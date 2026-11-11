@@ -47,7 +47,7 @@ const LEDGER_TEMPLATE = 'tools/ledger/build/template.html';
 
 /* where the UI takes text */
 const PROPS = new Set(['label', 'menuLabel', 'tbLabel', 'tip', 'title', 'text', 'placeholder', 'heading', 'note', 'aria-label', 'data-tip', 'what', 'drop', 'caption', 'hint']);
-const CALLS = { t: [0], 'L.t': [0], 'VO.t': [0], N: [0], 'L.N': [0], 'VO.N': [0], 'ui.msg': [0], 'ui.toast': [0], 'ui.busy': [1], 'ui.prompt': [0, 2], 'ui.button': [0], 'ui.check': [0],
+const CALLS = { t: [0], 'L.t': [0], 'VO.t': [0], N: [0], 'L.N': [0], 'VO.N': [0], mark: [0], 'ui.msg': [0], 'ui.toast': [0], 'ui.busy': [1], 'ui.prompt': [0, 2], 'ui.button': [0], 'ui.check': [0],
   'ui.radio': [1], 'ui.field': [0], 'ui.group': [0], 'ui.tbDrop': [0, 3], 'ui.toolbar': [1], 'G.f': [0], 'def': [1, 3], 'O.tx': [1] };
 const H = new Set(['h', 'L.h']);
 /* properties whose text is not shown (the assistant's descriptions of his own moves, ids, styles) */
@@ -235,6 +235,8 @@ function gather() {
     if (rel === 'ledger/js/fninfo.js') scanFninfo(rel, src, add);
     scanJS(rel, src, add, fragment);
   }
+  const reactEntry = path.join(root, 'suite/src/main.tsx');
+  if (fs.existsSync(reactEntry)) scanJS(path.relative(root, reactEntry), fs.readFileSync(reactEntry, 'utf8'), add, fragment);
   for (const rel of HTML) {
     const src = fs.readFileSync(path.join(PUB, rel), 'utf8');
     scanHTML(rel, src, add);   // no page has a script of its own (tools/csp.mjs): the Start Center's is start.js

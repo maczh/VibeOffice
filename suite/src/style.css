@@ -1,0 +1,30 @@
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; margin: 0; }
+body { font: 13px/1.45 var(--ui-font); color: var(--ink); background: var(--surface); }
+button { font: inherit; color: inherit; cursor: pointer; }
+.suite-start { height: 100%; overflow: auto; padding: 20px clamp(14px, 4vw, 48px); }
+.suite-start > header { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--chrome-line); }
+.suite-start header img { width: 34px; height: 34px; }
+.suite-start h1 { flex: 1; margin: 0; font-size: 20px; color: var(--pane-ink); }
+.suite-start header label { display: flex; align-items: center; gap: 5px; color: var(--pane-ink); }
+.suite-start select { max-width: 160px; min-height: 28px; color: var(--ink); background: var(--surface); border: 1px solid var(--field-border); font: inherit; }
+.suite-start h2 { margin: 20px 0 10px; font-size: 17px; color: var(--pane-ink); }
+.suite-start h3 { margin: 16px 0 8px; font-size: 14px; color: var(--pane-ink); }
+.suite-start button { min-height: 30px; padding: 5px 10px; border: 1px solid var(--tb-border); border-radius: var(--ctl-radius); background: linear-gradient(var(--btn-a), var(--btn-b)); }
+.suite-start button:hover { background: var(--menu-hot); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.cards button { display: flex; min-height: 112px; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 6px; padding: 8px; text-align: left; }
+.cards img { width: 100%; height: 72px; object-fit: contain; }
+.suite-start footer { display: flex; gap: 8px; margin-top: 20px; border-top: 1px solid var(--chrome-line); padding-top: 12px; }
+.suite-editor { width: 100%; height: 100%; display: flex; flex-direction: column; }
+.credential { position: fixed; inset: 50% auto auto 50%; transform: translate(-50%, -50%); min-width: min(360px, 92vw); padding: 16px; color: var(--ink); background: var(--surface); border: 1px solid var(--tb-border); box-shadow: 0 6px 20px var(--dlg-shadow-c); }
+.credential form, .credential label { display: flex; flex-direction: column; gap: 10px; }
+.credential input { min-height: 30px; color: var(--ink); background: var(--surface); border: 1px solid var(--field-border); font: inherit; }
+.credential button { align-self: flex-end; }
+.back { flex: none; width: max-content; height: 26px; margin: 4px 8px; border: 1px solid var(--tb-border); background: var(--surface); }
+.suite-frame { flex: 1; min-height: 0; }
+.draft-recovery { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; max-height: 110px; overflow: auto; padding: 6px 10px; border-bottom: 1px solid var(--chrome-line); color: var(--ink); background: var(--surface); }
+.draft-recovery > strong { margin-right: 6px; }
+.draft-recovery > div { display: flex; align-items: center; gap: 6px; }
+.draft-recovery button { min-height: 25px; color: var(--ink); background: var(--surface); border: 1px solid var(--tb-border); }
+@media (max-width: 620px) { .suite-start > header { flex-wrap: wrap; } .suite-start h1 { min-width: 45%; } }

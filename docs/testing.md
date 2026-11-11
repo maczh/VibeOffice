@@ -1,5 +1,11 @@
 # Testing
 
+## Vite + React workspace
+
+Install with `npm install`. `npm run dev` builds the workspace packages and starts the React suite; `npm run dev:suite` does the same explicitly. `npm run build` creates component JavaScript and declarations, while `npm run build:apps` also emits independent app shells in `wordx/standalone`, `excelx/standalone`, and `pptx/standalone`, plus the suite in `suite/dist`. Serve the suite output as the web root; it includes the three legacy document engines, shared assets, manifest, and generated offline worker. Set `VITE_REMOTE_ORIGINS` to a comma-separated list of exact HTTPS origins (HTTP is accepted only for localhost/127.0.0.1) to add remote file services to the generated suite CSP.
+
+The React UI and local-only draft store checks are `node --test tests/vite/workspace-packages.test.mjs`, `node --test --test-concurrency=1 tests/ui/react-host.test.mjs tests/ui/react-host-apps.test.mjs`, and `node --test --test-concurrency=1 tests/ui/react-suite.test.mjs`. The suite smoke check builds/serves `suite/dist`, verifies that Start Center has no Recent Files surface, verifies the offline worker, then mounts all three editors. The existing vanilla app remains served from `public/` for the legacy app, OOXML, and interoperability test suites.
+
 ## Serving
 
     python3 tools/serve.py          # http://127.0.0.1:8760/, no caching

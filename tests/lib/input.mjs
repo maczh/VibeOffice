@@ -61,9 +61,9 @@ export async function open(app, opts = {}) {
   await ensureChromium();
   const stopServer = await ensureServer();
   // once more if the page didn't come up in time (seen while other sessions share the browser)
-  const page = await openPage(app, { persistence: false, automated: true, lang: opts.lang }).catch((e) => {
+  const page = await openPage(app, { persistence: opts.persistence ?? false, automated: true, lang: opts.lang, query: opts.query, preload: opts.preload }).catch((e) => {
     if (!/did not attach/.test(e.message)) throw e;
-    return openPage(app, { persistence: false, automated: true, lang: opts.lang });
+    return openPage(app, { persistence: opts.persistence ?? false, automated: true, lang: opts.lang, query: opts.query, preload: opts.preload });
   });
   const { send, evaluate } = page;
   await send('Emulation.setDeviceMetricsOverride', { width: opts.width || 1280, height: opts.height || 800, deviceScaleFactor: 1, mobile: false });

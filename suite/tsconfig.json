@@ -1,0 +1,5 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": { "noEmit": true, "baseUrl": ".", "paths": { "@vibeoffice/core": ["../commonx/dist/index.d.ts"], "@vibeoffice/wordx": ["../wordx/dist/index.d.ts"], "@vibeoffice/excelx": ["../excelx/dist/index.d.ts"], "@vibeoffice/pptx": ["../pptx/dist/index.d.ts"] } },
+  "include": ["src"]
+}

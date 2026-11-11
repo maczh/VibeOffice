@@ -1,0 +1,3 @@
+# React editor packages reuse the document engines
+
+The browser editors already contain substantial document models, file-format readers and writers, and spreadsheet calculation logic whose compatibility is measured against Office-authored files. The Vite/React migration will put the user interface and application entry points in independently runnable, distributable editor packages while reusing those JavaScript document engines behind typed interfaces; rewriting the engines is out of scope because it would combine high-risk format changes with the UI migration and make parity harder to establish.

@@ -1,0 +1,1 @@
+React suite local-file launch smoke test.

@@ -1,0 +1,13 @@
+{
+  "name": "@vibeoffice/pptx",
+  "version": "0.1.0",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+    "./style.css": "./dist/style.css"
+  },
+  "scripts": { "build": "npm run build --workspace=@vibeoffice/core && vite build --config vite.config.ts && tsc -b --force && node ../tools/vite/copy-style.mjs pptx", "build:app": "npm run build --workspace=@vibeoffice/core && vite build --config vite.app.config.ts", "dev": "npm run build --workspace=@vibeoffice/core && vite --config vite.app.config.ts" },
+  "peerDependencies": { "@vibeoffice/core": "0.1.0", "react": "^19.0.0", "react-dom": "^19.0.0" },
+  "devDependencies": { "@vibeoffice/core": "0.1.0", "@vitejs/plugin-react": "^5.0.0", "react": "^19.0.0", "react-dom": "^19.0.0", "vite": "^7.0.0", "typescript": "^5.9.0" }
+}

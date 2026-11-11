@@ -397,6 +397,7 @@
     A.loadPres(M.newPresentation(Object.assign({ design: 'default' }, A.newSize())), 'Presentation1');
   };
   A.openDialog = async function () {
+    if (window.VO && VO.reactHost) return VO.reactFileOpen();
     if (window.VO && VO.oneDocument) return VO.openDialog();
     const files = await L.pickFiles('.pptx,.ppsx,.potx,.pptm,.potm,.ppsm,.txt,application/vnd.openxmlformats-officedocument.presentationml.presentation');
     if (files[0]) A.openFile(files[0]);
@@ -447,10 +448,12 @@
   const PRES_TYPE = /^(pptx|pptm|ppsx|ppsm|potx|potm)$/;
   /** Save: the presentation's own file (the desktop app: in place, when it has one it may change), else Save As */
   A.save = async function () {
+    if (window.VO && VO.reactHost) return A.exportAs(A.fileType || 'pptx', A.fileName + '.' + (A.fileType || 'pptx'));
     if (!A.saved || (L.file.native() && !L.file.inPlace())) return A.saveAs();
     return A.exportAs(A.fileType || 'pptx', A.fileName, L.file.native() ? 'save' : undefined);
   };
   A.saveAs = function () {
+    if (window.VO && VO.reactHost) return A.exportAs('pptx', A.fileName + '.pptx');
     /* the desktop app: the system's Save dialog picks the name and type, then the presentation is written there */
     if (L.file.native()) return (async () => {
       const c = await L.file.choose('saveAs', PRES_TYPE.test(A.fileType) ? A.fileType : 'pptx', A.fileName);

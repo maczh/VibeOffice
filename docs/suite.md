@@ -1,5 +1,9 @@
 # The suite: Start Center, app launch, Recent Files, PWA
 
+## React/Vite workspace
+
+The separate Vite workspace (`commonx/`, `wordx/`, `excelx/`, `pptx/`, `suite/`) exports React editor packages around the existing document engines. `npm run dev` starts its React Start Center; `npm run build` emits typed package artifacts; `npm run build:apps` also emits each standalone app and `suite/dist`. The React Start Center opens on Create File, supports local open/create from the template catalog, and does not read or delete Recent Files data. React-host editors use the isolated `vibeoffice-react-drafts` database and the same-origin message bridge for Open/Save. See [React package integration](react-packages.md).
+
 | File | What it does |
 |---|---|
 | `public/index.html`, `public/start.js` | The Start Center: its page and its code |

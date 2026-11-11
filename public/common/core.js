@@ -381,6 +381,11 @@
    *  desktop app it is an export: the Save dialog asks where (unless the app's own Save As just did), then the file
    *  is written there; 'cancelled' if the user gave up. */
   L.saveFile = async function (name, blob) {
+    if (root.VO && root.VO.reactHost) {
+      const result = await root.VO.reactFileSave(name, blob);
+      if (result === 'saved') window.dispatchEvent(new CustomEvent('vo-saved', { detail: { name } }));
+      return result;
+    }
     if (native()) {
       const type = L.file.typeOf(name);
       if (!type) throw new Error(L.t('{0} doesn\'t save “{1}”.', L.APP, name));

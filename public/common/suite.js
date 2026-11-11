@@ -35,6 +35,9 @@
   };
   const BASE = new URL('..', document.currentScript.src).href;   // public/
   VO.base = BASE;
+  /* React package hosts reuse the document engines but must not read the legacy Recent Files database. */
+  const reactHost = new URLSearchParams(location.search).has('reactHost');
+  VO.reactHost = reactHost;
 
   /* ------------------------------------------------------------ apps */
   VO.APPS = {
@@ -284,6 +287,7 @@
   /* ------------------------------------------------------------ IndexedDB */
   let dbp = null;
   function db() {
+    if (reactHost) return Promise.reject(new Error());
     return dbp || (dbp = new Promise((resolve, reject) => {
       const r = indexedDB.open('vibeoffice', 1);
       r.onupgradeneeded = () => {
@@ -368,7 +372,20 @@
     persistAsked = true;
     navigator.storage.persisted().then((yes) => yes || navigator.storage.persist()).catch(() => {});
   };
-  VO.recent = {
+  VO.recent = reactHost ? {
+    cache: [],
+    async list() { return []; },
+    async get() { return null; },
+    async preview() { return null; },
+    refresh() {},
+    forApp() { return []; },
+    async put() { return null; },
+    async setDraft() {},
+    async discardDraft() {},
+    async setThumb() {},
+    async remove() {},
+    async clear() {},
+  } : {
     /** newest first: { key, app, name, size, time, saved (it has a file), file: Blob|null (opened or saved),
      *  thumb: Blob|null, draft: { file: Blob, name, time } | null (unsaved changes) }; a never-saved document has
      *  only a draft. The desktop app's entries have no file or thumb, and say open (in a window now) and here (in
@@ -483,7 +500,7 @@
   const q = new URLSearchParams(location.search);
   /** how this app page was opened: null (plain: show the sample), { new }, { template: id }, { open: id } or { recent: key };
    *  the desktop app's { doc }: the window has a document (VO.host.document); n: the new document's number */
-  VO.launch = q.has('open') ? { open: q.get('open') } : q.has('recent') ? { recent: q.get('recent'), draft: q.has('draft') }
+  VO.launch = !reactHost && q.has('open') ? { open: q.get('open') } : !reactHost && q.has('recent') ? { recent: q.get('recent'), draft: q.has('draft') }
     : q.has('doc') && native ? { doc: true } : q.has('template') ? { template: q.get('template') } : q.has('new') ? { new: true } : null;
   /* the desktop app numbers new documents across windows (Document2 in the second window that makes one): n */
   if (VO.launch && (VO.launch.new || VO.launch.template) && +q.get('n') > 0) VO.launch.n = +q.get('n');
@@ -499,7 +516,7 @@
    *  new one), close() -> false when the user cancels closing (the "Save changes?" question) */
   VO.attach = async (app, hooks) => {
     current = { app, hooks: hooks || {} };
-    if (!native) VO.recent.refresh();
+    if (!native && !reactHost) VO.recent.refresh();
     readWindows();
     const l = VO.launch;
     if (l && !l.new) {
@@ -515,12 +532,40 @@
         else (current.hooks.message || alert)(VO.t('That file is no longer available here. Open it again from your computer.'));
       } else if (l.recent) await VO.openRecent(l.recent, { draft: l.draft });
     }
+    if (reactHost) parent.postMessage({ type: 'vibeoffice-react-ready', app }, location.origin);
     /* (the desktop app: the Start Center shows them) */
-    if (!native) setTimeout(async () => {
+    if (!native && !reactHost) setTimeout(async () => {
       const others = (await VO.recent.list()).filter((e) => e.app === app && e.draft && !isOpen(e));
       if (others.length && current.hooks.showRecovery) current.hooks.showRecovery();
     }, 700);
   };
+  if (reactHost) window.addEventListener('message', async (event) => {
+    const data = event.data;
+    if (event.source !== parent || event.origin !== location.origin || !data || !current) return;
+    try {
+      if (data.type === 'vibeoffice-react-restore' && typeof data.id === 'string' && typeof data.name === 'string' && data.blob instanceof Blob && current.hooks.open) {
+        if (current.hooks.close && !(await current.hooks.close())) return;
+        await current.hooks.open(new File([data.blob], data.name), { draft: true, name: data.name, saved: false, lossState: data.lossState });
+        const doc = current.hooks.current && current.hooks.current();
+        if (doc) reactDraftKeys.set(doc, data.id);
+        if (doc && current.hooks.isDirty && current.hooks.isDirty(doc)) VO.changed(doc);
+      } else if (data.type === 'vibeoffice-react-open' && data.file instanceof File && current.hooks.open) {
+        if (!data.initial && current.hooks.close && !(await current.hooks.close())) return;
+        await current.hooks.open(data.file, {});
+      } else if (data.type === 'vibeoffice-react-save-result' && typeof data.requestId === 'string') {
+        const pending = reactSaveRequests.get(data.requestId);
+        if (pending) { reactSaveRequests.delete(data.requestId); data.error ? pending.reject(new Error(data.error)) : pending.resolve(data.result); }
+      }
+    } catch (error) { console.error(error); }
+  });
+  const reactSaveRequests = new Map();
+  let reactSaveSequence = 0;
+  VO.reactFileOpen = () => { if (reactHost) parent.postMessage({ type: 'vibeoffice-react-request-open' }, location.origin); };
+  VO.reactFileSave = (name, blob) => new Promise((resolve, reject) => {
+    const requestId = 'wordx-save-' + (++reactSaveSequence);
+    reactSaveRequests.set(requestId, { resolve, reject });
+    parent.postMessage({ type: 'vibeoffice-react-request-save', requestId, name, blob }, location.origin);
+  });
   const asFile = (blob, name) => (blob instanceof File && blob.name === name ? blob : new File([blob], name, { type: blob.type }));
   const say = (e) => (current && current.hooks.message || alert)(String(e && e.message || e));
   /** the desktop app: open the document the native side gave this window as it was made */
@@ -670,6 +715,7 @@
   }
   /* ------------------------------------------------------------ documents, autosave */
   const docKeys = new WeakMap();   // the app's document object -> its Recent Files key
+  const reactDraftKeys = new WeakMap();
   const openKeys = new Set();      // keys of the documents open in this page (left out of Document Recovery)
   /* a document's unsaved version is written 15 s after its last change, at most once every 2 minutes, larger
      documents less often (12 s a MB: 50 MB, every 10 minutes, as Word's AutoRecover), slow ones too (30 × the time
@@ -681,6 +727,7 @@
   /** the app opened a file (from any source) as doc */
   VO.opened = (file, doc) => {
     if (!current) return;
+    if (reactHost) return;
     if (native) { thumbLater(); return; }   // the native side made its entry as it gave the window the file
     if (file.voDraft) { bind(doc, file.voDraft); return; }   // an unsaved version: keep its entry as it is
     VO.recent.put(current.app, file.name, file, true).then((key) => { if (key) bind(doc, key); thumbLater(key); }, (e) => console.warn('recent files:', e));
@@ -688,6 +735,12 @@
   /** the app saved doc in its own format as name: that is its entry now, without unsaved changes */
   VO.saved = (name, blob, doc) => {
     if (!current) return;
+    if (reactHost) {
+      const id = doc && reactDraftKeys.get(doc);
+      if (id) parent.postMessage({ type: 'vibeoffice-react-draft-remove', id }, location.origin);
+      if (doc) { clearTimeout(draftOf(doc).timer); reactDraftKeys.delete(doc); }
+      return;
+    }
     const old = doc && docKeys.get(doc);
     if (doc) { const s = draftOf(doc); clearTimeout(s.timer); s.since = null; s.last = Date.now(); }   // a save is a write too
     if (doc && current.hooks.isDirty && current.hooks.isDirty(doc)) VO.changed(doc);   // changed while it was saved
@@ -728,6 +781,13 @@
       s.big = true;
       return;
     }
+    if (reactHost) {
+      const editor = ({ quire: 'wordx', ledger: 'excelx', lectern: 'pptx' })[current.app] || current.app;
+      let id = reactDraftKeys.get(doc);
+      if (!id) { id = editor + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); reactDraftKeys.set(doc, id); }
+      parent.postMessage({ type: 'vibeoffice-react-draft', draft: { id, editor, name: info.name, updatedAt: Date.now(), snapshot: blob, lossState: info.lossState } }, location.origin);
+      return;
+    }
     if (native) {
       try { await setDraft(info, blob); } catch (e) { console.warn('autosave:', e); return; }
       thumbLater();
@@ -753,6 +813,12 @@
     if (!doc) return;
     clearTimeout(draftOf(doc).timer);
     drafts.delete(doc);
+    if (reactHost) {
+      const id = reactDraftKeys.get(doc);
+      if (id) parent.postMessage({ type: 'vibeoffice-react-draft-remove', id }, location.origin);
+      reactDraftKeys.delete(doc);
+      return;
+    }
     if (native) { call('host_clear_draft').catch(() => {}); return; }
     const key = docKeys.get(doc);
     if (!key) return;
@@ -774,13 +840,14 @@
   const toStart = (text) => { const b = el('button', 'tp-link', null); b.type = 'button'; const ic = el('span'); ic.innerHTML = icon('open'); b.append(ic, el('span', null, text)); b.addEventListener('click', () => VO.host.showRecent().catch(() => {})); return b; };
   /** File menu: the app's four most recent entries ({ label, run } items for L.ui menus); the desktop app's Recent
    *  Files... */
-  VO.recentMenuItems = (max) => (native ? [{ label: VO.t('Recent &Files...'), raw: true, run: () => VO.host.showRecent().catch(() => {}) }] : VO.recent.forApp().slice(0, max || 4).map((e, i) => ({
+  VO.recentMenuItems = (max) => (reactHost ? [] : native ? [{ label: VO.t('Recent &Files...'), raw: true, run: () => VO.host.showRecent().catch(() => {}) }] : VO.recent.forApp().slice(0, max || 4).map((e, i) => ({
     label: '&' + (i + 1) + ' ' + (e.draft ? VO.t('{0} (unsaved changes)', e.name) : e.name).replace(/&/g, '&&'), raw: true,
     run: () => VO.openRecent(e.key, { draft: !!e.draft }),
   })));
   /** task pane: the app's recent entries as links (Getting Started ▸ Open); keeps itself up to date */
   VO.recentLinks = (max) => {
     const box = el('div', 'vo-recent');
+    if (reactHost) return box;
     if (native) { box.append(toStart('Recent Files...')); return box; }
     const draw = () => {
       if (!box.isConnected && box.dataset.drawn) { stop(); return; }
@@ -805,6 +872,7 @@
   };
   /** the Document Recovery task pane: this app's unsaved versions, each to open or to discard */
   VO.recoveryPane = (b) => {
+    if (reactHost) return;
     if (native) { b.append(el('div', 'tp-note', 'Unsaved changes are kept for each document in Recent Files, in the Start Center: open them from there, or discard them.'), toStart('Recent Files...')); return; }
     const list = el('div', 'vo-recovery');
     const draw = () => {

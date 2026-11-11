@@ -61,6 +61,7 @@ export async function openPage(app, options = {}) {
     // the page says it is automated (navigator.webdriver), so the assistant waits to be asked instead of walking in
     if (options.automated) await send('Emulation.setAutomationOverride', { enabled: true });
     await send('Page.addScriptToEvaluateOnNewDocument', { source: WATCH_CSP });
+    if (options.preload) await send('Page.addScriptToEvaluateOnNewDocument', { source: options.preload });
     // Capture the actual app snapshot/recovery hooks, without touching the user's IndexedDB.
     await send('Page.addScriptToEvaluateOnNewDocument', { source: `
       let vo;
@@ -74,7 +75,8 @@ export async function openPage(app, options = {}) {
     // no app: the Start Center, ready once it has loaded (it attaches no document)
     // the UI in English unless asked otherwise (options.lang: 'ja', 'qps'…; common/i18n.js), whatever the browser's language
     const lang = 'lang=' + (options.lang || 'en');
-    await send('Page.navigate', { url: app ? base + '/' + app + '/?new&' + lang : base + '/?' + lang });
+    const query = new URLSearchParams({ ...(app ? { new: '' } : {}), ...options.query, lang: options.lang || 'en' });
+    await send('Page.navigate', { url: app ? base + '/' + app + '/?' + query : base + '/?' + query });
     const ready = app ? '!!window.__corpusHooks' : "document.readyState === 'complete' && !!window.VO";
     for (let i = 0; i < 200; i++) {
       if (await evaluate(ready).catch(() => false)) return { evaluate, close, errors, requests, windows, navigations, send };

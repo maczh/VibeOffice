@@ -79,3 +79,17 @@ Don't look up this project's GitHub issues (no `gh`, no fetching issue pages) un
 3. Look: `node tools/shot.mjs <app>/` with steps for the change; check every app still loads without console errors or external requests. UI checks pause between steps so the page repaints, as with real input: bursts of synthetic events hid a Ledger scroll bug. After each change, `node tools/quick.mjs`: the tests that cover the files changed (always the smoke test `tests/ui/smoke.test.mjs` when the apps changed, under a minute; a touched app's Node and UI tests; seconds to a few minutes), with the change's own test also run on the code before it (`tools/older.mjs`). The whole of `tests/ui/` (real input, about 25 minutes), `node tools/ui-full.mjs`, before a release: no new failures, and the `todo` count only goes down; it records its result, and the release scripts warn when it has not passed on the `public/` they publish (`tools/ui-tested.sh`).
 4. Shared save code (`public/common/opc.js` and the writers) runs on every part of every file: time a change on a large file (a 30 MB sheet) as well as on the corpus. A regex pre-scan or a full parse there costs seconds and gigabytes.
 5. Don't overtest: use your own judgment on whether a change needs a test at all. Add one where a fault could come back unnoticed or the logic is subtle; a small, obvious fix (a key cancelled, a guard added) is checked once and needs no test of its own. UI tests are slow: prefer a Node test or a one-off `tools/shot.mjs` check, and add a UI test only for what needs real input (focus, drags, keys the browser acts on). Run what the change touches once, not again to reconfirm; the full corpus once per feature group and before each Office batch, not after every fix.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked as local Markdown files under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repo using root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.

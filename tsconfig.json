@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./commonx" },
+    { "path": "./wordx" },
+    { "path": "./excelx" },
+    { "path": "./pptx" },
+    { "path": "./suite" }
+  ]
+}

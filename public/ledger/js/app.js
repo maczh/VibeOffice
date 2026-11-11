@@ -135,6 +135,7 @@
 
   /* ------------------------------------------------------------ open */
   A.openDialog = async function (accept) {
+    if (window.VO && VO.reactHost) return VO.reactFileOpen();
     if (window.VO && VO.oneDocument) return VO.openDialog();
     const files = await L.pickFiles(accept || '.xlsx,.xlsm,.xltx,.xltm,.csv,.txt,.tsv,.prn,.xml', true);
     if (files.length) A.openFiles(files);
@@ -262,6 +263,7 @@
   A.save = async function () {
     const b = book();
     if (!b) return false;
+    if (window.VO && VO.reactHost) return A.saveAs(b.type === 'csv' || b.type === 'txt' ? 'xlsx' : b.type, b.name.replace(/\.[^.]+$/, '') + '.xlsx');
     if (b.untitled || b.type === 'xls' || (L.file.native() && !L.file.inPlace())) return L.dlg.saveAs();
     return A.saveAs(b.type, b.name, L.file.native() ? 'save' : undefined);
   };
@@ -269,6 +271,7 @@
    *  workbook's own file ('save') or what the Save dialog picked ('chosen'); without `how` there, an export that asks
    *  where. Whether it was written */
   A.saveAs = async function (type, name, how) {
+    if (window.VO && VO.reactHost && !type) { type = 'xlsx'; name = book().name.replace(/\.[^.]+$/, '') + '.xlsx'; }
     const b = book();
     if (L.editor.active && !L.editor.commit()) return false;
     const w = b.wb;

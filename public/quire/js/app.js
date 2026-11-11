@@ -767,6 +767,7 @@
     return true;
   };
   A.openDialog = async function () {
+    if (window.VO && VO.reactHost) return VO.reactFileOpen();
     if (window.VO && VO.oneDocument) return VO.openDialog();
     const files = await L.pickFiles('.docx,.docm,.dotx,.dotm,.doc,.txt,.htm,.html,.rtf,.xml,.md,.markdown,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     if (files[0]) A.openFile(files[0]);
@@ -859,6 +860,7 @@
     return A.exportAs(A.fileType || 'docx', A.fileName, L.file.native() ? 'save' : undefined);
   };
   A.saveAs = function () {
+    if (window.VO && VO.reactHost) return A.exportAs(DOC_TYPES.includes(A.fileType) ? A.fileType : 'docx', A.fileName);
     /* the desktop app: the system's Save dialog picks the name and type, then the document is written there */
     if (L.file.native()) return (async () => {
       const c = await L.file.choose('saveAs', DOC_TYPES.includes(A.fileType) ? A.fileType : 'docx', A.fileName);
