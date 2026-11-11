@@ -171,7 +171,7 @@
      didn't finish; a drag of the page's own (an object, the selection bar, a tool) takes over from it. While it
      lasts, `pointer` is where the pointer is: a selection dragged out of the text follows it. */
   let pointer = null, textDrag = false, snapQueued = false, press = null;
-  document.addEventListener('pointerdown', (e) => {
+  function onPagePointerDown(e) {
     const t = e.target;
     if (e.button !== 0 || !isEditableNode(t)) return;
     textDrag = !!(t.closest && t.closest('.p') && LY.root && LY.root.contains(t));
@@ -188,7 +188,7 @@
       cancel: done,
     });
     press = d;
-  }, true);
+  }
   /** a mouse button is down in the document (a selection may still be dragged out) */
   E.pressing = () => !!press;
   /** the user let go of the mouse in the document: 'sel' fires all through a drag, 'sel-done' once, when
@@ -669,7 +669,9 @@
   E.init = function () {
     const root = LY.root;
     try { document.execCommand('enableObjectResizing', false, false); document.execCommand('enableInlineTableEditing', false, false); } catch (e) { /* firefox only */ }
-    document.addEventListener('selectionchange', E.onSelectionChange);
+    L.addMountListener(L.domHost(), 'pointerdown', onPagePointerDown, true);
+    L.addMountListener(document, 'selectionchange', E.onSelectionChange);
+    L.addMountListener(L.domHost(), 'dragend', clearDragData, true);
     root.addEventListener('beforeinput', onBeforeInput);
     root.addEventListener('keydown', onKeyDown);
     root.addEventListener('compositionstart', onCompStart);
@@ -903,7 +905,7 @@
     if (!dragData.data) { dragData = null; return; }
     try { e.dataTransfer.setData('text/plain', dragData.data.text); e.dataTransfer.setData('text/html', dragData.data.html); e.dataTransfer.setData(DRAG_MARK, '1'); e.dataTransfer.effectAllowed = 'copyMove'; } catch (err) { /* ignore */ }
   }
-  document.addEventListener('dragend', () => { dragData = null; }, true);
+  const clearDragData = () => { dragData = null; };
   /** move (Ctrl: copy) the text a…b to target, one undo step; the text moved is selected after, as in Word */
   function moveRange(a, b, target, copy) {
     const d = doc();

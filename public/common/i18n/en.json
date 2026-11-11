@@ -7498,7 +7498,7 @@
  "Cancel": {
   "where": [
    "common/charts.js:438",
-   "common/suite.js:687",
+   "common/suite.js:692",
    "common/ui.js:547",
    "common/ui.js:571"
   ]
@@ -8255,7 +8255,7 @@
  },
  "Choose Blank or a template:": {
   "where": [
-   "common/suite.js:685"
+   "common/suite.js:690"
   ]
  },
  "Choose a Theme:": {
@@ -11248,7 +11248,7 @@
  },
  "Discard the changes": {
   "where": [
-   "common/suite.js:892"
+   "common/suite.js:897"
   ]
  },
  "Discard the unsaved changes": {
@@ -18758,7 +18758,7 @@
  },
  "New Document": {
   "where": [
-   "common/suite.js:687",
+   "common/suite.js:692",
    "quire/js/panes.js:81"
   ]
  },
@@ -18769,7 +18769,7 @@
  },
  "New Presentation": {
   "where": [
-   "common/suite.js:687",
+   "common/suite.js:692",
    "lectern/js/panes.js:544"
   ]
  },
@@ -18793,7 +18793,7 @@
  },
  "New Spreadsheet": {
   "where": [
-   "common/suite.js:687"
+   "common/suite.js:692"
   ]
  },
  "New Style": {
@@ -19161,7 +19161,7 @@
  },
  "No unsaved versions are waiting.": {
   "where": [
-   "common/suite.js:896"
+   "common/suite.js:901"
   ]
  },
  "No-Width Non Break": {
@@ -19790,7 +19790,7 @@
  },
  "Open the unsaved version": {
   "where": [
-   "common/suite.js:889"
+   "common/suite.js:894"
   ]
  },
  "Open the version saved before the changes": {
@@ -21983,7 +21983,7 @@
  },
  "Recent &Files...": {
   "where": [
-   "common/suite.js:843"
+   "common/suite.js:848"
   ]
  },
  "Recent Files": {
@@ -22006,8 +22006,8 @@
  },
  "Recent Files...": {
   "where": [
-   "common/suite.js:851",
-   "common/suite.js:876"
+   "common/suite.js:856",
+   "common/suite.js:881"
   ]
  },
  "Recently Used Fonts": {
@@ -28401,7 +28401,7 @@
  "That file is no longer available here. Open it again from your computer.": {
   "where": [
    "common/suite.js:532",
-   "common/suite.js:641"
+   "common/suite.js:646"
   ]
  },
  "The Find What text contains a Pattern Match expression which is not valid.": {
@@ -30387,17 +30387,17 @@
  },
  "Unsaved changes are kept for each document in Recent Files, in the Start Center: open them from there, or discard them.": {
   "where": [
-   "common/suite.js:876"
+   "common/suite.js:881"
   ]
  },
  "Unsaved changes from {0}": {
   "where": [
-   "common/suite.js:885"
+   "common/suite.js:890"
   ]
  },
  "Unsaved changes from {0} (never saved)": {
   "where": [
-   "common/suite.js:885"
+   "common/suite.js:890"
   ]
  },
  "Untitled": {
@@ -32154,12 +32154,12 @@
  },
  "{0} (unsaved changes)": {
   "where": [
-   "common/suite.js:844"
+   "common/suite.js:849"
   ]
  },
  "{0} (unsaved)": {
   "where": [
-   "common/suite.js:862"
+   "common/suite.js:867"
   ]
  },
  "{0} ({1} seconds)": {
@@ -32332,7 +32332,7 @@
  },
  "{0} kept the unsaved changes of these documents. Open the ones you want to keep and save them; discard the rest.": {
   "where": [
-   "common/suite.js:900"
+   "common/suite.js:905"
   ]
  },
  "{0} key sentence highlighted. Undo to restore.": {
@@ -32457,17 +32457,17 @@
  },
  "{0} — open in another window": {
   "where": [
-   "common/suite.js:887"
+   "common/suite.js:892"
   ]
  },
  "{0} — open in this window": {
   "where": [
-   "common/suite.js:887"
+   "common/suite.js:892"
   ]
  },
  "{0} — unsaved changes from {1}": {
   "where": [
-   "common/suite.js:858"
+   "common/suite.js:863"
   ]
  },
  "{0}% normal size": {
@@ -32568,7 +32568,7 @@
  },
  "“{0}” is over 50 MB, so its changes aren't kept for recovery after a crash. Save it to keep them.": {
   "where": [
-   "common/suite.js:780"
+   "common/suite.js:785"
   ]
  },
  "“{0}” was changed by another program after you opened it. Replace it with this version, or save this version under another name?": {

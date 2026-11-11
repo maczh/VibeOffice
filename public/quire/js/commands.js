@@ -769,7 +769,9 @@
     if (A.extLevel) return;
     if (E.sel && !D.eqPos(E.sel.a, A.extAnchor) && D.storyOf(doc(), E.sel.f.p) === D.storyOf(doc(), A.extAnchor.p)) { A.extBusy = true; E.setSel(A.extAnchor, E.sel.f, { noScroll: true }); A.extBusy = false; }
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && E.extend) { E.extend = false; A.extAnchor = null; A.updateStatus(); } }, true);
+  L.bus.on('app-ready', () => {
+    L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.key === 'Escape' && E.extend) { E.extend = false; A.extAnchor = null; A.updateStatus(); } }, true);
+  });
 
   /* ---------- go back (Shift+F5): last three edit locations ---------- */
   A.editTrail = [];

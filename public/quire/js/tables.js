@@ -1272,9 +1272,9 @@
   void tableOf;
   T.mount = function () {
     const sc = L.$('#scroller');
-    sc.addEventListener('pointermove', onMove);
-    sc.addEventListener('pointerdown', onDown, true);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && T.tool) T.setTool(null); });
+    L.addMountListener(sc, 'pointermove', onMove);
+    L.addMountListener(sc, 'pointerdown', onDown, true);
+    L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.key === 'Escape' && T.tool) T.setTool(null); });
   };
   L.bus.on('app-ready', () => T.mount());
 })();

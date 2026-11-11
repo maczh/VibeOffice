@@ -1,4 +1,4 @@
-export { EditorFrame, EngineEditorFrame, createLegacyEngineFrame } from './editor-frame.js';
+export { EditorFrame, EngineEditorFrame, createLegacyEngineFrame, settleEditorMount } from './editor-frame.js';
 export type { EditorFrameProps, EngineEditorFrameProps, EditorMount, EditorMountContext, LegacyEngineFrameOptions, EditorKind } from './editor-frame.js';
 export { VibeOfficeProvider, useVibeOffice } from './react-bridge.js';
 export type { Choice, LanguageId, LookId, VibeOfficeProviderProps, VibeOfficeServiceOverrides, VibeOfficeServices } from './react-bridge.js';

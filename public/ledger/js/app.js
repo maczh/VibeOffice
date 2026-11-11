@@ -649,7 +649,7 @@
     sbCalc.addEventListener('click', (e) => calcMenu(e));
     sb.append(sbMode, sbText, sbCalc);
     for (const k of [L.N('CAPS'), L.N('NUM'), L.N('SCRL'), L.N('END')]) { sbInd[k] = h('div', { class: 'sb-cell ind off', text: k }); sb.appendChild(sbInd[k]); }
-    document.addEventListener('keydown', (e) => { if (e.getModifierState) { sbInd.CAPS.classList.toggle('off', !e.getModifierState('CapsLock')); sbInd.NUM.classList.toggle('off', !e.getModifierState('NumLock')); sbInd.SCRL.classList.toggle('off', !e.getModifierState('ScrollLock')); G().scrollLock = e.getModifierState('ScrollLock'); } }, true);
+    L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.getModifierState) { sbInd.CAPS.classList.toggle('off', !e.getModifierState('CapsLock')); sbInd.NUM.classList.toggle('off', !e.getModifierState('NumLock')); sbInd.SCRL.classList.toggle('off', !e.getModifierState('ScrollLock')); G().scrollLock = e.getModifierState('ScrollLock'); } }, true);
   }
   function calcMenu(e) {
     const fns = [['NONE', '&None'], ['AVERAGE', '&Average'], ['COUNTA', '&Count'], ['COUNT', 'C&ount Nums'], ['MAX', '&Max'], ['MIN', 'M&in'], ['SUM', '&Sum']];
@@ -832,7 +832,7 @@
     ui.exec(id);
     return true;
   };
-  document.addEventListener('keydown', (e) => {
+  function handleAppKeydown(e) {
     if (ui.dialogOpen()) { ui.dialogKey(e); return; }
     if (ui.menuOpen()) { if (ui.menuKey(e)) { e.preventDefault(); e.stopPropagation(); } return; }
     if ((e.key === 'F10' && !e.shiftKey) || (e.key === 'Alt' && false)) { e.preventDefault(); A.menuBar.openIndex(0); return; }
@@ -844,7 +844,7 @@
     if (A.shortcut(e)) { e.preventDefault(); return; }
     /* stray typing goes to the grid */
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) G().focus();
-  });
+  }
 
   /* ------------------------------------------------------------ context menus */
   A.contextMenu = function (e, z) {
@@ -1425,7 +1425,7 @@
   function setupDrop() {
     let hint = null, depth = 0;
     const app = L.$('#app');
-    app.addEventListener('dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a workbook to open it, or pictures to insert them' }); document.body.appendChild(hint); } });
+    app.addEventListener('dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a workbook to open it, or pictures to insert them' }); L.domHost().appendChild(hint); } });
     app.addEventListener('dragleave', () => { depth--; if (depth <= 0 && hint) { hint.remove(); hint = null; depth = 0; } });
     app.addEventListener('dragover', (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); });
     app.addEventListener('drop', (e) => {
@@ -1481,6 +1481,7 @@
     buildToolbars();
     L.ribbonUI.init();
     buildStatus();
+    L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
     buildTabNav();
     buildNameBox();
     if (L.panes) L.panes.task.mount(L.$('#taskpane'));
@@ -1492,7 +1493,7 @@
     L.bus.on('changed', () => { updateStatus(); ui.refresh(); renderTabsSoon(); });
     L.bus.on('mode', () => updateStatus());
     L.bus.on('zoom', () => ui.refresh());
-    window.addEventListener('beforeunload', (e) => { if (A.books.some((b) => b.dirty)) { e.preventDefault(); e.returnValue = ''; } });
+    L.addMountListener(window, 'beforeunload', (e) => { if (A.books.some((b) => b.dirty)) { e.preventDefault(); e.returnValue = ''; } });
     const narrow = window.innerWidth < 820;
     if (A.opts.taskOpen && !narrow && L.panes) L.panes.task.show('getting-started');
     A.applyOpts();
@@ -1527,6 +1528,14 @@
       templates: () => Object.entries(L.panes.TEMPLATES).map(([id, t]) => ({ id, name: t.name })),
     });
   };
+  /** Mount Ledger into a host that already contains its editor shell; returns an idempotent disposer. */
+  A.mount = async function (host) {
+    if (!L.createMountScope) throw new Error('Ledger requires the shared mount-scope runtime');
+    const scope = L.createMountScope(host);
+    try { await A.init(); }
+    catch (error) { scope.dispose(); throw error; }
+    return () => scope.dispose();
+  };
   /** Recent Files picture: the top left of the sheet as it is drawn, 4:3 */
   function gridThumb() {
     const c = L.$('canvas.gcv');
@@ -1539,7 +1548,10 @@
   const renderTabsSoon = L.debounce(() => renderTabs(), 30);
   if (typeof document !== 'undefined') {
     /* once the page and the UI's dictionary are here (common/i18n.js) */
-    const boot = () => (window.VO && VO.i18n ? VO.i18n.whenReady(() => A.init()) : A.init());
+    const boot = () => {
+      const host = document.querySelector('[data-vibeoffice-engine-root]') || document.body;
+      return window.VO && VO.i18n ? VO.i18n.whenReady(() => A.mount(host)) : A.mount(host);
+    };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else setTimeout(boot, 0);
   }

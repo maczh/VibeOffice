@@ -38,7 +38,7 @@
   A.loadOpts = () => { A.opts = L.deepMerge(L.clone(DEFAULT_OPTS), L.locale.savedOpts(L.store.get('opts', {}), EN_OPTS)); D.unit = A.opts.unit || 'in'; };
   A.saveOpts = () => { L.store.set('opts', L.locale.optsToSave(A.opts, DEFAULT_OPTS, EN_OPTS)); };
   A.applyOpts = () => {
-    document.body.classList.toggle('bluebg', !!A.opts.blueBg);
+    L.domHost().classList.toggle('bluebg', !!A.opts.blueBg);
     D.unit = A.opts.unit || 'in';
     L.store.set('userName', A.opts.userName || 'Quire User');
     L.store.set('userInitials', A.opts.userInitials || '');
@@ -464,12 +464,12 @@
     A.sb.rec.textContent = L.t('REC'); A.sb.trk.textContent = L.t('TRK'); A.sb.ext.textContent = L.t('EXT'); A.sb.ovr.textContent = L.t('OVR');
     A.sb.lang.textContent = A.langName('en-US');
     A.sb.spell.innerHTML = '<svg width="18" height="14" viewBox="0 0 18 14"><rect x="1.5" y="1.5" width="11" height="11" fill="#fff" stroke="#556"/><path d="M3 4h7M3 6.5h7M3 9h5" stroke="#889"/><path d="M10 9l2.5 3 4.5-7" fill="none" stroke="#2f9a3a" stroke-width="1.6"/></svg>';
-    A.sb.trk.addEventListener('dblclick', () => ui.exec('trackChanges'));
-    A.sb.ovr.addEventListener('dblclick', () => { E.overtype = !E.overtype; A.updateStatus(); });
-    A.sb.ext.addEventListener('dblclick', () => { E.extend = !E.extend; A.updateStatus(); });
-    A.sb.lang.addEventListener('dblclick', () => ui.exec('setLanguage'));
+    L.addMountListener(A.sb.trk, 'dblclick', () => ui.exec('trackChanges'));
+    L.addMountListener(A.sb.ovr, 'dblclick', () => { E.overtype = !E.overtype; A.updateStatus(); });
+    L.addMountListener(A.sb.ext, 'dblclick', () => { E.extend = !E.extend; A.updateStatus(); });
+    L.addMountListener(A.sb.lang, 'dblclick', () => ui.exec('setLanguage'));
     /* click: check this document's spelling and grammar as you type, or stop (off when a document opens) */
-    A.sb.spell.addEventListener('click', () => {
+    L.addMountListener(A.sb.spell, 'click', () => {
       if (!L.spell) return;
       if (!A.opts.spell) { A.opts.spell = true; A.saveOpts && A.saveOpts(); }
       L.spell.hidden = !L.spell.hidden;
@@ -483,7 +483,7 @@
     L.bus.on('proof-state', spellIcon);
     L.bus.on('doc-loaded', spellIcon);
     spellIcon();
-    A.sb.page.addEventListener('dblclick', () => ui.exec('goTo'));
+    L.addMountListener(A.sb.page, 'dblclick', () => ui.exec('goTo'));
     sb.append(A.sb.page, A.sb.sec, A.sb.pages, A.sb.at, A.sb.ln, A.sb.col, A.sb.rec, A.sb.trk, A.sb.ext, A.sb.ovr, A.sb.lang, A.sb.spell, A.sb.msg);
   }
   A.status = (msg, ms) => { if (!A.sb) return; A.sb.msg.textContent = L.t(msg); clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sb.msg.textContent = ''; }, ms || 4000); };
@@ -1236,7 +1236,7 @@
     ui.exec(cmd);
     return true;
   };
-  document.addEventListener('keydown', (e) => {
+  function handleAppKeydown(e) {
     if (ui.dialogOpen()) { ui.dialogKey(e); return; }
     if (ui.menuOpen()) { if (ui.menuKey(e)) { e.preventDefault(); e.stopPropagation(); } return; }
     if (e.key === 'F10' && !e.shiftKey) { e.preventDefault(); A.menuBar.openIndex(0); return; }
@@ -1254,16 +1254,16 @@
     const k = keyName(e);
     const cmd = A.SHORTCUTS[k];
     if (cmd && !/^(cut|copy|paste)$/.test(cmd)) { e.preventDefault(); ui.exec(cmd); }
-  });
+  }
 
   /* ================= drag & drop of files ================= */
   function setupDrop() {
     let hint = null, depth = 0;
     const app = L.$('#app');
-    app.addEventListener('dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a document to open it, or pictures to insert them' }); document.body.appendChild(hint); } });
-    app.addEventListener('dragleave', () => { depth--; if (depth <= 0 && hint) { hint.remove(); hint = null; depth = 0; } });
-    app.addEventListener('dragover', (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); });
-    app.addEventListener('drop', (e) => {
+    L.addMountListener(app, 'dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a document to open it, or pictures to insert them' }); L.domHost().appendChild(hint); } });
+    L.addMountListener(app, 'dragleave', () => { depth--; if (depth <= 0 && hint) { hint.remove(); hint = null; depth = 0; } });
+    L.addMountListener(app, 'dragover', (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); });
+    L.addMountListener(app, 'drop', (e) => {
       if (hint) { hint.remove(); hint = null; } depth = 0;
       if (e.defaultPrevented) return;
       const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
@@ -1278,7 +1278,7 @@
   /* ================= splitter (document map width) ================= */
   function setupSplitters() {
     const sp = L.$('#split-map');
-    sp.addEventListener('pointerdown', (e) => {
+    L.addMountListener(sp, 'pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       const map = L.$('#docmap'), w0 = map.offsetWidth, style0 = map.style.width;
@@ -1298,11 +1298,12 @@
     L.bus.on('doc-changed', () => { if (window.VO) VO.changed(doc()); A.updateStatus(); ui.refresh(); if (doc().settings.track || Object.keys(doc().comments).length) A.updateToolbars(); });
     L.bus.on('layout-done', () => { A.updateStatus(); if (L.rulers) L.rulers.drawSoon(); if (L.drawing) L.drawing.placeHandles(); E.placeHandles(); });
     L.bus.on('zoom', () => { ui.refresh(); if (L.rulers) L.rulers.draw(); if (L.drawing) L.drawing.placeHandles(); E.placeHandles(); });
-    LY.scroller.addEventListener('scroll', () => { if (L.rulers) L.rulers.drawSoon(); });
-    window.addEventListener('beforeunload', (e) => { const any = (doc() && doc().dirty) || A.docs.some((w, i) => i !== A.cur && w && w.doc && w.doc.dirty); if (any) { e.preventDefault(); e.returnValue = ''; } });
-    window.addEventListener('resize', L.debounce(() => { if (A.view === 'web') LY.render(); else LY.fitSizer(); if (L.rulers) L.rulers.draw(); }, 200));
-    document.addEventListener('keydown', (e) => { LY.root.classList.toggle('ctrl', e.ctrlKey || e.metaKey); });
-    document.addEventListener('keyup', (e) => { LY.root.classList.toggle('ctrl', e.ctrlKey || e.metaKey); });
+    L.addMountListener(LY.scroller, 'scroll', () => { if (L.rulers) L.rulers.drawSoon(); });
+    L.addMountListener(window, 'beforeunload', (e) => { const any = (doc() && doc().dirty) || A.docs.some((w, i) => i !== A.cur && w && w.doc && w.doc.dirty); if (any) { e.preventDefault(); e.returnValue = ''; } });
+    L.addMountListener(window, 'resize', L.debounce(() => { if (A.view === 'web') LY.render(); else LY.fitSizer(); if (L.rulers) L.rulers.draw(); }, 200));
+    const app = L.$('#app');
+    L.addMountListener(app, 'keydown', (e) => { LY.root.classList.toggle('ctrl', e.ctrlKey || e.metaKey); });
+    L.addMountListener(app, 'keyup', (e) => { LY.root.classList.toggle('ctrl', e.ctrlKey || e.metaKey); });
   }
 
   /* ================= format painter ================= */
@@ -1382,12 +1383,14 @@
     A.loadOpts();
     if (window.VO && L.icons.app) VO.setIcon(L.icons.app(32));
     /* the labels the page's CSS draws on pages and marks, in the UI's language */
+    const app = L.$('#app');
     for (const [v, text] of [['--t-blank', L.t('(This page intentionally left blank by a section break)')], ['--t-same', L.t('Same as Previous')],
-      ['--t-object', L.t('[object]')], ['--t-sect', L.t('Section Break (Next Page)')]]) document.documentElement.style.setProperty(v, JSON.stringify(text));
+      ['--t-object', L.t('[object]')], ['--t-sect', L.t('Section Break (Next Page)')]]) app.style.setProperty(v, JSON.stringify(text));
     buildMenus();
     buildToolbars();
     L.ribbonUI.init();
     buildStatus();
+    L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
     LY.mount(L.$('#scroller'));
     E.init();
     if (L.rulers) L.rulers.mount(L.$('#hruler'), L.$('#vruler'), L.$('#rcorner'));
@@ -1442,6 +1445,14 @@
       templates: () => (L.templates ? L.templates.list().map(({ id, name }) => ({ id, name })) : []),
     });
   };
+  /** Mount Quire into a host that already contains its editor shell; returns an idempotent disposer. */
+  A.mount = async function (host) {
+    if (!L.createMountScope) throw new Error('Quire requires the shared mount-scope runtime');
+    const scope = L.createMountScope(host);
+    try { await A.init(); }
+    catch (error) { scope.dispose(); throw error; }
+    return () => scope.dispose();
+  };
   const winOf = (d) => (d === doc() ? A : A.docs.find((x) => x && x.doc === d) || A);
   /** Recent Files picture: the first page, drawn as for PDF (print layout only) */
   async function pageThumb() {
@@ -1449,7 +1460,10 @@
     return p ? A.rasterizePage(p.el, 400 / p.el.offsetWidth, docCSS(), await mediaDataMap(p.el)) : null;
   }
   /* once the page and the UI's dictionary are here (common/i18n.js) */
-  const boot = () => (window.VO && VO.i18n ? VO.i18n.whenReady(() => A.init()) : A.init());
+  const boot = () => {
+    const host = document.querySelector('[data-vibeoffice-engine-root]') || document.body;
+    return window.VO && VO.i18n ? VO.i18n.whenReady(() => A.mount(host)) : A.mount(host);
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

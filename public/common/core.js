@@ -50,8 +50,91 @@
       else el.appendChild(document.createTextNode(typeof k === 'string' && !data ? tr(k) : String(k)));
     }
   }
-  L.$ = (s, r) => (r || document).querySelector(s);
-  L.$$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const domRoots = [];
+  const rootDisposers = new WeakMap();
+  const activeDomRoot = () => {
+    for (let i = domRoots.length - 1; i >= 0; i--) if (domRoots[i].active) return domRoots[i].root;
+    return null;
+  };
+  L.domHost = () => activeDomRoot() || document.body;
+  L.$ = (s, r) => (r || activeDomRoot() || document).querySelector(s);
+  L.$$ = (s, r) => Array.from((r || activeDomRoot() || document).querySelectorAll(s));
+  /** Enter a synchronous DOM scope for legacy code; the returned function restores the previous scope. */
+  L.setDomRoot = function (root) {
+    if (!root || typeof root.querySelector !== 'function' || typeof root.querySelectorAll !== 'function') throw new TypeError('A DOM query root is required');
+    const scope = { root, active: true, controller: new AbortController() };
+    domRoots.push(scope);
+    let active = true;
+    const restore = function restoreDomRoot() {
+      if (!active) return;
+      active = false;
+      scope.active = false;
+      scope.controller.abort();
+      const index = domRoots.indexOf(scope);
+      if (index >= 0) domRoots.splice(index, 1);
+      if (rootDisposers.get(root) === restore) rootDisposers.delete(root);
+    };
+    return restore;
+  };
+  /** Keep selectors and shared UI layers on a React-owned editor root until it is disposed. */
+  L.mountDomRoot = function (root) {
+    if (!root || typeof root.querySelector !== 'function' || typeof root.querySelectorAll !== 'function') throw new TypeError('A DOM query root is required');
+    rootDisposers.get(root)?.();
+    const restore = L.setDomRoot(root);
+    rootDisposers.set(root, restore);
+    return restore;
+  };
+  /** Own DOM-root, UI, global event, and deferred work created by one mounted editor. */
+  L.createMountScope = function (root) {
+    const restoreUi = L.ui && L.ui.mount ? L.ui.mount(root) : null;
+    const restoreRoot = restoreUi ? null : L.mountDomRoot(root);
+    const cleanups = new Set();
+    let disposed = false;
+    return {
+      listen(target, type, listener, options) {
+        if (disposed) throw new Error('The editor mount scope is disposed');
+        target.addEventListener(type, listener, options);
+        const cleanup = () => { target.removeEventListener(type, listener, options); cleanups.delete(cleanup); };
+        cleanups.add(cleanup);
+        return cleanup;
+      },
+      defer(callback, delay) {
+        if (disposed) throw new Error('The editor mount scope is disposed');
+        const id = setTimeout(() => { cleanups.delete(cleanup); if (!disposed) callback(); }, delay);
+        const cleanup = () => { clearTimeout(id); cleanups.delete(cleanup); };
+        cleanups.add(cleanup);
+        return cleanup;
+      },
+      dispose() {
+        if (disposed) return;
+        disposed = true;
+        cleanups.forEach((cleanup) => cleanup());
+        restoreUi && restoreUi();
+        if (restoreRoot) restoreRoot();
+      },
+      get disposed() { return disposed; },
+    };
+  };
+  /** Register a page/global listener that is automatically removed with the current mounted editor scope. */
+  L.addMountListener = function (target, type, listener, options) {
+    if (!target || typeof target.addEventListener !== 'function') throw new TypeError('An event target is required');
+    const scope = domRoots.length ? domRoots[domRoots.length - 1] : null;
+    if (!scope) { target.addEventListener(type, listener, options); return () => target.removeEventListener(type, listener, options); }
+    const opts = typeof options === 'boolean' ? { capture: options, signal: scope.controller.signal } : { ...(options || {}), signal: scope.controller.signal };
+    target.addEventListener(type, listener, opts);
+    return () => target.removeEventListener(type, listener, opts);
+  };
+  /** Register a non-event resource cleanup (observer, subscription, etc.) with the active editor mount. */
+  L.addMountCleanup = function (cleanup) {
+    if (typeof cleanup !== 'function') throw new TypeError('A mount cleanup function is required');
+    const scope = domRoots.length ? domRoots[domRoots.length - 1] : null;
+    if (!scope) return () => {};
+    const signal = scope.controller.signal;
+    if (signal.aborted) { cleanup(); return () => {}; }
+    const dispose = () => { signal.removeEventListener('abort', dispose); cleanup(); };
+    signal.addEventListener('abort', dispose, { once: true });
+    return () => signal.removeEventListener('abort', dispose);
+  };
   L.svgNS = 'http://www.w3.org/2000/svg';
   L.s = function s(tag, attrs, ...kids) {
     const el = document.createElementNS(L.svgNS, tag);
@@ -108,7 +191,13 @@
   /* ---------- event bus ---------- */
   const handlers = {};
   L.bus = {
-    on(ev, fn) { (handlers[ev] = handlers[ev] || []).push(fn); return () => this.off(ev, fn); },
+    on(ev, fn) {
+      (handlers[ev] = handlers[ev] || []).push(fn);
+      const off = () => this.off(ev, fn);
+      const scope = domRoots[domRoots.length - 1];
+      if (scope && scope.active) scope.controller.signal.addEventListener('abort', off, { once: true });
+      return off;
+    },
     off(ev, fn) { const a = handlers[ev]; if (a) { const i = a.indexOf(fn); if (i >= 0) a.splice(i, 1); } },
     emit(ev, ...args) { const a = handlers[ev]; if (a) for (const f of a.slice()) { try { f(...args); } catch (e) { console.error(e); } } },
   };

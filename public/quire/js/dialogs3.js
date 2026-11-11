@@ -563,7 +563,7 @@
     ui.dialog({ title: 'Customize', width: 460, body: ui.tabs([
       { label: 'Tool&bars', body: h('div', { class: 'col' }, ...tbs) },
       { label: '&Commands', body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'All Quire commands. Double-click one to run it.' }), cmdList), onShow: () => {} },
-      { label: '&Options', body: h('div', { class: 'col' }, ui.check('Show Standard and Formatting toolbars on two rows', true, null), ui.check('Always show full menus', true, null), ui.check('Show Scree&nTips on toolbars', o.screenTips !== false, (v) => { o.screenTips = v; A().saveOpts(); document.body.classList.toggle('notips', !v); }), ui.check('Show shortcut &keys in ScreenTips', true, null)) },
+      { label: '&Options', body: h('div', { class: 'col' }, ui.check('Show Standard and Formatting toolbars on two rows', true, null), ui.check('Always show full menus', true, null), ui.check('Show Scree&nTips on toolbars', o.screenTips !== false, (v) => { o.screenTips = v; A().saveOpts(); L.domHost().classList.toggle('notips', !v); }), ui.check('Show shortcut &keys in ScreenTips', true, null)) },
       { label: '&Keyboard', body: h('div', { style: 'max-height:300px;overflow:auto' }, keys) },
     ]), buttons: [{ label: 'Close', primary: true }] });
     cmdList.querySelector('.listbox').addEventListener('dblclick', () => { const id = cmdList.get(); if (id) ui.exec(id); });

@@ -248,7 +248,7 @@
   L.bus.on('layout-done', () => SP.refreshSoon());
   L.bus.on('doc-loaded', () => { SP.ignoredOnce.clear(); SP.refreshSoon(100); });
   L.bus.on('app-ready', () => {
-    LY.scroller.addEventListener('scroll', () => SP.refreshSoon(150), { passive: true });
+    L.addMountListener(LY.scroller, 'scroll', () => SP.refreshSoon(150), { passive: true });
     if (LY.root) LY.root.spellcheck = false;
   });
 

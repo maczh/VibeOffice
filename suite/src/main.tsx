@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createUrlReadProvider, createWebDavProvider, saveLocalDocument, VibeOfficeProvider, useVibeOffice } from '@vibeoffice/core';
 import { createIndexedDbDraftStore } from '@vibeoffice/core';
@@ -31,10 +31,33 @@ function appForName(name: string): Entry | undefined {
   return apps.find((candidate) => candidate.extensions.includes(extension || ''));
 }
 
-function ActiveEditor({ app, file, document, template, onSaveFile, onDraftsAvailable }: { app: Entry; file?: File; document?: LocalDocument; template?: string; onSaveFile: (name: string, blob: Blob, current?: LocalDocument) => Promise<LocalDocument | void | null>; onDraftsAvailable: (drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => void }) {
+let closeRequestSequence = 0;
+function requestEditorClose(): Promise<boolean> {
+  const frame = document.querySelector<HTMLIFrameElement>('.suite-frame iframe');
+  if (!frame?.contentWindow) return Promise.resolve(true);
+  const engine = frame.contentWindow as Window & { VO?: { reactClose?: () => Promise<boolean> } };
+  if (engine.VO?.reactClose) return engine.VO.reactClose().catch(() => false);
+  const requestId = `react-close-${++closeRequestSequence}`;
+  return new Promise((resolve) => {
+    const finish = (closed: boolean) => {
+      window.removeEventListener('message', receive);
+      clearTimeout(timeout);
+      resolve(closed);
+    };
+    const receive = (event: MessageEvent) => {
+      if (event.source !== frame.contentWindow || event.origin !== location.origin || event.data?.type !== 'vibeoffice-react-close-result' || event.data.requestId !== requestId) return;
+      finish(event.data.closed === true);
+    };
+    const timeout = window.setTimeout(() => finish(false), 30000);
+    window.addEventListener('message', receive);
+    frame.contentWindow?.postMessage({ type: 'vibeoffice-react-close', requestId }, location.origin);
+  });
+}
+
+function ActiveEditor({ app, file, document, template, onSaveFile, onDraftsAvailable }: { app: Entry; file?: File; document?: LocalDocument; template?: string; onSaveFile: (name: string, blob: Blob, current?: LocalDocument, signal?: AbortSignal) => Promise<LocalDocument | void | null>; onDraftsAvailable: (drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => void }) {
   const query = template ? `template=${encodeURIComponent(template)}` : 'new';
   const key = `${app.id}:${file?.name || template || 'blank'}`;
-  const engine = { url: `/${app.folder}/?${query}` };
+  const engine = useMemo(() => ({ url: `/${app.folder}/?${query}` }), [app.folder, query]);
   const recovery = { draftStore, onDraftsAvailable };
   if (app.id === 'quire') return <WordxEditor key={key} className="suite-frame" engine={engine} onSaveFile={onSaveFile} {...recovery} {...(document ? { initialDocument: document } : file ? { initialFile: file } : {})} />;
   if (app.id === 'ledger') return <ExcelxEditor key={key} className="suite-frame" engine={engine} onSaveFile={onSaveFile} {...recovery} {...(document ? { initialDocument: document } : file ? { initialFile: file } : {})} />;
@@ -47,6 +70,10 @@ function Suite() {
   const [active, setActive] = useState<{ app: Entry; file?: File; document?: LocalDocument; template?: string } | null>(null);
   const [recoverable, setRecoverable] = useState<LocalDraft<Blob>[]>([]);
   const restoreDraft = useRef<((draft: LocalDraft<Blob>) => void) | null>(null);
+  const onDraftsAvailable = useCallback((drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => {
+    restoreDraft.current = restore;
+    setRecoverable(drafts);
+  }, []);
   const [templates, setTemplates] = useState<Record<string, Template[]>>({});
   const picker = useRef<HTMLInputElement>(null);
   const [credentialAsk, setCredentialAsk] = useState<{ label: string; secret: boolean; finish: (value: string | null) => void } | null>(null);
@@ -77,24 +104,24 @@ function Suite() {
     setCredentialAsk(null);
     setCredentialInput('');
   };
-  const onSaveFile = useCallback(async (name: string, blob: Blob, current?: LocalDocument) => {
+  const onSaveFile = useCallback(async (name: string, blob: Blob, current?: LocalDocument, signal?: AbortSignal) => {
     const remote = current?.remote;
     if (remote?.provider.save) {
       try {
-        const file = await remote.provider.save(remote.file.id, blob, remote.file.revision ? { ifRevision: remote.file.revision } : {});
+        const file = await remote.provider.save(remote.file.id, blob, { ...(remote.file.revision ? { ifRevision: remote.file.revision } : {}), ...(signal ? { signal } : {}) });
         return { file: new File([blob], file.name || name, { type: blob.type }), remote: { provider: remote.provider, file } };
       } catch (error) {
         if ((error as { code?: string })?.code !== 'revision-conflict' || !window.confirm(translate(UI_TEXT.changed))) throw error;
-        const file = await remote.provider.save(remote.file.id, blob);
+        const file = await remote.provider.save(remote.file.id, blob, signal ? { signal } : undefined);
         return { file: new File([blob], file.name || name, { type: blob.type }), remote: { provider: remote.provider, file } };
       }
     }
     if (!remote && remoteTarget.current?.provider.create) {
       const target = remoteTarget.current;
-      const file = await target.provider.create(target.parentId, name, blob);
+      const file = await target.provider.create(target.parentId, name, blob, signal);
       return { file: new File([blob], file.name || name, { type: blob.type }), remote: { provider: target.provider, file } };
     }
-    return saveLocalDocument(current ?? { file: new File([], name) }, blob, name);
+    return saveLocalDocument(current ?? { file: new File([], name) }, blob, name, window, signal);
   }, [translate]);
 
   const openUrl = async () => {
@@ -150,9 +177,9 @@ function Suite() {
   if (active) {
     const { app, file, template } = active;
     return <main className="suite-editor">
-      <button className="back" type="button" onClick={() => setActive(null)}>{translate('Create File')}</button>
+      <button className="back" type="button" onClick={() => { void requestEditorClose().then((closed) => { if (closed) setActive(null); }); }}>{translate('Create File')}</button>
       {recoverable.length > 0 && <aside className="draft-recovery" aria-label={translate(UI_TEXT.recoverTitle)}><strong>{translate(UI_TEXT.recoverTitle)}</strong>{recoverable.map((draft) => <div key={draft.id}><span>{draft.name} · {translate(UI_TEXT.savedAt, new Date(draft.updatedAt).toLocaleString())}</span><button type="button" onClick={() => restoreDraft.current?.(draft)}>{translate(UI_TEXT.recover)}</button><button type="button" onClick={() => { void draftStore.remove(draft.id).then(() => setRecoverable((items) => items.filter((item) => item.id !== draft.id))); }}>{translate(UI_TEXT.dismiss)}</button></div>)}</aside>}
-      <ActiveEditor app={app} onSaveFile={onSaveFile} onDraftsAvailable={(drafts, restore) => { setRecoverable(drafts); restoreDraft.current = restore; }} {...(file ? { file } : {})} {...(active.document ? { document: active.document } : {})} {...(template ? { template } : {})} />
+      <ActiveEditor app={app} onSaveFile={onSaveFile} onDraftsAvailable={onDraftsAvailable} {...(file ? { file } : {})} {...(active.document ? { document: active.document } : {})} {...(template ? { template } : {})} />
     </main>;
   }
 

@@ -13,9 +13,9 @@ import { createRemoteFileCallbacks, createUrlReadProvider, createWebDavProvider,
 import { reactCsp } from '../../tools/vite/react-csp.mjs';
 
 const editors = [
-  { component: WordxEditor, label: 'Quire editor', id: 'wordx' },
-  { component: ExcelxEditor, label: 'Ledger editor', id: 'excelx' },
-  { component: PptxEditor, label: 'Lectern editor', id: 'pptx' },
+  { component: WordxEditor, label: 'Wordx editor', id: 'wordx' },
+  { component: ExcelxEditor, label: 'Excelx editor', id: 'excelx' },
+  { component: PptxEditor, label: 'PPTX editor', id: 'pptx' },
 ];
 
 test('a host can mount each editor package through its public React export', () => {
@@ -34,6 +34,29 @@ test('Wordx exposes an isolated engine mount point inside its React editor frame
   }));
   assert.match(html, /data-vibe-editor="wordx"/);
   assert.match(html, /class="vibe-editor__engine"><p>Engine fixture<\/p><\/div>/);
+});
+
+test('async editor mounts dispose late resources and report only live mount failures', async () => {
+  const { settleEditorMount } = await import('@vibeoffice/core');
+  let disposed = false, disposedLateMount = 0, reported = 0;
+  let resolveMount;
+  const pending = new Promise((resolve) => { resolveMount = resolve; });
+  settleEditorMount(pending, () => disposed, () => assert.fail('disposed mount must not be retained'), () => assert.fail('successful mount must not report an error'));
+  disposed = true;
+  resolveMount(() => disposedLateMount++);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(disposedLateMount, 1, 'a disposer returned after unmount runs immediately');
+
+  let rejectMount;
+  const lateFailure = new Promise((_resolve, reject) => { rejectMount = reject; });
+  settleEditorMount(lateFailure, () => true, () => assert.fail('rejected mount must not be retained'), () => reported++);
+  rejectMount(new Error('late failure'));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(reported, 0, 'rejection after unmount is consumed without calling stale UI');
+
+  settleEditorMount(Promise.reject(new Error('active failure')), () => false, () => {}, () => reported++);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(reported, 1, 'a live mount failure reaches its error handler');
 });
 
 test('legacy engine iframe forces React isolation and strips legacy file/recent launch keys', () => {
@@ -82,7 +105,7 @@ test('legacy React host exposes stored editor drafts with a validated restore ca
   const createBridge = bridgeModule.createLegacyHostBridge;
   const messages = [];
   let onLoad;
-  const frame = { contentWindow: { postMessage: (...args) => messages.push(args) }, style: {}, setAttribute() {}, addEventListener: (_type, listener) => { onLoad = listener; }, removeEventListener() {}, remove() {} };
+  const frame = { contentWindow: { VO: { reactHost: true, reactReady: true }, L: { app: {}, D: { doc: {} } }, postMessage: (...args) => messages.push(args) }, style: {}, setAttribute() {}, addEventListener: (_type, listener) => { onLoad = listener; }, removeEventListener() {}, remove() {} };
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   const store = {
@@ -91,19 +114,117 @@ test('legacy React host exposes stored editor drafts with a validated restore ca
   };
   let receive;
   let available;
-  globalThis.window = { location: { href: 'https://host.example/', origin: 'https://host.example' }, addEventListener: (_type, listener) => { receive = listener; }, removeEventListener() {} };
+  const hostListeners = new Map();
+  const host = { querySelector: () => frame, ownerDocument: { createElement: () => frame }, replaceChildren() {}, addEventListener: (type, listener) => hostListeners.set(type, listener), removeEventListener: (type) => hostListeners.delete(type) };
+  globalThis.window = { location: { href: 'https://host.example/', origin: 'https://host.example' }, addEventListener: (type, listener) => { if (type === 'message') receive = listener; }, removeEventListener() {}, setInterval: () => 1, clearInterval() {} };
   globalThis.document = { createElement: () => frame, documentElement: {} };
   globalThis.React = await import('react');
   globalThis.ReactDOM = await import('react-dom');
   try {
-    const mount = createBridge({ editor: 'excelx', engine: { url: 'https://host.example/ledger/' }, title: 'Ledger', accept: {}, draftStore: store, onDraftsAvailable: (drafts, restore) => { available = { drafts, restore }; } });
-    mount({ host: { querySelector: () => frame, ownerDocument: { createElement: () => frame }, replaceChildren() {} } });
+    const initialDocument = { file: new File(['book'], 'Initial.xlsx') };
+    const mount = createBridge({ editor: 'excelx', engine: { url: 'https://host.example/ledger/' }, title: 'Ledger', accept: {}, draftStore: store, initialDocument, onDraftsAvailable: (drafts, restore) => { available = { drafts, restore }; } });
+    mount({ host, editor: 'excelx', signal: new AbortController().signal });
     onLoad();
     await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(messages[0][0], { type: 'vibeoffice-react-open', file: initialDocument.file, initial: true });
     assert.equal(available.drafts[0].name, 'sheet.xlsx');
     available.restore(available.drafts[0]);
-    assert.equal(messages[0][0].type, 'vibeoffice-react-restore');
+    assert.equal(messages[1][0].type, 'vibeoffice-react-restore');
+    receive({ source: frame.contentWindow, origin: 'https://host.example', data: { type: 'vibeoffice-react-ready' } });
+    assert.equal(messages.length, 2, 'a late ready event does not open the initial file twice');
     assert.throws(() => available.restore({ ...available.drafts[0], editor: 'pptx' }), /Invalid excelx draft/);
+  } finally { globalThis.window = previousWindow; globalThis.document = previousDocument; }
+});
+
+test('legacy React host queues toolbar and file commands until the engine is ready', async () => {
+  const { createLegacyHostBridge: createBridge } = await import('../../commonx/dist/index.js');
+  const messages = [];
+  let onLoad;
+  const frame = { contentWindow: { postMessage: (...args) => messages.push(args) }, style: {}, setAttribute() {}, addEventListener: (_type, listener) => { onLoad = listener; }, removeEventListener() {}, remove() {} };
+  const previousWindow = globalThis.window;
+  const previousDocument = globalThis.document;
+  let receive;
+  const hostListeners = new Map();
+  const host = { querySelector: () => frame, ownerDocument: { createElement: () => frame }, replaceChildren() {}, addEventListener: (type, listener) => hostListeners.set(type, listener), removeEventListener: (type) => hostListeners.delete(type) };
+  let broadcastCommands = 0;
+  globalThis.window = { location: { href: 'https://host.example/', origin: 'https://host.example' }, addEventListener: (type, listener) => { if (type === 'message') receive = listener; if (type === 'vibeoffice-react-command') broadcastCommands++; }, removeEventListener() {}, setInterval: () => 1, clearInterval() {} };
+  globalThis.document = { createElement: () => frame, documentElement: {} };
+  globalThis.React = await import('react');
+  globalThis.ReactDOM = await import('react-dom');
+  try {
+    const mount = createBridge({ editor: 'wordx', engine: { url: 'https://host.example/quire/' }, title: 'Quire', accept: {}, draftStore: { async list() { return []; }, async put() {}, async remove() {} } });
+    const controller = new AbortController();
+    const cleanup = mount({ host, editor: 'wordx', signal: controller.signal });
+    const command = hostListeners.get('vibeoffice-react-command');
+    command({ detail: { command: 'new' } });
+    assert.equal(broadcastCommands, 0, 'commands are delivered through the owning editor host rather than broadcast to window');
+    assert.deepEqual(messages, [], 'commands do not reach an engine that has not attached yet');
+    receive({ source: frame.contentWindow, origin: 'https://host.example', data: { type: 'vibeoffice-react-ready' } });
+    assert.deepEqual(messages.map(([message]) => message), [{ type: 'vibeoffice-react-command', command: 'new' }]);
+    onLoad();
+    assert.equal(messages.length, 1, 'the later load poll does not duplicate queued commands');
+    controller.abort();
+    assert.equal(hostListeners.size, 0, 'the host-targeted event listeners are removed on unmount');
+    cleanup();
+  } finally { globalThis.window = previousWindow; globalThis.document = previousDocument; }
+});
+
+test('legacy React host ignores an asynchronous file open that finishes after unmount', async () => {
+  const { createLegacyHostBridge: createBridge } = await import('../../commonx/dist/index.js');
+  const messages = [];
+  const frame = { contentWindow: { postMessage: (...args) => messages.push(args) }, style: {}, setAttribute() {}, addEventListener() {}, removeEventListener() {}, remove() {} };
+  const previousWindow = globalThis.window;
+  const previousDocument = globalThis.document;
+  let receive;
+  let finishOpen;
+  const host = { querySelector: () => frame, ownerDocument: { createElement: () => frame }, replaceChildren() {}, addEventListener() {}, removeEventListener() {} };
+  globalThis.window = { location: { href: 'https://host.example/', origin: 'https://host.example' }, addEventListener: (type, listener) => { if (type === 'message') receive = listener; }, removeEventListener() {}, setInterval: () => 1, clearInterval() {} };
+  globalThis.document = { createElement: () => frame, documentElement: {} };
+  globalThis.React = await import('react');
+  globalThis.ReactDOM = await import('react-dom');
+  try {
+    const controller = new AbortController();
+    const mount = createBridge({ editor: 'wordx', engine: { url: 'https://host.example/quire/' }, title: 'Quire', accept: {},
+      draftStore: { async list() { return []; }, async put() {}, async remove() {} },
+      onOpenFile: () => new Promise((resolve) => { finishOpen = resolve; }) });
+    mount({ host, editor: 'wordx', signal: controller.signal });
+    receive({ source: frame.contentWindow, origin: 'https://host.example', data: { type: 'vibeoffice-react-ready' } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    receive({ source: frame.contentWindow, origin: 'https://host.example', data: { type: 'vibeoffice-react-request-open' } });
+    controller.abort();
+    finishOpen({ file: new File(['late'], 'Late.docx') });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(messages, [], 'a completed picker cannot message an unmounted editor');
+  } finally { globalThis.window = previousWindow; globalThis.document = previousDocument; }
+});
+
+test('Wordx React host routes a document save to the host with the opened local file context', async () => {
+  const { createLegacyHostBridge: createBridge } = await import('../../commonx/dist/index.js');
+  const messages = [];
+  const frame = { contentWindow: { postMessage: (...args) => messages.push(args) }, style: {}, setAttribute() {}, addEventListener() {}, removeEventListener() {}, remove() {} };
+  const previousWindow = globalThis.window;
+  const previousDocument = globalThis.document;
+  let receive;
+  const sourceFile = new File(['source'], 'Plan.txt', { type: 'text/plain' });
+  const opened = { file: sourceFile };
+  const hostListeners = new Map();
+  const host = { querySelector: () => frame, ownerDocument: { createElement: () => frame }, replaceChildren() {}, addEventListener: (type, listener) => hostListeners.set(type, listener), removeEventListener: (type) => hostListeners.delete(type) };
+  let callback;
+  globalThis.window = { location: { href: 'https://host.example/', origin: 'https://host.example' }, addEventListener: (type, listener) => { if (type === 'message') receive = listener; }, removeEventListener() {}, setInterval: () => 1, clearInterval() {} };
+  globalThis.document = { createElement: () => frame, documentElement: {} };
+  globalThis.React = await import('react');
+  globalThis.ReactDOM = await import('react-dom');
+  try {
+    const mount = createBridge({ editor: 'wordx', engine: { url: 'https://host.example/quire/' }, title: 'Quire', accept: {}, initialDocument: opened,
+      draftStore: { async list() { return []; }, async put() {}, async remove() {} },
+      onSaveFile: async (name, blob, current) => { callback = { name, text: await blob.text(), current }; return opened; } });
+    mount({ host, editor: 'wordx', signal: new AbortController().signal });
+    receive({ source: frame.contentWindow, origin: 'https://host.example', data: { type: 'vibeoffice-react-ready' } });
+    const blob = new Blob(['PK\u0003\u0004 OOXML']);
+    receive({ source: frame.contentWindow, origin: 'https://host.example', data: { type: 'vibeoffice-react-request-save', requestId: 'save-1', name: 'Plan.docx', blob } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(callback, { name: 'Plan.docx', text: 'PK\u0003\u0004 OOXML', current: opened });
+    assert.deepEqual(messages.at(-1)[0], { type: 'vibeoffice-react-save-result', requestId: 'save-1', result: 'saved' });
   } finally { globalThis.window = previousWindow; globalThis.document = previousDocument; }
 });
 
@@ -121,6 +242,90 @@ test('local open/save honors a writable file handle and returns the updated file
   assert.equal(written, 'updated');
   assert.equal(await saved.file.text(), 'updated');
   assert.equal(saved.handle, handle);
+});
+
+test('local file open rejects promptly when its mount AbortSignal is cancelled', async () => {
+  const controller = new AbortController();
+  let pickerSettled = false;
+  let finishPicker;
+  const picker = { showOpenFilePicker: () => new Promise((resolve) => { finishPicker = () => { pickerSettled = true; resolve([]); }; }) };
+  const opening = openLocalDocument(undefined, picker, controller.signal);
+  controller.abort();
+  await assert.rejects(opening, { name: 'AbortError' });
+  assert.equal(pickerSettled, false, 'the host stops waiting even if the browser-owned picker cannot be programmatically dismissed');
+  finishPicker();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(pickerSettled, true, 'the eventual native picker completion is safely ignored');
+});
+
+test('local file-input fallback removes its picker when the mount is aborted', async () => {
+  const previousDocument = globalThis.document;
+  const listeners = new Map();
+  const input = { type: '', accept: '', files: [], removed: false, addEventListener(type, listener) { listeners.set(type, listener); }, removeEventListener(type) { listeners.delete(type); }, click() {}, remove() { this.removed = true; } };
+  globalThis.document = { createElement: (tag) => { assert.equal(tag, 'input'); return input; } };
+  try {
+    const controller = new AbortController();
+    const opening = openLocalDocument(undefined, {}, controller.signal);
+    assert.equal(input.type, 'file');
+    controller.abort();
+    await assert.rejects(opening, { name: 'AbortError' });
+    assert.equal(input.removed, true);
+    assert.equal(listeners.size, 0);
+  } finally { globalThis.document = previousDocument; }
+});
+
+test('local save picker and draft transactions abort with their editor mount', async () => {
+  const pickerController = new AbortController();
+  const picker = { showSaveFilePicker: () => new Promise(() => {}) };
+  const saving = saveLocalDocument({ file: new File([], 'Plan.docx') }, new Blob(['save']), 'Plan.docx', picker, pickerController.signal);
+  pickerController.abort();
+  await assert.rejects(saving, { name: 'AbortError' });
+
+  const drafts = createIndexedDbDraftStore(new IDBFactory());
+  const draftController = new AbortController();
+  const writing = drafts.put({ id: 'wordx:abort', editor: 'wordx', name: 'Plan.docx', updatedAt: 1, snapshot: new Blob(['draft']) }, draftController.signal);
+  draftController.abort();
+  await assert.rejects(writing, { name: 'AbortError' });
+});
+
+test('local save aborts an in-progress writable stream', async () => {
+  const controller = new AbortController();
+  let startWrite;
+  let rejectWrite;
+  let abortCalls = 0;
+  const writeStarted = new Promise((resolve) => { startWrite = resolve; });
+  const handle = {
+    async createWritable() {
+      return {
+        write() {
+          startWrite();
+          return new Promise((_, reject) => { rejectWrite = reject; });
+        },
+        async abort() {
+          abortCalls++;
+          rejectWrite?.(new DOMException('Aborted', 'AbortError'));
+        },
+        async close() {},
+      };
+    },
+  };
+  const saving = saveLocalDocument({ file: new File([], 'Plan.docx'), handle }, new Blob(['save']), 'Plan.docx', {}, controller.signal);
+  await writeStarted;
+  controller.abort();
+  await assert.rejects(saving, { name: 'AbortError' });
+  assert.ok(abortCalls > 0, 'cancelling the mount aborts the active writable stream');
+});
+
+test('an aborted mount never starts the local download fallback', async () => {
+  const previousWindow = globalThis.window;
+  let anchorsCreated = 0;
+  globalThis.window = { document: { createElement() { anchorsCreated++; throw new Error('download must not start after unmount'); } } };
+  try {
+    const controller = new AbortController();
+    controller.abort();
+    await assert.rejects(saveLocalDocument({ file: new File([], 'Plan.docx') }, new Blob(['save']), 'Plan.docx', {}, controller.signal), { name: 'AbortError' });
+    assert.equal(anchorsCreated, 0);
+  } finally { globalThis.window = previousWindow; }
 });
 
 test('dirty local documents preserve Save, Discard, and Cancel behavior', async () => {

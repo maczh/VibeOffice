@@ -5,7 +5,117 @@
   'use strict';
   const L = root.L || (root.L = {});
   const { h } = L;
+  const domHost = () => document.fullscreenElement || (L.domHost ? L.domHost() : document.body);
   const ui = (L.ui = {});
+  const mountDisposers = new WeakMap();
+  const uiMounts = new Set();
+  const layerRoots = new Map();
+  const windowMounts = new WeakMap();
+  let legacyUiInstalled = false;
+  const mountPointerEvents = ['mousedown', 'mouseup', 'auxclick', 'contextmenu'];
+  ui.mount = function (host) {
+    if (!host || typeof host.addEventListener !== 'function') throw new TypeError('A UI mount element is required');
+    ui.unmount(host);
+    const rootRestore = L.mountDomRoot ? L.mountDomRoot(host) : null;
+    const on = (target, type, listener, options) => {
+      target.addEventListener(type, listener, options);
+      return () => target.removeEventListener(type, listener, options);
+    };
+    const offs = [];
+    const doc = host.ownerDocument || document;
+    const win = doc.defaultView || window;
+    offs.push(on(host, 'pointerover', legacyPointerover));
+    offs.push(on(host, 'pointerdown', hideTip, true));
+    offs.push(on(host, 'keydown', hideTip, true));
+    offs.push(on(host, 'pointerdown', legacyCloseOutside, true));
+    offs.push(on(host, 'mousedown', legacyKeepKeyboard, true));
+    offs.push(on(host, 'keydown', legacyStopBrush, true));
+    let shared = windowMounts.get(win);
+    if (!shared) {
+      shared = { count: 0, offs: [on(win, 'blur', legacyCloseMenus), on(win, 'resize', legacyCloseMenus), ...mountPointerEvents.map((type) => on(win, type, swallowOtherButtons, true))] };
+      windowMounts.set(win, shared);
+    }
+    shared.count++;
+    uiMounts.add(host);
+    mountDisposers.set(host, () => {
+      offs.splice(0).forEach((off) => off());
+      uiMounts.delete(host);
+      if (--shared.count === 0) {
+        shared.offs.forEach((off) => off());
+        windowMounts.delete(win);
+      }
+      for (const [element, owner] of layerRoots) if (owner === host) { element.remove(); layerRoots.delete(element); }
+      uninstallLegacyUi();
+      tipEl = null; tipTarget = null; clearTimeout(tipTimer);
+      ui.closeMenus();
+      rootRestore?.();
+    });
+    uninstallLegacyUi();
+    return () => ui.unmount(host);
+  };
+  ui.unmount = function (host) {
+    const dispose = mountDisposers.get(host);
+    if (!dispose) return;
+    mountDisposers.delete(host);
+    dispose();
+  };
+  const trackLayer = (element) => {
+    const host = uiMounts.size ? Array.from(uiMounts).at(-1) : null;
+    if (host) layerRoots.set(element, host);
+    return element;
+  };
+  function legacyPointerover(e) {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (t === tipTarget) return;
+    hideTip();
+    if (!t || e.pointerType === 'touch') return;
+    tipTarget = t;
+    const x = e.clientX, y = e.clientY;
+    tipTimer = setTimeout(() => showTip(t, x, y), 650);
+  }
+  function legacyCloseOutside(e) {
+    if (!openStack.length) return;
+    if (e.target.closest('.menu') || e.target.closest('.mb-item')) return;
+    ui.closeMenus();
+  }
+  function legacyKeepKeyboard(e) {
+    const t = e.target;
+    if (!t || !t.closest || t.closest('.dlg')) return;
+    const f = t.closest('input, select, textarea, [contenteditable=""], [contenteditable="true"], a[href], label, [tabindex], button');
+    if (f && !f.matches('button, .menu, .mb-item')) return;
+    e.preventDefault();
+  }
+  function legacyStopBrush(e) {
+    if (e.key !== 'Escape' || !liveBrush || ui.dialogOpen() || ui.menuOpen()) return;
+    e.preventDefault(); e.stopPropagation(); liveBrush.stop();
+  }
+  function legacyCloseMenus() { ui.closeMenus(); }
+  function installLegacyUi() {
+    if (legacyUiInstalled || uiMounts.size) return;
+    legacyUiInstalled = true;
+    document.addEventListener('pointerover', legacyPointerover);
+    document.addEventListener('pointerdown', hideTip, true);
+    document.addEventListener('keydown', hideTip, true);
+    document.addEventListener('pointerdown', legacyCloseOutside, true);
+    document.addEventListener('mousedown', legacyKeepKeyboard, true);
+    document.addEventListener('keydown', legacyStopBrush, true);
+    window.addEventListener('blur', legacyCloseMenus);
+    window.addEventListener('resize', legacyCloseMenus);
+    for (const type of mountPointerEvents) window.addEventListener(type, swallowOtherButtons, true);
+  }
+  function uninstallLegacyUi() {
+    if (!legacyUiInstalled || uiMounts.size) return;
+    legacyUiInstalled = false;
+    document.removeEventListener('pointerover', legacyPointerover);
+    document.removeEventListener('pointerdown', hideTip, true);
+    document.removeEventListener('keydown', hideTip, true);
+    document.removeEventListener('pointerdown', legacyCloseOutside, true);
+    document.removeEventListener('mousedown', legacyKeepKeyboard, true);
+    document.removeEventListener('keydown', legacyStopBrush, true);
+    window.removeEventListener('blur', legacyCloseMenus);
+    window.removeEventListener('resize', legacyCloseMenus);
+    for (const type of mountPointerEvents) window.removeEventListener(type, swallowOtherButtons, true);
+  }
 
   /* What the app's editor does around commands, toolbar boxes and dialogs; each app fills these in (app.js).
    * beforeExec: bring the selection model up to date; refocus: give the keyboard back to the document;
@@ -74,7 +184,7 @@
   function showTip(target, x, y) {
     const t = target.getAttribute('data-tip');
     if (!t) return;
-    if (!tipEl) { tipEl = h('div', { class: 'tooltip', role: 'tooltip' }); document.body.appendChild(tipEl); }
+    if (!tipEl) { tipEl = trackLayer(h('div', { class: 'tooltip', role: 'tooltip' })); domHost().appendChild(tipEl); }
     tipEl.textContent = target.closest('[translate="no"]') ? t : (L.t ? L.t(t) : t);   // data (a font's name) stays as it is
     tipEl.hidden = false;
     const r = tipEl.getBoundingClientRect();
@@ -85,19 +195,7 @@
     tipEl.style.top = Math.max(2, top) + 'px';
   }
   function hideTip() { clearTimeout(tipTimer); tipTarget = null; if (tipEl) tipEl.hidden = true; }
-  if (typeof document !== 'undefined') {
-    document.addEventListener('pointerover', (e) => {
-      const t = e.target.closest && e.target.closest('[data-tip]');
-      if (t === tipTarget) return;
-      hideTip();
-      if (!t || e.pointerType === 'touch') return;
-      tipTarget = t;
-      const x = e.clientX, y = e.clientY;
-      tipTimer = setTimeout(() => showTip(t, x, y), 650);
-    });
-    document.addEventListener('pointerdown', hideTip, true);
-    document.addEventListener('keydown', hideTip, true);
-  }
+  if (typeof document !== 'undefined') installLegacyUi();
   ui.hideTip = hideTip;
 
   /* ---------- menus ---------- */
@@ -188,7 +286,8 @@
       void idx;
       return false;
     };
-    (document.fullscreenElement || document.body).appendChild(el);   // over a slide show, as dialogs
+    trackLayer(el);
+    domHost().appendChild(el);   // over a slide show, as dialogs
     /* position */
     const r = el.getBoundingClientRect();
     let x, y;
@@ -205,26 +304,7 @@
     return el;
   };
   ui.contextMenu = (e, items) => { e.preventDefault(); ui.openMenu(items, { x: e.clientX, y: e.clientY }); };
-  if (typeof document !== 'undefined') {
-    document.addEventListener('pointerdown', (e) => {
-      if (!openStack.length) return;
-      if (e.target.closest('.menu') || e.target.closest('.mb-item')) return;
-      ui.closeMenus();
-    }, true);
-    window.addEventListener('blur', () => ui.closeMenus());
-    window.addEventListener('resize', () => ui.closeMenus());
-    /* The keyboard stays with the document when chrome is pressed: a toolbar's, the ribbon's or a pane's background, a
-       grip, the status bar, a tab strip, a menu, the menu bar or a button outside a dialog. The browser would give it
-       to <body> or to what was pressed, and the arrows, Delete and typing would stop working on the document until it
-       is clicked. A control of its own (a box, a list, the document itself, anything in a dialog) still takes it. */
-    document.addEventListener('mousedown', (e) => {
-      const t = e.target;
-      if (!t || !t.closest || t.closest('.dlg')) return;
-      const f = t.closest('input, select, textarea, [contenteditable=""], [contenteditable="true"], a[href], label, [tabindex], button');
-      if (f && !f.matches('button, .menu, .mb-item')) return;
-      e.preventDefault();
-    }, true);
-  }
+  /* Mounted and standalone event registration is owned by installLegacyUi/ui.mount above. */
   /** after chrome that took the keyboard is done with it (a menu command, a dialog), the document gets it back */
   const keyboardLost = () => !document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected;
   ui.menuOpen = () => openStack.length > 0;
@@ -425,7 +505,8 @@
     });
     dlg.append(titleBar, body, foot);
     overlay.appendChild(dlg);
-    (document.fullscreenElement || document.body).appendChild(overlay);   // over a slide show, which is full screen
+    trackLayer(overlay);
+    domHost().appendChild(overlay);   // over a slide show, which is full screen
     /* center */
     const r = dlg.getBoundingClientRect();
     dlg.style.left = Math.max(4, (window.innerWidth - r.width) / 2) + 'px';
@@ -824,12 +905,6 @@
     return b;
   };
   ui.brushOn = () => liveBrush;
-  if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !liveBrush || ui.dialogOpen() || ui.menuOpen()) return;
-    e.preventDefault();
-    e.stopPropagation();
-    liveBrush.stop();
-  }, true);
 
   /* ---------- drags ---------- */
   /* A drag is what a press with the primary button starts and its release ends: moving a shape, a ruler marker or a
@@ -856,6 +931,15 @@
   let liveDrag = null, swallow = null, cursorStyle = null;
   /** the events of the button that cancelled a drag go no further: its press, release, auxclick and context menu */
   const swallowButton = (button) => { swallow = { button, until: Date.now() + 1500, seen: new Set() }; };
+  function swallowOtherButtons(e) {
+    if (e.button === 0) return;
+    if (liveDrag) { swallowButton(e.button); liveDrag.end(false, null, 'button'); }
+    if (!swallow || e.button !== swallow.button) return;
+    if (Date.now() > swallow.until) { swallow = null; return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    swallow.seen.add(e.type);
+    if (swallow.seen.has('mouseup') && swallow.seen.has(swallow.button === 2 ? 'contextmenu' : 'auxclick')) swallow = null;
+  }
   const holdCursor = (c) => {
     if (!cursorStyle) { cursorStyle = document.createElement('style'); document.head.appendChild(cursorStyle); }
     cursorStyle.textContent = c ? `*, *::before, *::after { cursor: ${c} !important; }` : '';
@@ -915,21 +999,12 @@
   /* a second button cancels the drag; its own events then go no further (the pointer events report it as a move,
      before the mouse events come): its press, its release, and its auxclick or context menu, whichever ends that
      click, in whatever order the system sends them (or for 1.5 s at most) */
-  if (typeof window !== 'undefined') for (const type of ['mousedown', 'mouseup', 'auxclick', 'contextmenu']) window.addEventListener(type, (e) => {
-    if (e.button === 0) return;
-    if (liveDrag) { swallowButton(e.button); liveDrag.end(false, null, 'button'); }
-    if (!swallow || e.button !== swallow.button) return;
-    if (Date.now() > swallow.until) { swallow = null; return; }
-    e.preventDefault(); e.stopImmediatePropagation();
-    swallow.seen.add(type);
-    if (swallow.seen.has('mouseup') && swallow.seen.has(swallow.button === 2 ? 'contextmenu' : 'auxclick')) swallow = null;
-  }, true);
 
   /* ---------- status bar & misc ---------- */
   /** a short notice at the bottom; action: { label, run } adds a button to it (e.g. Browse) */
   ui.toast = (text, ms, action) => {
     let t = L.$('.toast');
-    if (!t) { t = h('div', { class: 'toast', role: 'status' }); document.body.appendChild(t); }
+    if (!t) { t = trackLayer(h('div', { class: 'toast', role: 'status' })); domHost().appendChild(t); }
     t.textContent = L.t ? L.t(text) : text;
     if (action) t.append(' ', h('button', { class: 'toast-act', type: 'button', text: action.label, onclick: () => { t.hidden = true; action.run(); } }));
     t.hidden = false;
@@ -939,7 +1014,7 @@
   ui.busy = (on, text) => {
     let b = L.$('.busy');
     if (!!on !== !!(b && !b.hidden)) tell('vo-busy', { on: !!on, text: on ? text || 'Working...' : '' });
-    if (on) { if (!b) { b = h('div', { class: 'busy' }, h('div', { class: 'busy-box' }, h('span', { class: 'busy-spin' }), h('span', { class: 'busy-t' }))); document.body.appendChild(b); } b.querySelector('.busy-t').textContent = t(text || 'Working...'); b.hidden = false; }
+    if (on) { if (!b) { b = trackLayer(h('div', { class: 'busy' }, h('div', { class: 'busy-box' }, h('span', { class: 'busy-spin' }), h('span', { class: 'busy-t' })))); domHost().appendChild(b); } b.querySelector('.busy-t').textContent = t(text || 'Working...'); b.hidden = false; }
     else if (b) b.hidden = true;
   };
 })(typeof window !== 'undefined' ? window : globalThis);

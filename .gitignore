@@ -1,7 +1,8 @@
 __pycache__
 node_modules
 *.zip
-.*
+.git/
+.github/
 !.gitignore
 !.dockerignore
 /issues/*.png

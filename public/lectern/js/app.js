@@ -1724,8 +1724,6 @@ addEventListener('resize',fit);fit();show(0);`;
     ui.dialog({ title: 'Paste Special', body, width: 360, buttons: [{ label: 'OK', primary: true, onClick: () => (mode === 'text' ? (TE.active() ? (L.hist.push(L.N('Paste')), TE.insertText(c.text || '')) : A.pasteText(c.text || '')) : A.pasteItem(c)) }, { label: 'Cancel' }] });
   };
   let pendingClip = null;
-  document.addEventListener('copy', (e) => onClipEvent(e, 'copy'));
-  document.addEventListener('cut', (e) => onClipEvent(e, 'cut'));
   function inNativeText(t) { return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
   function onClipEvent(e, op) {
     const prepared = typeof pendingClip === 'object' ? pendingClip : null;
@@ -1737,7 +1735,7 @@ addEventListener('resize',fit);fit();show(0);`;
     const c = prepared || (A.focusArea === 'slides' || A.view === 'sorter' ? A.copySlides(op === 'cut') : A.copyShapes(op === 'cut'));
     if (c) { e.preventDefault(); try { e.clipboardData.setData('text/plain', c.text || ''); e.clipboardData.setData('application/x-lectern', JSON.stringify(L.preserve.clipboard(c))); } catch (er) { e.clipboardData.setData('application/x-lectern', c.id); } }
   }
-  document.addEventListener('paste', (e) => {
+  function handlePaste(e) {
     pendingClip = null;
     if (L.show.active || ui.dialogOpen()) return;
     if (TE.active()) return; /* text editor handles its own paste */
@@ -1755,7 +1753,7 @@ addEventListener('resize',fit);fit();show(0);`;
     if (A.clip && (marker === A.clip.id || (text && text === A.clip.text))) { A.pasteItem(A.clip); return; }
     if (files.length) { A.insertPictureFiles(files); return; }
     if (text) { const sel = E.primary(); if (sel && sel.tx && E.sel.length === 1) { TE.begin(sel.id, { atEnd: true }); L.hist.push(L.N('Paste')); TE.insertText(text); } else A.pasteText(text); }
-  });
+  }
 
   /* ================= context menus ================= */
   A.contextShape = function (e) {
@@ -1795,7 +1793,7 @@ addEventListener('resize',fit);fit();show(0);`;
     'Alt+Shift+ArrowLeft': 'promote', 'Alt+Shift+ArrowRight': 'demote', 'Alt+Shift+ArrowUp': 'moveParaUp', 'Alt+Shift+ArrowDown': 'moveParaDown', 'F12': 'saveAs', 'Ctrl+Shift+S': 'saveAs',
   };
   const TEXT_SAFE = new Set(['bold', 'italic', 'underline', 'alignCenter', 'alignLeft', 'alignRight', 'justify', 'growFont', 'shrinkFont', 'subscript', 'superscript', 'resetChar', 'fontDlg', 'hyperlink', 'changeCase', 'promote', 'demote', 'moveParaUp', 'moveParaDown', 'undo', 'redo', 'save', 'open', 'new', 'print', 'newSlide', 'find', 'replace', 'showFromStart', 'showFromCurrent', 'help', 'spelling', 'taskPane', 'saveAs']);
-  document.addEventListener('keydown', (e) => {
+  function handleAppKeydown(e) {
     if (L.show.active) return;
     if (ui.dialogOpen()) { ui.dialogKey(e); return; }
     if (ui.menuOpen()) { if (ui.menuKey(e)) { e.preventDefault(); e.stopPropagation(); } return; }
@@ -1900,13 +1898,13 @@ addEventListener('resize',fit);fit();show(0);`;
         if (TE.active()) { L.hist.push(L.N('Typing')); TE.insertText(e.key); }
       }
     }
-  });
+  }
 
   /* ================= drag & drop ================= */
   function setupDrop() {
     let hint = null, depth = 0;
     const app = L.$('#app');
-    app.addEventListener('dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a .pptx to open it, or pictures to insert them' }); document.body.appendChild(hint); } });
+    app.addEventListener('dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a .pptx to open it, or pictures to insert them' }); L.domHost().appendChild(hint); } });
     app.addEventListener('dragleave', () => { depth--; if (depth <= 0 && hint) { hint.remove(); hint = null; depth = 0; } });
     app.addEventListener('dragover', (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); });
     app.addEventListener('drop', (e) => {
@@ -2175,19 +2173,24 @@ addEventListener('resize',fit);fit();show(0);`;
     L.bus.on('selection', () => { A.updateToolbars(); L.panes.task.refresh('selection'); });
     L.bus.on('edit-start', () => { A.updateToolbars(); ui.refresh(); });
     L.bus.on('edit-end', () => { ui.refresh(); });
-    window.addEventListener('beforeunload', (e) => { if (L.hist.dirty) { e.preventDefault(); e.returnValue = ''; } });
-    window.addEventListener('resize', L.debounce(() => { if (A.view === 'sorter') L.panes.sorter.render(); if (A.view === 'notes') L.panes.notesView.render(); if (A.view === 'preview') L.panes.preview.render(); L.panes.left.render(); }, 250));
+    L.addMountListener(window, 'beforeunload', (e) => { if (L.hist.dirty) { e.preventDefault(); e.returnValue = ''; } });
+    L.addMountListener(window, 'resize', L.debounce(() => { if (A.view === 'sorter') L.panes.sorter.render(); if (A.view === 'notes') L.panes.notesView.render(); if (A.view === 'preview') L.panes.preview.render(); L.panes.left.render(); }, 250));
     A.outlineDirty = () => {};
   }
 
   /* ================= init ================= */
   A.init = async function () {
     A.loadOpts();
+    TE.mount();
     if (window.VO) VO.setIcon(L.icons.app(32));
     buildMenus();
     buildToolbars();
     L.ribbonUI.init();
     buildStatus();
+    L.addMountListener(L.domHost(), 'copy', (e) => onClipEvent(e, 'copy'));
+    L.addMountListener(L.domHost(), 'cut', (e) => onClipEvent(e, 'cut'));
+    L.addMountListener(L.domHost(), 'paste', handlePaste);
+    L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
     /* opened from the Start Center: a template, or blank (a new presentation, or to open a file into); else the sample */
     const launch = window.VO && VO.launch;
     const blank = !!launch;
@@ -2242,9 +2245,21 @@ addEventListener('resize',fit);fit();show(0);`;
       templates: () => L.templates.list().map(({ id, name }) => ({ id, name })),
     });
   };
+  /** Mount Lectern into a host that already contains its editor shell; returns an idempotent disposer. */
+  A.mount = async function (host) {
+    if (!L.createMountScope) throw new Error('Lectern requires the shared mount-scope runtime');
+    const scope = L.createMountScope(host);
+    try { await A.init(); }
+    catch (error) { scope.dispose(); throw error; }
+    return () => scope.dispose();
+  };
+
 
   /* once the page and the UI's dictionary are here (common/i18n.js) */
-  const boot = () => (window.VO && VO.i18n ? VO.i18n.whenReady(() => A.init()) : A.init());
+  const boot = () => {
+    const host = document.querySelector('[data-vibeoffice-engine-root]') || document.body;
+    return window.VO && VO.i18n ? VO.i18n.whenReady(() => A.mount(host)) : A.mount(host);
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

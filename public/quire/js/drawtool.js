@@ -90,7 +90,7 @@
     }
   }
   L.bus.on('app-ready', () => {
-    LY.scroller.addEventListener('pointerdown', onDown, true);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && DT.active) { DT.stop(); A().status(''); } });
+    L.addMountListener(LY.scroller, 'pointerdown', onDown, true);
+    L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.key === 'Escape' && DT.active) { DT.stop(); A().status(''); } });
   });
 })();

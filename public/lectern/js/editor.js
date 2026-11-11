@@ -50,8 +50,12 @@
         E.goto(E.idx + (e.deltaY > 0 ? 1 : -1));
       }
     }, { passive: false });
-    if (window.ResizeObserver) new ResizeObserver(() => { if (E.zoom === 'fit') E.layout(); else E.layout(); }).observe(E.scroller);
-    else window.addEventListener('resize', () => E.layout());
+    if (window.ResizeObserver) {
+      const observer = new ResizeObserver(() => E.layout());
+      observer.observe(E.scroller);
+      L.addMountCleanup(() => observer.disconnect());
+    }
+    else L.addMountListener(window, 'resize', () => E.layout());
   };
 
   E.refocus = () => {

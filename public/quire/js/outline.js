@@ -138,7 +138,7 @@
   OL.toggle = function (k) { OL[k] = !OL[k]; if (L.app.view === 'outline') { LY.render(); E.restoreDom(true); } L.ui.refresh(); };
   /* clicking an outline symbol selects the heading with its subtext; double-click expands/collapses */
   L.bus.on('app-ready', () => {
-    LY.root.addEventListener('mousedown', (e) => {
+    L.addMountListener(LY.root, 'mousedown', (e) => {
       if (L.app.view !== 'outline') return;
       const f = e.target.closest && e.target.closest('.flow.outline > .p');
       if (!f) return;
