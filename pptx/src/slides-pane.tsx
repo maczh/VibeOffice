@@ -1,14 +1,14 @@
-import { useEffect, useState, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 
 interface SlideLike { id?: string; hidden?: boolean; trans?: { type?: string; after?: number }; anims?: unknown[] }
 interface PptxPaneRuntime {
   pres?: { slides: SlideLike[]; firstNum?: number };
   ed?: { idx: number; view: string };
-  app?: { slideSel: Set<number>; reactMounted?: boolean; contextThumb(event: MouseEvent): void; setView(view: string): void; toggleLeft(show: boolean): void; toggleTask(show: boolean): void };
+  app?: { slideSel: Set<number>; reactMounted?: boolean; opts?: { outlinePlain?: boolean; spell?: boolean }; contextThumb(event: MouseEvent): void; setView(view: string): void; toggleLeft(show: boolean): void; toggleTask(show: boolean): void };
   render?: { thumb(presentation: NonNullable<PptxPaneRuntime['pres']>, slide: SlideLike, width: number, options: { index: number }): HTMLElement };
   panes?: {
-    left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; setTab(tab: string): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
+    left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; outline?: HTMLElement | null; setTab(tab: string): void; reactOutlineRows?(): Array<{ kind: string; slideId?: string; level: number; text: string }>; onOutlineInput?(): void; onOutlinePaste?(event: ClipboardEvent): void; onOutlineKey?(event: KeyboardEvent): void; syncOutlineSlide?(): void; styleOutline?(): void; commitOutline?(keepFocus?: boolean): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
     sorter?: { el?: HTMLElement; reactMounted?: boolean; onDown?(event: PointerEvent, index: number, item: HTMLElement): void; mark(): void };
     task?: { stack: string[]; pos: number; current?: string; registry: Record<string, { id: string; title: string; hidden?: boolean }>; show(id: string): void; go(position: number): void };
   };
@@ -29,6 +29,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const [taskMount, setTaskMount] = useState<HTMLElement | null>(null);
   const [sorterMount, setSorterMount] = useState<HTMLElement | null>(null);
   const [revision, setRevision] = useState(0);
+  const outlineMutated = useRef(false);
   useEffect(() => {
     let slot: HTMLElement | null = null;
     let tabsSlot: HTMLElement | null = null;
@@ -48,11 +49,12 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       const engine = runtime();
       if (!engine) return;
       if (!subscribed && engine.bus) {
-        offRender = engine.bus.on('pptx-slides-render', () => setRevision((value) => value + 1));
-        offMark = engine.bus.on('pptx-slides-mark', () => setRevision((value) => value + 1));
-        offTask = engine.bus.on('pptx-task-render', () => setRevision((value) => value + 1));
-        offSorterRender = engine.bus.on('pptx-sorter-render', () => setRevision((value) => value + 1));
-        offSorterMark = engine.bus.on('pptx-sorter-mark', () => setRevision((value) => value + 1));
+        const refresh = () => { if (!outlineMutated.current) setRevision((value) => value + 1); };
+        offRender = engine.bus.on('pptx-slides-render', refresh);
+        offMark = engine.bus.on('pptx-slides-mark', refresh);
+        offTask = engine.bus.on('pptx-task-render', refresh);
+        offSorterRender = engine.bus.on('pptx-sorter-render', refresh);
+        offSorterMark = engine.bus.on('pptx-sorter-mark', refresh);
         subscribed = true;
       }
       if (target && target !== slot) {
@@ -122,8 +124,8 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     <button className="tp-nav" type="button" aria-label={L.t?.('Close task pane') || 'Close task pane'} dangerouslySetInnerHTML={{ __html: L.icons?.get('close', 12) || '' }} onClick={() => L.app?.toggleTask(false)} />
   </div>, taskMount);
   const tabs = tabsMount && createPortal(<div className="lp-tabs" role="tablist" aria-label="Presentation panes">
-    <button className={`lp-tab${pane.tab === 'outline' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'outline'} onClick={() => pane.setTab('outline')}>{L.t?.('Outline|pane') || 'Outline'}</button>
-    <button className={`lp-tab${pane.tab === 'slides' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'slides'} onClick={() => pane.setTab('slides')}>{L.t?.('Slides') || 'Slides'}</button>
+    <button className={`lp-tab${pane.tab === 'outline' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'outline'} onClick={() => { if (pane.tab !== 'outline') outlineMutated.current = false; pane.setTab('outline'); }}>{L.t?.('Outline|pane') || 'Outline'}</button>
+    <button className={`lp-tab${pane.tab === 'slides' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'slides'} onClick={() => { outlineMutated.current = false; pane.setTab('slides'); }}>{L.t?.('Slides') || 'Slides'}</button>
     <button className="lp-close" type="button" aria-label={L.t?.('Close pane') || 'Close pane'} dangerouslySetInnerHTML={{ __html: L.icons?.get('close', 12) || '' }} onClick={() => L.app?.toggleLeft(false)} />
   </div>, tabsMount);
   const renderSlide = L.render?.thumb;
@@ -137,6 +139,16 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       </div>;
     })}
   </div>, sorterMount);
+  const outlineRows = pane.tab === 'outline' ? pane.reactOutlineRows?.() : undefined;
+  const outlineView = mount && outlineRows && presentation && createPortal(<div className={`outline${L.app?.opts?.outlinePlain ? ' plain' : ''}`} contentEditable suppressContentEditableWarning spellCheck={!!L.app?.opts?.spell} role="textbox" aria-multiline="true" aria-label={L.t?.('Outline|pane') || 'Outline'} ref={(element) => { if (element) { pane.outline = element; pane.styleOutline?.(); } else if (pane.outline?.id === 'react-outline-editor') pane.outline = null; }} id="react-outline-editor" onInput={() => { outlineMutated.current = true; pane.onOutlineInput?.(); }} onPaste={(event) => pane.onOutlinePaste?.(event.nativeEvent)} onBlur={() => pane.commitOutline?.()} onKeyUp={() => pane.syncOutlineSlide?.()} onClick={() => pane.syncOutlineSlide?.()} onKeyDown={(event) => pane.onOutlineKey?.(event.nativeEvent)}>
+    {outlineRows.map((row, index) => {
+      const title = row.kind === 'title';
+      const titleNumber = (presentation.firstNum || 1) + outlineRows.slice(0, index).filter((item) => item.kind === 'title').length;
+      const style = title ? { fontWeight: 'bold' as const, marginTop: 6, paddingLeft: 36, position: 'relative' as const, minHeight: '1.35em' } : { paddingLeft: 48 + row.level * 18, position: 'relative' as const, minHeight: '1.35em', fontWeight: 'normal' as const };
+      return <div className={`ol-row ${title ? 'title' : 'body'}`} data-slide={title ? row.slideId : undefined} data-lvl={title ? undefined : row.level} data-num={title ? titleNumber : undefined} style={style} key={`${row.slideId || 'slide'}-${row.kind}-${index}`}>{row.text || <br />}</div>;
+    })}
+  </div>, mount);
+  if (pane.tab === 'outline' && L.ed?.view !== 'master') return <>{taskHeader}{tabs}{outlineView}{sorterView}</>;
   if (!mount || !presentation || !slides || pane.tab !== 'slides' || L.ed?.view === 'master') return <>{taskHeader}{tabs}{sorterView}</>;
   const body = pane.body;
   const width = Math.max(60, (body?.clientWidth || 190) - 48);

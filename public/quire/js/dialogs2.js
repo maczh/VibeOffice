@@ -14,14 +14,22 @@
 
   /* ================= Break ================= */
   G.breakDlg = function () {
-    const r = G.radios('br', [['page', '&Page break'], ['column', '&Column break'], ['wrap', 'Text &wrapping break'], ['nextPage', '&Next page'], ['continuous', 'Con&tinuous'], ['evenPage', '&Even page'], ['oddPage', '&Odd page']], 'page');
-    const els = r.querySelectorAll('.ck');
-    const body = h('div', { class: 'col' }, ui.group('Break types', els[0], els[1], els[2]), ui.group('Section break types', els[3], els[4], els[5], els[6]));
-    ui.dialog({ title: 'Break', width: 260, body, buttons: [{ label: 'OK', primary: true, onClick: () => {
-      const v = r.get();
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const items = [['page', '&Page break'], ['column', '&Column break'], ['wrap', 'Text &wrapping break'], ['nextPage', '&Next page'], ['continuous', 'Con&tinuous'], ['evenPage', '&Even page'], ['oddPage', '&Odd page']];
+    const r = direct ? null : G.radios('br', items, 'page');
+    const els = r?.querySelectorAll('.ck');
+    const root = h('div', { id: 'react-wordx-break-root' });
+    const insert = (v) => {
       if (v === 'page' || v === 'column') { E.enter(v); return; }
       if (v === 'wrap') { E.enter('line'); return; }
       A().insertSectionBreak(v);
+    };
+    G.reactBreakCatalog = () => items.map(([value, label]) => ({ value, label: L.t(label.replace('&', '')) }));
+    G.reactBreakAction = (value) => insert(value);
+    const body = direct ? root : h('div', { class: 'col' }, ui.group('Break types', els[0], els[1], els[2]), ui.group('Section break types', els[3], els[4], els[5], els[6]));
+    ui.dialog({ title: 'Break', width: 260, body, buttons: [{ label: 'OK', primary: true, onClick: () => {
+      if (direct) { G.reactBreakAction(root.querySelector('[data-break-type]:checked')?.getAttribute('data-break-type') || 'page'); return; }
+      insert(r.get());
     } }, { label: 'Cancel' }] });
   };
   A().insertSectionBreak = function (type) {
@@ -49,39 +57,45 @@
     const d = doc();
     const s = A().curSect();
     if (mode === 'format') { formatPageNumbers(s); return; }
-    const pos = ui.select([['bottom', 'Bottom of page (Footer)'], ['top', 'Top of page (Header)']], 'bottom', () => draw(), { id: 'pn-pos' });
-    const al = ui.select([['right', 'Right'], ['left', 'Left'], ['center', 'Center'], ['inside', 'Inside'], ['outside', 'Outside']], 'right', () => draw(), { id: 'pn-al' });
-    const first = ui.check('&Show number on first page', true, null);
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const pos = direct ? null : ui.select([['bottom', 'Bottom of page (Footer)'], ['top', 'Top of page (Header)']], 'bottom', () => draw(), { id: 'pn-pos' });
+    const al = direct ? null : ui.select([['right', 'Right'], ['left', 'Left'], ['center', 'Center'], ['inside', 'Inside'], ['outside', 'Outside']], 'right', () => draw(), { id: 'pn-al' });
+    const first = direct ? null : ui.check('&Show number on first page', true, null);
     const pv = h('div', { class: 'ps-page', style: 'width:80px;height:104px;margin:4px auto' });
+    const root = h('div', { id: 'react-wordx-page-numbers-root' });
     const draw = () => { L.clear(pv); const y = pos.value === 'top' ? 'top:6px' : 'bottom:6px'; const x = { left: 'left:8px', right: 'right:8px', center: 'left:36px', inside: 'right:8px', outside: 'right:8px' }[al.value]; pv.appendChild(h('span', { style: `position:absolute;${y};${x};width:8px;height:8px;border:1px solid #000;background:#fff` })); };
-    draw();
+    if (!direct) draw();
+    G.reactPageNumberAction = (position, alignment, showFirst) => {
+      const kind = position === 'top' ? 'hdr' : 'ftr';
+      E.edit('Page Numbers', () => {
+        D.touchKey(d, 'hf');
+        const holder = s.holder;
+        D.touchKey(holder, 'sect');
+        const sect = holder === d ? d.sect : holder.sect;
+        sect.refs = sect.refs || { hdr: {}, ftr: {} };
+        sect.refs[kind] = Object.assign({}, sect.refs[kind]);
+        const add = (ty, jc) => {
+          let story = sect.refs[kind][ty] && d.hf[sect.refs[kind][ty]];
+          if (!story) { const id = (kind === 'hdr' ? 'h' : 'f') + D.nid(); story = d.hf[id] = { kind, id, blocks: [D.para([], { style: D.useStyle(d, kind === 'hdr' ? 'Header' : 'Footer') })] }; sect.refs[kind][ty] = id; }
+          const fid = D.newFid(), pn = D.useStyle(d, 'PageNumber');
+          story.blocks.push(D.para([D.item('fb', { fid, instr: ' PAGE ' }, { style: pn }), D.item('fs', { fid }, { style: pn }), D.text('1', { style: pn }), D.item('fe', { fid }, { style: pn })], { style: D.useStyle(d, kind === 'hdr' ? 'Header' : 'Footer'), jc }));
+        };
+        const jc = (v, even) => (v === 'inside' ? (even ? 'right' : 'left') : v === 'outside' ? (even ? 'left' : 'right') : v);
+        add('default', jc(alignment, false));
+        if (d.settings.evenOdd) add('even', jc(alignment, true));
+        sect.titlePg = !showFirst || sect.titlePg;
+        if (!showFirst) { if (!sect.refs[kind].first) { const id = (kind === 'hdr' ? 'h' : 'f') + D.nid(); d.hf[id] = { kind, id, blocks: [D.para([], { style: kind === 'hdr' ? 'Header' : 'Footer' })] }; sect.refs[kind].first = id; } }
+        else if (sect.titlePg && sect.refs[kind].first) add('first', jc(alignment, false));
+        d._idxDirty = true;
+        return E.sel;
+      });
+    };
     ui.dialog({
-      title: 'Page Numbers', width: 360, body: G.row(h('div', { class: 'col' }, G.f('&Position:', pos), G.f('&Alignment:', al), first), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)),
+      title: 'Page Numbers', width: 360, body: direct ? root : G.row(h('div', { class: 'col' }, G.f('&Position:', pos), G.f('&Alignment:', al), first), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)),
       buttons: [{ label: '&Format...', onClick: () => { formatPageNumbers(s); return false; } }, { label: 'OK', primary: true, onClick: () => {
-        const kind = pos.value === 'top' ? 'hdr' : 'ftr';
-        E.edit('Page Numbers', () => {
-          D.touchKey(d, 'hf');
-          const holder = s.holder;
-          D.touchKey(holder, 'sect');
-          const sect = holder === d ? d.sect : holder.sect;
-          sect.refs = sect.refs || { hdr: {}, ftr: {} };
-          sect.refs[kind] = Object.assign({}, sect.refs[kind]);
-          const add = (ty, jc) => {
-            let story = sect.refs[kind][ty] && d.hf[sect.refs[kind][ty]];
-            if (!story) { const id = (kind === 'hdr' ? 'h' : 'f') + D.nid(); story = d.hf[id] = { kind, id, blocks: [D.para([], { style: D.useStyle(d, kind === 'hdr' ? 'Header' : 'Footer') })] }; sect.refs[kind][ty] = id; }
-            const fid = D.newFid(), pn = D.useStyle(d, 'PageNumber');
-            /* Word puts the number in its own paragraph aligned as chosen */
-            story.blocks.push(D.para([D.item('fb', { fid, instr: ' PAGE ' }, { style: pn }), D.item('fs', { fid }, { style: pn }), D.text('1', { style: pn }), D.item('fe', { fid }, { style: pn })], { style: D.useStyle(d, kind === 'hdr' ? 'Header' : 'Footer'), jc }));
-          };
-          const jc = (v, even) => (v === 'inside' ? (even ? 'right' : 'left') : v === 'outside' ? (even ? 'left' : 'right') : v);
-          add('default', jc(al.value, false));
-          if (d.settings.evenOdd) add('even', jc(al.value, true));
-          sect.titlePg = !first.input.checked || sect.titlePg;
-          if (!first.input.checked) { /* first page gets an empty header/footer */ if (!sect.refs[kind].first) { const id = (kind === 'hdr' ? 'h' : 'f') + D.nid(); d.hf[id] = { kind, id, blocks: [D.para([], { style: kind === 'hdr' ? 'Header' : 'Footer' })] }; sect.refs[kind].first = id; } }
-          else if (sect.titlePg && sect.refs[kind].first) add('first', jc(al.value, false));
-          d._idxDirty = true;
-          return E.sel;
-        });
+        const get = (id, fallback) => root.querySelector(`#${id}`)?.value || fallback;
+        const showFirst = direct ? !!root.querySelector('input[type=checkbox]')?.checked : first.input.checked;
+        G.reactPageNumberAction(direct ? get('react-wordx-page-position', 'bottom') : pos.value, direct ? get('react-wordx-page-alignment', 'right') : al.value, showFirst);
       } }, { label: 'Cancel' }],
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
     });
@@ -90,21 +104,29 @@
     const d = doc();
     const sect = s.sect;
     const pn = Object.assign({ fmt: 'decimal', start: null }, sect.pgNum || {});
-    const fmt = ui.select([['decimal', '1, 2, 3, ...'], ['numberInDash', '- 1 -, - 2 -, - 3 -, ...'], ['lowerLetter', 'a, b, c, ...'], ['upperLetter', 'A, B, C, ...'], ['lowerRoman', 'i, ii, iii, ...'], ['upperRoman', 'I, II, III, ...']], pn.fmt, null, { id: 'pf-fmt' });
-    const chap = ui.check('Include chapter &number', !!pn.chapStyle, null);
-    const mode = G.radios('pf-m', [['cont', '&Continue from previous section'], ['start', 'Start &at:']], pn.start != null ? 'start' : 'cont');
-    const startAt = G.num(pn.start != null ? pn.start : 1, { min: 0, id: 'pf-start' });
-    ui.dialog({ title: 'Page Number Format', width: 330, body: h('div', { class: 'col' }, G.f('Number &format:', fmt, 'wide'), chap, ui.group('Page numbering', mode, startAt)), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      E.edit('Page Number Format', () => {
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const formats = [['decimal', '1, 2, 3, ...'], ['numberInDash', '- 1 -, - 2 -, - 3 -, ...'], ['lowerLetter', 'a, b, c, ...'], ['upperLetter', 'A, B, C, ...'], ['lowerRoman', 'i, ii, iii, ...'], ['upperRoman', 'I, II, III, ...']];
+    const fmt = direct ? null : ui.select(formats, pn.fmt, null, { id: 'pf-fmt' });
+    const chap = direct ? null : ui.check('Include chapter &number', !!pn.chapStyle, null);
+    const mode = direct ? null : G.radios('pf-m', [['cont', '&Continue from previous section'], ['start', 'Start &at:']], pn.start != null ? 'start' : 'cont');
+    const startAt = direct ? null : G.num(pn.start != null ? pn.start : 1, { min: 0, id: 'pf-start' });
+    const root = h('div', { id: 'react-wordx-page-number-format-root' });
+    G.reactPageNumberFormatState = () => ({ fmt: pn.fmt, chapter: !!pn.chapStyle, mode: pn.start != null ? 'start' : 'cont', start: pn.start != null ? pn.start : 1 });
+    G.reactPageNumberFormatCatalog = () => formats.map(([value, label]) => ({ value, label: L.t(label) }));
+    G.reactPageNumberFormatAction = (format, chapter, numberingMode, start) => E.edit('Page Number Format', () => {
         D.touchKey(s.holder, 'sect');
         const sc = s.holder === d ? d.sect : s.holder.sect;
-        sc.pgNum = Object.assign({}, sc.pgNum, { fmt: fmt.value, start: mode.get() === 'start' ? startAt.get() : null });
-        if (chap.input.checked !== !!pn.chapStyle) {
-          if (chap.input.checked) sc.pgNum.chapStyle = 1;
+        sc.pgNum = Object.assign({}, sc.pgNum, { fmt: format, start: numberingMode === 'start' ? start : null });
+        if (chapter !== !!pn.chapStyle) {
+          if (chapter) sc.pgNum.chapStyle = 1;
           else { delete sc.pgNum.chapStyle; delete sc.pgNum.chapSep; }
         }
         return E.sel;
       });
+    ui.dialog({ title: 'Page Number Format', width: 330, body: direct ? root : h('div', { class: 'col' }, G.f('Number &format:', fmt, 'wide'), chap, ui.group('Page numbering', mode, startAt)), buttons: [{ label: 'OK', primary: true, onClick: () => {
+      const get = (id, fallback) => root.querySelector(`#${id}`)?.value || fallback;
+      const directMode = root.querySelector('[data-page-number-mode]:checked')?.getAttribute('data-page-number-mode') || 'cont';
+      G.reactPageNumberFormatAction(direct ? get('react-wordx-page-number-format', pn.fmt) : fmt.value, direct ? !!root.querySelector('input[type=checkbox]')?.checked : chap.input.checked, direct ? directMode : mode.get(), direct ? +(root.querySelector('#react-wordx-page-number-start')?.value || 1) : startAt.get());
     } }, { label: 'Cancel' }] });
   }
 
@@ -113,12 +135,24 @@
     const now = new Date();
     const pics = F().DATE_PICTURES;
     const def = L.store.get('defDatePic', pics[0]);
-    const lb = G.listBox(pics.map((p) => ({ value: p, label: F().formatDate(now, p) })), def, { height: 220, translate: 'no', onDbl: () => ok.click() });
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const lb = direct ? null : G.listBox(pics.map((p) => ({ value: p, label: F().formatDate(now, p) })), def, { height: 220, translate: 'no', onDbl: () => ok.click() });
     const lang = ui.select([['en-US', 'English (U.S.)'], ['en-GB', 'English (U.K.)']], 'en-US', null, { id: 'dt-lang' });
     const auto = ui.check('&Update automatically', !!L.store.get('defDateAuto', false), null);
-    const dlg = ui.dialog({ title: 'Date and Time', width: 360, body: h('div', { class: 'col' }, h('label', { text: 'Available formats:' }), lb, G.f('&Language:', lang), auto), buttons: [
-      { label: '&Default...', onClick: () => { L.store.set('defDatePic', lb.get()); L.store.set('defDateAuto', auto.input.checked); A().status('Default date format saved.'); return false; } },
-      { label: 'OK', primary: true, onClick: () => { const pic = lb.get(); if (auto.input.checked) A().insertFieldNow(`${/[hHms]/.test(pic) && !/[dMy]/.test(pic) ? 'TIME' : 'DATE'} \\@ "${pic}"`, 'Insert Date and Time'); else E.insertTextAt(F().formatDate(new Date(), pic), 'Insert Date and Time'); } },
+    const root = h('div', { id: 'react-wordx-date-time-root' });
+    G.reactDateTimeCatalog = () => pics.map((value) => ({ value, label: F().formatDate(now, value) }));
+    G.reactDateTimeState = () => ({ format: def, autoUpdate: !!L.store.get('defDateAuto', false) });
+    G.reactDateTimeAction = (action, pic, autoUpdate) => {
+      if (action === 'default') { L.store.set('defDatePic', pic); L.store.set('defDateAuto', !!autoUpdate); A().status('Default date format saved.'); return; }
+      if (action === 'insert') {
+        if (autoUpdate) A().insertFieldNow(`${/[hHms]/.test(pic) && !/[dMy]/.test(pic) ? 'TIME' : 'DATE'} \\@ "${pic}"`, 'Insert Date and Time');
+        else E.insertTextAt(F().formatDate(new Date(), pic), 'Insert Date and Time');
+      }
+    };
+    const current = () => direct ? { pic: root.querySelector('select')?.value || def, autoUpdate: !!root.querySelector('input[type=checkbox]')?.checked } : { pic: lb.get(), autoUpdate: auto.input.checked };
+    const dlg = ui.dialog({ title: 'Date and Time', width: 360, body: direct ? root : h('div', { class: 'col' }, h('label', { text: 'Available formats:' }), lb, G.f('&Language:', lang), auto), buttons: [
+      { label: '&Default...', onClick: () => { const { pic, autoUpdate } = current(); if (direct) G.reactDateTimeAction('default', pic, autoUpdate); else G.reactDateTimeAction('default', pic, autoUpdate); return false; } },
+      { label: 'OK', primary: true, onClick: () => { const { pic, autoUpdate } = current(); G.reactDateTimeAction('insert', pic, autoUpdate); } },
       { label: 'Cancel' }], onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left') });
     const ok = dlg.buttons[1];
   };
@@ -138,6 +172,44 @@
   G.field = function (fieldRef, opts) {
     opts = opts || {};
     const editing = !!fieldRef;
+    const direct = !!(window.VO && VO.reactDirectHost);
+    if (direct) {
+      const root = h('div', { id: 'react-wordx-field-root' });
+      const initialCode = editing ? fieldRef.it.instr.trim().replace(/\s*\\\*\s*MERGEFORMAT/i, '') : '';
+      const initialType = editing ? F().parse(fieldRef.it.instr).type : '';
+      const fullCode = (code, format, datePicture, keep) => {
+        let value = code.trim();
+        if (format) value += ' \\* ' + format;
+        if (datePicture && /^(DATE|TIME|CREATEDATE|SAVEDATE|PRINTDATE)\b/i.test(value) && !/\\@/.test(value)) value += ' \\@ "' + datePicture + '"';
+        if (keep && !/MERGEFORMAT/i.test(value) && !/^(TOC|INDEX|=)/i.test(value)) value += ' \\* MERGEFORMAT';
+        return value;
+      };
+      G.reactFieldState = () => ({ code: initialCode, type: initialType, editing, format: '', datePicture: '', keep: true });
+      G.reactFieldCatalog = (category = 'all') => ({
+        categories: [{ value: 'all', label: L.t('(All)') }, ...Object.keys(FIELD_CATS).map((value) => ({ value, label: value }))],
+        names: (category === 'all' ? Array.from(new Set(Object.values(FIELD_CATS).flat())).sort() : FIELD_CATS[category] || []).map((value) => ({ value, label: value })),
+        formats: [['', '(none)'], ['Upper', 'Uppercase'], ['Lower', 'Lowercase'], ['FirstCap', 'First capital'], ['Caps', 'Title case'], ['Arabic', '1, 2, 3, ...'], ['roman', 'i, ii, iii, ...'], ['ROMAN', 'I, II, III, ...'], ['alphabetic', 'a, b, c, ...'], ['ALPHABETIC', 'A, B, C, ...'], ['Ordinal', '1st, 2nd, 3rd ...'], ['CardText', 'One, Two, Three'], ['OrdText', 'First, Second, Third']].map(([value, label]) => ({ value, label: L.t(label) })),
+        datePictures: ['', ...F().DATE_PICTURES].map((value) => ({ value, label: value || L.t('(default)') })),
+      });
+      G.reactFieldDescription = (name) => L.t(FIELD_DESC[name] || '');
+      G.reactFieldPreview = (code, format, datePicture, keep) => {
+        try { const result = F().evaluate(fullCode(code, format, datePicture, keep), E.sel ? E.sel.f : null); return result == null ? L.t('(the result is produced when the field is inserted or updated)') : Array.isArray(result) ? L.t('(generated paragraphs)') : String(result); }
+        catch (e) { return L.t('Error!'); }
+      };
+      G.reactFieldAction = (code, format, datePicture, keep) => {
+        const value = fullCode(code, format, datePicture, keep);
+        if (!value) return false;
+        const type = F().parse(value).type;
+        if (editing) F().setInstr(fieldRef, value);
+        else if (type === 'TOC' || type === 'INDEX') F().insertGenerated(value);
+        else A().insertFieldNow(value);
+      };
+      ui.dialog({ title: 'Field', width: 560, focus: opts.codes ? root : null, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => {
+        const get = (id) => root.querySelector('#' + id);
+        return G.reactFieldAction(get('react-wordx-field-code')?.value || '', get('react-wordx-field-format')?.value || '', get('react-wordx-field-date-picture')?.value || '', !!get('react-wordx-field-keep')?.checked);
+      } }, { label: 'Cancel' }] });
+      return;
+    }
     const cat = ui.select([['all', '(All)']].concat(Object.keys(FIELD_CATS).map((k) => [k, k])), 'all', () => fillNames(), { id: 'fl-cat' });
     const names = G.listBox([], null, { height: 200, translate: 'no', onChange: (v) => { desc.textContent = L.t(FIELD_DESC[v] || ''); code.value = v === '=' ? '= ' : v + ' '; preview(); } });
     const fillNames = () => { const list = cat.value === 'all' ? Array.from(new Set(Object.values(FIELD_CATS).flat())).sort() : FIELD_CATS[cat.value]; names.setItems(list); };
@@ -217,6 +289,47 @@
   /* ================= Footnote and Endnote ================= */
   G.footnote = function () {
     const d = doc();
+    const direct = !!(window.VO && VO.reactDirectHost);
+    if (direct) {
+      const root = h('div', { id: 'react-wordx-footnote-root' });
+      const state = () => ({
+        kind: 'fn',
+        fnPos: (d.settings.fnPr && d.settings.fnPr.pos) || 'pageBottom',
+        enPos: (d.settings.enPr && d.settings.enPr.pos) || 'docEnd',
+        fnFmt: (d.settings.fnPr && d.settings.fnPr.fmt) || 'decimal',
+        enFmt: (d.settings.enPr && d.settings.enPr.fmt) || 'lowerRoman',
+        fnStart: (d.settings.fnPr && d.settings.fnPr.start) || 1,
+        enStart: (d.settings.enPr && d.settings.enPr.start) || 1,
+        fnRestart: (d.settings.fnPr && d.settings.fnPr.restart) || 'continuous',
+        enRestart: (d.settings.enPr && d.settings.enPr.restart) || 'continuous',
+        custom: '',
+      });
+      G.reactFootnoteState = state;
+      G.reactFootnoteCatalog = () => ({
+        locations: { fn: [['pageBottom', 'Bottom of page'], ['beneathText', 'Below text']], en: [['docEnd', 'End of document'], ['sectEnd', 'End of section']] },
+        formats: [['decimal', '1, 2, 3, ...'], ['lowerLetter', 'a, b, c, ...'], ['upperLetter', 'A, B, C, ...'], ['lowerRoman', 'i, ii, iii, ...'], ['upperRoman', 'I, II, III, ...'], ['chicago', '*, †, ‡, §, ...']],
+        restarts: [['continuous', 'Continuous'], ['eachSect', 'Restart each section'], ['eachPage', 'Restart each page']],
+      });
+      G.reactFootnoteAction = (action, values) => {
+        if (action === 'symbol') {
+          G.symbol({ pick: (character) => { const input = root.querySelector('#react-wordx-footnote-custom'); if (input) { input.value = character; input.dispatchEvent(new Event('input', { bubbles: true })); } } });
+          return;
+        }
+        if (action === 'convert') { convert(); return; }
+        const kind = values.kind;
+        const config = kind === 'fn' ? { fmt: values.fnFmt, start: values.fnStart, restart: values.fnRestart, pos: values.fnPos } : { fmt: values.enFmt, start: values.enStart, restart: values.enRestart, pos: values.enPos };
+        L.notes.setOptions(kind, config);
+        if (action === 'insert') L.notes.insert(kind, { mark: values.custom.trim() || null });
+        else return false;
+      };
+      const values = () => Object.fromEntries(['kind', 'fnPos', 'enPos', 'fnFmt', 'enFmt', 'fnStart', 'enStart', 'fnRestart', 'enRestart', 'custom'].map((key) => [key, (key === 'kind' ? root.querySelector('[name=react-wordx-footnote-kind]:checked') : root.querySelector('#react-wordx-footnote-' + key))?.value || (key.endsWith('Start') ? 1 : '')]).map(([key, value]) => [key, key.endsWith('Start') ? Math.max(1, Number(value)) : value]));
+      ui.dialog({ title: 'Footnote and Endnote', width: 380, body: root, buttons: [
+        { label: '&Insert', primary: true, onClick: () => G.reactFootnoteAction('insert', values()) },
+        { label: 'Cancel' },
+        { label: '&Apply', onClick: () => G.reactFootnoteAction('apply', values()) },
+      ] });
+      return;
+    }
     const kind = G.radios('fn-k', [['fn', '&Footnotes:'], ['en', '&Endnotes:']], 'fn', () => sync());
     const fnLoc = ui.select([['pageBottom', 'Bottom of page'], ['beneathText', 'Below text']], (d.settings.fnPr && d.settings.fnPr.pos) || 'pageBottom', null, { id: 'fn-floc' });
     const enLoc = ui.select([['docEnd', 'End of document'], ['sectEnd', 'End of section']], (d.settings.enPr && d.settings.enPr.pos) || 'docEnd', null, { id: 'fn-eloc' });
@@ -272,28 +385,45 @@
 
   /* ================= Cross-reference ================= */
   G.crossRef = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const kinds = [L.N('Numbered item'), L.N('Heading'), L.N('Bookmark'), L.N('Footnote'), L.N('Endnote')];
     const types = kinds.concat(['Equation', 'Figure', 'Table'], L.store.get('captionLabels', []));   // then the caption labels, as the document has them
     const what = { 'Numbered item': [['number', 'Paragraph number'], ['numberFull', 'Paragraph number (full context)'], ['text', 'Paragraph text'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]], Heading: [['text', 'Heading text'], ['page', 'Page number'], ['number', 'Heading number'], ['abovebelow', L.N('Above/below')]], Bookmark: [['text', 'Bookmark text'], ['page', 'Page number'], ['number', 'Paragraph number'], ['abovebelow', L.N('Above/below')]], Footnote: [['notenum', 'Footnote number'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]], Endnote: [['notenum', 'Endnote number'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]] };
     const capWhat = [['text', 'Entire caption'], ['labelnum', 'Only label and number'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]];
-    const type = ui.select(types.map((t) => [t, kinds.includes(t) ? L.t(t) : t]), 'Heading', () => refill(), { id: 'xr-type', translate: 'no' });
-    const ref = ui.select([], '', null, { id: 'xr-ref' });
-    const link = ui.check('Insert as &hyperlink', true, null);
-    const ab = ui.check('Include above/&below', false, null);
-    const list = G.listBox([], null, { height: 200, translate: 'no' });
+    const type = direct ? null : ui.select(types.map((t) => [t, kinds.includes(t) ? L.t(t) : t]), 'Heading', () => refill(), { id: 'xr-type', translate: 'no' });
+    const ref = direct ? null : ui.select([], '', null, { id: 'xr-ref' });
+    const link = direct ? null : ui.check('Insert as &hyperlink', true, null);
+    const ab = direct ? null : ui.check('Include above/&below', false, null);
+    const list = direct ? null : G.listBox([], null, { height: 200, translate: 'no' });
+    const root = h('div', { id: 'react-wordx-cross-reference-root' });
     let items = [];
-    const refill = () => {
+    const refill = (selectedType = type.value) => {
       L.clear(ref);
-      for (const [v, l] of what[type.value] || capWhat) ref.appendChild(h('option', { value: v, text: l }));
-      items = F().xrefItems(type.value);
+      for (const [v, l] of what[selectedType] || capWhat) ref.appendChild(h('option', { value: v, text: l }));
+      items = F().xrefItems(selectedType);
       list.setItems(items.map((x, i) => ({ value: String(i), label: x.text || L.t('(empty)') })));
       if (items.length) list.set('0');
     };
-    refill();
+    if (direct) {
+      G.reactCrossRefCatalog = (selectedType = 'Heading') => ({
+        types: types.map((value) => ({ value, label: kinds.includes(value) ? L.t(value) : value })),
+        references: (what[selectedType] || capWhat).map(([value, label]) => ({ value, label: L.t(label) })),
+        items: F().xrefItems(selectedType).map((item, index) => ({ value: String(index), label: item.text || L.t('(empty)') })),
+      });
+      G.reactCrossRefAction = (selectedType, itemIndex, reference, hyperlink, aboveBelow) => {
+        const candidates = F().xrefItems(selectedType);
+        const item = candidates[itemIndex];
+        if (!item) return;
+        F().insertXref(selectedType, item, reference, { link: hyperlink, abovebelow: aboveBelow });
+      };
+    } else refill();
     const dlg = ui.dialog({
       title: 'Cross-reference', width: 460, modeless: true,
-      body: h('div', { class: 'col' }, G.row(G.f('Reference type:', type), G.f('Insert &reference to:', ref)), G.row(link, ab), h('div', { class: 'cd-cap', text: 'For which item:' }), list),
-      buttons: [{ label: '&Insert', primary: true, onClick: () => { const it = items[+list.get()]; if (!it) return false; F().insertXref(type.value, it, ref.value, { link: link.input.checked, abovebelow: ab.input.checked }); return false; } }, { label: 'Close' }],
+      body: direct ? root : h('div', { class: 'col' }, G.row(G.f('Reference type:', type), G.f('Insert &reference to:', ref)), G.row(link, ab), h('div', { class: 'cd-cap', text: 'For which item:' }), list),
+      buttons: [{ label: '&Insert', primary: true, onClick: () => {
+        if (direct) { const selectedType = root.querySelector('#react-wordx-cross-reference-type')?.value || 'Heading'; G.reactCrossRefAction(selectedType, +(root.querySelector('#react-wordx-cross-reference-items')?.value || 0), root.querySelector('#react-wordx-cross-reference-reference')?.value || 'text', !!root.querySelector('#react-wordx-cross-reference-link')?.checked, !!root.querySelector('#react-wordx-cross-reference-above-below')?.checked); return false; }
+        const it = items[+list.get()]; if (!it) return false; F().insertXref(type.value, it, ref.value, { link: link.input.checked, abovebelow: ab.input.checked }); return false;
+      } }, { label: 'Close' }],
     });
     void dlg;
   };
@@ -372,20 +502,23 @@
     E.edit('TOC Format', () => { D.touchKey(d, 'styles'); for (let i = 1; i <= levels; i++) { const id = D.useStyle(d, 'TOC' + i); d.styles[id].rPr = Object.assign({}, look[Math.min(i - 1, 2)]); } D.stylesChanged(); return E.sel; });
   }
   G.markEntry = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const sel = E.sel && !E.collapsed() ? O.textRange(...E.range(), ' ').trim() : '';
-    const main = h('input', { type: 'text', id: 'me-main', value: sel, style: 'width:100%' });
-    const sub = h('input', { type: 'text', id: 'me-sub', style: 'width:100%' });
-    const opt = G.radios('me-o', [['cur', '&Current page'], ['xref', 'Cross-&reference:']], 'cur');
-    const xref = h('input', { type: 'text', id: 'me-x', value: 'See ', style: 'width:100%' });
-    const bold = ui.check('&Bold', false, null), ital = ui.check('&Italic', false, null);
-    const mark = (all) => {
-      const m = main.value.trim();
+    const main = direct ? null : h('input', { type: 'text', id: 'me-main', value: sel, style: 'width:100%' });
+    const sub = direct ? null : h('input', { type: 'text', id: 'me-sub', style: 'width:100%' });
+    const opt = direct ? null : G.radios('me-o', [['cur', '&Current page'], ['xref', 'Cross-&reference:']], 'cur');
+    const xref = direct ? null : h('input', { type: 'text', id: 'me-x', value: 'See ', style: 'width:100%' });
+    const bold = direct ? null : ui.check('&Bold', false, null), ital = direct ? null : ui.check('&Italic', false, null);
+    const root = h('div', { id: 'react-wordx-mark-entry-root' });
+    const mark = (all, values) => {
+      const m = (direct ? values.main : main.value).trim();
       if (!m) return;
-      const entry = (m + (sub.value.trim() ? ':' + sub.value.trim() : '')).replace(/"/g, '\\"');
-      let instr = `XE "${entry}"`;
-      if (opt.get() === 'xref') instr += ' \\t "' + xref.value.replace(/"/g, '\\"') + '"';
-      if (bold.input.checked) instr += ' \\b';
-      if (ital.input.checked) instr += ' \\i';
+      const subentry = direct ? values.sub : sub.value;
+      const entry = (m + (subentry.trim() ? ':' + subentry.trim() : '')).replace(/"/g, '\\"');
+      let instr = 'XE "' + entry + '"';
+      if ((direct ? values.option : opt.get()) === 'xref') instr += ' \\t "' + (direct ? values.xref : xref.value).replace(/"/g, '\\"') + '"';
+      if (direct ? values.bold : bold.input.checked) instr += ' \\b';
+      if (direct ? values.italic : ital.input.checked) instr += ' \\i';
       if (!all) { E.edit('Mark Index Entry', () => { const [, b] = E.range(); return O.insertField(b, instr, '', {}); }); return; }
       /* Mark All: every occurrence of the text in the main story */
       const d = doc();
@@ -403,28 +536,46 @@
       });
       A().status(n === 1 ? L.t('{0} entry marked.', n) : L.t('{0} entries marked.', n));
     };
-    ui.dialog({ title: 'Mark Index Entry', width: 360, modeless: true, body: h('div', { class: 'col' }, G.f('Main &entry:', main, 'wide'), G.f('&Subentry:', sub, 'wide'), ui.group('Options', opt, xref), ui.group('Page number format', bold, ital)), buttons: [{ label: '&Mark', primary: true, onClick: () => { mark(false); return false; } }, { label: 'Mark &All', onClick: () => { mark(true); return false; } }, { label: 'Close' }] });
+    G.reactMarkEntryState = () => ({ main: sel, sub: '', option: 'cur', xref: 'See ', bold: false, italic: false });
+    G.reactMarkEntryAction = (all, values) => mark(all, values);
+    const values = () => ({ main: root.querySelector('#react-wordx-mark-main')?.value || '', sub: root.querySelector('#react-wordx-mark-sub')?.value || '', option: root.querySelector('[name=react-wordx-mark-option]:checked')?.value || 'cur', xref: root.querySelector('#react-wordx-mark-xref')?.value || '', bold: !!root.querySelector('#react-wordx-mark-bold')?.checked, italic: !!root.querySelector('#react-wordx-mark-italic')?.checked });
+    ui.dialog({ title: 'Mark Index Entry', width: 360, modeless: true, body: direct ? root : h('div', { class: 'col' }, G.f('Main &entry:', main), G.f('&Subentry:', sub), ui.group('Options', opt, xref), ui.group('Page number format', bold, ital)), buttons: [{ label: '&Mark', primary: true, onClick: () => { if (direct) G.reactMarkEntryAction(false, values()); else mark(false); return false; } }, { label: 'Mark &All', onClick: () => { if (direct) G.reactMarkEntryAction(true, values()); else mark(true); return false; } }, { label: 'Close' }] });
   };
 
   /* ================= Bookmark ================= */
   G.bookmark = function () {
-    const sortBy = G.radios('bm-s', [['name', '&Name'], ['loc', '&Location']], 'name', () => fill());
-    const hidden = ui.check('&Hidden bookmarks', false, () => fill());
+    const direct = !!(window.VO && VO.reactDirectHost);
+    let reactName = '', reactSort = 'name', reactHidden = false, reactNames = [];
+    const sortBy = direct ? { get: () => reactSort } : G.radios('bm-s', [['name', '&Name'], ['loc', '&Location']], 'name', () => fill());
+    const hidden = direct ? null : ui.check('&Hidden bookmarks', false, () => fill());
     const name = h('input', { type: 'text', id: 'bm-name', style: 'width:100%' });
-    const list = G.listBox([], null, { height: 160, translate: 'no', onChange: (v) => { name.value = v; }, onDbl: () => go() });
+    const list = direct ? null : G.listBox([], null, { height: 160, translate: 'no', onChange: (v) => { name.value = v; }, onDbl: () => go() });
+    const getName = () => direct ? reactName : name.value;
     const fill = () => {
-      const all = Array.from(F().bookmarks().values()).filter((b) => hidden.input.checked || !b.name.startsWith('_'));
+      const all = Array.from(F().bookmarks().values()).filter((b) => (direct ? reactHidden : hidden.input.checked) || !b.name.startsWith('_'));
       if (sortBy.get() === 'name') all.sort((a, b) => a.name.localeCompare(b.name)); else all.sort((a, b) => (a.p._o || 0) - (b.p._o || 0) || a.o - b.o);
-      list.setItems(all.map((b) => b.name));
+      if (direct) { reactNames = all.map((b) => b.name); L.bus.emit('wordx-bookmark-refresh'); }
+      else list.setItems(all.map((b) => b.name));
     };
     fill();
-    if (E.sel && !E.collapsed()) { const t = O.textRange(...E.range(), ' ').trim().replace(/[^\p{L}\p{N}_]/gu, '_').replace(/^[^\p{L}]+/u, '').slice(0, 40); name.value = t; }
+    if (E.sel && !E.collapsed()) { const t = O.textRange(...E.range(), ' ').trim().replace(/[^\p{L}\p{N}_]/gu, '_').replace(/^[^\p{L}]+/u, '').slice(0, 40); name.value = t; reactName = t; }
     const valid = (n) => /^[\p{L}][\p{L}\p{N}_]{0,39}$/u.test(n);
-    const go = () => { const n = name.value.trim(); if (n) A().gotoBookmark(n); };
+    const go = () => { const n = getName().trim(); if (n) A().gotoBookmark(n); };
+    const reactRoot = h('div', { id: 'react-wordx-bookmark-root' });
+    G.reactBookmarkCatalog = () => ({ name: reactName, sort: reactSort, hidden: reactHidden, names: reactNames.slice() });
+    G.reactBookmarkAction = (action, value) => {
+      if (action === 'name') { reactName = value; name.value = value; }
+      else if (action === 'select') { reactName = value; name.value = value; }
+      else if (action === 'sort') { reactSort = value; fill(); }
+      else if (action === 'hidden') { reactHidden = value === 'true'; fill(); }
+      else if (action === 'add') { const n = getName().trim(); if (!valid(n)) { ui.msg('Bookmark names must begin with a letter and contain only letters, numbers and underscores.', { icon: 'warn' }); return false; } const [a, b] = E.range(); E.edit(L.N('Bookmark'), () => { F().addBookmark(n, a, b); return E.sel; }); fill(); }
+      else if (action === 'delete') { const bm = F().bookmarks().get(getName().trim()); if (bm) E.edit('Delete Bookmark', () => { F().removeBookmarkItems(bm); return E.sel; }); reactName = ''; name.value = ''; fill(); }
+      else if (action === 'goto') go();
+    };
     ui.dialog({
-      title: 'Bookmark', width: 320, focus: name,
-      body: h('div', { class: 'col' }, h('label', { for: 'bm-name', html: ui.ampHTML('&Bookmark name:') }), name, list, ui.group('Sort by:', sortBy), hidden),
-      buttons: [{ label: '&Add', primary: true, onClick: () => { const n = name.value.trim(); if (!valid(n)) { ui.msg('Bookmark names must begin with a letter and contain only letters, numbers and underscores.', { icon: 'warn' }); return false; } const [a, b] = E.range(); E.edit(L.N('Bookmark'), () => { F().addBookmark(n, a, b); return E.sel; }); } }, { label: '&Delete', onClick: () => { const bm = F().bookmarks().get(name.value.trim()); if (bm) E.edit('Delete Bookmark', () => { F().removeBookmarkItems(bm); return E.sel; }); fill(); name.value = ''; return false; } }, { label: '&Go To', onClick: () => { go(); return false; } }, { label: 'Cancel' }],
+      title: 'Bookmark', width: 320, focus: direct ? undefined : name,
+      body: direct ? reactRoot : h('div', { class: 'col' }, h('label', { for: 'bm-name', html: ui.ampHTML('&Bookmark name:') }), name, list, ui.group('Sort by:', sortBy), hidden),
+      buttons: [{ label: '&Add', primary: true, onClick: () => { const n = getName().trim(); if (!valid(n)) { ui.msg('Bookmark names must begin with a letter and contain only letters, numbers and underscores.', { icon: 'warn' }); return false; } const [a, b] = E.range(); E.edit(L.N('Bookmark'), () => { F().addBookmark(n, a, b); return E.sel; }); fill(); if (direct) return false; } }, { label: '&Delete', onClick: () => { G.reactBookmarkAction('delete'); fill(); return false; } }, { label: '&Go To', onClick: () => { go(); return false; } }, { label: 'Cancel' }],
     });
   };
 
@@ -496,29 +647,59 @@
   /* ================= Insert Object ================= */
   G.insertObject = function () {
     const types = [['chart', L.N('Chart')], ['equation', L.N('Equation')], ['wordart', L.N('LettersArt')], ['excel', L.N('Spreadsheet (table)')], ['document', L.N('Document (inserted as text)')], ['picture', L.N('Bitmap Image')]];
-    const lb = G.listBox(types.map(([v, l]) => ({ value: v, label: l })), 'chart', { height: 160, onDbl: () => ok.click() });
-    const dlg = ui.dialog({ title: 'Object', width: 360, body: ui.tabs([{ label: '&Create New', body: h('div', { class: 'col' }, h('label', { text: 'Object type:' }), lb) }, { label: 'Create from &File', body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Insert the contents of a .docx, .txt or .htm file, or a picture.' }), ui.button('&Browse...', () => { dlg.close(null); A().insertFileDialog(); })) }]), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      const v = lb.get();
+    const direct = !!(window.VO && VO.reactDirectHost);
+    let selected = 'chart', tab = 0, dlg = null;
+    const lb = direct ? { get: () => selected } : G.listBox(types.map(([v, l]) => ({ value: v, label: l })), 'chart', { height: 160, onDbl: () => ok.click() });
+    const root = h('div', { id: 'react-wordx-object-root' });
+    G.reactObjectCatalog = () => types.map(([value, label]) => ({ value, label: L.t(label) }));
+    G.reactObjectAction = (action, value) => {
+      if (action === 'select') selected = value;
+      else if (action === 'tab') tab = value === 'file' ? 1 : 0;
+      else if (action === 'browse') { dlg.close(null); A().insertFileDialog(); }
+      else if (action === 'insert') insert(selected);
+    };
+    const insert = (v) => {
       if (v === 'chart') A().insertChart();
       else if (v === 'equation') G.equation();
       else if (v === 'wordart') G.wordart();
       else if (v === 'excel') L.tables.insert(4, 5, { worksheet: true });
       else if (v === 'document') A().insertFileDialog();
       else A().insertPictureDialog();
+    };
+    dlg = ui.dialog({ title: 'Object', width: 360, body: direct ? root : ui.tabs([{ label: '&Create New', body: h('div', { class: 'col' }, h('label', { text: 'Object type:' }), lb) }, { label: 'Create from &File', body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Insert the contents of a .docx, .txt or .htm file, or a picture.' }), ui.button('&Browse...', () => { dlg.close(null); A().insertFileDialog(); })) }]), buttons: [{ label: 'OK', primary: true, onClick: () => {
+      const v = lb.get();
+      insert(v);
     } }, { label: 'Cancel' }] });
     const ok = dlg.buttons[0];
   };
   /** a simple equation editor: linear format with Unicode math symbols */
   G.equation = function () {
-    const inp = h('textarea', { rows: 3, id: 'eq-in', style: 'width:100%;font:16px "Cambria Math",Caladea,serif' });
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const inp = direct ? null : h('textarea', { rows: 3, id: 'eq-in', style: 'width:100%;font:16px "Cambria Math",Caladea,serif' });
     const pal = h('div', { class: 'sym-recent', style: 'grid-template-columns:repeat(16,26px)' });
-    for (const c of '±×÷≠≈≤≥∞√∛∑∏∫∂∆∇πθαβγδλμσφωΩ→⇒∈∉⊂⊃∪∩∀∃¬∧∨²³⁴ⁿ₀₁₂ᵢ½'.split('')) { const b = h('button', { type: 'button', text: c }); b.addEventListener('click', () => { const s = inp.selectionStart; inp.value = inp.value.slice(0, s) + c + inp.value.slice(inp.selectionEnd); inp.focus(); inp.setSelectionRange(s + 1, s + 1); }); pal.appendChild(b); }
-    ui.dialog({ title: 'Equation', width: 470, focus: inp, body: h('div', { class: 'col' }, pal, inp, h('div', { class: 'tp-note', text: 'Type the equation; it is inserted in Cambria Math italics.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { if (!inp.value.trim()) return; E.edit('Insert Equation', () => { const pos = E.deleteSelection(); return O.insertText(pos, inp.value.trim(), Object.assign(O.inheritRPr(pos), { font: 'Cambria Math', i: true })); }); } }, { label: 'Cancel' }] });
+    if (!direct) for (const c of '±×÷≠≈≤≥∞√∛∑∏∫∂∆∇πθαβγδλμσφωΩ→⇒∈∉⊂⊃∪∩∀∃¬∧∨²³⁴ⁿ₀₁₂ᵢ½'.split('')) { const b = h('button', { type: 'button', text: c }); b.addEventListener('click', () => { const s = inp.selectionStart; inp.value = inp.value.slice(0, s) + c + inp.value.slice(inp.selectionEnd); inp.focus(); inp.setSelectionRange(s + 1, s + 1); }); pal.appendChild(b); }
+    const root = h('div', { id: 'react-wordx-equation-root' });
+    G.reactEquationAction = (action, value) => {
+      if (action !== 'insert' || !String(value || '').trim()) return;
+      E.edit('Insert Equation', () => { const pos = E.deleteSelection(); return O.insertText(pos, String(value).trim(), Object.assign(O.inheritRPr(pos), { font: 'Cambria Math', i: true })); });
+    };
+    ui.dialog({ title: 'Equation', width: 470, focus: inp || root, body: direct ? root : h('div', { class: 'col' }, pal, inp, h('div', { class: 'tp-note', text: 'Type the equation; it is inserted in Cambria Math italics.' })), buttons: [{ label: 'OK', primary: true, onClick: () => {
+      if (direct) G.reactEquationAction('insert', root.querySelector('textarea')?.value || '');
+      else if (inp.value.trim()) E.edit('Insert Equation', () => { const pos = E.deleteSelection(); return O.insertText(pos, inp.value.trim(), Object.assign(O.inheritRPr(pos), { font: 'Cambria Math', i: true })); });
+    } }, { label: 'Cancel' }] });
   };
 
   /* ================= Diagram Gallery ================= */
   G.diagram = function () {
     const kinds = [['org', 'Organization Chart'], ['cycle', 'Cycle Diagram'], ['radial', 'Radial Diagram'], ['pyramid', 'Pyramid Diagram'], ['venn', 'Venn Diagram'], ['target', 'Target Diagram']];
+    const direct = !!(window.VO && VO.reactDirectHost);
+    if (direct) {
+      const root = h('div', { id: 'react-wordx-diagram-root' });
+      G.reactDiagramCatalog = () => kinds.map(([value, label]) => ({ value, label: L.t(label) }));
+      G.reactDiagramAction = (value) => insertDiagram(value);
+      ui.dialog({ title: 'Diagram Gallery', width: 340, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => G.reactDiagramAction(root.querySelector('[data-wordx-diagram].on')?.getAttribute('data-wordx-diagram') || 'org') }, { label: 'Cancel' }] });
+      return;
+    }
     const svg = { org: '<svg width="56" height="44"><rect x="20" y="2" width="16" height="10" fill="#fdd" stroke="#333"/><path d="M28 12v6M10 18h36M10 18v4M28 18v4M46 18v4" stroke="#333" fill="none"/><rect x="2" y="22" width="16" height="10" fill="#dfd" stroke="#333"/><rect x="20" y="22" width="16" height="10" fill="#dfd" stroke="#333"/><rect x="38" y="22" width="16" height="10" fill="#dfd" stroke="#333"/></svg>', cycle: '<svg width="56" height="44"><circle cx="28" cy="22" r="16" fill="none" stroke="#888" stroke-dasharray="3 2"/><circle cx="28" cy="6" r="5" fill="#9cf" stroke="#333"/><circle cx="42" cy="30" r="5" fill="#fc9" stroke="#333"/><circle cx="14" cy="30" r="5" fill="#cf9" stroke="#333"/></svg>', radial: '<svg width="56" height="44"><path d="M28 22L28 6M28 22L44 32M28 22L12 32" stroke="#333"/><circle cx="28" cy="22" r="7" fill="#fc9" stroke="#333"/><circle cx="28" cy="6" r="5" fill="#9cf" stroke="#333"/><circle cx="44" cy="32" r="5" fill="#9cf" stroke="#333"/><circle cx="12" cy="32" r="5" fill="#9cf" stroke="#333"/></svg>', pyramid: '<svg width="56" height="44"><path d="M28 2L50 42H6z" fill="#fc9" stroke="#333"/><path d="M19 18h18M12 30h32" stroke="#333"/></svg>', venn: '<svg width="56" height="44"><circle cx="22" cy="18" r="12" fill="#9cf" fill-opacity=".6" stroke="#333"/><circle cx="34" cy="18" r="12" fill="#fc9" fill-opacity=".6" stroke="#333"/><circle cx="28" cy="28" r="12" fill="#cf9" fill-opacity=".6" stroke="#333"/></svg>', target: '<svg width="56" height="44"><circle cx="24" cy="24" r="18" fill="#9cf" stroke="#333"/><circle cx="24" cy="24" r="12" fill="#fc9" stroke="#333"/><circle cx="24" cy="24" r="6" fill="#f99" stroke="#333"/></svg>' };
     let pick = 'org';
     const grid = h('div', { class: 'preset-grid' });
@@ -607,6 +788,7 @@
   /* ================= Table dialogs ================= */
   G.insertTable = function () {
     const last = L.store.get('tableDims', { c: 5, r: 2 });
+    const direct = !!(window.VO && VO.reactDirectHost);
     const cols = G.num(last.c, { min: 1, max: 63, id: 'it-c' }), rows = G.num(last.r, { min: 1, max: 32767, id: 'it-r' });
     const fit = G.radios('it-fit', [['fixed', 'Fi&xed column width:'], ['contents', 'Auto&Fit to contents'], ['window', 'AutoFit to win&dow']], 'fixed');
     const cw = G.len(null, { id: 'it-cw', autoLabel: L.N('Auto'), min: 9 });
@@ -614,10 +796,35 @@
     const styleNote = h('div', { class: 'tp-note', text: L.t('Table style: {0}', 'Table Grid') });
     const remember = ui.check('Remember dime&nsions for new tables', false, null);
     const fEls = fit.querySelectorAll('.ck');
+    const root = h('div', { id: 'react-wordx-insert-table-root' });
+    G.reactInsertTableState = () => ({ columns: last.c, rows: last.r });
+    G.reactInsertTableAction = (action, options) => {
+      if (action === 'autoFormat') {
+        G.tableAutoFormat({ pick: (name, selectedLook) => {
+          style = name; look = selectedLook;
+          window.dispatchEvent(new CustomEvent('wordx-insert-table-style', { detail: { name } }));
+        } });
+        return;
+      }
+      if (action !== 'insert') return;
+      if (options.remember) L.store.set('tableDims', { c: options.columns, r: options.rows });
+      cw.input.value = options.width || '';
+      const insertOptions = { autofit: options.fit };
+      const width = cw.get();
+      if (options.fit === 'fixed' && width) insertOptions.colWidth = width;
+      if (style) { insertOptions.style = L.tables.styleId(style); insertOptions.look = look; }
+      L.tables.insert(options.rows, options.columns, insertOptions);
+      if (style) L.tables.applyStyle(style, look);
+    };
     ui.dialog({
-      title: 'Insert Table', width: 330, focus: cols.input,
-      body: h('div', { class: 'col' }, ui.group('Table size', G.f('Number of &columns:', cols, 'wide'), G.f('Number of &rows:', rows, 'wide')), ui.group('AutoFit behavior', G.row(fEls[0], cw), fEls[1], fEls[2]), G.row(styleNote, ui.button('&AutoFormat...', () => G.tableAutoFormat({ pick: (s, lk) => { style = s; look = lk; styleNote.textContent = L.t('Table style: {0}', s); } }), { class: 'btn small' })), remember),
+      title: 'Insert Table', width: 330, focus: direct ? root : cols.input,
+      body: direct ? root : h('div', { class: 'col' }, ui.group('Table size', G.f('Number of &columns:', cols, 'wide'), G.f('Number of &rows:', rows, 'wide')), ui.group('AutoFit behavior', G.row(fEls[0], cw), fEls[1], fEls[2]), G.row(styleNote, ui.button('&AutoFormat...', () => G.tableAutoFormat({ pick: (s, lk) => { style = s; look = lk; styleNote.textContent = L.t('Table style: {0}', s); } }), { class: 'btn small' })), remember),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
+        if (direct) {
+          const get = (selector, fallback) => root.querySelector(selector)?.value || fallback;
+          G.reactInsertTableAction('insert', { columns: +get('#react-wordx-table-columns', '5'), rows: +get('#react-wordx-table-rows', '2'), fit: root.querySelector('[data-table-fit]:checked')?.getAttribute('data-table-fit') || 'fixed', width: get('#react-wordx-table-width', ''), remember: !!root.querySelector('input[type=checkbox]')?.checked });
+          return;
+        }
         if (remember.input.checked) L.store.set('tableDims', { c: cols.get(), r: rows.get() });
         const o = { autofit: fit.get() };
         const w = cw.get();
@@ -629,17 +836,31 @@
     });
   };
   G.insertCells = function () {
-    const r = G.radios('ic', [['right', 'Shift cells r&ight'], ['down', 'Shift cells &down'], ['row', 'Insert entire &row'], ['col', 'Insert entire &column']], 'down');
-    ui.dialog({ title: 'Insert Cells', width: 240, body: r, buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.insertCells(r.get()) }, { label: 'Cancel' }] });
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const items = [['right', 'Shift cells right'], ['down', 'Shift cells down'], ['row', 'Insert entire row'], ['col', 'Insert entire column']];
+    const deleteItems = [['left', 'Shift cells left'], ['up', 'Shift cells up'], ['row', 'Delete entire row'], ['col', 'Delete entire column']];
+    const r = direct ? null : G.radios('ic', [['right', 'Shift cells r&ight'], ['down', 'Shift cells &down'], ['row', 'Insert entire &row'], ['col', 'Insert entire &column']], 'down');
+    const root = h('div', { id: 'react-wordx-cell-operation-root' });
+    G.reactCellDialogCatalog = (kind) => kind === 'delete' ? deleteItems : items;
+    G.reactCellDialogKind = 'insert';
+    ui.dialog({ title: 'Insert Cells', width: 240, body: direct ? root : r, buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.insertCells(direct ? root.querySelector('[data-cell-operation]:checked')?.getAttribute('data-cell-operation') || 'down' : r.get()) }, { label: 'Cancel' }] });
   };
   G.deleteCells = function () {
-    const r = G.radios('dc', [['left', 'Shift cells &left'], ['up', 'Shift cells &up'], ['row', 'Delete entire &row'], ['col', 'Delete entire &column']], 'left');
-    ui.dialog({ title: 'Delete Cells', width: 240, body: r, buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.deleteCells(r.get()) }, { label: 'Cancel' }] });
+    const direct = !!(window.VO && VO.reactDirectHost);
+    G.reactCellDialogCatalog = () => [['left', 'Shift cells left'], ['up', 'Shift cells up'], ['row', 'Delete entire row'], ['col', 'Delete entire column']];
+    G.reactCellDialogKind = 'delete';
+    const r = direct ? null : G.radios('dc', [['left', 'Shift cells &left'], ['up', 'Shift cells &up'], ['row', 'Delete entire &row'], ['col', 'Delete entire &column']], 'left');
+    const root = h('div', { id: 'react-wordx-cell-operation-root' });
+    G.reactCellDialogKind = 'delete';
+    ui.dialog({ title: 'Delete Cells', width: 240, body: direct ? root : r, buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.deleteCells(direct ? root.querySelector('[data-cell-operation]:checked')?.getAttribute('data-cell-operation') || 'left' : r.get()) }, { label: 'Cancel' }] });
   };
   G.splitCells = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const c = G.num(2, { min: 1, max: 63, id: 'sc-c' }), r = G.num(1, { min: 1, max: 100, id: 'sc-r' });
     const merge = ui.check('&Merge cells before split', !!E.cellSel, null);
-    ui.dialog({ title: 'Split Cells', width: 260, focus: c.input, body: h('div', { class: 'col' }, G.f('Number of &columns:', c, 'wide'), G.f('Number of &rows:', r, 'wide'), merge), buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.split(r.get(), c.get(), merge.input.checked) }, { label: 'Cancel' }] });
+    const root = h('div', { id: 'react-wordx-split-cells-root' });
+    G.reactSplitCellsState = () => ({ columns: 2, rows: 1, merge: !!E.cellSel });
+    ui.dialog({ title: 'Split Cells', width: 260, focus: direct ? root : c.input, body: direct ? root : h('div', { class: 'col' }, G.f('Number of &columns:', c, 'wide'), G.f('Number of &rows:', r, 'wide'), merge), buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.split(direct ? +(root.querySelector('#react-wordx-split-rows')?.value || 1) : r.get(), direct ? +(root.querySelector('#react-wordx-split-columns')?.value || 2) : c.get(), direct ? !!root.querySelector('input[type=checkbox]')?.checked : merge.input.checked) }, { label: 'Cancel' }] });
   };
   G.tableAutoFormat = function (opts) {
     opts = opts || {};
@@ -647,21 +868,19 @@
     const ci = L.tables.cur();
     const curStyle = ci ? (doc().styles[ci.tbl.tblPr.style] || {}).name || 'Table Grid' : 'Table Grid';
     const look = Object.assign({ firstRow: true, firstCol: true, lastRow: false, lastCol: false }, ci ? ci.tbl.tblPr.look || {} : {});
-    const lb = G.listBox(names, names.includes(curStyle) ? curStyle : 'Table Grid', { height: 200, translate: 'no', onChange: () => draw() });
+    let reactName = names.includes(curStyle) ? curStyle : 'Table Grid';
+    let reactLook = { ...look };
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const lb = G.listBox(names, reactName, { height: 200, translate: 'no', onChange: () => draw() });
     const pv = h('div', { class: 'preview-box', style: 'width:220px;height:170px' });
     const chk = (k, l) => ui.check(l, !!look[k], (v) => { look[k] = v; draw(); });
     const checks = [chk('firstRow', '&Heading rows'), chk('firstCol', 'Fir&st column'), chk('lastRow', '&Last row'), chk('lastCol', 'Last co&lumn')];
-    function draw() {
-      L.clear(pv);
-      const name = lb.get();
+    function previewModel(name, selectedLook) {
       const def = L.tables.STYLES[name];
       const grid = [['', L.N('Jan'), L.N('Feb'), L.N('Mar'), L.N('Total')], [L.N('East'), '7', '7', '5', '19'], [L.N('West'), '6', '4', '7', '17'], [L.N('South'), '8', '7', '9', '24'], [L.N('Total'), '21', '18', '21', '60']];
-      const t = h('table', { style: 'border-collapse:collapse;font:10px Arial,Arimo,sans-serif;width:200px' });
       const bd = (b) => (b && b.val !== 'nil' ? `${Math.max(1, b.sz || 0.5)}px ${b.val === 'double' ? 'double' : b.val === 'dotted' ? 'dotted' : 'solid'} ${b.color && b.color !== 'auto' ? '#' + b.color : '#000'}` : 'none');
-      grid.forEach((row, ri) => {
-        const tr = h('tr');
-        row.forEach((v, cix) => {
-          const conds = R.cellConds({ tblPr: {} }, ri, cix, grid.length, row.length, Object.assign({ noVBand: !/Columns/.test(name), noHBand: !/List|Contemporary|Subtle|3D/.test(name) }, look));
+      return grid.map((row, ri) => row.map((v, cix) => {
+          const conds = R.cellConds({ tblPr: {} }, ri, cix, grid.length, row.length, Object.assign({ noVBand: !/Columns/.test(name), noHBand: !/List|Contemporary|Subtle|3D/.test(name) }, selectedLook));
           let rr = Object.assign({}, def && def.rPr), tc = Object.assign({}, def && def.tcPr), tb = Object.assign({}, def && def.tblPr && def.tblPr.borders);
           if (name === 'Table Grid') tb = { top: { val: 'single' }, bottom: { val: 'single' }, left: { val: 'single' }, right: { val: 'single' }, insideH: { val: 'single' }, insideV: { val: 'single' } };
           let cb = {};
@@ -670,16 +889,32 @@
           const css = [`border-top:${bd(side('top', 'top', 'insideH', ri === 0))}`, `border-bottom:${bd(side('bottom', 'bottom', 'insideH', ri === grid.length - 1))}`, `border-left:${bd(side('left', 'left', 'insideV', cix === 0))}`, `border-right:${bd(side('right', 'right', 'insideV', cix === row.length - 1))}`, 'padding:2px 4px'];
           if (tc.shd) css.push('background:' + R.shadeCSS(tc.shd));
           if (rr.b) css.push('font-weight:bold'); if (rr.i) css.push('font-style:italic'); if (rr.color) css.push('color:#' + rr.color); if (rr.caps) css.push('text-transform:uppercase');
-          tr.appendChild(h('td', { text: v, style: css.join(';') }));
-        });
+          return { text: v, style: css.join(';') };
+      }));
+    }
+    G.reactTableAutoFormatCatalog = () => ({ names: names.slice(), selected: reactName, look: { ...reactLook } });
+    G.reactTableAutoFormatPreview = (name, selectedLook) => previewModel(name || reactName, selectedLook || reactLook);
+    G.reactTableAutoFormatAction = (action, next) => {
+      if (action === 'change' && next) { reactName = next.selected; reactLook = { ...next.look }; return; }
+      if (action !== 'apply') return;
+      if (opts.pick) { opts.pick(reactName, Object.assign({}, reactLook, { noVBand: true })); return; }
+      L.tables.applyStyle(reactName, Object.assign({}, reactLook, { noVBand: !/Columns/.test(reactName) }), { clearDirect: true });
+    };
+    function draw() {
+      L.clear(pv);
+      const t = h('table', { style: 'border-collapse:collapse;font:10px Arial,Arimo,sans-serif;width:200px' });
+      previewModel(lb.get(), look).forEach((row) => {
+        const tr = h('tr');
+        row.forEach((cell) => tr.appendChild(h('td', { text: cell.text, style: cell.style })));
         t.appendChild(tr);
       });
       pv.appendChild(t);
     }
     draw();
+    const reactRoot = h('div', { id: 'react-wordx-table-autoformat-root' });
     ui.dialog({
-      title: 'Table AutoFormat', width: 480, body: h('div', { class: 'col' }, h('div', { text: 'Category: All table styles' }), G.row(h('div', { class: 'col', style: 'width:200px' }, h('label', { text: 'Table styles:' }), lb), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)), ui.group('Apply special formats to', G.row(...checks))),
-      buttons: [{ label: '&Apply', primary: true, onClick: () => { if (opts.pick) { opts.pick(lb.get(), Object.assign({}, look, { noVBand: true })); return; } L.tables.applyStyle(lb.get(), Object.assign({}, look, { noVBand: !/Columns/.test(lb.get()) }), { clearDirect: true }); } }, { label: 'Cancel' }],
+      title: 'Table AutoFormat', width: 480, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { text: 'Category: All table styles' }), G.row(h('div', { class: 'col', style: 'width:200px' }, h('label', { text: 'Table styles:' }), lb), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)), ui.group('Apply special formats to', G.row(...checks))),
+      buttons: [{ label: '&Apply', primary: true, onClick: () => { if (direct) { G.reactTableAutoFormatAction('apply'); return; } if (opts.pick) { opts.pick(lb.get(), Object.assign({}, look, { noVBand: true })); return; } L.tables.applyStyle(lb.get(), Object.assign({}, look, { noVBand: !/Columns/.test(lb.get()) }), { clearDirect: true }); } }, { label: 'Cancel' }],
     });
   };
   G.tableProps = function (tab) {
@@ -775,16 +1010,28 @@
     const inTbl = L.tables.inTable();
     const ci = inTbl ? L.tables.cur() : null;
     const fields = inTbl ? ci.tbl.grid.map((_, i) => ['' + i, L.t('Column {0}', i + 1)]) : [['0', L.t('Paragraphs')]].concat([1, 2, 3, 4, 5].map((i) => ['' + i, L.t('Field {0}', i)]));
+    const defaults = { inTable: inTbl, fields, keys: [{ by: fields[0][0], type: 'text', dir: 'asc' }, { by: '', type: 'text', dir: 'asc' }, { by: '', type: 'text', dir: 'asc' }], header: inTbl && ci.tbl.rows[0].trPr.header ? 'yes' : 'no', separator: '\t', caseSensitive: false };
+    let reactState = defaults;
+    G.reactSortCatalog = () => ({ ...reactState, fields: reactState.fields.map((field) => field.slice()), keys: reactState.keys.map((key) => ({ ...key })) });
+    G.reactSortAction = (action, next) => {
+      if (action === 'change' && next) { reactState = next; return; }
+      if (action !== 'apply') return;
+      const keys = reactState.keys.filter((key) => key.by !== '').map((key) => ({ col: +key.by, field: +key.by, type: key.type, desc: key.dir === 'desc' }));
+      if (inTbl) L.tables.sortTable(keys, { header: reactState.header === 'yes', caseSensitive: reactState.caseSensitive });
+      else L.tables.sortParagraphs(keys, { header: reactState.header === 'yes', sep: reactState.separator === 'other' ? ';' : reactState.separator, caseSensitive: reactState.caseSensitive });
+    };
     const mk = (n, def) => ({ by: ui.select(n ? [['', '(none)']].concat(fields) : fields, def, null, { id: 'so-b' + n }), type: ui.select([['text', 'Text'], ['number', 'Number'], ['date', 'Date']], 'text', null, { id: 'so-t' + n }), dir: G.radios('so-d' + n, [['asc', '&Ascending'], ['desc', '&Descending']], 'asc') });
     const k1 = mk(0, fields[0][0]), k2 = mk(1, ''), k3 = mk(2, '');
     const hdr = G.radios('so-h', [['yes', 'Header &row'], ['no', 'No header ro&w']], inTbl && ci.tbl.rows[0].trPr.header ? 'yes' : 'no');
     const sepSel = ui.select([['\t', 'Tabs'], [',', 'Commas'], ['other', 'Other']], '\t', null, { id: 'so-sep' });
     const caseS = ui.check('Case &sensitive', false, null);
     const row = (lbl, k) => ui.group(lbl, G.row(k.by, G.f('Type:', k.type), k.dir));
+    const reactRoot = h('div', { id: 'react-wordx-sort-root' });
     ui.dialog({
       title: inTbl ? 'Sort' : 'Sort Text', width: 470,
-      body: h('div', { class: 'col' }, row('&Sort by', k1), row('&Then by', k2), row('Then &by', k3), ui.group('My list has', hdr), G.row(G.f('Separate fields at:', sepSel), caseS)),
+      body: window.VO && VO.reactDirectHost ? reactRoot : h('div', { class: 'col' }, row('&Sort by', k1), row('&Then by', k2), row('Then &by', k3), ui.group('My list has', hdr), G.row(G.f('Separate fields at:', sepSel), caseS)),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
+        if (window.VO && VO.reactDirectHost) { G.reactSortAction('apply'); return; }
         const keys = [k1, k2, k3].filter((k) => k.by.value !== '').map((k) => ({ col: +k.by.value, field: +k.by.value, type: k.type.value, desc: k.dir.get() === 'desc' }));
         if (inTbl) L.tables.sortTable(keys, { header: hdr.get() === 'yes', caseSensitive: caseS.input.checked });
         else L.tables.sortParagraphs(keys, { header: hdr.get() === 'yes', sep: sepSel.value === 'other' ? ';' : sepSel.value, caseSensitive: caseS.input.checked });
@@ -794,37 +1041,64 @@
   G.formula = function () {
     let guess = '=SUM(ABOVE)';
     try { if (L.tables.inTable()) { const v = L.tables.evalFormula('SUM(ABOVE)', E.sel.f.p); const l = L.tables.evalFormula('SUM(LEFT)', E.sel.f.p); if (!v && l) guess = '=SUM(LEFT)'; } else guess = '='; } catch (e) { /* default */ }
-    const inp = h('input', { type: 'text', id: 'fo-f', value: guess, style: 'width:100%' });
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const inp = direct ? null : h('input', { type: 'text', id: 'fo-f', value: guess, style: 'width:100%' });
     const fmt = h('input', { type: 'text', id: 'fo-fmt', list: 'fo-fmts', style: 'width:100%' });
     const dl = h('datalist', { id: 'fo-fmts' }, ...['#,##0', '#,##0.00', '$#,##0.00;($#,##0.00)', '0', '0%', '0.00', '0.00%'].map((x) => h('option', { value: x })));
-    const fn = ui.select([['', L.t('Paste function')]].concat(['ABS', 'AND', 'AVERAGE', 'COUNT', 'DEFINED', 'FALSE', 'IF', 'INT', 'MAX', 'MIN', 'MOD', 'NOT', 'OR', 'PRODUCT', 'ROUND', 'SIGN', 'SUM', 'TRUE'].map((x) => [x, x])), '', (v) => { if (!v) return; inp.value += v + '()'; inp.focus(); inp.setSelectionRange(inp.value.length - 1, inp.value.length - 1); fn.value = ''; }, { id: 'fo-fn', translate: 'no' });   // function names
-    const bms = ui.select([['', L.t('Paste bookmark')]].concat(Array.from(F().bookmarks().keys()).filter((n) => !n.startsWith('_')).map((n) => [n, n])), '', (v) => { if (v) { inp.value += v; bms.value = ''; } }, { id: 'fo-bm', translate: 'no' });
-    ui.dialog({ title: 'Formula', width: 340, focus: inp, body: h('div', { class: 'col' }, h('label', { for: 'fo-f', html: ui.ampHTML('&Formula:') }), inp, dl, h('label', { for: 'fo-fmt', html: ui.ampHTML('&Number format:') }), fmt, G.row(fn, bms)), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      let c = inp.value.trim();
+    const functions = ['ABS', 'AND', 'AVERAGE', 'COUNT', 'DEFINED', 'FALSE', 'IF', 'INT', 'MAX', 'MIN', 'MOD', 'NOT', 'OR', 'PRODUCT', 'ROUND', 'SIGN', 'SUM', 'TRUE'];
+    const fn = direct ? null : ui.select([['', L.t('Paste function')]].concat(functions.map((x) => [x, x])), '', (v) => { if (!v) return; inp.value += v + '()'; inp.focus(); inp.setSelectionRange(inp.value.length - 1, inp.value.length - 1); fn.value = ''; }, { id: 'fo-fn', translate: 'no' });
+    const bms = direct ? null : ui.select([['', L.t('Paste bookmark')]].concat(Array.from(F().bookmarks().keys()).filter((n) => !n.startsWith('_')).map((n) => [n, n])), '', (v) => { if (v) { inp.value += v; bms.value = ''; } }, { id: 'fo-bm', translate: 'no' });
+    const root = h('div', { id: 'react-wordx-formula-root' });
+    G.reactFormulaCatalog = () => ({ guess, functions, bookmarks: Array.from(F().bookmarks().keys()).filter((n) => !n.startsWith('_')), formats: ['#,##0', '#,##0.00', '$#,##0.00;($#,##0.00)', '0', '0%', '0.00', '0.00%'] });
+    G.reactFormulaAction = (formula, numberFormat) => {
+      let c = formula.trim();
       if (!c.startsWith('=')) c = '=' + c;
-      if (fmt.value.trim()) c += ` \\# "${fmt.value.trim()}"`;
+      if (numberFormat.trim()) c += ` \\# "${numberFormat.trim()}"`;
       A().insertFieldNow(c, L.N('Formula'));
+    };
+    ui.dialog({ title: 'Formula', width: 340, focus: direct ? root : inp, body: direct ? root : h('div', { class: 'col' }, h('label', { for: 'fo-f', html: ui.ampHTML('&Formula:') }), inp, dl, h('label', { for: 'fo-fmt', html: ui.ampHTML('&Number format:') }), fmt, G.row(fn, bms)), buttons: [{ label: 'OK', primary: true, onClick: () => {
+      if (direct) G.reactFormulaAction(root.querySelector('#react-wordx-formula-input')?.value || '', root.querySelector('#react-wordx-formula-format')?.value || '');
+      else G.reactFormulaAction(inp.value, fmt.value);
     } }, { label: 'Cancel' }] });
   };
   G.textToTable = function () {
     const paras = E.selectedParas();
-    const sepR = G.radios('tt-s', [['para', '&Paragraphs'], [',', '&Commas'], ['\t', '&Tabs'], ['other', 'O&ther:']], paras.some((p) => p.runs.some((it) => it.t === 'tab')) ? '\t' : paras.some((p) => D.plainText(p).includes(',')) ? ',' : 'para', () => upd());
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const initialSeparator = paras.some((p) => p.runs.some((it) => it.t === 'tab')) ? '\t' : paras.some((p) => D.plainText(p).includes(',')) ? ',' : 'para';
+    const initialColumns = initialSeparator === 'para' ? 1 : Math.max(1, ...paras.map((p) => initialSeparator === '\t' ? p.runs.filter((it) => it.t === 'tab').length + 1 : D.plainText(p).split(initialSeparator).length));
+    const sepR = direct ? null : G.radios('tt-s', [['para', '&Paragraphs'], [',', '&Commas'], ['\t', '&Tabs'], ['other', 'O&ther:']], initialSeparator, () => upd());
     const other = h('input', { type: 'text', maxlength: 1, value: '-', style: 'width:30px' });
     const cols = G.num(1, { min: 1, max: 63, id: 'tt-c', onChange: () => upd(true) });
     const rowsN = h('span');
     const fit = G.radios('tt-fit', [['fixed', 'Fi&xed column width'], ['contents', 'Auto&Fit to contents'], ['window', 'AutoFit to win&dow']], 'fixed');
+    const root = h('div', { id: 'react-wordx-text-to-table-root' });
+    G.reactTextToTableState = () => ({ initialSeparator, columns: direct ? initialColumns : cols.get(), paragraphs: paras.map((p) => ({ text: D.plainText(p), tabs: p.runs.filter((it) => it.t === 'tab').length })) });
+    G.reactTextToTableAction = (options) => L.tables.textToTable(options);
     const upd = (fromCols) => {
       const sep = sepR.get() === 'other' ? other.value || '-' : sepR.get();
       if (!fromCols) cols.set(sep === 'para' ? 1 : Math.max(...paras.map((p) => (sep === '\t' ? p.runs.filter((it) => it.t === 'tab').length : (D.plainText(p).split(sep).length - 1)) + 1)));
       rowsN.textContent = String(sep === 'para' ? Math.ceil(paras.length / cols.get()) : paras.length);
     };
-    upd();
-    const sEls = sepR.querySelectorAll('.ck');
-    ui.dialog({ title: 'Convert Text to Table', width: 330, body: h('div', { class: 'col' }, ui.group('Table size', G.f('Number of &columns:', cols, 'wide'), G.f('Number of rows:', rowsN, 'wide')), ui.group('AutoFit behavior', fit), ui.group('Separate text at', G.row(sEls[0], sEls[1]), G.row(sEls[2], sEls[3], other))), buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.textToTable({ sep: sepR.get() === 'other' ? other.value || '-' : sepR.get(), cols: cols.get(), autofit: fit.get() }) }, { label: 'Cancel' }] });
+    if (!direct) upd();
+    const sEls = sepR?.querySelectorAll('.ck');
+    ui.dialog({ title: 'Convert Text to Table', width: 330, body: direct ? root : h('div', { class: 'col' }, ui.group('Table size', G.f('Number of &columns:', cols, 'wide'), G.f('Number of rows:', rowsN, 'wide')), ui.group('AutoFit behavior', fit), ui.group('Separate text at', G.row(sEls[0], sEls[1]), G.row(sEls[2], sEls[3], other))), buttons: [{ label: 'OK', primary: true, onClick: () => {
+      if (direct) {
+        const mode = root.querySelector('[data-text-separator]:checked')?.getAttribute('data-text-separator') || initialSeparator;
+        const sep = mode === 'other' ? root.querySelector('#react-wordx-text-separator')?.value || '-' : mode === 'paragraphs' ? 'para' : mode === 'tabs' ? '\t' : ',';
+        G.reactTextToTableAction({ sep, cols: +(root.querySelector('#react-wordx-text-table-columns')?.value || 1), autofit: root.querySelector('[data-text-fit]:checked')?.getAttribute('data-text-fit') || 'fixed' });
+      } else L.tables.textToTable({ sep: sepR.get() === 'other' ? other.value || '-' : sepR.get(), cols: cols.get(), autofit: fit.get() });
+    } }, { label: 'Cancel' }] });
   };
   G.tableToText = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const r = G.radios('tx-s', [['para', '&Paragraph marks'], ['\t', '&Tabs'], [',', '&Commas'], ['other', '&Other:']], '\t');
     const other = h('input', { type: 'text', maxlength: 1, value: '-', style: 'width:30px' });
-    ui.dialog({ title: 'Convert Table to Text', width: 280, body: ui.group('Separate text with', r, other), buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.tableToText(r.get() === 'other' ? other.value || '-' : r.get()) }, { label: 'Cancel' }] });
+    const root = h('div', { id: 'react-wordx-table-to-text-root' });
+    ui.dialog({ title: 'Convert Table to Text', width: 280, body: direct ? root : ui.group('Separate text with', r, other), buttons: [{ label: 'OK', primary: true, onClick: () => {
+      const mode = direct ? root.querySelector('[data-table-text-separator]:checked')?.getAttribute('data-table-text-separator') || 'tabs' : r.get();
+      const sep = direct ? mode === 'para' ? 'para' : mode === 'tabs' ? '\t' : mode === 'commas' ? ',' : 'other' : mode;
+      const custom = direct ? root.querySelector('#react-wordx-table-text-separator')?.value || '-' : other.value || '-';
+      L.tables.tableToText(sep === 'other' ? custom : sep);
+    } }, { label: 'Cancel' }] });
   };
 })();

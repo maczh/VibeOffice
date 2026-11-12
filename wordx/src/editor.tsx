@@ -3,6 +3,7 @@ import type { VibeOfficeServiceOverrides } from '@vibeoffice/core';
 import type { DraftStore, EditorMount, EngineRuntimeOptions, LocalDocument, LocalDraft, SaveFileOperation } from '@vibeoffice/core';
 import { useMemo, type ComponentProps } from 'react';
 import { WordxListBoxLayer } from './list-box.js';
+import { WordxTaskContentLayer } from './task-content.js';
 
 export interface WordxEngineControls {
   restoreDraft(draft: LocalDraft<Blob>): void;
@@ -45,5 +46,5 @@ export function WordxEditor({ services, mountEngine, engine, draftStore, onDraft
       ...(initialFile ? { initialFile } : {}), ...(initialDocument ? { initialDocument } : {}),
     });
   }, [mountEngine, engine, draftStore, onDraftSaved, onDraftsAvailable, onEngineReady, onOpenFile, allowedRemoteOrigins, onOpenUrl, onSaveFile, initialFile, initialDocument]);
-  return <VibeOfficeProvider {...(services ? { services } : {})}><EngineEditorFrame {...props} appName="Wordx" editor="wordx" {...(mount ? { mount } : {})} appLayers={(host) => <><WordxListBoxLayer host={host} />{props.appLayers?.(host)}</>} /></VibeOfficeProvider>;
+  return <VibeOfficeProvider {...(services ? { services } : {})}><EngineEditorFrame {...props} appName="Wordx" editor="wordx" {...(mount ? { mount } : {})} appLayers={(host) => <><WordxListBoxLayer host={host} /><WordxTaskContentLayer host={host} />{props.appLayers?.(host)}</>} /></VibeOfficeProvider>;
 }

@@ -335,6 +335,7 @@
 
   /* ================= slide show controller ================= */
   const S = (L.show = { active: false });
+  S.reactMounted = false;
   let root, stage, layer, inkCanvas, ink, popbar, raf = 0;
   let st = null; /* runtime state */
   let removeMountCleanup = () => {};
@@ -362,10 +363,11 @@
     root = h('div', { class: 'show', tabindex: '0', role: 'application', 'aria-label': 'Slide Show' });
     stage = h('div', { class: 'stage' });
     inkCanvas = h('canvas', { class: 'ink' });
-    popbar = h('div', { class: 'popbar' },
+    popbar = h('div', { class: 'popbar' });
+    if (!S.reactMounted) popbar.append(
       h('button', { type: 'button', 'aria-label': 'Previous', html: L.icons.get('showPrev'), onclick: (e) => { e.stopPropagation(); S.prev(); } }),
-      h('button', { type: 'button', 'aria-label': 'Pointer options', html: L.icons.get('showPen'), onclick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); L.ui.openMenu(pointerMenu(), { x: r.left, y: r.top - 230 }); } }),
-      h('button', { type: 'button', 'aria-label': 'Slide show menu', html: L.icons.get('showMenu'), onclick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); L.ui.openMenu(showMenu(), { x: r.left, y: r.top - 300 }); } }),
+      h('button', { type: 'button', 'aria-label': 'Pointer options', html: L.icons.get('showPen'), onclick: (e) => { e.stopPropagation(); S.openPointerMenu(e.currentTarget); } }),
+      h('button', { type: 'button', 'aria-label': 'Slide show menu', html: L.icons.get('showMenu'), onclick: (e) => { e.stopPropagation(); S.openShowMenu(e.currentTarget); } }),
       h('button', { type: 'button', 'aria-label': 'Next', html: L.icons.get('showNext'), onclick: (e) => { e.stopPropagation(); S.next(); } }));
     root.append(stage, inkCanvas, popbar);
     L.domHost().appendChild(root);
@@ -694,7 +696,13 @@
   S.prev = function () {
     if (!S.active) return;
     if (st.blank) { setBlank(null); return; }
-    if (st.ended) { st.ended = false; const es = root.querySelector('.endscreen'); if (es) es.remove(); return; }
+    if (st.ended) {
+      st.ended = false;
+      const es = root.querySelector(S.reactMounted ? '#react-show-overlay-root' : '.endscreen');
+      if (es) es.remove();
+      if (S.reactMounted) L.bus.emit('pptx-show-overlay');
+      return;
+    }
     if (st.running) { st.running.finishNow(); }
     if (st.step > 0) { st.step--; applyState(st.steps, st.step); return; }
     let p = st.pos - 1;
@@ -713,15 +721,28 @@
   function endScreen() {
     st.ended = true;
     clearTimeout(st.timer);
+    if (S.reactMounted) {
+      let overlay = root.querySelector('#react-show-overlay-root');
+      if (!overlay) { overlay = h('div', { id: 'react-show-overlay-root' }); root.appendChild(overlay); }
+      L.bus.emit('pptx-show-overlay');
+      return;
+    }
     const es = h('div', { class: 'endscreen', text: 'End of slide show, click to exit.' });
     root.appendChild(es);
   }
   function setBlank(color) {
-    const b = root.querySelector('.blank');
+    const b = root.querySelector(S.reactMounted ? '#react-show-overlay-root' : '.blank');
     if (b) b.remove();
     st.blank = color;
-    if (color) root.appendChild(h('div', { class: 'blank', style: `background:${color}` }));
+    if (S.reactMounted) {
+      if (color || st.ended) {
+        const overlay = h('div', { id: 'react-show-overlay-root' });
+        root.appendChild(overlay);
+      }
+      L.bus.emit('pptx-show-overlay');
+    } else if (color) root.appendChild(h('div', { class: 'blank', style: `background:${color}` }));
   }
+  S.overlayCatalog = () => st ? { blank: st.blank, ended: !!st.ended } : null;
 
   S.end = async function (options) {
     if (!S.active) return;
@@ -898,6 +919,7 @@
       { label: 'E&rase All Ink on Slide', run: () => { st.ink[st.order[st.pos]] = []; redrawInk(); } },
     ];
   }
+  S.openPointerMenu = (anchor) => { const r = anchor.getBoundingClientRect(); L.ui.openMenu(pointerMenu(), { x: r.left, y: r.top - 230 }); };
   function showMenu() {
     const slides = st.order.map((i, pos) => ({ label: `&${pos + 1} ${(L.model.slideTitle(L.pres.slides[i]) || L.t('Slide {0}', i + 1)).slice(0, 56).replace(/&/g, '&&')}`, raw: true, run: () => showSlide(pos, { transition: true }), checked: () => st.pos === pos }));
     return [
@@ -913,6 +935,7 @@
       { label: '&End Show', run: () => S.end() },
     ];
   }
+  S.openShowMenu = (anchor) => { const r = anchor.getBoundingClientRect(); L.ui.openMenu(showMenu(), { x: r.left, y: r.top - 300 }); };
   function onContext(e) {
     if (overShow(e)) return;
     e.preventDefault();
@@ -963,25 +986,35 @@
     }
   }
   function showGoto() {
+    if (S.reactMounted) {
+      let reactBox = root.querySelector('#react-goto-root');
+      if (!reactBox) { reactBox = h('div', { class: 'gotobox', id: 'react-goto-root' }); root.appendChild(reactBox); }
+      L.bus.emit('pptx-show-goto');
+      return;
+    }
     let g = root.querySelector('.gotobox');
     if (!g) { g = h('div', { class: 'gotobox' }); root.appendChild(g); }
     g.textContent = L.t('Go to slide {0}', st.gotoBuf);
   }
-  function hideGoto() { const g = root && root.querySelector('.gotobox'); if (g) g.remove(); }
+  function hideGoto() { const g = root && root.querySelector(S.reactMounted ? '#react-goto-root' : '.gotobox'); if (g) { g.remove(); if (S.reactMounted) L.bus.emit('pptx-show-goto'); } }
+  S.gotoCatalog = () => st && st.gotoBuf ? st.gotoBuf : null;
 
   /* ---- rehearsal ---- */
   function buildRehearse() {
-    const bar = h('div', { class: 'rehearse', role: 'toolbar', 'aria-label': 'Rehearsal' },
+    const bar = h('div', { class: 'rehearse', role: 'toolbar', 'aria-label': 'Rehearsal' });
+    if (S.reactMounted) bar.id = 'react-rehearse-root';
+    else bar.append(
       h('button', { type: 'button', class: 'tb-btn', 'aria-label': 'Next', html: L.icons.get('forward'), onclick: (e) => { e.stopPropagation(); S.next(); } }),
-      h('button', { type: 'button', class: 'tb-btn', 'aria-label': 'Pause', text: '❚❚', onclick: (e) => { e.stopPropagation(); st.rPaused = !st.rPaused; if (st.rPaused) st.rPauseAt = performance.now(); else st.slideStart += performance.now() - st.rPauseAt; } }),
+      h('button', { type: 'button', class: 'tb-btn', 'aria-label': 'Pause', text: '❚❚', onclick: (e) => { e.stopPropagation(); S.toggleRehearsePause(); } }),
       h('span', { class: 'rt', text: '0:00:00' }),
-      h('button', { type: 'button', class: 'tb-btn', 'aria-label': 'Repeat', html: L.icons.get('undo'), onclick: (e) => { e.stopPropagation(); st.slideStart = performance.now(); } }),
+      h('button', { type: 'button', class: 'tb-btn', 'aria-label': 'Repeat', html: L.icons.get('undo'), onclick: (e) => { e.stopPropagation(); S.repeatRehearse(); } }),
       h('span', { class: 'tot', text: '0:00:00' }));
     root.appendChild(bar);
     st.rTimer = setInterval(updateRehearse, 250);
   }
   function updateRehearse() {
     if (!st || !st.rehearse || !root) return;
+    if (S.reactMounted) { L.bus.emit('pptx-show-rehearse'); return; }
     const bar = root.querySelector('.rehearse');
     if (!bar) return;
     const now = st.rPaused ? st.rPauseAt : performance.now();
@@ -996,6 +1029,20 @@
     st.times[idx] = performance.now() - st.slideStart;
   }
   function fmtTime(ms) { const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
+  S.rehearseCatalog = function () {
+    if (!st || !st.rehearse) return null;
+    const now = st.rPaused ? st.rPauseAt : performance.now();
+    const current = now - st.slideStart;
+    const total = Object.values(st.times).reduce((sum, value) => sum + value, 0) + current;
+    return { current: fmtTime(current), total: fmtTime(total), paused: !!st.rPaused };
+  };
+  S.toggleRehearsePause = function () {
+    if (!st || !st.rehearse) return;
+    if (st.rPaused) { st.slideStart += performance.now() - st.rPauseAt; st.rPaused = false; }
+    else { st.rPaused = true; st.rPauseAt = performance.now(); }
+    L.bus.emit('pptx-show-rehearse');
+  };
+  S.repeatRehearse = function () { if (!st || !st.rehearse) return; st.slideStart = performance.now(); L.bus.emit('pptx-show-rehearse'); };
 
   /* preview helpers used by task panes (AutoPreview) */
   S.previewTransition = function (host, pres, slide, prevSlide) {

@@ -295,4 +295,31 @@
     }
     b.appendChild(nav);
   };
+  const P = L.panes;
+  P.reactMailMergeState = () => ({
+    step: MM.wstep, type: MM.type, hasData: !!MM.data, typed: !!(MM.data && MM.data.typed), name: MM.data?.name || '', rows: MM.data?.rows.length || 0, included: MM.data ? MM.records().length : 0, recipient: MM.rec + 1,
+    steps: STEPS.map((step) => L.t(step)),
+  });
+  P.reactMailMergeAction = async (action, value) => {
+    if (action === 'next') { if (MM.wstep === 3 && !MM.data) return; MM.wstep++; if (MM.wstep === 5 && MM.data) MM.go(MM.rec); }
+    else if (action === 'previous') MM.wstep--;
+    else if (action === 'type') MM.type = value;
+    else if (action === 'template') L.dlg.newFromTemplate();
+    else if (action === 'open') ui.exec('open');
+    else if (action === 'envelopes') L.dlg.envelopes();
+    else if (action === 'labels') L.dlg.envelopes('labels');
+    else if (action === 'browse') await MM.openSource();
+    else if (action === 'type-list') MM.typeList();
+    else if (action === 'recipients') MM.recipientsDialog();
+    else if (action === 'address') MM.insertBlock('address');
+    else if (action === 'greeting') MM.insertBlock('greeting');
+    else if (action === 'field') MM.fieldDialog();
+    else if (action === 'recipient-back') MM.step(-1);
+    else if (action === 'recipient-next') MM.step(1);
+    else if (action === 'find') { const query = await ui.prompt('Find:', '', 'Find Entry'); if (!query) return; const records = MM.records(); const index = records.findIndex((row) => MM.data.rows[row].some((cell) => String(cell).toLowerCase().includes(query.toLowerCase()))); if (index >= 0) MM.go(index); }
+    else if (action === 'exclude') { const records = MM.records(); MM.data.included.delete(records[MM.rec]); MM.go(MM.rec); }
+    else if (action === 'print') await MM.mergeToPDF();
+    else if (action === 'new-letters') await MM.mergeToNew();
+    P.task.render();
+  };
 })();

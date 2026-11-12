@@ -480,6 +480,7 @@
       const on = L.spell && !L.spell.hidden && A.opts.spell !== false;
       A.sb.spell.classList.toggle('off', !on);
       A.sb.spell.dataset.tip = on ? L.t('Spelling and grammar are checked as you type. Click to stop.') : L.t('Spelling and grammar are not checked as you type. Click to check this document.');
+      if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-status-render');
     };
     L.bus.on('proof-state', spellIcon);
     L.bus.on('doc-loaded', spellIcon);
@@ -496,7 +497,7 @@
     A.sb.trk.classList.toggle('on', !!d.settings.track);
     A.sb.ovr.classList.toggle('on', !!E.overtype);
     A.sb.ext.classList.toggle('on', !!E.extend);
-    if (!sel) return;
+    if (!sel) { if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-status-render'); return; }
     const pi = LY.pageOf(sel.f);
     const pg = pi >= 0 ? LY.pages[pi] : null;
     if (pg) {
@@ -522,7 +523,17 @@
     const r = E.curRun(), def = d.defaults.rPr || {};
     const lang = (A.typingEA() && (r.langEA || def.langEA)) || r.lang || def.lang || 'en-US';
     A.sb.lang.textContent = A.langName(lang);
+    if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-status-render');
   }, 60);
+  A.reactStatusState = () => A.sb ? ['page', 'sec', 'pages', 'at', 'ln', 'col', 'rec', 'trk', 'ext', 'ovr', 'lang', 'spell'].map((id) => ({ id, text: A.sb[id].textContent, className: A.sb[id].className, tip: A.sb[id].dataset.tip || '', html: id === 'spell' ? A.sb[id].innerHTML : '' })) : [];
+  A.reactStatusAction = (action) => {
+    if (action === 'track') return ui.exec('trackChanges');
+    if (action === 'language') return ui.exec('setLanguage');
+    if (action === 'goto') return ui.exec('goTo');
+    if (action === 'overtype') { E.overtype = !E.overtype; A.updateStatus(); }
+    else if (action === 'extend') { E.extend = !E.extend; A.updateStatus(); }
+    else if (action === 'spell' && L.spell) { if (!A.opts.spell) { A.opts.spell = true; A.saveOpts && A.saveOpts(); } L.spell.hidden = !L.spell.hidden; A.status(L.spell.hidden ? 'Spelling and grammar are no longer marked in this document.' : 'Checking spelling and grammar as you type in this document.'); }
+  };
   /* [code, name]: the names are UI text, shown through L.t; A.langName gives the name as shown */
   A.LANGS = [['en-US', L.N('English (U.S.)')], ['en-GB', L.N('English (U.K.)')], ['en-AU', L.N('English (Australia)')], ['en-CA', L.N('English (Canada)')], ['fr-FR', L.N('French (France)')], ['fr-CA', L.N('French (Canada)')], ['de-DE', L.N('German (Germany)')], ['es-ES', L.N('Spanish (Spain)')], ['es-MX', L.N('Spanish (Mexico)')], ['it-IT', L.N('Italian (Italy)')], ['pt-BR', L.N('Portuguese (Brazil)')], ['pt-PT', L.N('Portuguese (Portugal)')], ['nl-NL', L.N('Dutch (Netherlands)')], ['sv-SE', L.N('Swedish')], ['da-DK', L.N('Danish')], ['nb-NO', L.N('Norwegian (Bokmål)')], ['fi-FI', L.N('Finnish')], ['pl-PL', L.N('Polish')], ['ru-RU', L.N('Russian')], ['ja-JP', L.N('Japanese')], ['zh-CN', L.N('Chinese (Simp.)')], ['zh-HK', L.N('Chinese (Trad.)')], ['ko-KR', L.N('Korean')]];
   A.langName = (code) => { const hit = A.LANGS.find((x) => x[0].toLowerCase() === String(code).toLowerCase()); return hit ? L.t(hit[1]) : code; };

@@ -389,9 +389,29 @@
   const TYPE_LABEL = { ins: L.N('Inserted'), del: L.N('Deleted'), chg: L.N('Formatted'), pchg: L.N('Formatted'), mins: L.N('Inserted'), mdel: L.N('Deleted') };
   /* the document's own text (authors, dates, changed and comment text), shown as it is */
   const data = (cls, s, style) => { const el = h('div', { class: cls, style, translate: 'no' }); el.textContent = s; return el; };
+  RV.reactPaneCatalog = () => {
+    const d = doc(), items = [];
+    for (const revision of RV.list(d.main)) items.push({ kind: 'rev', revision, paragraph: revision.p, offset: revision.a });
+    D.reindex(d);
+    for (const paragraph of d.main.paras || []) { let offset = 0; for (const run of paragraph.runs) { if (run.t === 'cs' && d.comments[run.id]) items.push({ kind: 'cmt', id: run.id, paragraph, offset }); offset += D.ilen(run); } }
+    items.sort((a, b) => a.paragraph === b.paragraph ? a.offset - b.offset : a.paragraph._o - b.paragraph._o);
+    RV.reactPaneItems = items;
+    return items.map((item, index) => {
+      if (item.kind === 'rev') { const revision = item.revision; return { index, kind: 'rev', head: `${L.t(TYPE_LABEL[revision.type])} ${revision.stamp.author || ''} ${fmtDate(revision.stamp.date)}`, body: revision.type === 'chg' ? describeFmt(revision) : revision.text, color: R.authorColor(revision.stamp.author) }; }
+      const comment = d.comments[item.id];
+      return { index, kind: 'cmt', head: `${L.t('Comment [{0}{1}]', comment.initials || '', RV.commentNumber(item.id))} ${comment.author} ${fmtDate(comment.date)}`, body: comment.blocks.filter((block) => block.t === 'p').map((paragraph) => D.plainText(paragraph)).join('\n'), color: R.authorColor(comment.author) };
+    });
+  };
+  RV.reactPaneSelect = (index, edit) => {
+    const item = RV.reactPaneItems?.[index]; if (!item) return;
+    const start = D.pos(item.paragraph, item.kind === 'rev' ? item.revision.a : item.offset), end = D.pos(item.paragraph, item.kind === 'rev' ? item.revision.b : item.offset);
+    app().gotoPos(start, end);
+    if (item.kind === 'cmt') { highlightBalloon(item.id); if (edit) RV.editComment(item.id); }
+  };
   RV.renderPane = function () {
     const pane = L.$('#revpane');
     if (pane.hidden) return;
+    if (window.VO && VO.reactDirectHost) { L.bus.emit('wordx-review-render'); return; }
     const d = doc();
     pane.textContent = '';
     const close = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close Reviewing Pane', html: '<svg width="8" height="8"><path d="M1 1l6 6M7 1L1 7" stroke="#000" stroke-width="1.4"/></svg>', onclick: () => RV.togglePane(false) });

@@ -249,6 +249,8 @@
   const GOTO = [['page', L.N('Page'), L.N('Enter page number:')], ['section', L.N('Section'), L.N('Enter section number:')], ['line', L.N('Line'), L.N('Enter line number:')], ['bookmark', L.N('Bookmark'), L.N('Enter bookmark name:')], ['comment', L.N('Comment'), L.N('Enter comment number:')],
     ['footnote', L.N('Footnote'), L.N('Enter footnote number:')], ['endnote', L.N('Endnote'), L.N('Enter endnote number:')], ['field', L.N('Field'), L.N('Enter field number:')], ['table', L.N('Table'), L.N('Enter table number:')], ['graphic', L.N('Graphic'), L.N('Enter graphic number:')],
     ['equation', L.N('Equation'), L.N('Enter equation number:')], ['heading', L.N('Heading'), L.N('Enter heading number:')]];
+  FD.reactGoToCatalog = () => GOTO.map(([id, label, prompt]) => ({ id, label: L.t(label), prompt: L.t(prompt) }));
+  FD.reactGoToAction = (kind, value, dir) => FD.goto(kind, String(value || '').trim(), dir);
   FD.goto = function (kind, val, dir) {
     const d = doc();
     const rel = /^[+-]/.test(val);
@@ -293,26 +295,49 @@
   let open = null;
   const state = { text: '', replace: '', matchCase: false, wholeWord: false, wildcards: false, soundsLike: false, allForms: false, dir: 'all', scope: 'main', format: null, replaceFormat: null, highlight: false };
   const hist = { find: [], repl: [] };
+  FD.reactCloseDialog = () => open?.dlg?.close(null);
+  FD.reactFindState = () => ({ text: state.text, replace: state.replace, highlight: state.highlight, scope: state.scope, matchCase: state.matchCase, wholeWord: state.wholeWord, wildcards: state.wildcards, soundsLike: state.soundsLike, allForms: state.allForms, dir: state.dir, more: !!state.more });
+  FD.reactFindAction = (action, field) => {
+    if (action === 'focus') state.lastFocus = field;
+    else if (action === 'input') FD.clearHighlight();
+    else if (action === 'highlight') state.highlight = field === 'true';
+    else if (action === 'scope') state.scope = field;
+    else if (action === 'more') { state.more = field === 'true'; if (open?.more) open.more.hidden = !state.more; }
+    else if (action === 'options' && field) {
+      Object.assign(state, field);
+      if (state.wildcards) state.soundsLike = state.allForms = false;
+    }
+  };
   G.find = function (mode) {
     if (open) { open.select(mode); return; }
+    const direct = !!(window.VO && VO.reactDirectHost);
     if (E.sel && !E.collapsed()) { const [a, b] = E.range(); if (a.p === b.p && b.o - a.o < 255) state.text = O.textRange(a, b, '\n'); }
-    const findIn = h('input', { type: 'text', id: 'fr-find', list: 'fr-fhist', value: state.text, style: 'flex:1;min-width:0' });
-    const replIn = h('input', { type: 'text', id: 'fr-repl', list: 'fr-rhist', value: state.replace, style: 'flex:1;min-width:0' });
+    const findIn = direct ? null : h('input', { type: 'text', id: 'fr-find', list: 'fr-fhist', value: state.text, style: 'flex:1;min-width:0' });
+    const replIn = direct ? null : h('input', { type: 'text', id: 'fr-repl', list: 'fr-rhist', value: state.replace, style: 'flex:1;min-width:0' });
+    const findRoot = direct ? h('div', { id: 'react-wordx-find-input-root' }) : null;
+    const replaceRoot = direct ? h('div', { id: 'react-wordx-replace-input-root' }) : null;
+    const findInput = () => direct ? findRoot.querySelector('#fr-find') : findIn;
+    const replaceInput = () => direct ? replaceRoot.querySelector('#fr-repl') : replIn;
     const fhist = h('datalist', { id: 'fr-fhist' }), rhist = h('datalist', { id: 'fr-rhist' });
     const fillHist = () => { L.clear(fhist); L.clear(rhist); for (const x of hist.find) fhist.appendChild(h('option', { value: x })); for (const x of hist.repl) rhist.appendChild(h('option', { value: x })); };
     fillHist();
     const fmtNote = h('div', { class: 'tp-note fr-fmt' });
     const rfmtNote = h('div', { class: 'tp-note fr-fmt' });
     const showFmt = () => { fmtNote.textContent = state.format ? L.t('Format: {0}', describe(state.format)) : ''; rfmtNote.textContent = state.replaceFormat ? L.t('Format: {0}', describe(state.replaceFormat)) : ''; };
-    const hlChk = ui.check('&Highlight all items found in:', state.highlight, (v) => { state.highlight = v; });
-    const scope = ui.select([['main', 'Main Document'], ['all', 'All stories (headers, notes, comments)']], state.scope, (v) => { state.scope = v; }, { id: 'fr-scope' });
+    const hlChk = direct ? null : ui.check('&Highlight all items found in:', state.highlight, (v) => { state.highlight = v; });
+    const scope = direct ? null : ui.select([['main', 'Main Document'], ['all', 'All stories (headers, notes, comments)']], state.scope, (v) => { state.scope = v; }, { id: 'fr-scope' });
+    const findAuxRoot = direct ? h('div', { id: 'react-wordx-find-aux-root' }) : null;
+    const findFormatRoot = direct ? h('div', { id: 'react-wordx-find-format-root' }) : null;
+    const findMoreRoot = direct ? h('div', { id: 'react-wordx-find-more-root' }) : null;
     const opt = (k, l) => ui.check(l, state[k], (v) => { state[k] = v; if (k === 'wildcards' && v) { soundsChk.input.checked = state.soundsLike = false; formsChk.input.checked = state.allForms = false; } });
     const caseChk = opt('matchCase', 'Matc&h case'), wholeChk = opt('wholeWord', 'Find whole words onl&y'), wildChk = opt('wildcards', 'Use wildcar&ds'), soundsChk = opt('soundsLike', 'Sounds li&ke (English)'), formsChk = opt('allForms', 'Find all &word forms (English)');
-    const dir = ui.select([['all', 'All'], ['down', 'Down'], ['up', 'Up']], state.dir, (v) => { state.dir = v; }, { id: 'fr-dir' });
-    const more = h('div', { class: 'col', hidden: !state.more }, ui.group('Search Options', G.f('Search:', dir), caseChk, wholeChk, wildChk, soundsChk, formsChk), h('div', { class: 'tp-btns' }, ui.button('N&o Formatting', () => { if (curTab === 1 && document.activeElement === replIn) state.replaceFormat = null; else { state.format = null; state.replaceFormat = null; } showFmt(); }, { class: 'btn small' }), ui.button('F&ormat ▾', (e) => formatMenu(e.currentTarget, document.activeElement === replIn ? 'replaceFormat' : curTab === 1 && state.lastFocus === 'repl' ? 'replaceFormat' : 'format'), { class: 'btn small' }), ui.button('Sp&ecial ▾', (e) => specialMenu(e.currentTarget, state.lastFocus === 'repl' ? replIn : findIn), { class: 'btn small' })));
-    findIn.addEventListener('focus', () => { state.lastFocus = 'find'; });
-    replIn.addEventListener('focus', () => { state.lastFocus = 'repl'; });
-    const moreBtn = ui.button(state.more ? '<< &Less' : '&More >>', () => { state.more = !state.more; more.hidden = !state.more; moreBtn.innerHTML = ui.ampHTML(state.more ? '<< &Less' : '&More >>'); });
+    const dir = direct ? null : ui.select([['all', 'All'], ['down', 'Down'], ['up', 'Up']], state.dir, (v) => { state.dir = v; }, { id: 'fr-dir' });
+    const findOptionsRoot = direct ? h('div', { id: 'react-wordx-find-options-root' }) : null;
+    const optionsBody = direct ? findOptionsRoot : ui.group('Search Options', G.f('Search:', dir), caseChk, wholeChk, wildChk, soundsChk, formsChk);
+    const findFormatControls = direct ? findFormatRoot : h('div', { class: 'tp-btns' }, ui.button('N&o Formatting', () => { if (curTab === 1 && document.activeElement === replaceInput()) state.replaceFormat = null; else { state.format = null; state.replaceFormat = null; } showFmt(); }, { class: 'btn small' }), ui.button('F&ormat ▾', (e) => formatMenu(e.currentTarget, document.activeElement === replaceInput() ? 'replaceFormat' : curTab === 1 && state.lastFocus === 'repl' ? 'replaceFormat' : 'format'), { class: 'btn small' }), ui.button('Sp&ecial ▾', (e) => specialMenu(e.currentTarget, state.lastFocus === 'repl' ? replaceInput() : findInput()), { class: 'btn small' }));
+    const more = h('div', { class: 'col', hidden: !state.more }, optionsBody, findFormatControls);
+    if (!direct) { findIn.addEventListener('focus', () => { state.lastFocus = 'find'; }); replIn.addEventListener('focus', () => { state.lastFocus = 'repl'; }); }
+    const moreBtn = direct ? findMoreRoot : ui.button(state.more ? '<< &Less' : '&More >>', () => { state.more = !state.more; more.hidden = !state.more; moreBtn.innerHTML = ui.ampHTML(state.more ? '<< &Less' : '&More >>'); });
     /* Go To */
     const gotoKind = G.listBox(GOTO.map(([v, l]) => ({ value: v, label: l })), 'page', { height: 150, onChange: (v) => { gotoLbl.textContent = L.t(GOTO.find((x) => x[0] === v)[2]); gotoBtn.innerHTML = ui.ampHTML(gotoIn.value ? 'Go &To' : 'Nex&t'); } });
     const gotoLbl = h('label', { for: 'fr-goto', text: 'Enter page number:' });
@@ -320,11 +345,13 @@
     const gotoBtn = ui.button('Nex&t', () => FD.goto(gotoKind.get(), gotoIn.value.trim(), 1));
     gotoIn.addEventListener('input', () => { gotoBtn.innerHTML = ui.ampHTML(gotoIn.value ? 'Go &To' : 'Nex&t'); });
     const prevBtn = ui.button('Pre&vious', () => FD.goto(gotoKind.get(), '', -1));
-    const findBody = h('div', { class: 'col' }, h('div', { class: 'row', style: 'align-items:center;flex-wrap:nowrap' }, h('label', { for: 'fr-find', html: ui.ampHTML('Fi&nd what:'), style: 'width:80px' }), findIn), fmtNote);
+    const findBody = h('div', { class: 'col' }, h('div', { class: 'row', style: 'align-items:center;flex-wrap:nowrap' }, direct ? findRoot : h('div', { class: 'row', style: 'align-items:center;flex:1;min-width:0' }, h('label', { for: 'fr-find', html: ui.ampHTML('Fi&nd what:'), style: 'width:80px' }), findIn)), fmtNote);
     const findTabBody = h('div', { class: 'col' });
     const replTabBody = h('div', { class: 'col' });
-    const gotoTabBody = h('div', { class: 'row' }, h('div', { class: 'col', style: 'width:140px' }, h('label', { html: ui.ampHTML('G&o to what:') }), gotoKind), h('div', { class: 'col', style: 'flex:1;min-width:150px' }, gotoLbl, gotoIn, h('div', { class: 'tp-note', text: 'Enter + and − to move relative to the current location. Example: +4 will move forward four items.' })));
-    const replRow = h('div', { class: 'col' }, h('div', { class: 'row', style: 'align-items:center;flex-wrap:nowrap' }, h('label', { for: 'fr-repl', html: ui.ampHTML('Re&place with:'), style: 'width:80px' }), replIn), rfmtNote);
+    const gotoNativeBody = h('div', { class: 'row' }, h('div', { class: 'col', style: 'width:140px' }, h('label', { html: ui.ampHTML('G&o to what:') }), gotoKind), h('div', { class: 'col', style: 'flex:1;min-width:150px' }, gotoLbl, gotoIn, h('div', { class: 'tp-note', text: 'Enter + and − to move relative to the current location. Example: +4 will move forward four items.' })));
+    const gotoReactRoot = h('div', { id: 'react-wordx-goto-root' });
+    const gotoTabBody = h('div', { class: 'col' }, window.VO && VO.reactDirectHost ? gotoReactRoot : gotoNativeBody);
+    const replRow = h('div', { class: 'col' }, h('div', { class: 'row', style: 'align-items:center;flex-wrap:nowrap' }, direct ? replaceRoot : h('div', { class: 'row', style: 'align-items:center;flex:1;min-width:0' }, h('label', { for: 'fr-repl', html: ui.ampHTML('Re&place with:'), style: 'width:80px' }), replIn)), rfmtNote);
     let curTab = mode === 'replace' ? 1 : mode === 'goto' ? 2 : 0;
     let dlg = null;
     const foot = h('div', { class: 'tp-btns', style: 'justify-content:flex-end;margin-top:8px' });
@@ -334,17 +361,18 @@
     const bClose = ui.button('Cancel', () => dlg && dlg.close(null));
     function setButtons(t) {
       L.clear(foot);
-      if (t === 2) foot.append(prevBtn, gotoBtn, ui.button('Close', () => dlg && dlg.close(null)));
-      else { if (t === 1) foot.append(moreBtn, bRepl, bAll, bFind, bClose); else foot.append(moreBtn, bFind, bClose); }
+      if (t === 2) { if (!(window.VO && VO.reactDirectHost)) foot.append(prevBtn, gotoBtn, ui.button('Close', () => dlg && dlg.close(null))); }
+      else if (t === 1) foot.append(moreBtn, bRepl, bAll, bFind, bClose);
+      else foot.append(moreBtn, bFind, bClose);
       more.hidden = t === 2 || !state.more;
     }
     const tabs = ui.tabs([
-      { label: 'Fin&d', body: findTabBody, onShow: () => { findTabBody.append(findBody, h('div', { class: 'row', style: 'align-items:center' }, hlChk, scope)); setButtons(0); curTab = 0; setTimeout(() => findIn.focus(), 0); } },
-      { label: 'Re&place', body: replTabBody, onShow: () => { replTabBody.append(findBody, replRow); setButtons(1); curTab = 1; setTimeout(() => findIn.focus(), 0); } },
-      { label: '&Go To', body: gotoTabBody, onShow: () => { setButtons(2); curTab = 2; setTimeout(() => gotoIn.focus(), 0); } },
+      { label: 'Fin&d', body: findTabBody, onShow: () => { findTabBody.append(findBody, direct ? findAuxRoot : h('div', { class: 'row', style: 'align-items:center' }, hlChk, scope)); setButtons(0); curTab = 0; if (direct) L.bus.emit('wordx-find-focus'); else setTimeout(() => findIn.focus(), 0); } },
+      { label: 'Re&place', body: replTabBody, onShow: () => { replTabBody.append(findBody, replRow); setButtons(1); curTab = 1; if (direct) L.bus.emit('wordx-find-focus'); else setTimeout(() => findIn.focus(), 0); } },
+      { label: '&Go To', body: gotoTabBody, onShow: () => { setButtons(2); curTab = 2; if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-goto-focus'); else setTimeout(() => gotoIn.focus(), 0); } },
     ], mode === 'replace' ? 1 : mode === 'goto' ? 2 : 0);
-    const opts = () => Object.assign({}, state, { text: findIn.value, replace: replIn.value });
-    const remember = () => { const t = findIn.value; if (t && !hist.find.includes(t)) hist.find.unshift(t); hist.find.length = Math.min(hist.find.length, 12); const r = replIn.value; if (r && !hist.repl.includes(r)) hist.repl.unshift(r); fillHist(); state.text = findIn.value; state.replace = replIn.value; };
+    const opts = () => Object.assign({}, state, { text: findInput()?.value || '', replace: replaceInput()?.value || '' });
+    const remember = () => { const t = findInput()?.value || ''; if (t && !hist.find.includes(t)) hist.find.unshift(t); hist.find.length = Math.min(hist.find.length, 12); const r = replaceInput()?.value || ''; if (r && !hist.repl.includes(r)) hist.repl.unshift(r); fillHist(); state.text = t; state.replace = r; };
     const findNext = () => {
       remember();
       try {
@@ -361,14 +389,22 @@
     const replace = keepKeys(() => { remember(); try { const hit = FD.replaceOne(opts()); if (hit) A().gotoPos(hit.a, hit.b, KEEP); else ui.msg('Wordx has finished searching the document.', { icon: 'info' }); } catch (e) { if (e.message !== 'empty') ui.msg(e.message, { icon: 'warn' }); } });
     const replaceAll = () => { remember(); try { const n = FD.replaceAll(opts()); ui.msg(n === 1 ? L.t('Wordx has completed its search of the document and has made {0} replacement.', n) : n ? L.t('Wordx has completed its search of the document and has made {0} replacements.', n) : 'Wordx has finished searching the document. The search item was not found.', { icon: 'info' }); } catch (e) { if (e.message !== 'empty') ui.msg(e.message, { icon: 'warn' }); } };
     const body = h('div', { class: 'col' }, tabs, more, foot);
-    dlg = ui.dialog({ title: 'Find and Replace', width: 470, body, modeless: true, buttons: [], focus: mode === 'goto' ? gotoIn : findIn, onClose: () => { open = null; FD.clearHighlight(); E.refocus(); } });   /* the found text is the page's selection again */
+    dlg = ui.dialog({ title: 'Find and Replace', width: 470, body, modeless: true, buttons: [], focus: mode === 'goto' ? gotoIn : (direct ? null : findIn), onClose: () => { open = null; FD.reactFindCommand = null; FD.clearHighlight(); E.refocus(); } });   /* the found text is the page's selection again */
     dlg.el.querySelector('.dlg-foot').remove();
     dlg.el.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); if (curTab === 2) gotoBtn.click(); else bFind.click(); }
     });
-    findIn.addEventListener('input', () => { if (FD.hlOpts) FD.clearHighlight(); });
+    if (!direct) findIn.addEventListener('input', () => { if (FD.hlOpts) FD.clearHighlight(); });
     showFmt();
-    open = { select: (m) => { tabs.select(m === 'replace' ? 1 : m === 'goto' ? 2 : 0); }, dlg };
+    open = { select: (m) => { tabs.select(m === 'replace' ? 1 : m === 'goto' ? 2 : 0); }, dlg, more };
+    if (direct) FD.reactFindCommand = (action, anchor) => {
+      if (action === 'clear-format') {
+        if (curTab === 1 && state.lastFocus === 'repl') state.replaceFormat = null;
+        else { state.format = null; state.replaceFormat = null; }
+        showFmt();
+      } else if (action === 'format' && anchor) formatMenu(anchor, curTab === 1 && state.lastFocus === 'repl' ? 'replaceFormat' : 'format');
+      else if (action === 'special' && anchor) specialMenu(anchor, state.lastFocus === 'repl' ? replaceInput() : findInput());
+    };
     function describe(f) {
       const parts = [];
       if (f.rPr) for (const [k, v] of Object.entries(f.rPr)) parts.push(k === 'font' ? L.t('Font: {0}', v) : k === 'sz' ? v + ' pt' : k === 'b' ? (v ? L.t('Bold') : L.t('Not Bold')) : k === 'i' ? (v ? L.t('Italic') : L.t('Not Italic')) : k === 'u' ? (v && v !== 'none' ? L.t('Underline') : L.t('No underline')) : k === 'color' ? L.t('Font color: {0}', v) : k);
@@ -385,8 +421,8 @@
       ], anchor.getBoundingClientRect());
     }
     function specialMenu(anchor, input) {
-      const ins = (code) => { const s = input.selectionStart ?? input.value.length, e = input.selectionEnd ?? s; input.value = input.value.slice(0, s) + code + input.value.slice(e); input.focus(); input.setSelectionRange(s + code.length, s + code.length); };
-      const isRepl = input === replIn;
+      const ins = (code) => { const s = input.selectionStart ?? input.value.length, e = input.selectionEnd ?? s; input.value = input.value.slice(0, s) + code + input.value.slice(e); input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); input.setSelectionRange(s + code.length, s + code.length); };
+      const isRepl = input === replaceInput();
       const wild = state.wildcards;
       const items = isRepl ? [['^p', 'Paragraph Mark'], ['^t', 'Tab Character'], ['^^', 'Caret Character'], ['^&', 'Find What Text'], ['^c', 'Clipboard Contents'], ['^+', 'Em Dash'], ['^=', 'En Dash'], ['^l', 'Manual Line Break'], ['^m', 'Manual Page Break'], ['^n', 'Column Break'], ['^~', 'Nonbreaking Hyphen'], ['^s', 'Nonbreaking Space'], ['^-', 'Optional Hyphen']].concat(wild ? [['\\1', 'Find What Expression']] : [])
         : wild ? [['?', 'Any Character'], ['[-]', 'Character in Range'], ['<', 'Beginning of Word'], ['>', 'End of Word'], ['()', L.N('Expression')], ['[!]', L.N('Not')], ['{,}', 'Num Occurrences'], ['@', 'Previous 1 or More'], ['*', L.N('0 or More Characters')], ['^t', 'Tab Character'], ['^p', 'Paragraph Mark'], ['^l', 'Manual Line Break'], ['^m', 'Manual Page Break']]

@@ -62,6 +62,18 @@ test('classic PPTX page keeps the legacy speaker-notes editor visible', () => le
   await u.evaluate("L.app.setView('notes')");
   assert.equal(await u.evaluate("!!document.querySelector('.notespage .np-page .np-notes') && !document.querySelector('.notespage')?.classList.contains('vibeoffice-react-owned')"), true, 'classic PPTX keeps its native Notes Page renderer without mounting the React package');
   await u.evaluate("L.app.setView('normal')");
+  await u.evaluate("L.panes.left.setTab('outline')");
+  assert.equal(await u.evaluate("!!document.querySelector('#leftpane .lp-body > .outline[contenteditable=true]') && !document.querySelector('#react-slides-root')?.classList.contains('vibeoffice-react-owned')"), true, 'classic PPTX keeps its native Outline editor without mounting the React package');
+  await u.evaluate("L.panes.left.setTab('slides')");
+  await u.evaluate("L.app.setView('preview')");
+  await u.evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  const classicPrint = await u.evaluate("({view:L.app.view,previewOn:document.querySelector('.preview')?.classList.contains('on'),buttons:[...document.querySelectorAll('.pv-bar button')].map((button)=>button.textContent.trim()),rootOwned:document.querySelector('#react-preview-controls-root')?.classList.contains('vibeoffice-react-owned'),error:window.__errors})");
+  assert.ok(classicPrint.previewOn && classicPrint.buttons.some((label) => label.includes('Print')) && !classicPrint.rootOwned, `classic PPTX keeps its native Print Preview toolbar without mounting the React package: ${JSON.stringify(classicPrint)}`);
+  await u.evaluate("L.app.setView('normal')");
+  await u.evaluate("L.show.start({preview:0})");
+  const classicShow = await u.evaluate("new Promise((resolve) => { const end=Date.now()+1000; const poll=()=>{ const root=document.querySelector('.show .popbar'); const labels=[...(root?.querySelectorAll('button')||[])].map((button)=>button.getAttribute('aria-label')); root&&labels.length===4?resolve({labels,react:root.classList.contains('vibeoffice-react-owned')}):Date.now()>end?resolve({labels,react:root?.classList.contains('vibeoffice-react-owned')}):setTimeout(poll,20); }; poll(); })");
+  assert.deepEqual(classicShow, { labels: ['Previous', 'Pointer options', 'Slide show menu', 'Next'], react: false }, 'classic PPTX keeps native slide-show controls without mounting the React package');
+  await u.evaluate("L.show.end()");
   await u.evaluate("L.panes.task.show('help')");
   assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .help-topic') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders the Help pane without mounting React task content');
   await u.evaluate("L.panes.task.show('clipart')");

@@ -21,7 +21,8 @@
     TP.title = h('div', { class: 'tp-title', role: 'button', tabindex: '0', 'aria-haspopup': 'menu' }, h('span', { text: '' }), h('span', { class: 'dd-arrow' }));
     const close = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close task pane', 'data-tip': 'Close', html: L.icons.get('close', 12) });
     TP.body = h('div', { class: 'tp-body' });
-    el.append(h('div', { class: 'tp-head' }, TP.back, TP.fwd, TP.home, TP.title, close), TP.body);
+    TP.reactBody = h('div', { class: 'wordx-react-task-body-root', id: 'react-wordx-task-body' });
+    el.append(h('div', { class: 'tp-head' }, TP.back, TP.fwd, TP.home, TP.title, close), TP.reactBody, TP.body);
     TP.back.addEventListener('click', () => TP.go(TP.pos - 1));
     TP.fwd.addEventListener('click', () => TP.go(TP.pos + 1));
     TP.home.addEventListener('click', () => TP.show('getting-started'));
@@ -49,13 +50,23 @@
     TP.title.firstChild.textContent = L.t(p.title);
     TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
     L.clear(TP.body);
-    p.render(TP.body);
+    if (!(window.VO && VO.reactDirectHost && ['getting-started', 'help', 'search', 'clipart', 'new', 'clipboard', 'styles', 'reveal', 'protect', 'research', 'mailmerge'].includes(id))) p.render(TP.body);
+    L.bus.emit('wordx-task-render');
+  };
+  P.reactTaskShellState = () => ({ current: TP.current || '', title: TP.registry[TP.current]?.title || '', backDisabled: TP.pos <= 0, forwardDisabled: TP.pos >= TP.stack.length - 1, items: Object.values(TP.registry).filter((pane) => !pane.hidden).map((pane) => ({ id: pane.id, title: pane.title, current: pane.id === TP.current })) });
+  P.reactTaskShellAction = (action, anchor) => {
+    if (action === 'back') return TP.go(TP.pos - 1);
+    if (action === 'forward') return TP.go(TP.pos + 1);
+    if (action === 'home') return TP.show('getting-started');
+    if (action === 'close') return A().toggleTask(false);
+    if (action === 'menu' && anchor) return ui.openMenu(Object.values(TP.registry).filter((pane) => !pane.hidden).map((pane) => ({ label: pane.title, run: () => TP.show(pane.id), checked: () => TP.current === pane.id })), anchor.getBoundingClientRect());
   };
   TP.refresh = function (reason) {
     const p = TP.registry[TP.current];
     if (!p || !TP.el || TP.el.hidden) return;
     if (p.refresh) p.refresh(TP.body, reason);
-    else if (p.live && reason !== 'sel') { L.clear(TP.body); p.render(TP.body); }
+    else if (p.live && reason !== 'sel' && !(window.VO && VO.reactDirectHost && TP.current === 'clipboard')) { L.clear(TP.body); p.render(TP.body); }
+    if (window.VO && VO.reactDirectHost && TP.current === 'clipboard') L.bus.emit('wordx-task-refresh');
   };
   const sec = (title, ...kids) => h('div', { class: 'tp-sec' }, title ? h('div', { class: 'tp-h' }, title) : null, ...kids);
   const link = (icon, label, fn, o) => h('button', Object.assign({ class: 'tp-link', type: 'button', onclick: fn }, o || {}), icon ? h('span', { html: L.icons.get(icon) }) : null, h('span', { text: label }));
@@ -76,6 +87,138 @@
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => { P.helpTopic = 'keys'; TP.show('help'); }), link('stylesPane', 'Styles and Formatting', () => TP.show('styles')), link('mailMerge', 'Mail Merge wizard', () => TP.show('mailmerge'))));
     },
   });
+  P.reactNewCatalog = () => (L.templates ? L.templates.list().slice(0, 6).map(({ id, name }) => ({ id, name })) : []);
+  P.reactGettingStartedAction = (action) => {
+    if (action === 'open') return ui.exec('open');
+    if (action === 'new') return TP.show('new');
+    if (action === 'sample') return A().newDocument({ build: (d) => Object.assign(d, A().buildSample()) });
+    if (action === 'help') { P.helpTopic = 'keys'; return TP.show('help'); }
+    if (action === 'styles') return TP.show('styles');
+    if (action === 'mailmerge') return TP.show('mailmerge');
+    if (action.startsWith('help:')) { P.helpQuery = action.slice(5); P.helpTopic = null; return TP.show('help'); }
+  };
+  P.reactStylesCatalog = (mode) => {
+    const d = doc(), used = D.usedStyles(d);
+    let ids = Object.keys(d.styles).filter((id) => ['paragraph', 'character', 'table', 'numbering'].includes(d.styles[id].type) && !d.styles[id].hidden && !d.styles[id].sameAs);
+    if (mode === 'inuse') ids = ids.filter((id) => used.has(id));
+    else if (mode === 'avail' || mode === 'styles') ids = ids.filter((id) => used.has(id) || d.styles[id].q || d.styles[id].custom || /^Heading[1-3]$|^Normal$/.test(id) || /^heading [1-3]$/i.test(d.styles[id].name || ''));
+    if (mode === 'all') { const builtins = D.builtinStyles(); for (const id in builtins) if (!ids.includes(id) && !d.styles[id]?.sameAs) ids.push(id); }
+    ids.sort((a, b) => D.styleDisplayName(d.styles[a] || D.builtinStyles()[a]).localeCompare(D.styleDisplayName(d.styles[b] || D.builtinStyles()[b])));
+    const current = E.sel ? E.sel.f.p.pPr.style || 'Normal' : '';
+    return ids.map((id) => {
+      const style = d.styles[id] || D.builtinStyles()[id];
+      if (!style) return null;
+      const r = style.type === 'paragraph' ? (d.styles[id] ? D.styleProps(d, id).rPr : style.rPr || {}) : style.type === 'character' ? D.mergeRPr(d.defaults.rPr, d.styles[id] ? D.charStyleProps(d, id) : style.rPr) : d.defaults.rPr;
+      const css = `font-family:${L.fontStack(r.font)};font-size:${Math.min(16, Math.max(8, (r.sz || 12)))}px;${r.b ? 'font-weight:bold;' : ''}${r.i ? 'font-style:italic;' : ''}${r.color && r.color !== 'auto' ? 'color:#' + r.color + ';' : ''}${r.u && r.u !== 'none' ? 'text-decoration:underline;' : ''}`;
+      return { id, name: D.styleDisplayName(style), type: style.type, css, description: styleDescription(d, id), selected: id === current, mark: style.type === 'paragraph' ? '¶' : style.type === 'character' ? 'a' : style.type === 'table' ? '⊞' : '≡' };
+    }).filter(Boolean);
+  };
+  P.reactStylesCurrent = () => A().styleState ? A().styleState() + describeDirect() : '';
+  P.reactStyleAction = (action, id, point) => {
+    if (action === 'clear') return ui.exec('clearFormats');
+    if (action === 'select-all') return selectAllLike();
+    if (action === 'new') return L.dlg.style(null);
+    if (action === 'context') return styleMenu(id, point);
+    const style = doc().styles[id] || D.builtinStyles()[id];
+    if (!style) return;
+    if (style.type === 'table') { if (L.tables.inTable()) L.tables.applyStyle(style.name || id); return; }
+    if (style.type === 'numbering') return;
+    A().applyStyle(id); E.refocus();
+  };
+  P.reactRevealCatalog = () => {
+    const sample = E.sel ? (O.textRange(...E.range(), ' ').slice(0, 120) || L.t('Sample Text')) : '';
+    if (!E.sel) return { sample, distinguish: !!P.distinguish, marks: !!LY.opts.showMarks, groups: [] };
+    const d = doc(), p = E.sel.f.p, r = E.curRun(), pp = E.curPara(), sect = D.sectFor(d, p), ind = pp.ind || {}, sp = pp.sp || {};
+    const fl = (value) => D.fmtLen(value || 0);
+    const lineSp = !sp.line ? L.t('single') : sp.rule === 'auto' || !sp.rule ? (sp.line === 1 ? L.t('single') : sp.line === 2 ? L.t('double') : L.t('{0} lines', sp.line)) : sp.rule === 'exact' ? L.t('Exactly {0} pt', sp.line) : L.t('At least {0} pt', sp.line);
+    const underline = (L.dlg.UNDERLINES || []).find((item) => item[0] === r.u);
+    const start = { nextPage: L.N('New page'), continuous: L.N('Continuous'), evenPage: L.N('Even page'), oddPage: L.N('Odd page'), nextColumn: L.N('New column') };
+    const row = (label, value) => ({ label, value: String(value) });
+    const font = [row(L.N('FONT:'), [`${r.font || ''} ${r.sz || 12} pt`, r.b && L.t('Bold'), r.i && L.t('Italic')].filter(Boolean).join(', '))];
+    if (r.color && r.color !== 'auto') font.push(row('Font color:', '#' + r.color));
+    if (r.u && r.u !== 'none') font.push(row('Underline:', L.t(underline ? underline[1] : r.u)));
+    if (r.hl) font.push(row('Highlight:', L.t(ui.colorName(L.R.HIGHLIGHT[r.hl] || r.hl))));
+    if (r.caps) font.push(row('Effects:', L.t('All caps')));
+    if (r.smallCaps) font.push(row('Effects:', L.t('Small caps')));
+    if (r.vert) font.push(row('Position:', L.t({ superscript: L.N('Superscript'), subscript: L.N('Subscript') }[r.vert] || r.vert)));
+    font.push(row('Language:', L.t(r.lang ? A().langName(r.lang) : 'English (U.S.)')));
+    const paragraph = [row('Paragraph Style:', D.styleDisplayName(d.styles[p.pPr.style || 'Normal'])), row('Alignment:', L.t(JC[pp.jc || 'left'] || pp.jc)), row('Indentation:', !ind.fl ? L.t('Left: {0}, Right: {1}', fl(ind.l), fl(ind.r)) : ind.fl < 0 ? L.t('Left: {0}, Right: {1}, Hanging: {2}', fl(ind.l), fl(ind.r), fl(-ind.fl)) : L.t('Left: {0}, Right: {1}, First line: {2}', fl(ind.l), fl(ind.r), fl(ind.fl))), row('Spacing:', L.t('Before: {0} pt, After: {1} pt, Line spacing: {2}', L.round(sp.b || 0, 1), L.round(sp.a || 0, 1), lineSp))];
+    if (pp.keepNext || pp.keepLines || pp.pageBreakBefore) paragraph.push(row('Line and Page Breaks:', [pp.keepNext && L.t('Keep with next'), pp.keepLines && L.t('Keep lines together'), pp.pageBreakBefore && L.t('Page break before')].filter(Boolean).join(', ')));
+    if (L.lists && L.lists.info(p)) paragraph.push(row('Bullets and Numbering:', L.lists.info(p).fmt === 'bullet' ? L.t('Bulleted') : L.t('Numbered')));
+    const section = [row('Margins:', L.t('Top: {0}, Bottom: {1}, Left: {2}, Right: {3}', fl(sect.mt), fl(sect.mb), fl(sect.ml), fl(sect.mr))), row('Layout:', L.t('Section start: {0}', L.t(start[sect.type || 'nextPage']))), row('Paper:', `${L.t(D.paperName(sect))} (${fl(sect.pgW)} × ${fl(sect.pgH)}), ${sect.orient === 'landscape' ? L.t('Landscape') : L.t('Portrait')}`)];
+    if (sect.cols && sect.cols.n > 1) section.push(row('Columns:', sect.cols.n));
+    return { sample, distinguish: !!P.distinguish, marks: !!LY.opts.showMarks, groups: [{ title: L.N('Font'), action: 'font', rows: font }, { title: L.N('Paragraph'), action: 'paragraph', rows: paragraph }, { title: L.N('Section'), action: 'pageSetup', rows: section }], styleDescription: P.distinguish ? L.t('Paragraph style: {0}', styleDescription(d, p.pPr.style || 'Normal')) : '' };
+  };
+  P.reactRevealAction = (action, value) => {
+    if (action === 'toggle-source') { P.distinguish = !!value; L.bus.emit('wordx-task-render'); }
+    else if (action === 'marks') ui.exec('showMarks');
+    else if (action === 'font') L.dlg.font();
+    else if (action === 'paragraph') L.dlg.paragraph();
+    else if (action === 'pageSetup') L.dlg.pageSetup();
+  };
+  P.reactProtectCatalog = () => {
+    const protection = doc().settings.protect || {};
+    return { formatting: !!protection.formatting, editing: !!(protection.kind && protection.kind !== 'none'), kind: protection.kind || 'readOnly', on: !!protection.on };
+  };
+  P.reactProtectSet = (field, value) => {
+    const protection = doc().settings.protect || (doc().settings.protect = {});
+    if (field === 'formatting') protection.formatting = !!value;
+  };
+  P.reactProtectApply = async ({ editing, formatting, kind }) => {
+    const d = doc(), protection = d.settings.protect || {};
+    if (protection.on) {
+      if (protection.hash) { const password = await ui.prompt('Password:', '', 'Unprotect Document'); if (password == null) return; if (await hash(password) !== protection.hash) { ui.msg('The password is incorrect.', { icon: 'warn' }); return; } }
+      d.settings.protect = Object.assign({}, protection, { on: false });
+    } else {
+      if (!editing && !formatting) { ui.msg('Choose a restriction first.', { icon: 'info' }); return; }
+      const password = await ui.prompt('Enter new password (optional):', '', 'Start Enforcing Protection');
+      if (password == null) return;
+      d.settings.protect = { on: true, kind: editing ? kind || protection.kind || 'readOnly' : 'none', formatting, hash: password ? await hash(password) : null };
+      if (d.settings.protect.kind === 'tracked') d.settings.track = true;
+    }
+    d.dirty = true;
+    E.readOnly = false;
+    TP.render();
+    A().updateStatus();
+    ui.refresh();
+  };
+  P.reactNewAction = (action) => {
+    if (action === 'blank') return A().newDocument();
+    if (action === 'web') return A().newDocument({ build: (d) => { d.webPage = true; } }).then(() => A().setView('web'));
+    if (action === 'email') return A().newDocument({ build: (d) => { d.main.blocks = [D.para([D.text('To: ')]), D.para([D.text('Subject: ')]), D.para()]; } });
+    if (action === 'existing') return A().newFromExisting();
+    if (action === 'template-dialog') return L.dlg.newFromTemplate();
+    if (String(action).startsWith('template:')) return L.templates.create(String(action).slice(9));
+  };
+  P.reactClipboardCatalog = () => (A().clipItems || []).map((item, index) => ({
+    index, text: (item.text || '').slice(0, 160) || L.t('[object]'), table: item.blocks.some((block) => block.t === 'tbl'), blocks: item.blocks,
+  }));
+  P.reactPasteClipboard = (index) => { const item = A().clipItems?.[index]; if (item) E.pasteBlocks(item.blocks); };
+  P.reactPasteAllClipboard = () => { for (const item of (A().clipItems || []).slice().reverse()) E.pasteBlocks(item.blocks); };
+  P.reactClearClipboard = () => { if (A().clipItems) A().clipItems.length = 0; TP.refresh('doc'); };
+  P.reactSearchCatalog = function (query) {
+    P.searchQuery = query;
+    const needle = String(query || '').trim().toLowerCase();
+    const hits = [];
+    const modelHits = [];
+    if (!needle || !doc()) { P.reactSearchHits = modelHits; return hits; }
+    D.reindex(doc());
+    for (const story of D.stories(doc())) for (const paragraph of story.paras || []) {
+      const text = D.ptext(paragraph), lower = text.toLowerCase();
+      let offset = lower.indexOf(needle);
+      while (offset >= 0 && hits.length < 200) {
+        const start = Math.max(0, offset - 30), end = Math.min(text.length, offset + needle.length + 40);
+        hits.push({ before: (start ? '…' : '') + text.slice(start, offset), match: text.slice(offset, offset + needle.length), after: text.slice(offset + needle.length, end) + (end < text.length ? '…' : '') });
+        modelHits.push({ paragraph, offset });
+        offset = lower.indexOf(needle, offset + needle.length);
+      }
+    }
+    P.reactSearchHits = modelHits;
+    return hits;
+  };
+  P.reactOpenSearchHit = (index) => { const hit = P.reactSearchHits?.[index]; if (hit) A().gotoPos(D.pos(hit.paragraph, hit.offset), D.pos(hit.paragraph, hit.offset + String(P.searchQuery || '').trim().length)); };
+  P.reactHelpCatalog = () => ({ topics: HELP, keys: KEYS, query: P.helpQuery || '', topic: P.helpTopic || null });
+  P.reactSetHelpState = (query, topic) => { P.helpQuery = query; P.helpTopic = topic; L.bus.emit('wordx-task-render'); };
   /* ---------- New Document ---------- */
   TP.register({
     id: 'new', title: 'New Document',
@@ -341,6 +484,41 @@
     if (!n) box.appendChild(h('p', { class: 'tp-note', text: 'The text was not found in this document.' }));
     else if (n >= 50) box.appendChild(h('p', { class: 'tp-note', text: 'Showing the first 50 matches.' }));
   }
+  P.reactResearchSearch = async (text, service, fromHistory) => {
+    const query = String(text || '').trim();
+    P.researchQuery = query; P.researchService = service;
+    const history = P.researchHistory || (P.researchHistory = []);
+    if (query && !fromHistory && history[history.length - 1] !== query) history.push(query);
+    const result = { thesaurus: null, document: [], error: '' };
+    if (!query) return result;
+    if (service === 'thesaurus' || service === 'thesaurusUK' || service === 'all') {
+      try {
+        await TH.load();
+        const entry = TH.lookup(query);
+        result.thesaurus = entry ? { base: entry.base ? entry.head : '', senses: entry.senses.map((sense) => ({ heading: `${sense.syns[0]} (${POS[sense.pos] || sense.pos})`, words: sense.syns })), antonyms: entry.ants } : { missing: true, near: TH.near(query, 12) };
+      } catch (error) { result.error = L.t('The thesaurus could not be loaded ({0}). Serve Wordx from a web server rather than opening index.html as a local file.', error.message || error); }
+    }
+    if (service === 'document' || service === 'all') {
+      const d = doc(), needle = query.toLowerCase(), hits = [];
+      D.reindex(d);
+      for (const story of D.stories(d)) for (const paragraph of story.paras || []) {
+        const textValue = D.ptext(paragraph); let offset = textValue.toLowerCase().indexOf(needle);
+        while (offset >= 0 && hits.length < 50) {
+          const end = offset + needle.length;
+          hits.push({ before: (offset > 30 ? '…' : '') + textValue.slice(Math.max(0, offset - 30), offset).replace(/[￼\t]/g, ' '), match: textValue.slice(offset, end), after: textValue.slice(end, end + 40).replace(/[￼\t]/g, ' ') + (textValue.length > end + 40 ? '…' : ''), paragraph, offset });
+          offset = textValue.toLowerCase().indexOf(needle, end);
+        }
+      }
+      P.reactResearchHits = hits; result.document = hits.map(({ before, match, after }) => ({ before, match, after }));
+    }
+    return result;
+  };
+  P.reactOpenResearchHit = (index) => { const hit = P.reactResearchHits?.[index]; if (hit) A().gotoPos(D.pos(hit.paragraph, hit.offset), D.pos(hit.paragraph, hit.offset + hit.match.length)); };
+  P.reactResearchWordMenu = (word, rect, lookUp) => ui.openMenu([
+    { label: '&Insert', run: () => { if (E.sel && E.collapsed()) { const range = O.wordAt(E.sel.f); if (range) E.setSel(range[0], range[1]); } E.insertTextAt(word, 'Insert'); } },
+    { label: '&Copy', run: () => { try { navigator.clipboard.writeText(word).catch(() => {}); } catch (error) { /* clipboard may be unavailable */ } E.clip = { text: word, blocks: [D.para([D.text(word)])], html: word }; } },
+    { label: '&Look Up', run: () => lookUp(word) },
+  ], rect);
   /* ---------- Styles and Formatting ---------- */
   TP.register({
     id: 'styles', title: 'Styles and Formatting',
@@ -547,7 +725,37 @@
   /* ================= Document Map & thumbnails ================= */
   const DM = (P.docmap = { collapsed: new Set() });
   DM.mount = function (el) { DM.el = el; L.bus.on('doc-changed', L.debounce(() => { if (!el.hidden) (A().opts.thumbs ? P.thumbs.render() : DM.render()); }, 400)); L.bus.on('sel', L.debounce(() => { if (!el.hidden && !A().opts.thumbs) DM.mark(); }, 120)); L.bus.on('doc-loaded', () => { if (!el.hidden) DM.render(); }); };
+  P.reactDocMapCatalog = () => {
+    if (A().opts.thumbs) {
+      const width = Math.max(60, (DM.el?.clientWidth || 100) - 40);
+      return { thumbs: true, items: [], pages: LY.pages.map((page, index) => { const scale = width / page.el.offsetWidth; return { index, width, height: page.el.offsetHeight * scale, scale, source: page.el }; }) };
+    }
+    const d = doc(); D.reindex(d);
+    const headings = [];
+    for (const paragraph of d.main.paras) { const level = D.headingLevel(d, paragraph); if (level) headings.push({ paragraph, level }); }
+    let active = E.sel && D.storyOf(d, E.sel.f.p) === d.main ? E.sel.f.p : null;
+    while (active && !D.headingLevel(d, active)) active = D.prevPara(d, active);
+    let hideBelow = 0;
+    const items = headings.flatMap((heading, index) => {
+      if (hideBelow && heading.level > hideBelow) return [];
+      hideBelow = 0;
+      const hasChildren = !!headings[index + 1] && headings[index + 1].level > heading.level;
+      const collapsed = DM.collapsed.has(heading.paragraph.id);
+      if (collapsed) hideBelow = heading.level;
+      return [{ id: heading.paragraph.id, level: heading.level, text: D.plainText(heading.paragraph).trim() || L.t('(blank)'), title: D.plainText(heading.paragraph), hasChildren, collapsed, selected: !!active && active.id === heading.paragraph.id }];
+    });
+    return { thumbs: false, items, pages: [] };
+  };
+  P.reactDocMapToggle = (id) => { if (DM.collapsed.has(id)) DM.collapsed.delete(id); else DM.collapsed.add(id); L.bus.emit('wordx-docmap-render'); };
+  P.reactDocMapSelect = (id) => {
+    const paragraph = doc().main.paras.find((item) => item.id === id);
+    if (!paragraph) return;
+    A().gotoPos(D.pos(paragraph, 0));
+    const fragment = LY.fragFor(paragraph, 0); if (fragment) fragment.scrollIntoView({ block: 'start' });
+  };
+  P.reactThumbSelect = (index) => { const page = LY.pages[index]; if (page) page.el.scrollIntoView({ block: 'start' }); };
   DM.render = function () {
+    if (window.VO && VO.reactDirectHost) { L.bus.emit('wordx-docmap-render'); return; }
     const el = DM.el;
     L.clear(el);
     const d = doc();
@@ -573,6 +781,7 @@
     DM.mark();
   };
   DM.mark = function () {
+    if (window.VO && VO.reactDirectHost) { L.bus.emit('wordx-docmap-render'); return; }
     if (!E.sel || !DM.el) return;
     const d = doc();
     let p = E.sel.f.p;
@@ -582,6 +791,7 @@
   };
   P.thumbs = {
     render() {
+      if (window.VO && VO.reactDirectHost) { L.bus.emit('wordx-docmap-render'); return; }
       const el = DM.el;
       L.clear(el);
       const box = h('div', { class: 'thumbs' });
@@ -632,6 +842,8 @@
   PV.enter = function () {
     E.readOnly = true;
     LY.root.contentEditable = 'false';
+    if (window.VO && VO.reactDirectHost) { PV.mag = true; L.bus.emit('wordx-preview-view'); }
+    else {
     const bar = h('div', { class: 'toolbar preview-bar', id: 'tb-preview', role: 'toolbar', 'aria-label': 'Print Preview' });
     const btn = (icon, label, fn, tip, on) => { const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : '') + (on ? ' on' : ''), type: 'button', 'data-tip': tip || label, 'aria-label': tip || label, html: (icon ? L.icons.get(icon) : '') + (label ? `<span class="tb-lbl">${L.esc(L.t(label))}</span>` : '') }); b.addEventListener('pointerdown', (e) => e.preventDefault()); b.addEventListener('click', fn); return b; };
     const zoom = ui.combo({ id: 'pv-zoom', width: 74, tip: 'Zoom', options: () => ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%', 'Page Width', 'Text Width', 'Whole Page', 'Two Pages'], value: () => Math.round(LY.zoom * 100) + '%', onChange: (v) => A().zoomTo(v) });
@@ -640,6 +852,7 @@
     bar.append(h('span', { class: 'tb-grip' }), btn('print', '', () => A().printPDF(), L.N('Print')), magBtn, btn('onePage', '', () => { LY.setMultiPage(0); LY.setZoom(LY.zoomFor('wholePage')); }, 'One Page'), btn('multiPage', '', (e) => PV.multiMenu(e.currentTarget), 'Multiple Pages'), zoom, btn('ruler', '', () => ui.exec('ruler'), 'View Ruler'), btn('shrink', '', () => PV.shrink(), 'Shrink to Fit'), btn('fullScreen', '', () => ui.exec('fullScreen'), 'Full Screen'), btn('', 'Close Preview', () => A().setView(A().prevView || 'print'), 'Close Preview'), btn('help', '', () => ui.exec('help'), L.N('Help')));
     L.$('#toolbars').appendChild(bar);
     PV.bar = bar;
+    }
     PV.prevZoom = LY.zoom;
     LY.setZoom(LY.zoomFor('wholePage'));
     PV.click = (e) => {
@@ -655,6 +868,7 @@
   PV.exit = function () {
     if (PV.bar) PV.bar.remove();
     PV.bar = null;
+    if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-preview-view');
     LY.scroller.removeEventListener('click', PV.click);
     L.$('#scroller').classList.remove('zoomed');
     E.readOnly = false;
@@ -678,6 +892,18 @@
         return box;
       },
     }], anchor.getBoundingClientRect(), { cls: 'grid-menu' });
+  };
+  P.reactPreviewAction = (action, value, anchor) => {
+    if (action === 'print') A().printPDF();
+    else if (action === 'magnifier') { PV.mag = !PV.mag; E.readOnly = PV.mag; LY.root.contentEditable = PV.mag ? 'false' : 'true'; L.bus.emit('wordx-preview-view'); }
+    else if (action === 'page') { LY.setMultiPage(0); LY.setZoom(LY.zoomFor('wholePage')); }
+    else if (action === 'multi') PV.multiMenu(anchor);
+    else if (action === 'zoom') A().zoomTo(value);
+    else if (action === 'ruler') ui.exec('ruler');
+    else if (action === 'shrink') PV.shrink();
+    else if (action === 'fullscreen') ui.exec('fullScreen');
+    else if (action === 'close') A().setView(A().prevView || 'print');
+    else if (action === 'help') ui.exec('help');
   };
   /** Shrink One Page: reduce font sizes until the last page disappears */
   PV.shrink = function () {
@@ -706,12 +932,24 @@
   /* ================= Reading Layout toolbar ================= */
   const RL = (P.reading = {});
   RL.enter = function () {
+    if (window.VO && VO.reactDirectHost) { L.bus.emit('wordx-reading-view'); return; }
     const bar = h('div', { class: 'readbar', role: 'toolbar', 'aria-label': 'Reading Layout' });
     const btn = (icon, label, fn, tip) => { const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : ''), type: 'button', 'data-tip': tip || label, 'aria-label': tip || label, html: (icon ? L.icons.get(icon) : '') + (label ? `<span class="tb-lbl">${L.esc(L.t(label))}</span>` : '') }); b.addEventListener('pointerdown', (e) => e.preventDefault()); b.addEventListener('click', fn); return b; };
     bar.append(btn('docMap', 'Document Map', () => A().toggleDocMap()), btn('thumbnails', L.N('Thumbnails'), () => A().toggleThumbs()), btn('find', L.N('Find'), () => ui.exec('find')), btn('research', L.N('Research'), () => ui.exec('research')), h('span', { class: 'tb-sep' }), btn('growFont', '', () => { LY.setZoom(LY.zoom * 1.1); }, 'Increase Text Size'), btn('shrinkFont', '', () => { LY.setZoom(LY.zoom / 1.1); }, 'Decrease Text Size'), btn('onePage', '', () => { LY.setMultiPage(0); LY.setZoom(LY.zoomFor('wholePage')); }, 'Actual Page'), btn('multiPage', '', () => { LY.setMultiPage(2); LY.setZoom(LY.zoomFor('twoPages')); }, 'Allow Multiple Pages'), h('span', { class: 'tb-sep' }), btn('', L.N('Close'), () => A().setView(A().prevView && A().prevView !== 'reading' ? A().prevView : 'print'), L.N('Close')));
     L.$('#toolbars').appendChild(bar);
     RL.bar = bar;
   };
-  RL.exit = function () { if (RL.bar) RL.bar.remove(); RL.bar = null; };
+  RL.exit = function () { if (window.VO && VO.reactDirectHost) { L.bus.emit('wordx-reading-view'); return; } if (RL.bar) RL.bar.remove(); RL.bar = null; };
+  P.reactReadingAction = (action) => {
+    if (action === 'docmap') A().toggleDocMap();
+    else if (action === 'thumbs') A().toggleThumbs();
+    else if (action === 'find') ui.exec('find');
+    else if (action === 'research') ui.exec('research');
+    else if (action === 'grow') LY.setZoom(LY.zoom * 1.1);
+    else if (action === 'shrink') LY.setZoom(LY.zoom / 1.1);
+    else if (action === 'page') { LY.setMultiPage(0); LY.setZoom(LY.zoomFor('wholePage')); }
+    else if (action === 'pages') { LY.setMultiPage(2); LY.setZoom(LY.zoomFor('twoPages')); }
+    else if (action === 'close') A().setView(A().prevView && A().prevView !== 'reading' ? A().prevView : 'print');
+  };
   L.bus.on('view', (v) => { if (v === 'reading') { if (!RL.bar) RL.enter(); } else RL.exit(); });
 })();

@@ -502,16 +502,17 @@
     A.openSheetNavigationMenu = (e) => ui.openMenu(wb().sheets.map((s, k) => (s.state === 'visible' ? { label: s.name.replace(/&/g, '&&'), raw: true, checked: () => k === wb().active, radio: true, run: () => A.activateSheet(k) } : null)).filter(Boolean), { x: e.clientX, y: e.clientY });
     /* the split bar between tabs and the horizontal scroll bar */
     const sp = L.$('#tabsplit');
-    sp.addEventListener('pointerdown', (e) => {
+    A.beginTabsResize = (e, capture = sp) => {
       e.preventDefault();
       if (e.button !== 0) return;
       const x0 = e.clientX, w0 = tabs.offsetWidth, before = tabs.style.width;
       ui.drag(e, {
-        capture: sp,
+        capture,
         move(ev) { tabs.style.width = L.clamp(w0 + ev.clientX - x0, 40, L.$('#tabrow').offsetWidth - 120) + 'px'; G().paint(); },
         cancel() { tabs.style.width = before; G().paint(); },
       });
-    });
+    };
+    if (!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected)) sp.addEventListener('pointerdown', (e) => A.beginTabsResize(e, sp));
   }
   A.insertSheet = function () {
     const w = wb();

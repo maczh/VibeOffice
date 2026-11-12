@@ -47,6 +47,7 @@
   function thumbWidth() { return Math.max(60, (LP.body.clientWidth || 190) - 48); }
   function renderThumbs() {
     if (LP.reactRoot && LP.reactRoot.isConnected && L.app.reactMounted) {
+      L.clear(LP.body).appendChild(LP.reactRoot);
       L.bus.emit('pptx-slides-render');
       return;
     }
@@ -170,6 +171,10 @@
   /* --- outline --- */
   let olDirty = false, olHistPushed = false;
   function renderOutline() {
+    if (LP.reactRoot && LP.reactRoot.isConnected && L.app.reactMounted) {
+      L.clear(LP.body).appendChild(LP.reactRoot);
+      return;
+    }
     const ol = h('div', { class: 'outline' + (L.app.opts.outlinePlain ? ' plain' : ''), contenteditable: 'true', spellcheck: String(!!L.app.opts.spell), role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Outline|pane' });
     L.pres.slides.forEach((s, i) => {
       const title = s.shapes.find((x) => x.ph && (x.ph.type === 'title' || x.ph.type === 'ctrTitle'));
@@ -188,8 +193,8 @@
       void i;
     });
     ol.addEventListener('keydown', onOutlineKey);
-    ol.addEventListener('input', () => { if (!olHistPushed) { L.hist.push('Outline Edit'); olHistPushed = true; } olDirty = true; commitSoon(); });
-    ol.addEventListener('paste', (e) => { e.preventDefault(); const t = (e.clipboardData && e.clipboardData.getData('text/plain')) || ''; document.execCommand('insertText', false, t.replace(/\r?\n/g, ' ')); });
+    ol.addEventListener('input', LP.onOutlineInput);
+    ol.addEventListener('paste', LP.onOutlinePaste);
     ol.addEventListener('focusout', () => LP.commitOutline());
     ol.addEventListener('keyup', syncOutlineSlide);
     ol.addEventListener('click', syncOutlineSlide);
@@ -198,6 +203,20 @@
     LP.outline = ol;
     styleOutline();
   }
+  LP.reactOutlineRows = function () {
+    return L.pres.slides.flatMap((s) => {
+      const title = s.shapes.find((x) => x.ph && (x.ph.type === 'title' || x.ph.type === 'ctrTitle'));
+      const rows = [{ kind: 'title', slideId: s.id, level: 0, text: title ? L.txt.plain(title.tx).replace(/\n/g, ' ') : '' }];
+      const body = bodyShape(s);
+      if (body) for (const p of body.tx.ps) rows.push({ kind: 'body', slideId: s.id, level: p.lvl || 0, text: L.txt.paraText(p).replace(/\n/g, ' ') });
+      return rows;
+    });
+  };
+  LP.onOutlineInput = function () { if (!olHistPushed) { L.hist.push('Outline Edit'); olHistPushed = true; } olDirty = true; commitSoon(); };
+  LP.onOutlinePaste = function (e) { e.preventDefault(); const t = (e.clipboardData && e.clipboardData.getData('text/plain')) || ''; document.execCommand('insertText', false, t.replace(/\r?\n/g, ' ')); };
+  LP.onOutlineKey = onOutlineKey;
+  LP.syncOutlineSlide = syncOutlineSlide;
+  LP.styleOutline = styleOutline;
   function styleOutline() {
     if (!LP.outline) return;
     let n = L.pres.firstNum || 1;
@@ -431,26 +450,34 @@
   PV.mount = function (parent) {
     PV.el = h('div', { class: 'preview', 'aria-label': 'Print Preview' });
     PV.bar = h('div', { class: 'pv-bar' });
+    PV.reactRoot = h('div', { class: 'react-preview-controls-root', id: 'react-preview-controls-root' });
     PV.scroll = h('div', { class: 'pv-scroll' });
+    PV.bar.appendChild(PV.reactRoot);
     PV.el.append(PV.bar, PV.scroll);
     parent.appendChild(PV.el);
   };
   PV.render = function () {
     if (!PV.el) return;
     const o = L.app.printOpts;
-    L.clear(PV.bar);
-    const canPrint = window.self === window.top || !!VO.reactDirectHost;
-    if (canPrint) PV.bar.appendChild(ui.button('&Print...', () => { document.body.classList.add('printing'); window.print(); setTimeout(() => document.body.classList.remove('printing'), 500); }));
-    PV.bar.append(
-      h('label', { text: 'Print What:' }),
-      ui.select([['slides', 'Slides'], ['handouts', 'Handouts'], ['notes', 'Notes Pages'], ['outline', 'Outline View']], o.what, (v) => { o.what = v; PV.render(); }),
-      h('label', { text: 'Per page:' }),
-      ui.select([[1, '1'], [2, '2'], [3, '3'], [4, '4'], [6, '6'], [9, '9']], o.per, (v) => { o.per = +v; PV.render(); }, { disabled: o.what !== 'handouts' }),
-      ui.select([['color', 'Color'], ['gray', 'Grayscale'], ['bw', 'Pure Black and White']], o.color, (v) => { o.color = v; PV.render(); }),
-      ui.check('Frame slides', o.frame, (v) => { o.frame = v; PV.render(); }),
-      ui.button('Save as P&DF...', () => L.app.previewPDF()),
-      ui.button('&Close', () => L.app.setView(L.app.prevView || 'normal')));
-    if (!canPrint) PV.bar.appendChild(h('span', { class: 'tp-note', text: 'To print, save these pages as a PDF and print the PDF.' }));
+    if (PV.reactMounted) {
+      if (!PV.reactRoot.isConnected) PV.bar.appendChild(PV.reactRoot);
+      L.bus.emit('pptx-preview-render');
+    } else {
+      L.clear(PV.bar);
+      const canPrint = window.self === window.top || !!VO.reactDirectHost;
+      if (canPrint) PV.bar.appendChild(ui.button('&Print...', () => { document.body.classList.add('printing'); window.print(); setTimeout(() => document.body.classList.remove('printing'), 500); }));
+      PV.bar.append(
+        h('label', { text: 'Print What:' }),
+        ui.select([['slides', 'Slides'], ['handouts', 'Handouts'], ['notes', 'Notes Pages'], ['outline', 'Outline View']], o.what, (v) => { o.what = v; PV.render(); }),
+        h('label', { text: 'Per page:' }),
+        ui.select([[1, '1'], [2, '2'], [3, '3'], [4, '4'], [6, '6'], [9, '9']], o.per, (v) => { o.per = +v; PV.render(); }, { disabled: o.what !== 'handouts' }),
+        ui.select([['color', 'Color'], ['gray', 'Grayscale'], ['bw', 'Pure Black and White']], o.color, (v) => { o.color = v; PV.render(); }),
+        ui.check('Frame slides', o.frame, (v) => { o.frame = v; PV.render(); }),
+        ui.button('Save as P&DF...', () => L.app.previewPDF()),
+        ui.button('&Close', () => L.app.setView(L.app.prevView || 'normal')));
+      if (!canPrint) PV.bar.appendChild(h('span', { class: 'tp-note', text: 'To print, save these pages as a PDF and print the PDF.' }));
+      if (!PV.reactRoot.isConnected) PV.bar.appendChild(PV.reactRoot);
+    }
     L.clear(PV.scroll);
     const slides = L.pres.slides.map((s, i) => [s, i]).filter(([s, i]) => (o.hidden || !s.hidden) && (!o.range || o.range.includes(i)));
     const landscape = o.what === 'slides';

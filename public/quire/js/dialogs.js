@@ -319,26 +319,43 @@
   /* ================= Tabs ================= */
   G.tabs = function (opts) {
     opts = opts || {};
+    const direct = !!(window.VO && VO.reactDirectHost);
     const d = doc();
     const pp = opts.target ? Object.assign({}, opts.base || {}, opts.target) : E.curPara();
     let tabs = (pp.tabs || []).filter((t) => t.al !== 'clear' && t.al !== 'num').map((t) => Object.assign({}, t));
     const cleared = [];
+    let reactPosition = '', reactAlignment = 'left', reactLeader = 'none', reactDefault = d.settings.defTab || 36;
+    const reactRoot = h('div', { id: 'react-wordx-tabs-root' });
     const pos = h('input', { type: 'text', id: 'td-pos', style: 'width:100%' });
     const list = G.listBox(tabs.map((t) => D.fmtLen(t.pos)), null, { height: 90, translate: 'no', onChange: (v) => { const t = tabs.find((x) => D.fmtLen(x.pos) === v); if (t) { pos.value = v; al.set(t.al === 'start' ? 'left' : t.al === 'end' ? 'right' : t.al); lead.set(t.leader || 'none'); } } });
     const def = G.len(d.settings.defTab || 36, { id: 'td-def', min: 1 });
     const al = G.radios('td-al', [['left', '&Left'], ['center', '&Center'], ['right', '&Right'], ['decimal', '&Decimal'], ['bar', '&Bar']], 'left');
     const lead = G.radios('td-lead', [['none', L.N('&1 None')], ['dot', '&2 .......'], ['hyphen', '&3 -------'], ['underscore', '&4 ______']], 'none');
     const clearInfo = h('div', { class: 'tp-note' });
-    const refresh = () => { tabs.sort((a, b) => a.pos - b.pos); list.setItems(tabs.map((t) => D.fmtLen(t.pos))); clearInfo.textContent = cleared.length ? L.t('Tab stops to be cleared: {0}', cleared.map((p) => D.fmtLen(p)).join(', ')) : ''; };
-    const setTab = () => { const p = D.parseLen(pos.value); if (p == null || isNaN(p)) return false; const i = tabs.findIndex((t) => Math.abs(t.pos - p) < 0.5); const t = { pos: L.round(p, 2), al: al.get(), leader: lead.get() === 'none' ? undefined : lead.get() }; if (i >= 0) tabs[i] = t; else tabs.push(t); refresh(); return true; };
-    const body = h('div', null, G.row(h('div', { class: 'col', style: 'flex:1' }, h('label', { for: 'td-pos', html: ui.ampHTML('&Tab stop position:') }), pos, list), h('div', { class: 'col', style: 'flex:1' }, G.f('De&fault tab stops:', def), clearInfo)),
+    const refresh = () => { tabs.sort((a, b) => a.pos - b.pos); list.setItems(tabs.map((t) => D.fmtLen(t.pos))); clearInfo.textContent = cleared.length ? L.t('Tab stops to be cleared: {0}', cleared.map((p) => D.fmtLen(p)).join(', ')) : ''; if (direct) L.bus.emit('wordx-tabs-refresh'); };
+    const setTab = () => { const p = D.parseLen(direct ? reactPosition : pos.value); if (p == null || isNaN(p)) return false; const i = tabs.findIndex((t) => Math.abs(t.pos - p) < 0.5); const t = { pos: L.round(p, 2), al: direct ? reactAlignment : al.get(), leader: (direct ? reactLeader : lead.get()) === 'none' ? undefined : direct ? reactLeader : lead.get() }; if (i >= 0) tabs[i] = t; else tabs.push(t); refresh(); return true; };
+    G.reactTabsCatalog = () => ({ tabs: tabs.slice().sort((a, b) => a.pos - b.pos).map((t) => ({ value: D.fmtLen(t.pos), label: D.fmtLen(t.pos) })), cleared: cleared.map((p) => D.fmtLen(p)), position: reactPosition, alignment: reactAlignment, leader: reactLeader, defaultTab: reactDefault });
+    G.reactTabsAction = (action, value) => {
+      if (action === 'change' && value) { reactPosition = value.position; reactAlignment = value.alignment; reactLeader = value.leader; reactDefault = +value.defaultTab || 1; return; }
+      if (action === 'select') { const t = tabs.find((tab) => D.fmtLen(tab.pos) === value); if (t) { reactPosition = D.fmtLen(t.pos); reactAlignment = t.al === 'start' ? 'left' : t.al === 'end' ? 'right' : t.al; reactLeader = t.leader || 'none'; L.bus.emit('wordx-tabs-refresh'); } }
+      else if (action === 'set') { if (setTab()) { reactPosition = D.fmtLen(D.parseLen(reactPosition)); L.bus.emit('wordx-tabs-refresh'); } }
+      else if (action === 'clear') { const p = D.parseLen(reactPosition); if (p != null) { tabs = tabs.filter((t) => Math.abs(t.pos - p) > 0.5); cleared.push(p); refresh(); } }
+      else if (action === 'clearAll') { for (const t of tabs) cleared.push(t.pos); tabs = []; for (const t of D.pProps(d, E.sel ? E.sel.f.p : D.firstPara(d.main.blocks)).tabs || []) cleared.push(t.pos); refresh(); }
+      else if (action === 'apply') applyTabs();
+    };
+    const body = direct ? reactRoot : h('div', null, G.row(h('div', { class: 'col', style: 'flex:1' }, h('label', { for: 'td-pos', html: ui.ampHTML('&Tab stop position:') }), pos, list), h('div', { class: 'col', style: 'flex:1' }, G.f('De&fault tab stops:', def), clearInfo)),
       G.row(ui.group('Alignment', al), ui.group('Leader', lead)),
       h('div', { class: 'tp-btns' }, ui.button('&Set', () => setTab()), ui.button('Cl&ear', () => { const p = D.parseLen(pos.value); if (p == null) return; tabs = tabs.filter((t) => Math.abs(t.pos - p) > 0.5); cleared.push(p); refresh(); }), ui.button('Clear &All', () => { for (const t of tabs) cleared.push(t.pos); tabs = []; for (const t of D.pProps(d, E.sel ? E.sel.f.p : D.firstPara(d.main.blocks)).tabs || []) cleared.push(t.pos); refresh(); })));
     ui.dialog({
-      title: 'Tabs', width: 380, body, focus: pos,
+      title: 'Tabs', width: 380, body, focus: direct ? reactRoot : pos,
       buttons: [{ label: 'OK', primary: true, onClick: () => {
-        if (pos.value.trim() && !tabs.some((t) => D.fmtLen(t.pos) === pos.value.trim())) setTab();
-        const dt = def.get();
+        if (direct) { G.reactTabsAction('apply'); return; }
+        applyTabs();
+      } }, { label: 'Cancel' }],
+    });
+    function applyTabs() {
+        if ((direct ? reactPosition : pos.value).trim() && !tabs.some((t) => D.fmtLen(t.pos) === (direct ? reactPosition : pos.value).trim())) setTab();
+        const dt = direct ? reactDefault : def.get();
         if (dt && Math.abs(dt - (d.settings.defTab || 36)) > 0.1) E.edit('Default Tabs', () => { D.touchKey(d, 'settings'); d.settings.defTab = dt; return E.sel; });
         const fn = (pPr, p) => {
           const styleTabs = p ? (D.styleProps(d, pPr.style || 'Normal').pPr.tabs || []) : (opts.base && opts.base.tabs) || [];
@@ -348,8 +365,7 @@
         };
         if (opts.onOK) { const t = {}; fn(t, null); opts.onOK(t); return; }
         E.formatPara(fn, L.N('Tabs'));
-      } }, { label: 'Cancel' }],
-    });
+    }
   };
 
   /* ================= Borders and Shading ================= */
@@ -806,6 +822,7 @@
 
   /* ================= Drop Cap ================= */
   G.dropCap = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const p = E.sel && E.sel.f.p;
     if (!p) return;
     const pp = D.pProps(doc(), p);
@@ -818,8 +835,12 @@
     const font = ui.select(FONTS(), (D.rProps(doc(), p, p.runs.find((x) => x.t === 'text')) || {}).font || 'Times New Roman', null, { id: 'dc-font', translate: 'no' });
     const nl = G.num(dc.lines || 3, { min: 1, max: 10, id: 'dc-lines' });
     const dist = G.len(dc.dist || 0, { min: 0, id: 'dc-dist' });
+    let reactFont = font.value, reactLines = dc.lines || 3, reactDist = dc.dist || 0;
+    G.reactDropCapCatalog = () => ({ position: pos, positions: [['none', '&None'], ['drop', '&Dropped'], ['margin', 'In &margin']], fonts: FONTS(), font: reactFont, lines: reactLines, distanceText: `${reactDist} pt` });
+    G.reactDropCapAction = (action, value) => { if (action === 'position') pos = value || 'none'; else if (action === 'font') reactFont = value || 'Times New Roman'; else if (action === 'lines') reactLines = Math.max(1, Math.min(10, Number(value) || 1)); else if (action === 'distance') { const parsed = D.parseLen(value, D.unit || 'in'); if (parsed != null && Number.isFinite(parsed)) reactDist = Math.max(0, parsed); } };
+    const reactRoot = h('div', { id: 'react-wordx-drop-cap-root' });
     ui.dialog({
-      title: 'Drop Cap', width: 300, body: h('div', { class: 'col' }, ui.group('Position', box), ui.group('Options', G.f('&Font:', font), G.f('&Lines to drop:', nl, 'wide'), G.f('Distance from te&xt:', dist, 'wide'))),
+      title: 'Drop Cap', width: 300, body: direct ? reactRoot : h('div', { class: 'col' }, ui.group('Position', box), ui.group('Options', G.f('&Font:', font), G.f('&Lines to drop:', nl, 'wide'), G.f('Distance from te&xt:', dist, 'wide'))),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         const d = doc();
         E.edit('Drop Cap', () => {
@@ -842,8 +863,11 @@
           }
           D.touch(target);
           const r = D.rProps(d, target, target.runs.find((x) => x.t === 'text'));
-          target.pPr.dropCap = { type: pos, lines: nl.get(), dist: dist.get() || 0 };
-          for (const it of target.runs) if (it.t === 'text') it.rPr = Object.assign({}, it.rPr, { font: font.value, sz: L.round((r.sz || 12) * nl.get() * 1.13, 1), position: undefined });
+          const lineCount = direct ? reactLines : nl.get();
+          const distance = direct ? reactDist : dist.get();
+          const typeface = direct ? reactFont : font.value;
+          target.pPr.dropCap = { type: pos, lines: lineCount, dist: distance || 0 };
+          for (const it of target.runs) if (it.t === 'text') it.rPr = Object.assign({}, it.rPr, { font: typeface, sz: L.round((r.sz || 12) * lineCount * 1.13, 1), position: undefined });
           void prev;
           return D.pos(D.nextPara(d, target) || target, 0);
         });
@@ -853,12 +877,17 @@
 
   /* ================= Change Case ================= */
   G.changeCase = function () {
-    const r = G.radios('cc', [['sentence', '&Sentence case.'], ['lower', L.N('&lowercase')], ['upper', L.N('&UPPERCASE')], ['title', '&Title Case'], ['toggle', L.N('t&OGGLE cASE')]], 'sentence');
-    ui.dialog({ title: 'Change Case', width: 230, body: r, buttons: [{ label: 'OK', primary: true, onClick: () => {
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const options = [['sentence', 'Sentence case.'], ['lower', 'lowercase'], ['upper', 'UPPERCASE'], ['title', 'Title Case'], ['toggle', 'tOGGLE cASE']];
+    const r = G.radios('cc', options, 'sentence');
+    const reactRoot = h('div', { id: 'react-wordx-change-case-root' });
+    G.reactChangeCaseCatalog = () => options;
+    ui.dialog({ title: 'Change Case', width: 230, body: direct ? reactRoot : r, buttons: [{ label: 'OK', primary: true, onClick: () => {
       if (!E.sel) return;
       let [a, b] = E.range();
       if (D.eqPos(a, b)) { const w = O.wordAt(a); if (!w) return; [a, b] = w; }
-      E.edit('Change Case', () => { O.changeCase(a, b, r.get()); return { a, f: b }; });
+      const selectedCase = direct ? reactRoot.querySelector('input:checked')?.value || 'sentence' : r.get();
+      E.edit('Change Case', () => { O.changeCase(a, b, selectedCase); return { a, f: b }; });
     } }, { label: 'Cancel' }] });
   };
 
@@ -905,14 +934,20 @@
     [L.N('Rice Paper'), { body: 'Garamond', head: 'Garamond', hc: '5C4033', bg: 'FBF6E9' }], [L.N('Sumi Painting'), { body: 'Palatino Linotype', head: 'Palatino Linotype', hc: '262626', bg: 'FAFAF5' }], [L.N('Willow'), { body: 'Georgia', head: 'Trebuchet MS', hc: '336600', bg: 'F3F8EC' }],
   ];
   G.theme = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     let pick = null;
+    let reactPick = '';
     const pv = h('div', { class: 'preview-box', style: 'width:260px;height:180px;flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:12px;gap:6px' });
     const draw = (t) => { L.clear(pv); pv.style.background = t && t.bg ? '#' + t.bg : '#fff'; pv.append(h('div', { text: 'Heading 1 style', style: `font:bold 18px ${L.fontStack(t ? t.head : 'Arial')};color:#${t ? t.hc : '000'}` }), h('div', { text: 'Heading 2 style', style: `font:bold 14px ${L.fontStack(t ? t.head : 'Arial')};color:#${t ? t.hc : '000'}` }), h('div', { text: 'Regular Text Sample — the quick brown fox jumps over the lazy dog.', style: `font:12px ${L.fontStack(t ? t.body : 'Times New Roman')}` }), h('div', { style: 'font-size:12px' }, h('u', { style: 'color:#00f', text: 'Hyperlink' }))); };
     const lb = G.listBox(THEMES.map((x) => x[0]), '(No Theme)', { height: 200, onChange: (v) => { pick = THEMES.find((x) => x[0] === v); draw(pick && pick[1]); } });
+    G.reactThemeCatalog = () => THEMES.map(([label, value], index) => ({ value: index ? label : '', label, body: value ? value.body : 'Times New Roman', head: value ? value.head : 'Arial', headingColor: value ? value.hc : '000000', background: value ? value.bg : null, bodyStack: L.fontStack(value ? value.body : 'Times New Roman'), headStack: L.fontStack(value ? value.head : 'Arial') }));
+    G.reactThemeAction = (action, value) => { if (action === 'select') reactPick = value || ''; };
+    const reactRoot = h('div', { id: 'react-wordx-theme-root' });
     draw(null);
-    ui.dialog({ title: 'Theme', width: 470, body: G.row(h('div', { class: 'col', style: 'width:150px' }, h('label', { text: 'Choose a Theme:' }), lb), pv), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      if (!pick) return;
-      const t = pick[1];
+    ui.dialog({ title: 'Theme', width: 470, body: direct ? reactRoot : G.row(h('div', { class: 'col', style: 'width:150px' }, h('label', { text: 'Choose a Theme:' }), lb), pv), buttons: [{ label: 'OK', primary: true, onClick: () => {
+      const selected = direct ? THEMES.find(([label], index) => (index ? label : '') === reactPick) : pick;
+      if (!selected) return;
+      const t = selected[1];
       const d = doc();
       E.edit(L.N('Theme'), () => {
         D.touchKey(d, 'styles'); D.touchKey(d, 'bg');
@@ -929,9 +964,14 @@
 
   /* ================= Text Direction ================= */
   G.textDirection = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const it = L.drawing && L.drawing.selectedItem();
-    const r = G.radios('tdir', [['horz', 'Horizontal'], ['vert', 'Vertical (top to bottom)'], ['vert270', 'Vertical (bottom to top)']], (it && it.vert) || 'horz');
-    ui.dialog({ title: 'Text Direction - Text Box', width: 280, body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Text direction applies to text boxes and table cells.' }), r), buttons: [{ label: 'OK', primary: true, onClick: () => { if (it && it.tb) L.drawing.modifySelected('Text Direction', (x) => { x.vert = r.get() === 'horz' ? undefined : r.get(); }); else if (L.tables && L.tables.inTable()) L.tables.forCells('Text Direction', (c) => { const v = r.get(); if (v === 'horz') delete c.tcPr.textDir; else c.tcPr.textDir = v === 'vert' ? 'tbRl' : 'btLr'; }); else A().status('Select a text box or table cell first.'); } }, { label: 'Cancel' }] });
+    const options = [['horz', 'Horizontal'], ['vert', 'Vertical (top to bottom)'], ['vert270', 'Vertical (bottom to top)']];
+    const current = (it && it.vert) || 'horz';
+    const r = G.radios('tdir', options, current);
+    const reactRoot = h('div', { id: 'react-wordx-text-direction-root' });
+    G.reactTextDirectionState = () => current;
+    ui.dialog({ title: 'Text Direction - Text Box', width: 280, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Text direction applies to text boxes and table cells.' }), r), buttons: [{ label: 'OK', primary: true, onClick: () => { const direction = direct ? reactRoot.querySelector('input:checked')?.value || current : r.get(); if (it && it.tb) L.drawing.modifySelected('Text Direction', (x) => { x.vert = direction === 'horz' ? undefined : direction; }); else if (L.tables && L.tables.inTable()) L.tables.forCells('Text Direction', (c) => { if (direction === 'horz') delete c.tcPr.textDir; else c.tcPr.textDir = direction === 'vert' ? 'tbRl' : 'btLr'; }); else A().status('Select a text box or table cell first.'); } }, { label: 'Cancel' }] });
   };
 
   /* ================= Style (New / Modify) ================= */
@@ -1010,13 +1050,19 @@
   /* ================= Language ================= */
   G.language = function (opts) {
     opts = opts || {};
+    const direct = !!(window.VO && VO.reactDirectHost);
     const cur = E.curRun().lang || 'en-US';
     const lb = G.listBox(A().LANGS.map(([v, l]) => ({ value: v, label: l })), cur, { height: 180 });   // the names are L.N-marked in app.js
     const noProof = ui.check("&Do not check spelling or grammar", !!E.curRun().noProof, null);
     const detect = ui.check('Detect &language automatically', true, null);
+    let reactLanguage = cur;
+    let reactNoProof = !!E.curRun().noProof;
+    G.reactLanguageCatalog = () => ({ languages: A().LANGS.map(([value, label]) => ({ value, label })), language: reactLanguage, noProof: reactNoProof, detect: true });
+    G.reactLanguageAction = (action, value) => { if (action === 'language') reactLanguage = value || cur; else if (action === 'noProof') reactNoProof = value === 'true'; };
+    const reactRoot = h('div', { id: 'react-wordx-language-root' });
     ui.dialog({
-      title: 'Language', width: 320, body: h('div', { class: 'col' }, h('div', { text: 'Mark selected text as:' }), lb, h('div', { class: 'tp-note', text: 'The speller and other proofing tools use the dictionaries of the selected language.' }), noProof, detect),
-      buttons: [{ label: '&Default...', onClick: async () => { const r = await ui.msg(L.t('Do you want to change the default language to {0}?', A().langName(lb.get())), { icon: 'question', buttons: ['&Yes', '&No'] }); if (r === 0) { const d = doc(); E.edit('Default Language', () => { D.touchKey(d, 'defaults'); d.defaults.rPr = Object.assign({}, d.defaults.rPr, { lang: lb.get() }); D.stylesChanged(); return E.sel; }); } return false; } }, { label: 'OK', primary: true, onClick: () => { if (opts.onOK) { opts.onOK(lb.get()); return; } E.formatRun({ lang: lb.get(), noProof: noProof.input.checked || undefined }, L.N('Language')); A().updateStatus(); } }, { label: 'Cancel' }],
+      title: 'Language', width: 320, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { text: 'Mark selected text as:' }), lb, h('div', { class: 'tp-note', text: 'The speller and other proofing tools use the dictionaries of the selected language.' }), noProof, detect),
+      buttons: [{ label: '&Default...', onClick: async () => { const language = direct ? reactLanguage : lb.get(); const r = await ui.msg(L.t('Do you want to change the default language to {0}?', A().langName(language)), { icon: 'question', buttons: ['&Yes', '&No'] }); if (r === 0) { const d = doc(); E.edit('Default Language', () => { D.touchKey(d, 'defaults'); d.defaults.rPr = Object.assign({}, d.defaults.rPr, { lang: language }); D.stylesChanged(); return E.sel; }); } return false; } }, { label: 'OK', primary: true, onClick: () => { const language = direct ? reactLanguage : lb.get(); if (opts.onOK) { opts.onOK(language); return; } E.formatRun({ lang: language, noProof: (direct ? reactNoProof : noProof.input.checked) || undefined }, L.N('Language')); A().updateStatus(); } }, { label: 'Cancel' }],
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
     });
   };

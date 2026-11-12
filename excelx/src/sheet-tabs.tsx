@@ -10,10 +10,11 @@ interface SheetsApi {
   openSheetTabMenu(event: { clientX: number; clientY: number }, index: number): void;
   openSheetNavigationMenu(event: { clientX: number; clientY: number }): void;
   scrollSheetTabs(destination: 'first' | 'prev' | 'next' | 'last'): void;
+  beginTabsResize?(event: globalThis.PointerEvent, capture: HTMLElement): void;
   renameSheet(index: number, name: string): boolean;
   reorderSheet(from: number, to: number | null, copy: boolean): void;
 }
-interface SheetRuntime { app?: SheetsApi; bus?: { on(event: string, listener: () => void): () => void } }
+interface SheetRuntime { app?: SheetsApi; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string, ...args: unknown[]): string }
 interface Gesture { pointerId: number; from: number; startX: number; moved: boolean; target: number | null }
 function runtime(): SheetRuntime | undefined { return (window as Window & { L?: SheetRuntime }).L; }
 
@@ -21,6 +22,7 @@ function runtime(): SheetRuntime | undefined { return (window as Window & { L?: 
 export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [navMount, setNavMount] = useState<HTMLElement | null>(null);
+  const [splitMount, setSplitMount] = useState<HTMLElement | null>(null);
   const [tabs, setTabs] = useState<SheetTab[]>([]);
   const [renaming, setRenaming] = useState<number | null>(null);
   const [nameDraft, setNameDraft] = useState('');
@@ -35,6 +37,7 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
       attached = target;
       setMount(target);
       setNavMount(host.querySelector<HTMLElement>('#tabnav'));
+      setSplitMount(host.querySelector<HTMLElement>('#tabsplit'));
       off?.();
       off = runtime()?.bus?.on('sheet-tabs', () => setTabs(runtime()?.app?.sheetTabs?.() || []));
       setTabs(runtime()?.app?.sheetTabs?.() || []);
@@ -105,5 +108,6 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
         <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">{destination === 'first' ? <><path d="M1.5 1v7" stroke="#000" /><path d="M7 1.5L3 4.5 7 7.5z" fill="#000" /></> : destination === 'prev' ? <path d="M6.5 1.5L2.5 4.5 6.5 7.5z" fill="#000" /> : destination === 'next' ? <path d="M2.5 1.5L6.5 4.5 2.5 7.5z" fill="#000" /> : <><path d="M7.5 1v7" stroke="#000" /><path d="M2 1.5L6 4.5 2 7.5z" fill="#000" /></>}</svg>
       </button>)}
     </>, navMount, 'excelx-sheet-tab-navigation')}
+    {splitMount && createPortal(<div className="tabsplit-react-grip" style={{ width: '100%', height: '100%', minHeight: 1, cursor: 'col-resize' }} role="separator" aria-orientation="vertical" aria-label={runtime()?.t?.('Resize') || 'Resize'} onPointerDown={(event) => runtime()?.app?.beginTabsResize?.(event.nativeEvent, splitMount)} />, splitMount, 'excelx-sheet-tab-resize')}
   </>;
 }
