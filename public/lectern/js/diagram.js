@@ -1,4 +1,4 @@
-/* Lectern — SmartArt diagrams. A diagram is a group with an `sa` record:
+/* PPTX — SmartArt diagrams. A diagram is a group with an `sa` record:
  *   sa = { layout, colors, style, items: [{ id, text, kids }] }     (common/smartart.js lays the items out)
  * Its kids are the laid-out shapes, regenerated from the items on every change, each marked
  * kid.sa = { item, role } so a click, an on-slide text edit or Delete finds its item. Because it stays a group,
@@ -229,7 +229,7 @@
     if (!g.sa.office) return;
     delete g.sa.office;
     g.sa.converted = true;
-    ui.toast(L.t('This IntelliArt now uses Lectern\'s {0} layout, so it can be edited here.', L.t((SA.get(g.sa.layout) || {}).name)), 4000);
+    ui.toast(L.t('This IntelliArt now uses PPTX\'s {0} layout, so it can be edited here.', L.t((SA.get(g.sa.layout) || {}).name)), 4000);
   }
   /** after a change: undo point, lay out, draw, keep the text pane in step */
   function change(g, label, fn, coalesce) {

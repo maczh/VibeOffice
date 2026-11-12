@@ -1,4 +1,4 @@
-/* Ledger — dialogs, part 2 (Data and Format): Sort, Validation, Subtotals, Text to Columns, Advanced Filter, Form,
+/* Excelx — dialogs, part 2 (Data and Format): Sort, Validation, Subtotals, Text to Columns, Advanced Filter, Form,
  * Create List, Outline settings, Conditional Formatting, AutoFormat, Style, Goal Seek, Scenarios, Data Table,
  * Consolidate, PivotTable report. */
 (function (root) {
@@ -159,7 +159,7 @@
   D.subtotals = function () {
     const s = sh(), w = wb();
     const rg = listRange();
-    if (rg.r2 <= rg.r1) { ui.msg('Ledger cannot determine which row in your list or selection contains column labels, which are required for this command.', { icon: 'warn' }); return; }
+    if (rg.r2 <= rg.r1) { ui.msg('Excelx cannot determine which row in your list or selection contains column labels, which are required for this command.', { icon: 'warn' }); return; }
     const cols = Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => rg.c1 + i);
     const st = { at: rg.c1, fn: 9, add: new Set([rg.c2]), replace: true, pageBreak: false, below: true };
     const addBox = h('div', { class: 'lbox checks', translate: 'no' }, ...cols.map((c) => ui.check(colLabel(s, rg, true, c), st.add.has(c), (v) => { if (v) st.add.add(c); else st.add.delete(c); })));
@@ -830,7 +830,7 @@
       ui.field('&Range:', src),
       ui.group('Layout', ui.field('&Row field:', opt('row')), ui.field('&Column field:', opt('col', true)), h('div', { class: 'row', style: 'gap:8px' }, ui.field('&Data field:', opt('data')), ui.field('Summarize by:', ui.select(PIV_FN, st.fn, (v) => { st.fn = v; }))), ui.field('&Page field:', opt('page', true))),
       ui.group('Where do you want to put the PivotTable report?', ui.radio('pv-w', '&New worksheet', true, () => { st.where = 'new'; }), ui.radio('pv-w', '&Existing worksheet (at the active cell)', false, () => { st.where = 'here'; })),
-      h('div', { class: 'hint', text: 'Ledger builds the report as a formatted summary of values; rebuild it after the source data changes.' })),
+      h('div', { class: 'hint', text: 'Excelx builds the report as a formatted summary of values; rebuild it after the source data changes.' })),
     buttons: [{ label: '&Finish', primary: true, onClick: () => {
       const p = parseRef(src.input.value);
       if (!p) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; }

@@ -1,4 +1,4 @@
-/* Quire — dialogs, part 2: Insert menu (Break, Page Numbers, Date and Time, Field, Symbol,
+/* Wordx — dialogs, part 2: Insert menu (Break, Page Numbers, Date and Time, Field, Symbol,
  * Footnote, Caption, Cross-reference, Index and Tables, Bookmark, Hyperlink, Object, Diagram) and
  * the Table menu dialogs.
  */

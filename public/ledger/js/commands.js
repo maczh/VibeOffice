@@ -1,4 +1,4 @@
-/* Ledger — command definitions (menus, toolbars, shortcuts all run these). */
+/* Excelx — command definitions (menus, toolbars, shortcuts all run these). */
 (function (root) {
   'use strict';
   const L = root.L;
@@ -185,7 +185,7 @@
   cmd('errorChecking', { label: '&Error Checking...', run: run(() => D().errorChecking()) });
   cmd('protectSheet', { get label() { return sh().protection ? 'Un&protect Sheet...' : '&Protect Sheet...'; }, icon: 'protect', run: run(() => D().protectSheet()) });
   cmd('protectWorkbook', { get label() { return wb().protection ? 'Unprotect &Workbook...' : 'Protect &Workbook...'; }, run: run(() => D().protectWorkbook()) });
-  cmd('allowEditRanges', { label: 'Allow Users to Edit Ra&nges...', run: run(() => ui.msg('Sheet protection in Ledger follows each cell\'s Locked setting (Format ▸ Cells ▸ Protection). Unlock the cells people may edit, then protect the sheet.', { icon: 'info' })) });
+  cmd('allowEditRanges', { label: 'Allow Users to Edit Ra&nges...', run: run(() => ui.msg('Sheet protection in Excelx follows each cell\'s Locked setting (Format ▸ Cells ▸ Protection). Unlock the cells people may edit, then protect the sheet.', { icon: 'info' })) });
   cmd('goalSeek', { label: '&Goal Seek...', icon: 'goalSeek', run: run(() => D().goalSeek()) });
   cmd('scenarios', { label: 'Sc&enarios...', run: run(() => D().scenarios()) });
   cmd('tracePrecedents', { label: 'Trace &Precedents', icon: 'tracePrec', run: run(() => A().trace('prec')) });
@@ -201,7 +201,7 @@
   cmd('calcSheet', { label: 'Calculate Sheet', key: 'Shift+F9', run: run(() => A().calculateNow()) });
   cmd('autoCorrectDlg', { label: '&AutoCorrect Options...', run: run(() => D().autoCorrect()) });
   cmd('options', { label: '&Options...', run: run(() => D().options()) });
-  cmd('macros', { label: '&Macros...', key: 'Alt+F8', run: () => ui.msg(wb().macroEnabled ? 'This workbook contains macros. Ledger keeps them when you save as .xlsm, but cannot run them.' : 'Ledger does not run macros. Workbooks with macros (.xlsm) open and save with their macros intact.', { icon: 'info' }) });
+  cmd('macros', { label: '&Macros...', key: 'Alt+F8', run: () => ui.msg(wb().macroEnabled ? 'This workbook contains macros. Excelx keeps them when you save as .xlsm, but cannot run them.' : 'Excelx does not run macros. Workbooks with macros (.xlsm) open and save with their macros intact.', { icon: 'info' }) });
   cmd('addIns', { label: 'Add-&Ins...', run: () => ui.msg('Analysis ToolPak functions (engineering, financial, date) are built in.', { icon: 'info' }) });
 
   /* ------------------------------------------------------------ Data */
@@ -234,14 +234,14 @@
   /* ------------------------------------------------------------ Window */
   cmd('freezePanes', { get label() { return sh().view.freeze ? 'Un&freeze Panes' : '&Freeze Panes'; }, icon: 'freeze', run: run(() => A().toggleFreeze()) });
   cmd('splitWindow', { get label() { return sh().view.freeze ? 'Remove &Split' : '&Split'; }, icon: 'split', run: run(() => A().toggleFreeze(true)) });
-  cmd('newWindow', { label: '&New Window', run: run(() => ui.msg('Ledger shows one window per workbook. Use the Window menu to switch between open workbooks.', { icon: 'info' })) });
+  cmd('newWindow', { label: '&New Window', run: run(() => ui.msg('Excelx shows one window per workbook. Use the Window menu to switch between open workbooks.', { icon: 'info' })) });
   cmd('arrangeWindows', { label: '&Arrange...', run: run(() => ui.msg('Open workbooks are listed at the bottom of the Window menu.', { icon: 'info' })) });
 
   /* ------------------------------------------------------------ Help */
-  cmd('help', { label: 'Ledger &Help', icon: 'help', key: 'F1', run: () => L.panes.task.show('help') });
+  cmd('help', { label: 'Excelx &Help', icon: 'help', key: 'F1', run: () => L.panes.task.show('help') });
   cmd('keyboardHelp', { label: '&Keyboard Shortcuts', run: () => L.panes.task.show('keys') });
   cmd('functionsHelp', { label: '&Functions Reference', run: () => D().insertFunction() });
-  cmd('about', { label: '&About Ledger', run: () => D().about() });
+  cmd('about', { label: '&About Excelx', run: () => D().about() });
 
   /* ------------------------------------------------------------ sheets & misc */
   cmd('nextSheet', { label: 'Next Sheet', key: 'Ctrl+PageDown', run: () => A().nextSheet(1) });

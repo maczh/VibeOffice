@@ -1,4 +1,4 @@
-/* Quire — WordprocessingML writer. Produces a package that follows the OOXML schema element order,
+/* Wordx — WordprocessingML writer. Produces a package that follows the OOXML schema element order,
  * readable by Word 2007+, LibreOffice and other consumers.
  */
 (function () {
@@ -693,7 +693,7 @@
     x += L.preserve.controlSequence(t.rows, row => row.trPr, row => L.preserve.tableMemberXML(row, ctx, () => {
       const ri = t.rows.indexOf(row), rowEnds = hoistEnds(lastTop(row.cells.at(-1)?.blocks), 'row', ctx);
       const trp = trPrXML(row.trPr, ctx);
-      /* a row and a cell read from a file keep what Quire doesn't model (preserve.js, propertyFields) */
+      /* a row and a cell read from a file keep what Wordx doesn't model (preserve.js, propertyFields) */
       const exb = row.exBorders ? bordersEl('tblBorders', row.exBorders, ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']) : '';
       const ex = row.ex ? L.preserve.propertyXML('tblPrEx', { ...row.ex, borders: row.exBorders }, exb, ctx) : exb ? `<w:tblPrEx>${exb}</w:tblPrEx>` : '';
       let rowXML = `<w:tr${idsXML(row.ids, ctx)}>${ex}${row.trPr?.x ? L.preserve.propertyXML('trPr', row.trPr, trp, ctx) : trp ? `<w:trPr>${trp}</w:trPr>` : ''}`;
@@ -725,7 +725,7 @@
     const left = new Set(Object.values(doc.styles).filter((s) => s?.sameAs && doc.styles[s.sameAs] && !refs.has(s.id)).map((s) => s.id));
     const ref = (id) => (left.has(id) ? doc.styles[id].sameAs : id);
     /* a file's styles part defines the styles it uses and leaves the other built-ins to its latent styles, as Word does:
-       a built-in Quire has but the file doesn't is written once something uses it or it was changed (a new document still gets them all) */
+       a built-in Wordx has but the file doesn't is written once something uses it or it was changed (a new document still gets them all) */
     let used = null;
     const catalogue = doc.keep?.catalogue, asAdded = (s) => catalogue?.[s.id] === JSON.stringify(s);
     if (doc.keep?.styles) {
@@ -791,7 +791,7 @@
           st += `<w:tblStylePr w:type="${ty}">${cx}</w:tblStylePr>`;
         }
       }
-      /* a style from a file keeps what Quire doesn't model (aliases, locked, rsid, a table style's trPr) and the children it didn't change */
+      /* a style from a file keeps what Wordx doesn't model (aliases, locked, rsid, a table style's trPr) and the children it didn't change */
       x += s.x ? L.preserve.propertyXML('style', s, st, ctx, { type, default: s.isDefault ? '1' : null, customStyle: s.custom ? '1' : null, styleId: s.id })
         : `<w:style w:type="${type}"${s.isDefault ? ' w:default="1"' : ''}${s.custom ? ' w:customStyle="1"' : ''} w:styleId="${X(s.id)}">${st}</w:style>`;
     }
@@ -946,7 +946,7 @@
     return HEAD + `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">` +
       (p.title ? `<dc:title>${X(p.title)}</dc:title>` : '') + (p.subject ? `<dc:subject>${X(p.subject)}</dc:subject>` : '') + `<dc:creator>${X(p.creator || '')}</dc:creator>` +
       (p.keywords ? `<cp:keywords>${X(p.keywords)}</cp:keywords>` : '') + (p.description ? `<dc:description>${X(p.description)}</dc:description>` : '') +
-      `<cp:lastModifiedBy>${X(p.lastModifiedBy || L.store.get('userName', 'Quire User'))}</cp:lastModifiedBy><cp:revision>${Math.max(1, (p.revision | 0))}</cp:revision>` +
+      `<cp:lastModifiedBy>${X(p.lastModifiedBy || L.store.get('userName', 'Wordx User'))}</cp:lastModifiedBy><cp:revision>${Math.max(1, (p.revision | 0))}</cp:revision>` +
       `<dcterms:created xsi:type="dcterms:W3CDTF">${iso(p.created)}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${iso(p.modified)}</dcterms:modified>` +
       (p.category ? `<cp:category>${X(p.category)}</cp:category>` : '') +
       (p.lastPrinted ? `<cp:lastPrinted>${X(p.lastPrinted)}</cp:lastPrinted>` : '') + (p.contentStatus ? `<cp:contentStatus>${X(p.contentStatus)}</cp:contentStatus>` : '') +
@@ -955,7 +955,7 @@
   function appXML(doc, stats) {
     const p = doc.props;
     return HEAD + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">' +
-      `<Template>${X(p.template || 'Normal.dotm')}</Template><TotalTime>0</TotalTime><Pages>${stats.pages}</Pages><Words>${stats.words}</Words><Characters>${stats.charsNoSp}</Characters><Application>Quire</Application><DocSecurity>0</DocSecurity><Lines>${stats.lines}</Lines><Paragraphs>${stats.paras}</Paragraphs><ScaleCrop>false</ScaleCrop>` +
+      `<Template>${X(p.template || 'Normal.dotm')}</Template><TotalTime>0</TotalTime><Pages>${stats.pages}</Pages><Words>${stats.words}</Words><Characters>${stats.charsNoSp}</Characters><Application>Wordx</Application><DocSecurity>0</DocSecurity><Lines>${stats.lines}</Lines><Paragraphs>${stats.paras}</Paragraphs><ScaleCrop>false</ScaleCrop>` +
       (p.manager ? `<Manager>${X(p.manager)}</Manager>` : '') + `<Company>${X(p.company || '')}</Company><LinksUpToDate>false</LinksUpToDate><CharactersWithSpaces>${stats.chars}</CharactersWithSpaces><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>11.0000</AppVersion></Properties>`;
   }
   function customXML(doc) {
@@ -1292,7 +1292,7 @@
     return blob;
   };
 
-  /* ---------- chart XML from the chart model (charts created in Quire) ---------- */
+  /* ---------- chart XML from the chart model (charts created in Wordx) ---------- */
   W.chartXML = function (c) {
     const NS_C = NS.c, NS_A = NS.a;
     const v = (x) => `<c:v>${X(x)}</c:v>`;

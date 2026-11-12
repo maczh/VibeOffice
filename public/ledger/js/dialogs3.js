@@ -1,4 +1,4 @@
-/* Ledger — dialogs, part 3 (formulas and printing): Insert Function, Function Arguments, names, Evaluate Formula,
+/* Excelx — dialogs, part 3 (formulas and printing): Insert Function, Function Arguments, names, Evaluate Formula,
  * Watch Window, Error Checking, Spelling, Page Setup with Header/Footer, Print. */
 (function (root) {
   'use strict';
@@ -454,7 +454,7 @@
     to.value = String(Math.max(1, items.length));
     return new Promise((res) => {
       ui.dialog({ title: 'Print', width: 440, body: h('div', { class: 'col' },
-        ui.group('Printer', ui.field('&Name:', ui.select([['pdf', 'Ledger PDF Writer']], 'pdf')), h('div', { class: 'hint', text: 'Ledger prints by creating a PDF that you can open and print on any printer.' })),
+        ui.group('Printer', ui.field('&Name:', ui.select([['pdf', 'Excelx PDF Writer']], 'pdf')), h('div', { class: 'hint', text: 'Excelx prints by creating a PDF that you can open and print on any printer.' })),
         h('div', { class: 'row', style: 'gap:10px;align-items:stretch' },
           ui.group('Print range', ui.radio('pr-r', '&All', true, () => { st.range = 'all'; }), h('div', { class: 'row', style: 'gap:6px' }, ui.radio('pr-r', 'Pa&ge(s)', false, () => { st.range = 'pages'; }), h('span', { text: 'From:' }), from, h('span', { text: 'To:' }), to)),
           ui.group('Print what', ui.radio('pr-w', 'Selectio&n', false, () => { st.what = 'selection'; }), ui.radio('pr-w', 'Active s&heet(s)', true, () => { st.what = 'sheets'; }), ui.radio('pr-w', '&Entire workbook', false, () => { st.what = 'workbook'; }))),

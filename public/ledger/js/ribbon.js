@@ -1,4 +1,4 @@
-/* Ledger — the ribbon of the Paper 2016 look (common/ribbon.js): Excel's tabs and groups over Ledger's commands.
+/* Excelx — the ribbon of the Paper 2016 look (common/ribbon.js): Excel's tabs and groups over Excelx's commands.
  * Read when the ribbon is first shown, so it may use what app.js defines (A.parts, A.menus). */
 (function () {
   'use strict';

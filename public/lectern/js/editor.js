@@ -1,4 +1,4 @@
-/* Lectern — slide editor: selection, handles, move/resize/rotate, drawing tools. */
+/* PPTX — slide editor: selection, handles, move/resize/rotate, drawing tools. */
 (function () {
   'use strict';
   const L = window.L;

@@ -1,4 +1,4 @@
-/* Ledger — preserve complete comment threads beside their displayed notes. */
+/* Excelx — preserve complete comment threads beside their displayed notes. */
 (function (root) {
   'use strict';
   const L = root.L, K = L.opc, F = L.formula, M = L.model, T = (L.threads = {});

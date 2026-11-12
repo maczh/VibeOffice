@@ -1,4 +1,4 @@
-/* Lectern — imported design libraries and property-scoped design changes. */
+/* PPTX — imported design libraries and property-scoped design changes. */
 (function () {
   'use strict';
   const L = window.L, K = L.opc, X = L.xmlTree, D = (L.designs = {}), N = K.NS;

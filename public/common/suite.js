@@ -36,8 +36,10 @@
   const BASE = new URL('..', document.currentScript.src).href;   // public/
   VO.base = BASE;
   /* React package hosts reuse the document engines but must not read the legacy Recent Files database. */
-  const reactHost = new URLSearchParams(location.search).has('reactHost');
+  const directHost = window.__VIBE_OFFICE_DIRECT_HOST__ || null;
+  const reactHost = !!directHost;
   VO.reactHost = reactHost;
+  VO.reactDirectHost = directHost;
   VO.reactReady = false;
 
   /* ------------------------------------------------------------ apps */
@@ -330,23 +332,26 @@
     { id: 'paper2016', name: N('Paper 2016'), layout: 'ribbon', note: 'Paper with tabs of commands, grouped by task, instead of menus and toolbars.' }];
   const LOOK = 'vibeoffice.look';
   const storedLook = () => VO.settings.get(LOOK) || 'classic';
+  const lookRoot = () => directHost && directHost.root && directHost.root.isConnected ? directHost.root : document.documentElement;
   const applyLook = (id) => {
-    const root = document.documentElement;
+    const root = lookRoot();
     if (!LOOKS.some((l) => l.id === id)) return;
     const changed = root.dataset.look !== id;
     root.dataset.look = id;
     root.dataset.layout = LOOKS.find((l) => l.id === id).layout || 'bars';
-    const meta = document.querySelector('meta[name="theme-color"]');
-    const c = getComputedStyle(root).getPropertyValue('--theme-color').trim();
-    if (meta && c) meta.content = c;
+    if (root === document.documentElement) {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      const c = getComputedStyle(root).getPropertyValue('--theme-color').trim();
+      if (meta && c) meta.content = c;
+    }
     if (changed) window.dispatchEvent(new Event('vo-look'));
   };
   VO.look = {
     /** [{ id, name, note, layout }] */
     list: () => LOOKS.map((l) => ({ ...l })),
-    get: () => document.documentElement.dataset.look || 'classic',
+    get: () => lookRoot().dataset.look || 'classic',
     /** 'bars' (menus and toolbars) or 'ribbon' */
-    layout: () => document.documentElement.dataset.layout || 'bars',
+    layout: () => lookRoot().dataset.layout || 'bars',
     set(id) {
       if (!LOOKS.some((l) => l.id === id)) return;
       VO.settings.set(LOOK, id);   // not kept: this window still changes
@@ -501,7 +506,7 @@
   const q = new URLSearchParams(location.search);
   /** how this app page was opened: null (plain: show the sample), { new }, { template: id }, { open: id } or { recent: key };
    *  the desktop app's { doc }: the window has a document (VO.host.document); n: the new document's number */
-  VO.launch = !reactHost && q.has('open') ? { open: q.get('open') } : !reactHost && q.has('recent') ? { recent: q.get('recent'), draft: q.has('draft') }
+  VO.launch = directHost && directHost.launch ? directHost.launch : !reactHost && q.has('open') ? { open: q.get('open') } : !reactHost && q.has('recent') ? { recent: q.get('recent'), draft: q.has('draft') }
     : q.has('doc') && native ? { doc: true } : q.has('template') ? { template: q.get('template') } : q.has('new') ? { new: true } : null;
   /* the desktop app numbers new documents across windows (Document2 in the second window that makes one): n */
   if (VO.launch && (VO.launch.new || VO.launch.template) && +q.get('n') > 0) VO.launch.n = +q.get('n');
@@ -533,53 +538,23 @@
         else (current.hooks.message || alert)(VO.t('That file is no longer available here. Open it again from your computer.'));
       } else if (l.recent) await VO.openRecent(l.recent, { draft: l.draft });
     }
-    if (reactHost) { VO.reactReady = true; parent.postMessage({ type: 'vibeoffice-react-ready', app }, location.origin); }
+    if (reactHost) {
+      VO.reactReady = true;
+      if (directHost && typeof directHost.ready === 'function') directHost.ready(app, current.hooks);
+    }
     /* (the desktop app: the Start Center shows them) */
     if (!native && !reactHost) setTimeout(async () => {
       const others = (await VO.recent.list()).filter((e) => e.app === app && e.draft && !isOpen(e));
       if (others.length && current.hooks.showRecovery) current.hooks.showRecovery();
     }, 700);
   };
-  if (reactHost) window.addEventListener('message', async (event) => {
-    const data = event.data;
-    if (event.source !== parent || event.origin !== location.origin || !data || !current) return;
-    try {
-      if (data.type === 'vibeoffice-react-command' && typeof data.command === 'string' && L.ui && L.ui.cmds[data.command]) {
-        if (data.command === 'new') {
-          const createBlank = current.app === 'quire' ? L.app && L.app.newDocument : current.app === 'ledger' ? L.app && L.app.newWorkbook : current.app === 'lectern' ? L.app && L.app.newPresentation : null;
-          if (typeof createBlank === 'function') createBlank.call(L.app);
-          else L.ui.exec(data.command);
-        } else L.ui.exec(data.command);
-      } else if (data.type === 'vibeoffice-react-chrome') {
-        if (data.look && VO.look) VO.look.set(data.look);
-        if (data.language && VO.lang) VO.lang.set(data.language);
-      } else if (data.type === 'vibeoffice-react-restore' && typeof data.id === 'string' && typeof data.name === 'string' && data.blob instanceof Blob && current.hooks.open) {
-        if (current.hooks.close && !(await current.hooks.close())) return;
-        await current.hooks.open(new File([data.blob], data.name), { draft: true, name: data.name, saved: false, lossState: data.lossState });
-        const doc = current.hooks.current && current.hooks.current();
-        if (doc) reactDraftKeys.set(doc, data.id);
-        if (doc && current.hooks.isDirty && current.hooks.isDirty(doc)) VO.changed(doc);
-      } else if (data.type === 'vibeoffice-react-open' && data.file instanceof File && current.hooks.open) {
-        if (!data.initial && current.hooks.close && !(await current.hooks.close())) return;
-        await current.hooks.open(data.file, {});
-      } else if (data.type === 'vibeoffice-react-save-result' && typeof data.requestId === 'string') {
-        const pending = reactSaveRequests.get(data.requestId);
-        if (pending) { reactSaveRequests.delete(data.requestId); data.error ? pending.reject(new Error(data.error)) : pending.resolve(data.result); }
-      } else if (data.type === 'vibeoffice-react-close' && typeof data.requestId === 'string') {
-        const closed = !current.hooks.close || await current.hooks.close();
-        parent.postMessage({ type: 'vibeoffice-react-close-result', requestId: data.requestId, closed: !!closed }, location.origin);
-      }
-    } catch (error) { console.error(error); }
-  });
-  const reactSaveRequests = new Map();
-  let reactSaveSequence = 0;
   VO.reactClose = async () => !reactHost || !current || !current.hooks.close ? true : !!(await current.hooks.close());
-  VO.reactFileOpen = () => { if (reactHost) parent.postMessage({ type: 'vibeoffice-react-request-open' }, location.origin); };
-  VO.reactFileSave = (name, blob) => new Promise((resolve, reject) => {
-    const requestId = 'wordx-save-' + (++reactSaveSequence);
-    reactSaveRequests.set(requestId, { resolve, reject });
-    parent.postMessage({ type: 'vibeoffice-react-request-save', requestId, name, blob }, location.origin);
-  });
+  VO.reactFileOpen = () => {
+    if (!reactHost) return;
+    return directHost.open();
+  };
+  VO.reactFileSave = (name, blob) => directHost?.save?.(name, blob);
+  VO.reactFileSaveAs = (name, blob) => directHost?.saveAs?.(name, blob);
   const asFile = (blob, name) => (blob instanceof File && blob.name === name ? blob : new File([blob], name, { type: blob.type }));
   const say = (e) => (current && current.hooks.message || alert)(String(e && e.message || e));
   /** the desktop app: open the document the native side gave this window as it was made */
@@ -751,7 +726,7 @@
     if (!current) return;
     if (reactHost) {
       const id = doc && reactDraftKeys.get(doc);
-      if (id) parent.postMessage({ type: 'vibeoffice-react-draft-remove', id }, location.origin);
+      if (id) void directHost.removeDraft?.(id);
       if (doc) { clearTimeout(draftOf(doc).timer); reactDraftKeys.delete(doc); }
       return;
     }
@@ -799,7 +774,7 @@
       const editor = ({ quire: 'wordx', ledger: 'excelx', lectern: 'pptx' })[current.app] || current.app;
       let id = reactDraftKeys.get(doc);
       if (!id) { id = editor + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); reactDraftKeys.set(doc, id); }
-      parent.postMessage({ type: 'vibeoffice-react-draft', draft: { id, editor, name: info.name, updatedAt: Date.now(), snapshot: blob, lossState: info.lossState } }, location.origin);
+      void directHost.saveDraft?.({ id, editor, name: info.name, updatedAt: Date.now(), snapshot: blob, lossState: info.lossState });
       return;
     }
     if (native) {
@@ -829,7 +804,7 @@
     drafts.delete(doc);
     if (reactHost) {
       const id = reactDraftKeys.get(doc);
-      if (id) parent.postMessage({ type: 'vibeoffice-react-draft-remove', id }, location.origin);
+      if (id) void directHost.removeDraft?.(id);
       reactDraftKeys.delete(doc);
       return;
     }

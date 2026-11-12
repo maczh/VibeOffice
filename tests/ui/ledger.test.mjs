@@ -48,6 +48,118 @@ const wheel = async (u, p, dx, dy) => { await u.send('Input.dispatchMouseEvent',
 /** the screen position of a cell, to see whether a pane scrolled */
 const where = async (u, ref) => { const p = await pt(u, ref); return { x: p.x, y: p.y }; };
 
+test('classic Excelx page keeps the native formula bar, Name Box, sheet tabs, and navigation fallback', async () => {
+  const u = await ledger();
+  try {
+    const controls = await u.evaluate(`(() => {
+      const visible = (element) => { const r=element.getBoundingClientRect(); return r.width>20 && r.height>8 && getComputedStyle(element).display!=='none'; };
+      return { nameBox: visible(document.querySelector('#namebox')), formula: visible(document.querySelector('#fbinput')), tabs: document.querySelectorAll('#tabs .stab').length, navigation: document.querySelectorAll('#tabnav button').length, reactSlots: [...document.querySelectorAll('#react-fbar,#react-namebox,#react-fbar-buttons')].every((element)=>getComputedStyle(element).display==='none') };
+    })()`);
+    assert.ok(controls.nameBox && controls.formula && controls.tabs > 0 && controls.navigation === 4 && controls.reactSlots, `classic Excelx retains its original controls outside the React package; observed ${JSON.stringify(controls)}`);
+  } finally { await u.close(); }
+});
+
+test('AutoFilter popover removes its outside-pointer listener when the editor mount is disposed', async () => {
+  const u = await ledger();
+  try {
+    const result = await u.evaluate(`(async () => {
+      const s = L.grid.sheet(), oldFilter = s.autoFilter, originalFocus = L.grid.focus;
+      const scope = L.createMountScope(document.body), button = document.createElement('button');
+      let focusCalls = 0;
+      L.grid.focus = () => { focusCalls++; };
+      s.autoFilter = { ref: { r1: 0, c1: 0, r2: 2, c2: 0 }, cols: [] };
+      document.body.append(button);
+      L.filter.open(button, { ref: s.autoFilter.ref, f: s.autoFilter }, 0);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      const opened = !!document.querySelector('.af-list');
+      scope.dispose();
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      const focusCallsAfterDispose = focusCalls;
+      document.querySelector('.af-list')?.remove(); button.remove();
+      L.grid.focus = originalFocus; s.autoFilter = oldFilter;
+      return { opened, focusCallsAfterDispose };
+    })()`);
+    assert.deepEqual(result, { opened: true, focusCallsAfterDispose: 0 }, 'a disposed editor mount cannot keep handling document pointer events');
+  } finally { await u.close(); }
+});
+
+test('Comment editor removes its outside-pointer listener when the editor mount is disposed', async () => {
+  const u = await ledger();
+  try {
+    const result = await u.evaluate(`(async () => {
+      const scope = L.createMountScope(document.body), originalFocus = L.grid.focus;
+      let focusCalls = 0;
+      L.grid.focus = () => { focusCalls++; };
+      L.dlg.comment(0, 0, null);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      const opened = !!document.querySelector('.cmt-edit');
+      scope.dispose();
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      const focusCallsAfterDispose = focusCalls;
+      document.querySelector('.cmt-edit')?.remove();
+      L.grid.focus = originalFocus;
+      return { opened, focusCallsAfterDispose };
+    })()`);
+    assert.deepEqual(result, { opened: true, focusCallsAfterDispose: 0 }, 'a disposed editor mount cannot keep handling document pointer events');
+  } finally { await u.close(); }
+});
+
+test('Alt+Down pick list removes its outside-pointer listener when the editor mount is disposed', async () => {
+  const u = await ledger();
+  try {
+    const result = await u.evaluate(`(async () => {
+      const scope = L.createMountScope(document.body);
+      L.editor.pickList(['alpha', 'beta'], () => {});
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      const opened = L.editor.hasList();
+      scope.dispose();
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      const stillOpenAfterDispose = L.editor.hasList();
+      L.editor.listKey(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+      return { opened, stillOpenAfterDispose, cleaned: !L.editor.hasList() };
+    })()`);
+    assert.deepEqual(result, { opened: true, stillOpenAfterDispose: true, cleaned: true }, 'a disposed editor mount cannot keep handling document pointer events');
+  } finally { await u.close(); }
+});
+
+test('Print Preview closes and removes its document key listener when the editor mount is disposed', async () => {
+  const u = await ledger();
+  try {
+    const result = await u.evaluate(`(async () => {
+      const scope = L.createMountScope(document.body), originalFocus = L.grid.focus, originalPages = L.print.allPages;
+      let focusCalls = 0;
+      L.grid.focus = () => { focusCalls++; };
+      L.print.allPages = () => [];
+      await L.print.preview();
+      const opened = !!document.querySelector('.pp-overlay');
+      scope.dispose();
+      const closedOnDispose = !document.querySelector('.pp-overlay');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      L.grid.focus = originalFocus; L.print.allPages = originalPages;
+      return { opened, closedOnDispose, focusCalls };
+    })()`);
+    assert.deepEqual(result, { opened: true, closedOnDispose: true, focusCalls: 0 }, 'a disposed editor mount closes print preview without handling later document keys');
+  } finally { await u.close(); }
+});
+
+test('Touch long-press timer cannot open a context menu after the editor mount is disposed', async () => {
+  const u = await ledger();
+  try {
+    const result = await u.evaluate(`(async () => {
+      const scope = L.createMountScope(document.body), originalContextMenu = L.app.contextMenu;
+      const canvas = document.querySelector('#gridwrap canvas.gcv'), rect = canvas.getBoundingClientRect();
+      let contextMenus = 0;
+      L.app.contextMenu = () => { contextMenus++; };
+      canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 71, pointerType: 'touch', button: 0, clientX: rect.left + 40, clientY: rect.top + 30 }));
+      scope.dispose();
+      await new Promise((resolve) => setTimeout(resolve, 650));
+      L.app.contextMenu = originalContextMenu;
+      return { contextMenus };
+    })()`);
+    assert.deepEqual(result, { contextMenus: 0 }, 'a touch timer from a disposed editor cannot open a menu');
+  } finally { await u.close(); }
+});
+
 /* ---------------------------------------------------------------- S1: point mode in Edit mode */
 test('S1a After F2, a click on a cell where the formula expects an operand inserts its reference', async () => {
   const u = await ledger();

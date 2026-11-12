@@ -1,4 +1,4 @@
-/* Ledger — conditional formatting evaluation and data validation helpers. */
+/* Excelx — conditional formatting evaluation and data validation helpers. */
 (function (root) {
   'use strict';
   const L = root.L;

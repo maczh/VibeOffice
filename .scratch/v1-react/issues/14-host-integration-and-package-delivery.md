@@ -6,7 +6,7 @@
 
 **Status:** in-progress
 
-The current React adapters still host legacy pages in iframes. The package contract and examples are not complete until Wordx, Excelx, and PPTX mount directly in the consumer's document.
+The React packages now mount their current editor engines directly in the consumer's document without iframes. Their engines and much of the shared/app UI still come from the legacy public script bundles, so package delivery remains dependent on the full module migrations and final brand audit.
 
 - [x] Each editor package builds independently with its public React component, styles, and TypeScript declarations.
 - [x] React and React DOM are declared as peer dependencies.

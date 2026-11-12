@@ -1,4 +1,4 @@
-/* Lectern — dialog boxes. */
+/* PPTX — dialog boxes. */
 (function () {
   'use strict';
   const L = window.L;
@@ -1080,7 +1080,7 @@
   }
 
   /* ---------- About ---------- */
-  D.about = () => ui.about({ name: 'Lectern', text: [
+  D.about = () => ui.about({ name: 'PPTX', text: [
     L.N('A presentation editor that runs entirely in your browser. Presentations are read and written as Office Open XML (.pptx, .pptm); nothing is uploaded.'),
     'Slide shows play in the browser, and presentations export to PDF, PNG pictures and web pages.'] });
 })();

@@ -406,6 +406,12 @@
 .taskpane[hidden] { display: none !important; }
 @media (max-width: 820px) { .taskpane { position: absolute; right: 0; top: 0; bottom: 0; z-index: 60; box-shadow: -2px 0 6px var(--tip-shadow-c); } }
 
+.fb-engine-adapter { position: absolute !important; left: -10000px !important; top: 0 !important; width: 1px !important; height: 1px !important; min-height: 1px !important; opacity: 0 !important; pointer-events: none !important; }
+.vibeoffice-react-owned { display: flex !important; }
+#react-fbar, #react-namebox, #react-fbar-buttons { display: none; }
+#react-fbar { flex: 1; min-width: 0; }
+#react-namebox { flex: 1; min-width: 0; }
+.fb-react-btns [hidden] { display: none !important; }
 </style>
 <div id="app" class="app" aria-label="Ledger spreadsheet">
   <div class="cmdbars">
@@ -413,9 +419,10 @@
     <div class="toolbars" id="toolbars"></div>
   </div>
   <div class="fbar" id="fbar">
-    <div class="namebox" id="namebox-wrap"><input id="namebox" aria-label="Name Box" autocomplete="off" spellcheck="false"><button id="namebox-dd" type="button" tabindex="-1" aria-label="Names"><span class="dd-arrow"></span></button></div>
-    <div class="fb-btns"><button class="fb-x" id="fb-cancel" type="button" aria-label="Cancel" data-tip="Cancel"></button><button class="fb-ok" id="fb-enter" type="button" aria-label="Enter" data-tip="Enter"></button><button id="fb-fx" type="button" aria-label="Insert Function" data-tip="Insert Function"></button></div>
-    <div class="fb-edit"><textarea class="fb-input" id="fbinput" rows="1" aria-label="Formula Bar" spellcheck="false" autocomplete="off"></textarea></div>
+    <div class="namebox" id="namebox-wrap"><input id="namebox" aria-label="Name Box" autocomplete="off" spellcheck="false"><button id="namebox-dd" type="button" tabindex="-1" aria-label="Names"><span class="dd-arrow"></span></button><div id="react-namebox"></div></div>
+    <div class="fb-btns" id="fb-buttons"><button class="fb-x" id="fb-cancel" type="button" aria-label="Cancel" data-tip="Cancel"></button><button class="fb-ok" id="fb-enter" type="button" aria-label="Enter" data-tip="Enter"></button><button id="fb-fx" type="button" aria-label="Insert Function" data-tip="Insert Function"></button></div>
+    <div class="fb-btns fb-react-btns" id="react-fbar-buttons"></div>
+    <div class="fb-edit" id="fb-edit"><textarea class="fb-input" id="fbinput" rows="1" aria-label="Formula Bar" spellcheck="false" autocomplete="off"></textarea><div id="react-fbar"></div></div>
   </div>
   <div class="main" id="main">
     <div class="center" id="center">

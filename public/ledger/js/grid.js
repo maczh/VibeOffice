@@ -1,4 +1,4 @@
-/* Ledger — grid controller: viewport, scrolling, selection, mouse & keyboard, objects layer. */
+/* Excelx — grid controller: viewport, scrolling, selection, mouse & keyboard, objects layer. */
 (function (root) {
   'use strict';
   const L = root.L;
@@ -828,8 +828,18 @@
     let last = p, acc = { x: 0, y: 0 }, moved = false;
     const fr = G.frame();
     const g = LY.geo(sh);
-    const lp = setTimeout(() => { if (!moved) { if (z0.kind === 'cell') G.select(z0.r, z0.c, { noScroll: true }); L.app.contextMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault() {} }, z0); } }, 600);
+    let active = true, lp = 0, removeScopeCleanup = () => {};
+    const detach = () => {
+      if (!active) return;
+      active = false;
+      clearTimeout(lp);
+      wrap.removeEventListener('pointermove', mv); wrap.removeEventListener('pointerup', up); wrap.removeEventListener('pointercancel', up);
+      removeScopeCleanup();
+    };
+    lp = setTimeout(() => { lp = 0; if (active && !moved) { if (z0.kind === 'cell') G.select(z0.r, z0.c, { noScroll: true }); L.app.contextMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault() {} }, z0); } }, 600);
+    removeScopeCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(detach) : () => {};
     const mv = (ev) => {
+      if (!active) return;
       const q = pt(ev);
       if (Math.abs(q.x - p.x) + Math.abs(q.y - p.y) > 6) { moved = true; clearTimeout(lp); }
       if (!moved) return;
@@ -841,8 +851,8 @@
       if (dc) { acc.x -= dc * cw; G.scrollBy(0, dc); }
     };
     const up = () => {
-      clearTimeout(lp);
-      wrap.removeEventListener('pointermove', mv); wrap.removeEventListener('pointerup', up); wrap.removeEventListener('pointercancel', up);
+      if (!active) return;
+      detach();
       if (moved) return;
       const ed = L.editor;
       if (ed && ed.active) { if (ed.canPoint() && z0.kind === 'cell') { ed.pointStart({ r1: z0.r, c1: z0.c, r2: z0.r, c2: z0.c }); ed.pointEnd(); return; } if (!ed.commit()) return; }
@@ -1104,6 +1114,7 @@
     if (!cm) { if (hoverCm) { hoverCm = null; G.syncObjects(); } return; }
     hoverTimer = setTimeout(() => { hoverCm = cm; G.syncObjects(); }, 250);
   }
-  wrapLeave();
-  function wrapLeave() { document.addEventListener('pointerleave', () => { if (hoverCm) { hoverCm = null; G.syncObjects(); } }); }
+  L.bus.on('app-ready', () => {
+    L.addMountListener(document, 'pointerleave', () => { if (hoverCm) { hoverCm = null; G.syncObjects(); } });
+  });
 })(typeof window !== 'undefined' ? window : globalThis);

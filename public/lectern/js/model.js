@@ -1,4 +1,4 @@
-/* Lectern — presentation model.
+/* PPTX — presentation model.
  * Units are points. Colours are '#RRGGBB' literals or scheme slot names
  * (dk1, lt1, dk2, lt2, tx1, bg1, tx2, bg2, accent1..6, hlink, folHlink).
  */
@@ -45,7 +45,7 @@
     scheme('#EAF3FA', '#0B2545', '#8DA9C4', '#13315C', '#5FA8D3', '#E07A5F', '#3D5A80', '#98C1D9'),
     scheme('#1B1F2A', '#E6E9F0', '#0E1118', '#7FDBCA', '#4CC9F0', '#F72585', '#B5179E', '#4361EE'),
   ];
-  /* the theme's style matrix (fmtScheme) in the themes Lectern writes, which shapes refer to by index (SmartArt
+  /* the theme's style matrix (fmtScheme) in the themes PPTX writes, which shapes refer to by index (SmartArt
      quick styles, PowerPoint's shape styles) in the colour they name: fills 1–3 (solid, a soft and a rich
      top-to-bottom gradient, as colour changes per stop), line widths 1–3 (pt) and effects 1–3 (drop shadows, pt) */
   M.FMT = {

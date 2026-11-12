@@ -1,11 +1,11 @@
-/* Quire — Markdown reader: CommonMark 0.31 plus what GitHub adds (tables, task lists, strikethrough,
+/* Wordx — Markdown reader: CommonMark 0.31 plus what GitHub adds (tables, task lists, strikethrough,
  * extended autolinks, footnotes, alerts, math spans kept as source). parse() gives a node tree with
  * source line numbers for every block; toHTML() renders it the way the reference implementations do,
  * which is how the parser is checked against the spec examples (tests/quire/mdspec.js).
  * Loads in Node as well as in the page.
  *
  * Derived from commonmark.js lib/blocks.js, lib/inlines.js and lib/node.js (BSD-2-Clause), condensed and changed
- * for Quire (GitHub's additions, line numbers, the HTML output):
+ * for Wordx (GitHub's additions, line numbers, the HTML output):
  *
  *   Copyright (c) 2014, John MacFarlane
  *

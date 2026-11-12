@@ -66,6 +66,20 @@ const runs = (u, b, prop) => u.evaluate(`L.D.doc.main.blocks[${b}].runs.map((r) 
 const objectState = (u) => u.evaluate(`({ handles: document.querySelectorAll('.obj-handles').length, outlined: document.querySelectorAll('.sel-obj').length, selected: !!L.ed.objSel })`);
 const TEXT = ['Source plain target words follow here', 'Second paragraph of ordinary text for clicking', 'Third paragraph with more words to paint'];
 
+test('the default Wordx sample and author metadata use the rebranded product name', async () => {
+  const u = await open('quire');
+  try {
+    const sample = await u.evaluate(`(() => { const d = L.app.buildSample(); return {
+      title: d.props.title, creator: d.props.creator, heading: L.D.ptext(d.main.blocks[0]),
+      header: L.D.ptext(d.hf.h1.blocks[0])
+    }; })()`);
+    assert.deepEqual(sample, {
+      title: 'Welcome to Wordx', creator: 'Wordx', heading: 'Welcome to Wordx', header: 'Wordx\t\tSample document',
+    });
+    u.clean();
+  } finally { await u.close(); }
+});
+
 test('the highlighter marks the whole drag, as one undo step', () => inQuire(PARAS(TEXT), async (u) => {
   await u.click(await u.button('highlightBtn'));
   assert.equal(await u.painting(), true, 'the Highlight button with no selection arms the highlighter');

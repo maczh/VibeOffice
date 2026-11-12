@@ -1,4 +1,4 @@
-/* Quire — reviewing: track changes (accept / reject / navigate), comments with balloons and the
+/* Wordx — reviewing: track changes (accept / reject / navigate), comments with balloons and the
  * reviewing pane, reviewer colours, and Compare and Merge Documents.
  */
 (function () {
@@ -155,7 +155,7 @@
     const cur = E.sel.f;
     const at = (x) => D.cmp(d, D.pos(x.p, x.a), cur);
     const hit = dir > 0 ? items.find((x) => at(x) > 0 || (E.collapsed() && at(x) === 0 && false)) : items.slice().reverse().find((x) => D.cmp(d, D.pos(x.p, x.b), E.range()[0]) < 0);
-    if (!hit) { if (!quiet) app().status(dir > 0 ? 'Quire reached the end of the document.' : 'Quire reached the beginning of the document.'); return; }
+    if (!hit) { if (!quiet) app().status(dir > 0 ? 'Wordx reached the end of the document.' : 'Wordx reached the beginning of the document.'); return; }
     E.setSel(D.pos(hit.p, hit.a), D.pos(hit.p, hit.b));
     if (hit.cmt) highlightBalloon(hit.cmt);
   };

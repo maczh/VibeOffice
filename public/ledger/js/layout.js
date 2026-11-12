@@ -1,4 +1,4 @@
-/* Ledger — sheet geometry: column / row positions, fonts and text measurement, cell display text. */
+/* Excelx — sheet geometry: column / row positions, fonts and text measurement, cell display text. */
 (function (root) {
   'use strict';
   const L = root.L;

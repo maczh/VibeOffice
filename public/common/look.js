@@ -50,7 +50,8 @@
   if (desk) window.addEventListener('vo-settings', (e) => take(e.detail.key, e.detail.value));
   else window.addEventListener('storage', (e) => { if (e.storageArea === localStorage) for (const fn of listeners) fn(e.key, e.newValue); });
 
-  const d = document.documentElement, l = VO.settings.get('vibeoffice.look') || 'classic';
+  const directRoot = () => window.__VIBE_OFFICE_DIRECT_HOST__?.root?.isConnected ? window.__VIBE_OFFICE_DIRECT_HOST__.root : null;
+  const d = directRoot() || document.documentElement, l = VO.settings.get('vibeoffice.look') || 'classic';
   d.dataset.look = l;
   d.dataset.layout = l === 'paper2016' ? 'ribbon' : 'bars';
 })();

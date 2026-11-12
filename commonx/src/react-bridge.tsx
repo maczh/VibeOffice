@@ -22,8 +22,10 @@ export interface VibeOfficeServices {
 interface LegacyVibeOffice {
   t?: (message: string, ...values: Array<string | number>) => string;
   N?: (message: string) => string;
-  look?: { set: (look: LookId) => void };
+  reactClose?: () => Promise<boolean>;
+  look?: { get?: () => LookId; set: (look: LookId) => void };
   lang?: { set: (language: LanguageId) => void };
+  reactDirectHost?: { root?: HTMLElement | null };
 }
 
 declare global {
@@ -57,7 +59,7 @@ const languages: readonly Choice<LanguageId>[] = [
 const Context = createContext<VibeOfficeServices | null>(null);
 
 function currentLook(): LookId {
-  const value = typeof document === 'undefined' ? undefined : document.documentElement.dataset.look;
+  const value = typeof window !== 'undefined' ? window.VO?.look?.get?.() : undefined;
   return looks.some(({ id }) => id === value) ? value as LookId : 'classic';
 }
 

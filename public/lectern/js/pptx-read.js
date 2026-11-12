@@ -1,4 +1,4 @@
-/* Lectern — PresentationML reader (.pptx / .ppsx / .potx / .pptm). */
+/* PPTX — PresentationML reader (.pptx / .ppsx / .potx / .pptm). */
 (function () {
   'use strict';
   const L = window.L, K = L.opc;
@@ -1592,7 +1592,7 @@
       const withSa = (g) => { if (g && sa) g.sa = sa; return g; };
       if (dm) {
         const dx = await xml(dm.target);
-        /* a diagram Lectern wrote (our layout ids): editable again as SmartArt (js/diagram.js) */
+        /* a diagram PPTX wrote (our layout ids): editable again as SmartArt (js/diagram.js) */
         if (dx && L.saIO) try { sa = L.saIO.read(dx); } catch (e) { sa = null; }
         /* an item's own formatting: its point's fill and outline, its text's colour, bold and italic */
         /* a shape filled with a picture: not something our layouts carry, so the diagram stays as it came */

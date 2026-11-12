@@ -1,4 +1,4 @@
-/* Quire — WordprocessingML reader (.docx / .docm / .dotx / .dotm).
+/* Wordx — WordprocessingML reader (.docx / .docm / .dotx / .dotm).
  * Builds the document model from the package: styles, numbering, settings, theme, sections,
  * headers & footers, footnotes/endnotes, comments, fields, revisions, tables, images, shapes,
  * text boxes, charts, SmartArt drawings, VML pictures and watermarks. Damaged packages are repaired
@@ -31,7 +31,7 @@
       throw e;
     }
     const warnings = [];
-    if (zip.repaired) warnings.push('The file was damaged; Quire repaired what it could.');
+    if (zip.repaired) warnings.push('The file was damaged; Wordx repaired what it could.');
     const get = (p) => zip.get(p) || zip.get(p.replace(/^\//, '')) || findCI(p);
     const findCI = (p) => { const lp = p.toLowerCase(); for (const [k, v] of zip) if (k.toLowerCase() === lp) return v; return null; };
     const xmlCache = new Map();
@@ -439,7 +439,7 @@
           }
         }
         if (type === 'numbering' && st.pPr.num) st.numStyle = true;
-        /* the style as the file has it: the writer keeps what Quire doesn't model, and the file's order */
+        /* the style as the file has it: the writer keeps what Wordx doesn't model, and the file's order */
         L.preserve.properties(st, s, 'style', propertyContext(s));
         st.x.order = order++;
         imported[id] = st;
@@ -503,7 +503,7 @@
     doc.defaults = defaults;
     if (!styles.Normal) styles.Normal = { id: 'Normal', name: 'Normal', type: 'paragraph', pPr: {}, rPr: {}, builtin: true, isDefault: true };
     styles.Normal.isDefault = true;
-    /* the built-ins Quire adds to a file's styles: the writer leaves out the ones nothing uses and nobody changed */
+    /* the built-ins Wordx adds to a file's styles: the writer leaves out the ones nothing uses and nobody changed */
     if (stX) doc.keep.catalogue = Object.fromEntries(Object.values(styles).filter((s) => !s.x).map((s) => [s.id, JSON.stringify(s)]));
 
     /* ---- media ---- */
@@ -1223,7 +1223,7 @@
         const tids = elementIds(tr);
         if (tids) row.ids = tids;
         if (ex) { const xp = tblPr(ex); if (xp.borders) row.exBorders = xp.borders; }
-        /* the row's exceptions to the table's properties as the file has them (margins, shading, width, …); Quire models the borders */
+        /* the row's exceptions to the table's properties as the file has them (margins, shading, width, …); Wordx models the borders */
         if (ex) row.ex = L.preserve.properties({ borders: row.exBorders }, ex, 'tblPrEx', { pkg: doc.pkg, part: ctx.part });
         rows.push(row);
         rowModels.set(tr, row);
@@ -1755,7 +1755,7 @@
       if (st.visibility === 'hidden') it.hidden = true;
       return it;
     }
-    /** a VML group flattened into a Quire group: children mapped from the group's coordinate space into points */
+    /** a VML group flattened into a Wordx group: children mapped from the group's coordinate space into points */
     function vmlGroup(g, ctx, w, h) {
       const it = { t: 'group', w, h, kids: [] };
       const walk = (grp, map) => {

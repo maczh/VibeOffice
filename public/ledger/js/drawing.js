@@ -1,4 +1,4 @@
-/* Ledger — drawing objects on worksheets: pictures, charts, AutoShapes and text boxes.
+/* Excelx — drawing objects on worksheets: pictures, charts, AutoShapes and text boxes.
  * Rendering into the grid's object layer, selection, move / resize, text editing, the drawing tools, Format Object. */
 (function (root) {
   'use strict';
@@ -487,7 +487,7 @@
     tool = { kind, ov };
     L.app.status(kind === 'textbox' ? L.t('Drag in the worksheet to insert the text box. Press Esc to cancel.') : L.t('Drag in the worksheet to insert the AutoShape. Press Esc to cancel.'));
     const esc = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); DR.cancelTool(); } };
-    document.addEventListener('keydown', esc, true);
+    L.addMountListener(document, 'keydown', esc, true);
     tool.esc = esc;
     ov.addEventListener('pointerdown', (e) => {
       e.preventDefault();

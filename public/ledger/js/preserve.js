@@ -1,4 +1,4 @@
-/* Ledger — ownership of original OOXML parts and merged workbook settings. */
+/* Excelx — ownership of original OOXML parts and merged workbook settings. */
 (function (root) {
   'use strict';
   const L = root.L, K = L.opc, N = K.NS, P = (L.preserve = {});

@@ -1,4 +1,4 @@
-/* Quire — Find, Replace and Go To: Word's special characters (^p, ^t, ^?, ^# …), wildcards
+/* Wordx — Find, Replace and Go To: Word's special characters (^p, ^t, ^?, ^# …), wildcards
  * (?, *, [ ], {n,m}, @, < >, groups and \1 back-references), match case / whole words / sounds like /
  * all word forms, formatting criteria, Highlight All, and the Go To tab.
  */
@@ -348,18 +348,18 @@
     const findNext = () => {
       remember();
       try {
-        if (state.highlight && curTab === 0) { const n = FD.highlightAll(opts()); A().status(n < 0 ? 'Highlighting is not supported in this browser.' : n === 1 ? L.t('Quire found {0} item matching this criteria.', n) : L.t('Quire found {0} items matching this criteria.', n)); if (n > 0) { const hit = FD.next(opts()); if (hit) A().gotoPos(hit.a, hit.b, KEEP); } return; }
+        if (state.highlight && curTab === 0) { const n = FD.highlightAll(opts()); A().status(n < 0 ? 'Highlighting is not supported in this browser.' : n === 1 ? L.t('Wordx found {0} item matching this criteria.', n) : L.t('Wordx found {0} items matching this criteria.', n)); if (n > 0) { const hit = FD.next(opts()); if (hit) A().gotoPos(hit.a, hit.b, KEEP); } return; }
         FD.wrapped = false;
         const hit = FD.next(opts());
-        if (!hit) { ui.msg(`Quire has finished searching the document. The search item was not found.`, { icon: 'info' }); return; }
+        if (!hit) { ui.msg(`Wordx has finished searching the document. The search item was not found.`, { icon: 'info' }); return; }
         A().gotoPos(hit.a, hit.b, KEEP);
-        if (FD.wrapped) A().status('Quire reached the end of the document and continued from the beginning.');
+        if (FD.wrapped) A().status('Wordx reached the end of the document and continued from the beginning.');
       } catch (e) { if (e.message !== 'empty') ui.msg(e.message, { icon: 'warn' }); }
     };
     /* the dialog keeps the keyboard where it was (an edit in the page takes it there) */
     const keepKeys = (fn) => () => { const back = document.activeElement; fn(); if (back && dlg && dlg.el.contains(back) && document.activeElement !== back) back.focus(); };
-    const replace = keepKeys(() => { remember(); try { const hit = FD.replaceOne(opts()); if (hit) A().gotoPos(hit.a, hit.b, KEEP); else ui.msg('Quire has finished searching the document.', { icon: 'info' }); } catch (e) { if (e.message !== 'empty') ui.msg(e.message, { icon: 'warn' }); } });
-    const replaceAll = () => { remember(); try { const n = FD.replaceAll(opts()); ui.msg(n === 1 ? L.t('Quire has completed its search of the document and has made {0} replacement.', n) : n ? L.t('Quire has completed its search of the document and has made {0} replacements.', n) : 'Quire has finished searching the document. The search item was not found.', { icon: 'info' }); } catch (e) { if (e.message !== 'empty') ui.msg(e.message, { icon: 'warn' }); } };
+    const replace = keepKeys(() => { remember(); try { const hit = FD.replaceOne(opts()); if (hit) A().gotoPos(hit.a, hit.b, KEEP); else ui.msg('Wordx has finished searching the document.', { icon: 'info' }); } catch (e) { if (e.message !== 'empty') ui.msg(e.message, { icon: 'warn' }); } });
+    const replaceAll = () => { remember(); try { const n = FD.replaceAll(opts()); ui.msg(n === 1 ? L.t('Wordx has completed its search of the document and has made {0} replacement.', n) : n ? L.t('Wordx has completed its search of the document and has made {0} replacements.', n) : 'Wordx has finished searching the document. The search item was not found.', { icon: 'info' }); } catch (e) { if (e.message !== 'empty') ui.msg(e.message, { icon: 'warn' }); } };
     const body = h('div', { class: 'col' }, tabs, more, foot);
     dlg = ui.dialog({ title: 'Find and Replace', width: 470, body, modeless: true, buttons: [], focus: mode === 'goto' ? gotoIn : findIn, onClose: () => { open = null; FD.clearHighlight(); E.refocus(); } });   /* the found text is the page's selection again */
     dlg.el.querySelector('.dlg-foot').remove();

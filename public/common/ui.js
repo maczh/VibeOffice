@@ -7,6 +7,12 @@
   const { h } = L;
   const domHost = () => document.fullscreenElement || (L.domHost ? L.domHost() : document.body);
   const ui = (L.ui = {});
+  ui.reactStatus = (text, duration) => {
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (!directRoot) return false;
+    directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-status', { detail: { text: String(text || ''), duration }, bubbles: true }));
+    return true;
+  };
   const mountDisposers = new WeakMap();
   const uiMounts = new Set();
   const layerRoots = new Map();
@@ -24,7 +30,7 @@
     const offs = [];
     const doc = host.ownerDocument || document;
     const win = doc.defaultView || window;
-    offs.push(on(host, 'pointerover', legacyPointerover));
+    if (!(root.VO && root.VO.reactDirectHost)) offs.push(on(host, 'pointerover', legacyPointerover));
     offs.push(on(host, 'pointerdown', hideTip, true));
     offs.push(on(host, 'keydown', hideTip, true));
     offs.push(on(host, 'pointerdown', legacyCloseOutside, true));
@@ -194,7 +200,11 @@
     tipEl.style.left = Math.max(2, left) + 'px';
     tipEl.style.top = Math.max(2, top) + 'px';
   }
-  function hideTip() { clearTimeout(tipTimer); tipTarget = null; if (tipEl) tipEl.hidden = true; }
+  function hideTip() {
+    clearTimeout(tipTimer); tipTarget = null; if (tipEl) tipEl.hidden = true;
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-hide-tooltip', { bubbles: true }));
+  }
   if (typeof document !== 'undefined') installLegacyUi();
   ui.hideTip = hideTip;
 
@@ -213,6 +223,11 @@
   }
   ui.closeMenus = (keepDepth) => {
     keepDepth = keepDepth || 0;
+    const directHost = root.VO && root.VO.reactDirectHost;
+    if (directHost && directHost.root && directHost.root.isConnected) {
+      directHost.root.dispatchEvent(new root.CustomEvent('vibeoffice-react-close-menus', { detail: { keepDepth }, bubbles: true }));
+      if (!keepDepth && directHost.menuBarApi) directHost.menuBarApi.active = null;
+    }
     while (openStack.length > keepDepth) {
       const m = openStack.pop();
       m.el.remove();
@@ -232,6 +247,36 @@
     const depth = opts.depth || 0;
     ui.closeMenus(depth);
     const list = (typeof items === 'function' ? items() : items).map(resolveItem).filter((x) => x && !x.hidden);
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      const directHost = root.VO.reactDirectHost;
+      const rect = at && typeof at.getBoundingClientRect === 'function' ? at.getBoundingClientRect() : at;
+      let x, y;
+      if (rect instanceof DOMRect || (rect && rect.bottom != null && rect.left != null && rect.x == null)) { x = rect.left; y = rect.bottom; }
+      else if (rect && rect.bottom != null) { x = rect.left; y = rect.bottom; }
+      else { x = rect && rect.x || 2; y = rect && rect.y || 2; }
+      const prepare = (source) => source.map(resolveItem).filter((item) => item && !item.hidden).map((item) => {
+        const disabled = !!item.disabled || !!(item.enabled && !item.enabled());
+        const checked = !!(item.checked && item.checked());
+        return {
+          ...item, disabled, checked,
+          labelHtml: item.label == null ? '' : item.raw ? ampMark(item.label) : ampHTML(item.label),
+          iconHtml: item.html || (item.icon ? L.icons.get(item.icon) : checked ? item.radio ? '<span class="m-radio">●</span>' : '<span class="m-check">✓</span>' : ''),
+          keyText: item.raw ? item.key || '' : keyText(item.key),
+          accessKey: item.raw ? keyOf(item.label) : accessKey(item.label),
+        };
+      });
+      const eventTarget = at && typeof at.dispatchEvent === 'function' ? at : reactRoot;
+      if (opts.fromBar != null && directHost.menuBarApi) directHost.menuBarApi.active = opts.fromBar;
+      eventTarget.dispatchEvent(new root.CustomEvent('vibeoffice-react-menu', { detail: {
+        items: prepare(list), left: x || 2, top: y || 2, side: at && at.side, cls: opts.cls,
+        overDialog: ui.dialogOpen(), selectFirst: opts.selectFirst, depth, fromBar: opts.fromBar,
+        anchor: at instanceof root.Element ? at : undefined,
+        resolveItems: prepare,
+        execute: (item) => { if (item.run) item.run(); else if (item.cmd) ui.exec(item.cmd, item.arg); if (!ui.dialogOpen() && keyboardLost()) ui.hooks.refocus(); },
+      }, bubbles: true }));
+      return undefined;
+    }
     /* a menu from inside a dialog (a drop-down button there) goes above the dialogs */
     const el = h('div', { class: 'menu' + (opts.cls ? ' ' + opts.cls : '') + (ui.dialogOpen() ? ' over-dlg' : ''), role: 'menu', tabindex: '-1' });
     const rows = [];
@@ -307,9 +352,10 @@
   /* Mounted and standalone event registration is owned by installLegacyUi/ui.mount above. */
   /** after chrome that took the keyboard is done with it (a menu command, a dialog), the document gets it back */
   const keyboardLost = () => !document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected;
-  ui.menuOpen = () => openStack.length > 0;
+  ui.menuOpen = () => openStack.length > 0 || !!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.menuOpen);
   /* menu keyboard routing; returns true if handled */
   ui.menuKey = (e) => {
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.menuOpen) return true;
     if (!openStack.length) return false;
     const top = openStack[openStack.length - 1];
     if (e.key === 'Escape') {
@@ -330,6 +376,35 @@
   ui.barKeys = null;
   /** Menu bar: menus = [{label, items}] */
   ui.menuBar = function (container, menus) {
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      const directHost = root.VO.reactDirectHost;
+      const bar = {
+        active: null,
+        menus,
+        openByKey(ch) {
+          if (ui.barKeys && ui.barKeys.active()) return ui.barKeys.byKey(ch);
+          const index = menus.findIndex((menu) => accessKey(menu.label) === ch.toLowerCase());
+          if (index >= 0) { bar.openIndex(index, true); return true; }
+          return false;
+        },
+        openIndex(index, selectFirst) {
+          if (ui.barKeys && ui.barKeys.active()) { ui.barKeys.index(index); return; }
+          if (!menus[index]) return;
+          if (directHost.menuOpen && bar.active === index) { ui.closeMenus(); return; }
+          const button = container.querySelector('.menubar')?.children.item(index) || container;
+          ui.openMenu(menus[index].items, button, { cls: 'from-bar', selectFirst, fromBar: index });
+        },
+      };
+      directHost.menuBarApi = bar;
+      ui.menus = menus;
+      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-menu-bar', { detail: {
+        container, menus: menus.map((menu) => ({ labelHtml: ampHTML(menu.label), items: menu.items })),
+        openIndex: (index, selectFirst) => bar.openIndex(index, selectFirst),
+        close: () => ui.closeMenus(),
+      }, bubbles: true }));
+      return bar;
+    }
     const bar = h('div', { class: 'menubar', role: 'menubar' });
     const els = [];
     menus.forEach((m, i) => {
@@ -397,6 +472,12 @@
    * and { label, run } actions (the list reopens after the action);
    * o.note(v): grey text beside an option in the list, or { text, tip } with a tooltip for its row */
   ui.combo = function (o) {
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) {
+      const control = h('div', { class: 'combo vibeoffice-react-combo', id: 'combo-' + o.id, style: `width:${o.width || 120}px`, 'data-tip': o.tip || '' });
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-combo', { detail: { target: control, options: o }, bubbles: true }));
+      return control;
+    }
     const wrap = h('div', { class: 'combo', style: `width:${o.width || 120}px`, 'data-tip': o.tip || '' });
     const inp = h('input', { type: 'text', class: 'combo-in', id: o.id, 'aria-label': o.tip || o.id, autocomplete: 'off', spellcheck: 'false' });
     const btn = h('button', { class: 'combo-btn', type: 'button', tabindex: '-1', 'aria-label': 'Open list', html: '<span class="dd-arrow"></span>' });
@@ -443,6 +524,12 @@
   };
   /** Build a toolbar row */
   ui.toolbar = function (id, title, items) {
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      const toolbar = h('div', { class: 'toolbar vibeoffice-react-toolbar', id: 'tb-' + id, role: 'toolbar', 'aria-label': title });
+      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-toolbar', { detail: { id, title, target: toolbar, items }, bubbles: true }));
+      return toolbar;
+    }
     const tb = h('div', { class: 'toolbar', id: 'tb-' + id, role: 'toolbar', 'aria-label': title });
     tb.appendChild(h('span', { class: 'tb-grip', 'aria-hidden': 'true' }));
     for (const it of items) {
@@ -472,7 +559,7 @@
 
   /* ---------- dialogs ---------- */
   const dlgStack = [];
-  ui.dialogOpen = () => dlgStack.length > 0;
+  ui.dialogOpen = () => dlgStack.length > 0 || !!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.dialogStack && root.VO.reactDirectHost.dialogStack.length);
   /**
    * opts: {title, body, width, buttons:[{label, primary, cancel, onClick(close, button)→false to keep open}], onClose, help}
    */
@@ -483,6 +570,44 @@
     /* the selection in text being edited, for text the app doesn't give back itself (Lectern's speaker notes) */
     const s0 = window.getSelection();
     const prevRange = prevFocus && prevFocus.isContentEditable && s0.rangeCount && prevFocus.contains(s0.anchorNode) ? s0.getRangeAt(0).cloneRange() : null;
+    const directHost = root.VO && root.VO.reactDirectHost;
+    const reactRoot = directHost && directHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      const dialogHost = reactRoot.closest && reactRoot.closest('.vibe-editor__engine') || domHost();
+      const buttons = (opts.buttons || [{ label: 'OK', primary: true }]).map((button) => ({ ...button, labelHtml: ampHTML(button.label) }));
+      const stack = directHost.dialogStack || (directHost.dialogStack = []);
+      const token = {};
+      let result;
+      let closed = false;
+      const done = new Promise((resolve) => { result = resolve; });
+      const restoreFocus = () => {
+        const live = prevFocus && prevFocus.isConnected && prevFocus !== document.body;
+        if (live && !(prevFocus.isContentEditable && ui.hooks.ownsText(prevFocus))) {
+          try { prevFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+          if (prevRange && prevRange.startContainer.isConnected && prevRange.endContainer.isConnected) { const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(prevRange); }
+        } else ui.hooks.refocus();
+      };
+      const request = {
+        host: dialogHost, token, stack, options: { ...opts, buttons }, done,
+        resolve: (index) => result(index),
+        restoreFocus: () => restoreFocus(),
+        close: (index) => {
+          if (closed) return;
+          closed = true;
+          const at = stack.indexOf(token);
+          if (at >= 0) stack.splice(at, 1);
+          request.unmount?.();
+          if (opts.onClose) opts.onClose(index);
+          result(index);
+          restoreFocus();
+        },
+      };
+      if (!opts.modeless) stack.push(token);
+      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-dialog', { detail: request, bubbles: true }));
+      if (request.api) return request.api;
+      const at = stack.indexOf(token);
+      if (at >= 0) stack.splice(at, 1);
+    }
     const overlay = h('div', { class: 'dlg-overlay' });
     const dlg = h('div', { class: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.title });
     dlg.style.width = Math.min(opts.width || 380, window.innerWidth - 16) + 'px';
@@ -563,13 +688,23 @@
     if (opts.onOpen) opts.onOpen(dlg);
     return { el: dlg, body, close, done, buttons: btns };
   };
-  ui.dialogKey = (e) => { const top = dlgStack[dlgStack.length - 1]; return top ? top.keys(e) || true : false; };
+  ui.dialogKey = (e) => {
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.dialogStack && root.VO.reactDirectHost.dialogStack.length) return true;
+    const top = dlgStack[dlgStack.length - 1]; return top ? top.keys(e) || true : false;
+  };
 
   /** A document's hyperlink, which the suite never opens itself: a link in a file can lead anywhere, so it shows
    *  the address with a warning and Copy, to paste into the browser's address bar (or, for mail, into a message).
    *  Every app's Open Hyperlink, Ctrl+click and slide show link come here; links within the document don't. */
   ui.linkDialog = function (url) {
     const mail = /^mailto:/i.test(url);
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      let respond;
+      const done = new Promise((resolve) => { respond = resolve; });
+      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-link', { detail: { url, mail, respond }, bubbles: true }));
+      return { done };
+    }
     const box = h('input', { type: 'text', class: 'link-url', readonly: true, value: url, spellcheck: 'false', 'aria-label': t('Address') });
     const copied = h('p', { class: 'link-copied', role: 'status' });
     const body = h('div', { class: 'col' },
@@ -605,6 +740,15 @@
     /* Esc answers Cancel; No only where there is no Cancel (Yes/No), never in Yes/No/Cancel, where No discards */
     const plain = labels.map(plainAmp);
     const esc = plain.some((l) => /cancel/i.test(l)) ? plain.findIndex((l) => /cancel/i.test(l)) : plain.findIndex((l) => /^no$/i.test(l));
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      return new Promise((respond) => {
+        reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-message', { detail: {
+          title: o.title || L.APP, text: String(L.t ? L.t(text) : text), icon: o.icon || 'info', iconSvg: icons[o.icon || 'info'] || icons.info,
+          buttons: labels, defaultButton: o.def || 0, escapeIndex: esc, width: o.width || 380, respond,
+        }, bubbles: true }));
+      });
+    }
     const d = ui.dialog({ title: o.title || L.APP, body, width: o.width || 380, buttons: labels.map((l, i) => ({ label: l, primary: i === (o.def || 0), cancel: i === esc })) });
     return d.done;
   };
@@ -612,6 +756,16 @@
    *  source licenses, and the suite's license and font notes (as in the Start Center's About).
    *  Descriptions stay general, without naming another company's products (o: { name, text: [paragraphs] }). */
   ui.about = function (o) {
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      let respond;
+      const done = new Promise((resolve) => { respond = resolve; });
+      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-about', { detail: {
+        name: o.name, text: o.text, version: L.VERSION || 'dev', icon: L.icons.app ? L.icons.app(48) : '',
+        licensesUrl: root.VO.LICENSES || '../oss-licenses.html', respond,
+      }, bubbles: true }));
+      return { done };
+    }
     const body = h('div', { class: 'col about' },
       h('div', { class: 'about-head' }, h('span', { html: L.icons.app ? L.icons.app(48) : '' }),
         h('div', null, h('div', { class: 'about-name', translate: 'no', text: root.VO ? root.VO.editionName(o.name) : o.name }), h('div', { text: t('Version {0}', L.VERSION) }))),
@@ -623,6 +777,14 @@
     return ui.dialog({ title: t('About {0}', o.name), width: 420, body, buttons: [{ label: 'OK', primary: true }] });
   };
   ui.prompt = function (label, value, title) {
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      return new Promise((respond) => {
+        reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-prompt', { detail: {
+          title: title || L.APP, label, value: value || '', respond,
+        }, bubbles: true }));
+      });
+    }
     const inp = h('input', { type: 'text', id: 'prompt-in', value: value || '', style: 'width:100%' });
     let val = null;
     const d = ui.dialog({ title: title || L.APP, body: h('div', { class: 'col' }, h('label', { for: 'prompt-in', text: label }), inp), buttons: [{ label: 'OK', primary: true, onClick: () => { val = inp.value; } }, { label: 'Cancel' }] });
@@ -648,6 +810,14 @@
     const body = h('div', { class: 'col' },
       h('div', { text: 'Some of this file can\'t be saved exactly as it was:' }), list,
       h('div', { text: 'Click Continue to save anyway, or Cancel to go back to your document without saving.' }));
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      const grouped = Array.from(groups, ([what, places]) => ({ what, places }));
+      const proceed = await new Promise((resolve) => {
+        reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-compatibility', { detail: { groups: grouped, respond: resolve }, bubbles: true }));
+      });
+      return proceed ? pending : null;
+    }
     const result = await ui.dialog({ title: 'Compatibility Checker', width: 540, body,
       buttons: [{ label: '&Continue', primary: true }, { label: 'Cancel', cancel: true }] }).done;
     return result === 0 ? pending : null;
@@ -655,6 +825,14 @@
 
   /** the "Password" box for opening a protected file; resolves to the password or null. wrong: after a wrong one */
   ui.password = function (fileName, wrong) {
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      return new Promise((respond) => {
+        reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-password', { detail: {
+          text: wrong ? '' : t("'{0}' is protected.", fileName), wrong: !!wrong, respond,
+        }, bubbles: true }));
+      });
+    }
     const inp = h('input', { type: 'password', id: 'pw-in', value: '', style: 'width:100%', autocomplete: 'off' });
     let val = null;
     const d = ui.dialog({ title: 'Password', width: 340, body: h('div', { class: 'col' }, h('div', { text: wrong ? 'The password is incorrect. Try again.' : t('\'{0}\' is protected.', fileName) }), h('label', { for: 'pw-in', text: 'Enter password to open file' }), inp), buttons: [{ label: 'OK', primary: true, onClick: () => { val = inp.value; } }, { label: 'Cancel' }] });
@@ -664,9 +842,35 @@
 
   /* ---------- form controls ---------- */
   let ctlId = 0;
-  ui.button = (label, onClick, o) => { const b = h('button', Object.assign({ class: 'btn', type: 'button', html: ampHTML(label) }, o || {})); b.addEventListener('click', onClick); return b; };
+  ui.button = (label, onClick, o) => {
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) {
+      const id = (o && o.id) || 'btn' + (++ctlId);
+      const attrs = Object.assign({ class: 'btn', type: 'button' }, o || {}, { id });
+      delete attrs.html;
+      const button = h('button', attrs);
+      const options = Object.assign({ html: ampHTML(label) }, o || {}, { id, label });
+      Object.defineProperties(button, {
+        innerHTML: { configurable: true, get: () => button.querySelector('.vibeoffice-react-button-label')?.innerHTML ?? String(options.html || ''), set: (value) => { const content = button.querySelector('.vibeoffice-react-button-label'); options.html = String(value); if (content) content.innerHTML = options.html; } },
+        textContent: { configurable: true, get: () => button.querySelector('.vibeoffice-react-button-label')?.textContent ?? String(options.label || ''), set: (value) => { const content = button.querySelector('.vibeoffice-react-button-label'); options.html = L.esc(String(value)); options.label = String(value); if (content) content.textContent = String(value); } },
+      });
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-button', { detail: { target: button, options }, bubbles: true }));
+      if (onClick) button.addEventListener('click', onClick);
+      return button;
+    }
+    const b = h('button', Object.assign({ class: 'btn', type: 'button', html: ampHTML(label) }, o || {}));
+    b.addEventListener('click', onClick);
+    return b;
+  };
   ui.check = (label, checked, onChange, o) => {
     const id = (o && o.id) || 'ck' + (++ctlId);
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) {
+      const wrap = h('span', { class: 'ck vibeoffice-react-choice-slot', 'data-react-choice-id': id, style: 'display:contents' });
+      Object.defineProperty(wrap, 'input', { configurable: true, get: () => wrap.querySelector('input') });
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-choice', { detail: { target: wrap, options: { id, type: 'checkbox', label, checked: !!checked, onChange } }, bubbles: true }));
+      return wrap;
+    }
     const inp = h('input', { type: 'checkbox', id });
     inp.checked = !!checked;
     inp.addEventListener('change', () => onChange && onChange(inp.checked));
@@ -676,6 +880,13 @@
   };
   ui.radio = (name, label, checked, onChange, o) => {
     const id = (o && o.id) || 'rd' + (++ctlId);
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) {
+      const wrap = h('span', { class: 'ck vibeoffice-react-choice-slot', 'data-react-choice-id': id, style: 'display:contents' });
+      Object.defineProperty(wrap, 'input', { configurable: true, get: () => wrap.querySelector('input') });
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-choice', { detail: { target: wrap, options: { id, type: 'radio', name, label, checked: !!checked, onChange } }, bubbles: true }));
+      return wrap;
+    }
     const inp = h('input', { type: 'radio', id, name });
     inp.checked = !!checked;
     inp.addEventListener('change', () => { if (inp.checked && onChange) onChange(); });
@@ -686,6 +897,18 @@
   /** options: [value, label] pairs, whose labels are UI text, or plain values shown as they are (font names, sizes);
       o.translate: 'no' shows every label as it is */
   ui.select = (options, value, onChange, o) => {
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) {
+      const id = (o && o.id) || 'sel' + (++ctlId);
+      const control = h('div', { class: 'vibeoffice-react-select-slot', 'data-react-select-id': id, style: 'display:contents' });
+      Object.defineProperties(control, {
+        value: { configurable: true, get: () => control.querySelector('select')?.value ?? String(value ?? ''), set: (next) => { const select = control.querySelector('select'); if (select) select.value = String(next); } },
+        disabled: { configurable: true, get: () => control.querySelector('select')?.disabled ?? !!(o && o.disabled), set: (next) => { const select = control.querySelector('select'); if (select) select.disabled = !!next; } },
+        selectedIndex: { configurable: true, get: () => control.querySelector('select')?.selectedIndex ?? 0, set: (next) => { const select = control.querySelector('select'); if (select) select.selectedIndex = next; } },
+      });
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-select', { detail: { target: control, options: Object.assign({}, o || {}, { id, options, value, onChange }) }, bubbles: true }));
+      return control;
+    }
     const sel = h('select', Object.assign({ id: (o && o.id) || 'sel' + (++ctlId) }, o || {}));
     for (const op of options) {
       const [v, l] = Array.isArray(op) ? op : [op, op];
@@ -700,6 +923,19 @@
   ui.spin = (o) => {
     const id = o.id || 'sp' + (++ctlId);
     const fmt = (v) => (o.fmt ? o.fmt(v) : L.round(v, o.dec == null ? 2 : o.dec) + (o.unit || ''));
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) {
+      const wrap = h('span', { class: 'spin vibeoffice-react-spin', 'data-react-spin-id': id });
+      const parseReact = () => { const inp = wrap.querySelector('input'); const value = parseFloat(String(inp ? inp.value : fmt(o.value)).replace(/[^0-9.\-]/g, '')); return isNaN(value) ? o.value : value; };
+      Object.defineProperties(wrap, {
+        input: { configurable: true, get: () => wrap.querySelector('input') },
+        get: { configurable: true, value: parseReact },
+        set: { configurable: true, value: (value) => { o.value = value; const inp = wrap.querySelector('input'); if (inp) inp.value = fmt(value); } },
+        setDisabled: { configurable: true, value: (disabled) => { wrap.__reactSpinDisabled = !!disabled; wrap.querySelectorAll('input,button').forEach((control) => { control.disabled = !!disabled; }); wrap.dispatchEvent(new root.CustomEvent('vibeoffice-react-spin-disabled')); } },
+      });
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-spin', { detail: { target: wrap, options: o }, bubbles: true }));
+      return wrap;
+    }
     const inp = h('input', { type: 'text', id, class: 'spin-in', value: fmt(o.value), inputmode: 'decimal', autocomplete: 'off' });
     const parse = () => { const v = parseFloat(String(inp.value).replace(/[^0-9.\-]/g, '')); return isNaN(v) ? o.value : v; };
     const set = (v) => { v = L.clamp(v, o.min == null ? -1e9 : o.min, o.max == null ? 1e9 : o.max); o.value = v; inp.value = fmt(v); if (o.onChange) o.onChange(v); };
@@ -718,6 +954,31 @@
   };
   /** Tabs: [{label, body}] */
   ui.tabs = (tabs, active) => {
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) {
+      const id = 'tabs' + (++ctlId);
+      const head = h('div', { class: 'tabs-head vibeoffice-react-tabs-head', id: id + '-head', role: 'tablist' });
+      const bodies = h('div', { class: 'tabs-body' });
+      const initial = Math.max(0, Math.min(Number.isInteger(active) ? active : 0, tabs.length - 1));
+      function sel(i) {
+        if (!Number.isInteger(i) || i < 0 || i >= tabs.length) return;
+        tabs.forEach((tab, index) => {
+          tab.body.classList.add('tab-pane');
+          tab.body.id = id + '-panel-' + index;
+          tab.body.setAttribute('role', 'tabpanel');
+          tab.body.setAttribute('aria-labelledby', id + '-tab-' + index);
+          tab.body.hidden = index !== i;
+        });
+        head.__reactSetActive && head.__reactSetActive(i);
+        if (tabs[i].onShow) tabs[i].onShow();
+      }
+      tabs.forEach((tab) => bodies.appendChild(tab.body));
+      const el = h('div', { class: 'tabs', 'data-react-tabs-id': id }, head, bodies);
+      el.select = sel;
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-tabs', { detail: { target: head, tabs, active: initial, select: sel }, bubbles: true }));
+      sel(initial);
+      return el;
+    }
     const head = h('div', { class: 'tabs-head', role: 'tablist' });
     const bodies = h('div', { class: 'tabs-body' });
     const btns = tabs.map((t, i) => {
@@ -735,10 +996,18 @@
     return el;
   };
   ui.field = (label, ctl, o) => {
-    const id = ctl.id || (ctl.input && ctl.input.id) || (ctl.querySelector && ctl.querySelector('input,select') && ctl.querySelector('input,select').id);
-    return h('div', { class: 'field' + (o && o.cls ? ' ' + o.cls : '') }, h('label', { for: id || null, html: ampHTML(label) }), ctl);
+    const id = ctl.dataset && (ctl.dataset.reactSelectId || ctl.dataset.reactSpinId) || ctl.id || (ctl.input && ctl.input.id) || (ctl.querySelector && ctl.querySelector('input,select') && ctl.querySelector('input,select').id);
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    const fieldLabel = h('label', { for: id || null, ...(directRoot && directRoot.isConnected ? {} : { html: ampHTML(label) }) });
+    if (directRoot && directRoot.isConnected) directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-ui-content', { detail: { target: fieldLabel, options: { html: ampHTML(label), id: 'field-label-' + (++ctlId) } }, bubbles: true }));
+    return h('div', { class: 'field' + (o && o.cls ? ' ' + o.cls : '') }, fieldLabel, ctl);
   };
-  ui.group = (title, ...kids) => h('fieldset', { class: 'grp' }, h('legend', { html: ampHTML(title) }), ...kids);
+  ui.group = (title, ...kids) => {
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    const legend = h('legend', directRoot && directRoot.isConnected ? {} : { html: ampHTML(title) });
+    if (directRoot && directRoot.isConnected) directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-ui-content', { detail: { target: legend, options: { html: ampHTML(title), id: 'group-legend-' + (++ctlId) } }, bubbles: true }));
+    return h('fieldset', { class: 'grp' }, legend, ...kids);
+  };
   /** Tools ▸ Options ▸ General ▸ Theme: the suite's look (common/looks.css). { el, apply() }; apply on OK
    *  changes every open window of the suite. null outside the suite (no common/suite.js). */
   /** the suite's own choices for Tools ▸ Options: the look (Theme) and the UI's language (common/i18n.js) */
@@ -772,6 +1041,34 @@
     const design = o.design || (ui.currentDesign ? ui.currentDesign() : null);
     const scheme = o.scheme != null ? !!o.scheme : !!ui.schemeColors;
     const r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor;
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      const sections = [];
+      const separator = () => sections.push({ layout: 'separator' });
+      const wide = (label, value) => sections.push({ layout: 'wide', item: { label: t(label), value, wide: true } });
+      const row = (layout, items) => sections.push({ layout, items });
+      if (o.mode === 'fill' || o.mode === 'line') wide(o.mode === 'fill' ? 'No Fill' : 'No Line', { none: true });
+      if (o.mode === 'font' || o.automatic) wide('Automatic', { auto: true });
+      separator();
+      if (scheme && ui.schemeColors) row('row', ui.schemeColors(design).map((color) => ({ label: color.tip || color.ref, color: color.hex, tip: color.tip || color.ref, value: color.ref })));
+      if (recent.length) { separator(); row('row', recent.map((color) => ({ label: color, color, value: color }))); }
+      if (o.mode === 'plain' || o.grid || !scheme) {
+        if (scheme) separator();
+        row('grid', L.color.STANDARD.map((color) => ({ label: ui.colorName(color), color, tip: ui.colorName(color), value: color, recent: true })));
+      }
+      separator();
+      const moreLabel = o.mode === 'fill' ? 'More Fill Colors...' : o.mode === 'line' ? 'More Line Colors...' : 'More Colors...';
+      sections.push({ layout: 'wide', item: { label: t(moreLabel), wide: true, special: 'more' } });
+      if (o.effects) sections.push({ layout: 'wide', item: { label: t(o.mode === 'line' ? 'Patterned Lines...' : 'Fill Effects...'), wide: true, special: 'effects' } });
+      const dispatchTarget = anchor && typeof anchor.dispatchEvent === 'function' ? anchor : reactRoot;
+      dispatchTarget.dispatchEvent(new root.CustomEvent('vibeoffice-react-color-menu', { detail: {
+        left: r.left || r.x || 0, bottom: r.bottom || r.y || 0, anchor: anchor instanceof root.Element ? anchor : undefined,
+        sections,
+        choose: (value, isRecent) => { if (isRecent && typeof value === 'string') ui.addRecentColor(value); onPick(value); },
+        more: () => ui.moreColors(null, (color) => { if (color) { ui.addRecentColor(color); onPick(color); } }),
+      }, bubbles: true }));
+      return;
+    }
     const panel = (close) => {
       const el = h('div', { class: 'color-panel' });
       if (o.mode === 'fill' || o.mode === 'line') el.appendChild(h('button', { class: 'cp-wide', type: 'button', text: o.mode === 'fill' ? 'No Fill' : 'No Line', onclick: () => { close(); onPick({ none: true }); } }));
@@ -812,26 +1109,44 @@
   /** "Colors" dialog with Standard and Custom tabs. cb(hex|null) */
   ui.moreColors = function (initial, cb) {
     let cur = initial && initial[0] === '#' ? initial : '#3366FF';
+    const palette = (() => {
+      const rows = [];
+      for (let r2 = 0; r2 < 13; r2++) {
+        const n = r2 < 7 ? 7 + r2 : 19 - r2;
+        const row = [];
+        for (let i = 0; i < n; i++) {
+          const ang = ((i / n) * 360 + r2 * 23) % 360;
+          const dist = Math.abs(r2 - 6) / 6, light = 0.5 + (r2 < 6 ? 0.35 : -0.25) * dist;
+          const [cr, cg, cb] = L.color.hslToRgb(ang / 360, 1 - dist * 0.4, L.clamp(light, 0.1, 0.92));
+          row.push(L.color.rgbToHex(cr, cg, cb));
+        }
+        rows.push(row);
+      }
+      const grays = Array.from({ length: 16 }, (_, i) => { const v = Math.round((255 * i) / 15); return L.color.rgbToHex(v, v, v); });
+      return { rows, grays };
+    })();
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-more-colors', { detail: {
+        initial: cur, rows: palette.rows, grays: palette.grays,
+        respond: (color) => { if (color) ui.addRecentColor(color); cb(color); },
+      }, bubbles: true }));
+      return;
+    }
     const prevNew = h('div', { class: 'cc-new', style: `background:${cur}` });
     const prevOld = h('div', { class: 'cc-cur', style: `background:${cur}` });
     const set = (c) => { cur = c.toUpperCase(); prevNew.style.background = cur; hex.value = cur; const [r2, g2, b2] = L.color.hexToRgb(cur); R.set(r2); Gs.set(g2); Bs.set(b2); };
     /* standard: hexagon-ish honeycomb approximated by staggered rows */
     const std = h('div', { class: 'cc-honey' });
-    const rows = 13;
-    for (let r2 = 0; r2 < rows; r2++) {
-      const n = r2 < 7 ? 7 + r2 : 19 - r2;
+    for (const colors of palette.rows) {
       const row = h('div', { class: 'cc-hrow' });
-      for (let i = 0; i < n; i++) {
-        const ang = ((i / n) * 360 + r2 * 23) % 360;
-        const dist = Math.abs(r2 - 6) / 6, light = 0.5 + (r2 < 6 ? 0.35 : -0.25) * dist;
-        const [cr, cg, cb] = L.color.hslToRgb(ang / 360, 1 - dist * 0.4, L.clamp(light, 0.1, 0.92));
-        const c = L.color.rgbToHex(cr, cg, cb);
+      for (const c of colors) {
         row.appendChild(h('button', { type: 'button', class: 'cc-hex', style: `background:${c}`, 'aria-label': c, onclick: () => set(c) }));
       }
       std.appendChild(row);
     }
     const grays = h('div', { class: 'cc-grays' });
-    for (let i = 0; i <= 15; i++) { const v = Math.round((255 * i) / 15); const c = L.color.rgbToHex(v, v, v); grays.appendChild(h('button', { type: 'button', class: 'cc-hex', style: `background:${c}`, 'aria-label': c, onclick: () => set(c) })); }
+    for (const c of palette.grays) grays.appendChild(h('button', { type: 'button', class: 'cc-hex', style: `background:${c}`, 'aria-label': c, onclick: () => set(c) }));
     const nat = h('input', { type: 'color', id: 'cc-native', value: cur.toLowerCase() });
     nat.addEventListener('input', () => set(nat.value));
     const R = ui.spin({ value: 0, min: 0, max: 255, step: 1, dec: 0, onChange: () => upd() });
@@ -1003,6 +1318,14 @@
   /* ---------- status bar & misc ---------- */
   /** a short notice at the bottom; action: { label, run } adds a button to it (e.g. Browse) */
   ui.toast = (text, ms, action) => {
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-toast', { detail: {
+        text: L.t ? L.t(text) : text, duration: ms || 2600,
+        ...(action ? { action: { label: action.label, run: action.run } } : {}),
+      }, bubbles: true }));
+      return;
+    }
     let t = L.$('.toast');
     if (!t) { t = trackLayer(h('div', { class: 'toast', role: 'status' })); domHost().appendChild(t); }
     t.textContent = L.t ? L.t(text) : text;
@@ -1014,6 +1337,11 @@
   ui.busy = (on, text) => {
     let b = L.$('.busy');
     if (!!on !== !!(b && !b.hidden)) tell('vo-busy', { on: !!on, text: on ? text || 'Working...' : '' });
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (reactRoot && reactRoot.isConnected) {
+      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-busy', { detail: on ? { text: t(text || 'Working...') } : null, bubbles: true }));
+      return;
+    }
     if (on) { if (!b) { b = trackLayer(h('div', { class: 'busy' }, h('div', { class: 'busy-box' }, h('span', { class: 'busy-spin' }), h('span', { class: 'busy-t' })))); domHost().appendChild(b); } b.querySelector('.busy-t').textContent = t(text || 'Working...'); b.hidden = false; }
     else if (b) b.hidden = true;
   };

@@ -1,4 +1,4 @@
-/* Quire — drawing new AutoShapes, lines and text boxes onto the page (Drawing toolbar). */
+/* Wordx — drawing new AutoShapes, lines and text boxes onto the page (Drawing toolbar). */
 (function () {
   'use strict';
   const L = window.L, D = L.D, O = L.O, E = L.ed, LY = L.layout;

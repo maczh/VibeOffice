@@ -1,4 +1,4 @@
-import { cp, readFile, stat } from 'node:fs/promises';
+import { cp, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,10 +10,33 @@ const MIME = new Map([
   ['.woff2', 'font/woff2'], ['.woff', 'font/woff'], ['.ttf', 'font/ttf'], ['.otf', 'font/otf'], ['.png', 'image/png'],
 ]);
 
+function reactManifest(source) {
+  const manifest = JSON.parse(source);
+  const products = [
+    { legacy: 'quire', id: 'wordx', name: 'Wordx' },
+    { legacy: 'ledger', id: 'excelx', name: 'Excelx' },
+    { legacy: 'lectern', id: 'pptx', name: 'PPTX' },
+  ];
+  for (const product of products) {
+    const shortcut = manifest.shortcuts?.find((entry) => entry.url.startsWith(product.legacy + '/'));
+    if (shortcut) {
+      shortcut.url = shortcut.url.replace(product.legacy + '/', product.id + '/');
+      shortcut.description = shortcut.description?.replace(new RegExp(product.legacy, 'i'), product.name);
+    }
+    const screenshot = manifest.screenshots?.find((entry) => entry.src.startsWith(product.legacy + '/'));
+    if (screenshot) {
+      screenshot.src = screenshot.src.replace(product.legacy + '/', product.id + '/');
+      screenshot.label = screenshot.label?.replace(new RegExp(product.legacy, 'i'), product.name);
+    }
+  }
+  return JSON.stringify(manifest, null, 2);
+}
+
 export function legacyRuntime(app) {
   const apps = Array.isArray(app) ? app : [app];
-  if (!apps.length || apps.some((name) => !['quire', 'ledger', 'lectern'].includes(name))) throw new TypeError('Unknown legacy editor runtime');
-  const roots = new Map([...apps.map((name) => [`/${name}`, path.join(publicRoot, name)]), ['/common', path.join(publicRoot, 'common')],
+  const legacyFolders = { wordx: 'quire', excelx: 'ledger', pptx: 'lectern' };
+  if (!apps.length || apps.some((name) => !Object.hasOwn(legacyFolders, name))) throw new TypeError('Unknown editor runtime');
+  const roots = new Map([...apps.map((name) => [`/${name}`, path.join(publicRoot, legacyFolders[name])]), ['/common', path.join(publicRoot, 'common')],
     ['/fonts', path.join(publicRoot, 'fonts')], ['/icons', path.join(publicRoot, 'icons')]]);
   roots.set('/manifest.webmanifest', path.join(publicRoot, 'manifest.webmanifest'));
   roots.set('/sw.js', path.join(publicRoot, 'sw.js'));
@@ -36,17 +59,18 @@ export function legacyRuntime(app) {
             response.statusCode = 200;
             response.setHeader('Content-Type', MIME.get(path.extname(target).toLowerCase()) || 'application/octet-stream');
             response.setHeader('Cache-Control', 'no-store');
-            response.end(contents);
+            response.end(prefix === '/manifest.webmanifest' ? reactManifest(contents.toString('utf8')) : contents);
           }).catch(next);
       });
     },
     async writeBundle(options) {
       if (!options.dir) return;
       const output = path.resolve(options.dir);
-      for (const folder of [...apps, 'common', 'fonts', 'icons']) {
-        await cp(path.join(publicRoot, folder), path.join(output, folder), { recursive: true });
+      for (const folder of [...apps.map((name) => [legacyFolders[name], name]), ['common', 'common'], ['fonts', 'fonts'], ['icons', 'icons']]) {
+        await cp(path.join(publicRoot, folder[0]), path.join(output, folder[1]), { recursive: true });
       }
-      await cp(path.join(publicRoot, 'manifest.webmanifest'), path.join(output, 'manifest.webmanifest'));
+      const manifest = reactManifest(await readFile(path.join(publicRoot, 'manifest.webmanifest'), 'utf8'));
+      await writeFile(path.join(output, 'manifest.webmanifest'), manifest);
       await cp(path.join(publicRoot, 'sw.js'), path.join(output, 'sw.js'));
     },
   };

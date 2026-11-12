@@ -307,7 +307,13 @@
     return lookCache[name] || d;
   };
   /** call fn after the look changes (VO.look.set, here or in another window), once the new values apply */
-  L.onLook = (fn) => { if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('vo-look', () => { lookCache = {}; fn(); }); };
+  L.onLook = (fn) => {
+    if (typeof window === 'undefined' || !window.addEventListener) return () => {};
+    const listener = () => { lookCache = {}; fn(); };
+    if (L.addMountListener) return L.addMountListener(window, 'vo-look', listener);
+    window.addEventListener('vo-look', listener);
+    return () => window.removeEventListener('vo-look', listener);
+  };
   if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('vo-look', () => { lookCache = {}; });
 
   /* ---------- file I/O ---------- */
@@ -490,6 +496,15 @@
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 5000);
     window.dispatchEvent(new CustomEvent('vo-saved', { detail: { name } }));
     return 'saved';
+  };
+  /** Save As in a React host is distinct from in-place Save so remote files are not overwritten by Save As. */
+  L.saveFileAs = async function (name, blob) {
+    if (root.VO && root.VO.reactHost && typeof root.VO.reactFileSaveAs === 'function') {
+      const result = await root.VO.reactFileSaveAs(name, blob);
+      if (result === 'saved') window.dispatchEvent(new CustomEvent('vo-saved', { detail: { name } }));
+      return result;
+    }
+    return L.saveFile(name, blob);
   };
   L.pickFiles = function (accept, multiple) {
     return new Promise((resolve) => {

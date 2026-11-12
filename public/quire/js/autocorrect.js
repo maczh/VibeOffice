@@ -1,4 +1,4 @@
-/* Quire — AutoCorrect, AutoFormat As You Type, AutoComplete and AutoText. */
+/* Wordx — AutoCorrect, AutoFormat As You Type, AutoComplete and AutoText. */
 (function () {
   'use strict';
   const L = window.L, D = L.D, O = L.O, E = L.ed, LY = L.layout;
@@ -271,7 +271,7 @@
     showTip(hit, p, o, word.length);
   }
   function showTip(text, p, o, typed) {
-    if (!tip) { tip = L.h('div', { class: 'tooltip ac-tip' }); document.body.appendChild(tip); }
+    if (!tip) { tip = L.h('div', { class: 'tooltip ac-tip' }); L.domHost().appendChild(tip); }
     tip.textContent = L.t('{0} (Press ENTER to Insert)', text);
     tip.hidden = false;
     const r = E.caretRect();
@@ -297,7 +297,7 @@
   L.bus.on('sel', () => { if (tipState && E.sel && (E.sel.f.p !== tipState.p || E.sel.f.o !== tipState.o)) hideTip(); });
 
   /* ---------- AutoText ---------- */
-  const userName = () => L.store.get('userName', 'Quire User');
+  const userName = () => L.store.get('userName', 'Wordx User');
   const userInitials = () => L.store.get('userInitials', '') || O.initials();
   AC.AUTOTEXT = {
     'Attention Line': ['ATTENTION:', 'Attention:'],

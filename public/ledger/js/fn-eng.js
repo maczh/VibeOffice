@@ -1,4 +1,4 @@
-/* Ledger — engineering (bases, bits, complex numbers, Bessel, CONVERT) and database functions. */
+/* Excelx — engineering (bases, bits, complex numbers, Bessel, CONVERT) and database functions. */
 (function (root) {
   'use strict';
   const L = root.L;

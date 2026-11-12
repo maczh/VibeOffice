@@ -1,4 +1,4 @@
-/* Quire — mail merge: data sources (.csv/.txt/.docx tables or a typed list), recipient filtering,
+/* Wordx — mail merge: data sources (.csv/.txt/.docx tables or a typed list), recipient filtering,
  * address block / greeting line / merge fields, preview, and merging to a new document or PDF.
  */
 (function () {
@@ -291,7 +291,7 @@
       const n = MM.records().length;
       b.append(sec('Preview your letters', h('div', { class: 'tp-note', text: 'One of the merged letters is previewed here. To preview another letter, click one of the following:' }), h('div', { class: 'tp-row' }, ui.button('<<', () => MM.step(-1), { class: 'btn small' }), h('span', { text: L.t('Recipient: {0} of {1}', MM.rec + 1, n) }), ui.button('>>', () => MM.step(1), { class: 'btn small' })), link('find', 'Find a recipient...', async () => { const q = await ui.prompt('Find:', '', 'Find Entry'); if (!q) return; const recs = MM.records(); const k = recs.findIndex((ri) => MM.data.rows[ri].some((v) => String(v).toLowerCase().includes(q.toLowerCase()))); if (k >= 0) MM.go(k); }), link('mmRecipients', 'Edit recipient list...', () => MM.recipientsDialog()), ui.button('Exclude this recipient', () => { const recs = MM.records(); MM.data.included.delete(recs[MM.rec]); MM.go(MM.rec); }, { class: 'btn small' })));
     } else {
-      b.append(sec('Complete the merge', h('div', { class: 'tp-note', text: 'Quire is ready to produce your letters.' }), link('mmMergePrint', 'Print... (PDF)', () => MM.mergeToPDF()), link('mmMergeNew', 'Edit individual letters...', () => MM.mergeToNew())));
+      b.append(sec('Complete the merge', h('div', { class: 'tp-note', text: 'Wordx is ready to produce your letters.' }), link('mmMergePrint', 'Print... (PDF)', () => MM.mergeToPDF()), link('mmMergeNew', 'Edit individual letters...', () => MM.mergeToNew())));
     }
     b.appendChild(nav);
   };

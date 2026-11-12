@@ -23,6 +23,9 @@ interface LegacyVibeOffice {
     lang?: {
         set: (language: LanguageId) => void;
     };
+    reactDirectHost?: {
+        root?: HTMLElement | null;
+    };
 }
 declare global {
     interface Window {

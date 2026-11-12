@@ -1,4 +1,4 @@
-/* Lectern — SmartArt parts for diagrams (js/diagram.js): the data model written from the items, and our own
+/* PPTX — SmartArt parts for diagrams (js/diagram.js): the data model written from the items, and our own
  * layout, quick-style and colour definitions. The definitions are written here from our layouts (common/
  * smartart.js) under urn:vibeoffice.work/diagram/… ids; nothing is copied from Office's built-in ones.
  * pptx-write.js adds the drawing (the laid-out shapes, which other applications show) and the slide frame;
@@ -228,7 +228,7 @@
   /* ---------------------------------------------------------------- composite definitions
      PowerPoint lays SmartArt out from the definition, never from the stored drawing. For every layout but the trees
      the definition is written from our own engine: for each item count (1 to MAXN) a branch places every shape where
-     smartart.js puts it, as a fraction of the diagram, so PowerPoint draws what Lectern draws, also after Add Shape.
+     smartart.js puts it, as a fraction of the diagram, so PowerPoint draws what PPTX draws, also after Add Shape.
      Each shape is bound to its item (forEach st=i cnt=1), its arrow (the item's sibling transition) or its line (the
      satellite's parent transition); its text is a transparent layer over it, placed at our text box. */
   const MAXN = 10;
@@ -247,7 +247,7 @@
     const W = ctx.w, H = ctx.h, SA = L.smartart, radial = lay.id === 'radial';
     const kidsOf = (i) => { const it = (ctx.items || [])[i - 1]; return it && it.kids ? it.kids.length : (lay.levels > 1 ? 1 : 0); };
     /* sample items for k: tops t1..tk (with the diagram's own sub-item counts); radial: one centre with k satellites */
-    /* the diagram's own text where it has the item, so the branch for its count gets Lectern's text sizes */
+    /* the diagram's own text where it has the item, so the branch for its count gets PPTX's text sizes */
     const its = ctx.items || [], textAt = (it) => (it && it.text) || 'Text';
     const sample = (k) => (radial
       ? [{ id: 't1', text: textAt(its[0]), kids: Array.from({ length: k }, (_, j) => ({ id: `s${j + 1}`, text: textAt(((its[0] || {}).kids || [])[j]), kids: [] })) }]
@@ -441,7 +441,7 @@
     process1: 'process', chevron1: 'chevron', process2: 'vProcess', hProcess11: 'timeline', cycle2: 'cycle', cycle3: 'continuousCycle', radial1: 'radial',
     venn1: 'venn', venn3: 'linearVenn', target1: 'target', funnel1: 'funnel', matrix1: 'matrix', pyramid1: 'pyramid', pyramid2: 'pyramidList', pyramid3: 'invertedPyramid' };
   const OFFICE_URN = 'urn:microsoft.com/office/officeart/2005/8/';
-  /** a diagram's sa record from its data model: Lectern's own, or an Office layout that is ours by another
+  /** a diagram's sa record from its data model: PPTX's own, or an Office layout that is ours by another
       id (sa.office: shown as PowerPoint drew it until edited here); null for any other layout */
   IO.read = (data) => {
     const doc = typeof data === 'string' ? new DOMParser().parseFromString(data, 'application/xml') : data;

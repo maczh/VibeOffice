@@ -1,4 +1,4 @@
-/* Ledger — model operations with undo: cell input, formatting, rows/columns, sheets, sort, fill, merge.
+/* Excelx — model operations with undo: cell input, formatting, rows/columns, sheets, sort, fill, merge.
  * Everything here works on the model only (no DOM); the grid controller repaints afterwards. */
 (function (root) {
   'use strict';
@@ -790,7 +790,7 @@
         let blocked = false;
         if (axis === 'r') { for (let r = lim - n; r <= sh.maxR; r++) if (sh.rows[r] && sh.rows[r].cells.some((c) => c && (c.v != null || c.f != null))) blocked = true; }
         else sh.rows.forEach((row) => { if (row) for (let c = lim - n; c < row.cells.length; c++) if (row.cells[c] && (row.cells[c].v != null || row.cells[c].f != null)) blocked = true; });
-        if (blocked) throw Object.assign(new Error('To prevent possible loss of data, Ledger cannot shift nonblank cells off of the worksheet.'), { code: 'offsheet' });
+        if (blocked) throw Object.assign(new Error('To prevent possible loss of data, Excelx cannot shift nonblank cells off of the worksheet.'), { code: 'offsheet' });
       }
     }
     for (const m of sh.merges) {

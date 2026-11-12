@@ -1,4 +1,4 @@
-/* Ledger — lookup & reference functions and dynamic-array helpers. */
+/* Excelx — lookup & reference functions and dynamic-array helpers. */
 (function (root) {
   'use strict';
   const L = root.L;

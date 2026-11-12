@@ -1,4 +1,4 @@
-/* Lectern — PresentationML (.pptx/.ppsx/.potx) writer. */
+/* PPTX — PresentationML (.pptx/.ppsx/.potx) writer. */
 (function () {
   'use strict';
   const L = window.L;
@@ -370,7 +370,7 @@
       shapes, which applications without a SmartArt engine show */
   function diagramFrameXML(sh, id, ctx, design) {
     L.diagram.capture(sh);   // formatting given to its shapes since the last layout
-    if (sh.sa.converted) ctx.writer.loss({ id: 'smartart-layout:' + sh.id, what: `This IntelliArt is saved with Lectern's ${(L.smartart.get(sh.sa.layout) || {}).name} layout and its own colours and style, because it was edited here.`, where: sh.name || ctx.part, place: ctx.place, action: 'conversion' });
+    if (sh.sa.converted) ctx.writer.loss({ id: 'smartart-layout:' + sh.id, what: `This IntelliArt is saved with PPTX's ${(L.smartart.get(sh.sa.layout) || {}).name} layout and its own colours and style, because it was edited here.`, where: sh.name || ctx.part, place: ctx.place, action: 'conversion' });
     const IO = L.saIO, NS_DGM = IO.NS.dgm, NS_DSP = IO.NS.dsp;
     const ctD = 'application/vnd.openxmlformats-officedocument.drawingml.';
     const rel = (name, type) => ctx.rels.add(type, K.relative(ctx.part, name));
@@ -406,7 +406,7 @@
     const cs = rel(ctx.addPart('ppt/diagrams', 'colors', IO.colorsXML(sh.sa.colors, L.diagram.palette(design), L.diagram.styleLang(sh.sa.style)), ctD + 'diagramColors+xml'), RT('diagramColors'));
     return `<p:graphicFrame><p:nvGraphicFramePr>${cNvPr(id, sh, ctx)}<p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>${xfrm(sh, 'p:xfrm')}<a:graphic><a:graphicData uri="${NS_DGM}"><dgm:relIds xmlns:dgm="${NS_DGM}" r:dm="${dm}" r:lo="${lo}" r:qs="${qs}" r:cs="${cs}"/></a:graphicData></a:graphic></p:graphicFrame>`;
   }
-  /** chart XML from the chart model: charts made or edited in Lectern */
+  /** chart XML from the chart model: charts made or edited in PPTX */
   function chartXML(c, design) {
     const v2 = c.v === 2;
     const v = (x) => `<c:v>${X(x)}</c:v>`;
@@ -419,7 +419,7 @@
     const pie = c.kind === 'pie' || c.kind === 'doughnut';
     const g0 = (v2 && c.groups && c.groups[0]) || {};
     const font = c.font === '+mn' ? '+mn-lt' : c.font === '+mj' ? '+mj-lt' : c.font || (v2 ? '+mn-lt' : 'Arial');
-    /* series formatting: Lectern's own charts keep the 2003 look (black outlines); imported ones keep theirs */
+    /* series formatting: PPTX's own charts keep the 2003 look (black outlines); imported ones keep theirs */
     const colOf = (s, i) => s.color || pal[i % pal.length];
     const spFill = (s, i) => {
       if (!v2) return `<c:spPr><a:solidFill>${clr(colOf(s, i), null, design)}</a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln></c:spPr>`;
@@ -1117,7 +1117,7 @@
     overrides.push(['/docProps/core.xml', CT.core]);
     const words = allSlides.reduce((a, s) => a + (L.model.allText(s).match(/\S+/g) || []).length, 0);
     const fmtName = (L.model.SLIDE_SIZES.find((z) => z.w === pres.W && z.h === pres.H) || { name: 'Custom' }).name;
-    add('docProps/app.xml', HEAD + `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><TotalTime>0</TotalTime><Words>${words}</Words><Application>Lectern Web Edition</Application><PresentationFormat>${X(fmtName)}</PresentationFormat><Paragraphs>0</Paragraphs><Slides>${allSlides.length}</Slides><Notes>${allSlides.filter((s) => s.notes && s.notes.trim()).length}</Notes><HiddenSlides>${allSlides.filter((s) => s.hidden).length}</HiddenSlides><MMClips>0</MMClips><ScaleCrop>false</ScaleCrop><Company>${X(p.company || '')}</Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>11.0000</AppVersion></Properties>`);
+    add('docProps/app.xml', HEAD + `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><TotalTime>0</TotalTime><Words>${words}</Words><Application>PPTX Web Edition</Application><PresentationFormat>${X(fmtName)}</PresentationFormat><Paragraphs>0</Paragraphs><Slides>${allSlides.length}</Slides><Notes>${allSlides.filter((s) => s.notes && s.notes.trim()).length}</Notes><HiddenSlides>${allSlides.filter((s) => s.hidden).length}</HiddenSlides><MMClips>0</MMClips><ScaleCrop>false</ScaleCrop><Company>${X(p.company || '')}</Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>11.0000</AppVersion></Properties>`);
     overrides.push(['/docProps/app.xml', CT.app]);
 
     const rootRels = pack.rels('');

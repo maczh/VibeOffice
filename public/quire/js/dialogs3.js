@@ -1,4 +1,4 @@
-/* Quire — dialogs, part 3: Format Object (pictures, AutoShapes, text boxes, WordArt), Fill Effects,
+/* Wordx — dialogs, part 3: Format Object (pictures, AutoShapes, text boxes, WordArt), Fill Effects,
  * Tools (Word Count, AutoSummarize, Hyphenation, Envelopes and Labels, Letter Wizard, Macros, Templates,
  * AutoCorrect, Customize, Options) and File (Properties, Print, Save As, New from template, Zoom,
  * Paste Special, About).
@@ -186,7 +186,7 @@
     const kind = ui.select([['general', 'General document'], ['letter', 'Letter'], ['email', 'E-mail']], 'general', null, { id: 'af-k' });
     const o = A().opts;
     const opts = { headings: ui.check('Built-in Heading &styles', true, null), lists: ui.check('&List styles', true, null), quotes: ui.check('"Straight &quotes" with “smart quotes”', o.smartQuotes !== false, null), dashes: ui.check('&Hyphens (--) with dash (—)', o.dashes !== false, null), ordinals: ui.check('&Ordinals (1st) with superscript', o.ordinals !== false, null), fractions: ui.check('&Fractions (1/2) with fraction character', o.fractions !== false, null), urls: ui.check('&Internet paths with hyperlinks', o.autoUrl !== false, null), empty: ui.check('Remove &extra empty paragraphs', true, null) };
-    ui.dialog({ title: 'AutoFormat', width: 400, body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Quire will automatically format the document.' }), mode, G.f('Please select a document type to help improve the formatting process:', kind, 'wide'), ui.group('Apply / replace', ...Object.values(opts))), buttons: [{ label: 'OK', primary: true, onClick: () => {
+    ui.dialog({ title: 'AutoFormat', width: 400, body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Wordx will automatically format the document.' }), mode, G.f('Please select a document type to help improve the formatting process:', kind, 'wide'), ui.group('Apply / replace', ...Object.values(opts))), buttons: [{ label: 'OK', primary: true, onClick: () => {
       const cfg = {}; for (const k in opts) cfg[k] = opts[k].input.checked;
       if (kind.value === 'letter') cfg.headings = false;
       const n = autoFormat(cfg);
@@ -330,7 +330,7 @@
     const kind = G.radios('as-k', [['highlight', '&Highlight key points'], ['top', '&Insert an executive summary or abstract at the top of the document'], ['new', '&Create a new document and put the summary there'], ['hide', 'Hide &everything but the summary without leaving the original document']], 'highlight');
     const pct = ui.select([[10, '10 sentences'], [20, '20 sentences'], [100, '100 words or less'], [500, '500 words or less'], ['10%', '10%'], ['25%', '25%'], ['50%', '50%'], ['75%', '75%']], '25%', null, { id: 'as-pct' });
     const upd = ui.check('&Update document statistics', true, null);
-    ui.dialog({ title: 'AutoSummarize', width: 460, body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Quire has examined the document and picked the sentences most relevant to the main theme.' }), ui.group('Type of summary', kind), ui.group('Length of summary', G.f('&Percent of original:', pct, 'wide')), upd), buttons: [{ label: 'OK', primary: true, onClick: () => summarize(kind.get(), pct.value, upd.input.checked) }, { label: 'Cancel' }] });
+    ui.dialog({ title: 'AutoSummarize', width: 460, body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Wordx has examined the document and picked the sentences most relevant to the main theme.' }), ui.group('Type of summary', kind), ui.group('Length of summary', G.f('&Percent of original:', pct, 'wide')), upd), buttons: [{ label: 'OK', primary: true, onClick: () => summarize(kind.get(), pct.value, upd.input.checked) }, { label: 'Cancel' }] });
   };
   function summarize(kind, len, updStats) {
     const d = doc();
@@ -510,7 +510,7 @@
   /* ================= Macros, Templates & Organizer ================= */
   G.macros = function () {
     const lb = G.listBox([], null, { height: 140 });
-    ui.dialog({ title: 'Macros', width: 360, body: h('div', { class: 'col' }, h('label', { text: 'Macro name:' }), h('input', { type: 'text', style: 'width:100%', disabled: true }), lb, h('div', { class: 'tp-note', text: 'Macros are not run in Quire. VBA projects in .docm files are kept when the document is saved as .docm by Word, but Quire saves the document text only.' })), buttons: [{ label: 'Close', primary: true }] });
+    ui.dialog({ title: 'Macros', width: 360, body: h('div', { class: 'col' }, h('label', { text: 'Macro name:' }), h('input', { type: 'text', style: 'width:100%', disabled: true }), lb, h('div', { class: 'tp-note', text: 'Macros are not run in Wordx. VBA projects in .docm files are kept when the document is saved as .docm by Word, but Wordx saves the document text only.' })), buttons: [{ label: 'Close', primary: true }] });
   };
   G.templates = function () {
     const d = doc();
@@ -562,7 +562,7 @@
     const o = A().opts;
     ui.dialog({ title: 'Customize', width: 460, body: ui.tabs([
       { label: 'Tool&bars', body: h('div', { class: 'col' }, ...tbs) },
-      { label: '&Commands', body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'All Quire commands. Double-click one to run it.' }), cmdList), onShow: () => {} },
+      { label: '&Commands', body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'All Wordx commands. Double-click one to run it.' }), cmdList), onShow: () => {} },
       { label: '&Options', body: h('div', { class: 'col' }, ui.check('Show Standard and Formatting toolbars on two rows', true, null), ui.check('Always show full menus', true, null), ui.check('Show Scree&nTips on toolbars', o.screenTips !== false, (v) => { o.screenTips = v; A().saveOpts(); L.domHost().classList.toggle('notips', !v); }), ui.check('Show shortcut &keys in ScreenTips', true, null)) },
       { label: '&Keyboard', body: h('div', { style: 'max-height:300px;overflow:auto' }, keys) },
     ]), buttons: [{ label: 'Close', primary: true }] });
@@ -595,7 +595,7 @@
       { label: 'General', body: h('div', { class: 'col' }, look && look.el, opt('bgRepag', 'Background repagination', true), opt('blueBg', 'Blue background, white text', false), opt('sound', 'Provide feedback with sound', false), G.row(opt('recentOn', 'Recently used file list:', true), recentN, h('span', { text: 'entries' })), G.f('Measurement units:', units, 'wide')) },
       { label: 'Edit', body: h('div', { class: 'col' }, ui.group('Editing options', opt('typingReplaces', 'Typing replaces selection', true), opt('dragDrop', 'Drag-and-drop text editing', true), opt('ctrlClick', 'Use CTRL + Click to follow hyperlink', true), opt('smartPara', 'Use smart paragraph selection', true), chk('Overtype mode', () => E.overtype, (v) => { E.overtype = v; }), opt('smartCut', 'Smart cut and paste', true)), ui.group('Cut and paste options', opt('pasteOptions', 'Show Paste Options buttons', true))) },
       { label: 'Print', body: h('div', { class: 'col' }, ui.group('Printing options', opt('updateFieldsOnPrint', 'Update fields', false), opt('printBg', 'Background colors and images', true)), ui.group('Include with document', opt('printProps', 'Document properties', false), opt('printCodes', 'Field codes', false), opt('printHidden', 'Hidden text', false), opt('printDrawings', 'Drawing objects', true))) },
-      { label: 'Save', body: h('div', { class: 'col' }, opt('promptProps', 'Prompt for document properties', false), G.row(opt('autoRecover', 'Save AutoRecover info every:', true), autoRec, h('span', { text: 'minutes' })), h('div', { class: 'tp-note', text: 'AutoRecover keeps a copy in this browser only; it is offered when Quire opens after an unexpected close.' }), G.f('Save Word files as:', ui.select([['docx', 'Word Document (*.docx)'], ['dotx', 'Word Template (*.dotx)']], 'docx', null, { id: 'op-fmt' }), 'wide')) },
+      { label: 'Save', body: h('div', { class: 'col' }, opt('promptProps', 'Prompt for document properties', false), G.row(opt('autoRecover', 'Save AutoRecover info every:', true), autoRec, h('span', { text: 'minutes' })), h('div', { class: 'tp-note', text: 'AutoRecover keeps a copy in this browser only; it is offered when Wordx opens after an unexpected close.' }), G.f('Save Word files as:', ui.select([['docx', 'Word Document (*.docx)'], ['dotx', 'Word Template (*.dotx)']], 'docx', null, { id: 'op-fmt' }), 'wide')) },
       { label: 'Security', body: h('div', { class: 'col' }, ui.group('Privacy options', opt('removePersonal', 'Remove personal information from file properties on save', false), opt('warnTracked', 'Warn before printing, saving or sending a file that contains tracked changes or comments', false)), ui.group('File encryption options for this document', h('div', { class: 'col' }, h('label', { for: 'op-pw', text: 'Password to open:' }), pwInp, h('div', { class: 'tp-note', text: 'Saved .docx files are encrypted with AES-256, as Word 2010 and later do. Passwords are case-sensitive; if you forget it, the document cannot be recovered.' }))), h('div', { class: 'tp-note', text: 'To restrict editing instead, use Tools ▸ Protect Document.' })) },
       { label: 'Spelling & Grammar', body: h('div', { class: 'col' }, ui.group('Spelling', opt('spell', 'Check spelling as you type', true), chk('Hide spelling and grammar errors in this document', () => !!(L.spell && L.spell.hidden), (v) => { if (L.spell) L.spell.hidden = v; }), opt('ignoreUpper', 'Ignore words in UPPERCASE', true), opt('ignoreNum', 'Ignore words with numbers', true), opt('ignoreUrl', 'Ignore Internet and file addresses', true), ui.button('Custom Dictionaries...', () => { const ta = h('textarea', { rows: 12, style: 'width:100%' }); ta.value = L.store.get('customDict', []).join('\n'); ui.dialog({ title: 'CUSTOM.DIC', width: 300, body: ta, buttons: [{ label: 'OK', primary: true, onClick: () => { L.store.set('customDict', ta.value.split(/\s+/).filter(Boolean).map((x) => x.toLowerCase())); if (L.spell) L.spell.reloadCustom(); } }, { label: 'Cancel' }] }); }, { class: 'btn small' })), ui.group('Grammar', opt('grammarAsType', 'Check grammar as you type', true), opt('grammar', 'Check grammar with spelling', true), ui.button('Readability Statistics...', () => { const r = L.spell.readability(); ui.msg(L.t('Words: {0}\nCharacters: {1}\nParagraphs: {2}\nSentences: {3}\n\nSentences per Paragraph: {4}\nWords per Sentence: {5}\nCharacters per Word: {6}\n\nPassive Sentences: {7}%\nFlesch Reading Ease: {8}\nFlesch-Kincaid Grade Level: {9}', r.words, r.chars, r.paras, r.sentences, r.sPerPara, r.wPerS, r.cPerW, r.passive, r.ease, r.grade), { icon: 'info', title: 'Readability Statistics' }); }, { class: 'btn small' })), ui.button('Recheck Document', () => { if (L.spell) { L.spell.ignoredOnce.clear(); L.spell.refreshSoon(0); } }, { class: 'btn small' })) },
       { label: 'Track Changes', body: h('div', { class: 'col' }, ui.group('Markup', G.f('Insertions color:', insColor, 'wide')), ui.group('Balloons', G.f('Use Balloons (Print and Web Layout):', balloons, 'wide'))) },
@@ -621,7 +621,7 @@
           setTimeout(() => again.focus(), 0);
         }
       }
-      o.userName = uname.value.trim() || 'Quire User';
+      o.userName = uname.value.trim() || 'Wordx User';
       o.userInitials = uinit.value.trim();
       o.autoSaveMin = autoRec.get();
       L.store.set('userAddress', uaddr.value);
@@ -695,7 +695,7 @@
     const copies = G.num(1, { min: 1, max: 99, id: 'pr-copies' });
     ui.dialog({
       title: 'Print', width: 470,
-      body: h('div', { class: 'col' }, ui.group('Printer', G.f('&Name:', ui.select([['pdf', 'Save as PDF (Quire)']], 'pdf', null, { id: 'pr-printer' }), 'wide'), h('div', { class: 'tp-note', text: 'Status: Ready — the pages are saved as a PDF that you can print from any viewer.' })), G.row(ui.group('Page range', range, pagesIn, h('div', { class: 'tp-note', text: 'Enter page numbers and/or page ranges separated by commas. For example, 1,3,5–12' })), ui.group('Copies', G.f('Number of &copies:', copies))), G.row(G.f('Print &what:', what, 'wide'), G.f('P&rint:', which)), ui.group('Zoom', G.f('Pages per s&heet:', perSheet, 'wide'))),
+      body: h('div', { class: 'col' }, ui.group('Printer', G.f('&Name:', ui.select([['pdf', 'Save as PDF (Wordx)']], 'pdf', null, { id: 'pr-printer' }), 'wide'), h('div', { class: 'tp-note', text: 'Status: Ready — the pages are saved as a PDF that you can print from any viewer.' })), G.row(ui.group('Page range', range, pagesIn, h('div', { class: 'tp-note', text: 'Enter page numbers and/or page ranges separated by commas. For example, 1,3,5–12' })), ui.group('Copies', G.f('Number of &copies:', copies))), G.row(G.f('Print &what:', what, 'wide'), G.f('P&rint:', which)), ui.group('Zoom', G.f('Pages per s&heet:', perSheet, 'wide'))),
       buttons: [{ label: '&Options...', onClick: () => { G.options('print'); return false; } }, { label: 'OK', primary: true, onClick: () => { doPrint(); } }, { label: 'Cancel' }],
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
     });
@@ -747,14 +747,14 @@
   G.pasteSpecial = function () {
     const lb = G.listBox([{ value: 'rich', label: 'Formatted Text (RTF)' }, { value: 'html', label: 'HTML Format' }, { value: 'text', label: 'Unformatted Text' }, { value: 'utext', label: 'Unformatted Unicode Text' }], 'rich', { height: 110 });
     const clip = E.clip;
-    ui.dialog({ title: 'Paste Special', width: 380, body: h('div', { class: 'col' }, h('div', { text: clip ? 'Source: Quire document' : 'Source: (the Quire clipboard is empty — copy something first, or press Ctrl+V)' }), G.radios('ps-m', [['paste', '&Paste:'], ['link', 'Paste &link:']], 'paste'), lb, h('div', { class: 'tp-note', text: 'Formatted text keeps fonts and formatting; unformatted text takes the formatting of the destination.' })), buttons: [{ label: 'OK', primary: true, onClick: () => {
+    ui.dialog({ title: 'Paste Special', width: 380, body: h('div', { class: 'col' }, h('div', { text: clip ? 'Source: Wordx document' : 'Source: (the Wordx clipboard is empty — copy something first, or press Ctrl+V)' }), G.radios('ps-m', [['paste', '&Paste:'], ['link', 'Paste &link:']], 'paste'), lb, h('div', { class: 'tp-note', text: 'Formatted text keeps fonts and formatting; unformatted text takes the formatting of the destination.' })), buttons: [{ label: 'OK', primary: true, onClick: () => {
       if (!clip) return;
       const v = lb.get();
       if (v === 'text' || v === 'utext') E.pasteText(clip.text);
       else E.pasteBlocks(clip.blocks, { keepFormat: v === 'rich' || v === 'html' });
     } }, { label: 'Cancel' }] });
   };
-  G.about = () => ui.about({ name: 'Quire', text: [
+  G.about = () => ui.about({ name: 'Wordx', text: [
     L.N('A word processor that runs entirely in your browser. Documents are read and written as Office Open XML (.docx, .docm), RTF, HTML, text and Markdown; nothing is uploaded.'),
     L.N('Spelling, AutoCorrect and the thesaurus work offline, in English (U.S.) and English (U.K.).')] });
   G.newFromTemplate = function () {

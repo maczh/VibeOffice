@@ -1,7 +1,7 @@
-/* Quire — Rich Text Format (RTF 1.x) reader and writer.
+/* Wordx — Rich Text Format (RTF 1.x) reader and writer.
  * Reader: fonts, colours, character and paragraph formatting, styles (headings), lists, tables,
  * hyperlinks and other field results, pictures (PNG/JPEG/EMF/WMF), page/line/column breaks, section
- * page setup and document information.  Writer: the same subset, so RTF round-trips through Quire.
+ * page setup and document information.  Writer: the same subset, so RTF round-trips through Wordx.
  */
 (function () {
   'use strict';

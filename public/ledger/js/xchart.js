@@ -1,4 +1,4 @@
-/* Ledger — worksheet charts: read c:chartSpace, live data from cell references, SVG rendering,
+/* Excelx — worksheet charts: read c:chartSpace, live data from cell references, SVG rendering,
  * chart XML for new or edited charts, reference maintenance, and the Chart Wizard. */
 (function (root) {
   'use strict';

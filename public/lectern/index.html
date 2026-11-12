@@ -28,11 +28,17 @@
 .main { flex: 1; display: flex; min-height: 0; min-width: 0; background: var(--dock-b); }
 .leftpane { flex: none; width: 196px; display: flex; flex-direction: column; background: var(--surface); border-right: 1px solid var(--chrome-line); min-height: 0; }
 .lp-tabs { flex: none; display: flex; align-items: flex-end; gap: 2px; padding: 4px 4px 0 6px; background: linear-gradient(var(--tb-a), var(--tb-b)); border-bottom: 1px solid var(--tab-line-2); }
+.lp-tabs.react-pane-adapter { display: none; }
+.slides-react-tabs-root { display: none; }
+.slides-react-tabs-root.vibeoffice-react-owned { display: block; }
+.slides-react-tabs-root .lp-tab { font: inherit; color: inherit; }
 .lp-tab { border: 1px solid var(--tab-line-2); border-bottom: 0; background: linear-gradient(var(--tab2-a), var(--tab2-b)); padding: 2px 9px 3px; border-radius: 3px 3px 0 0; margin-bottom: -1px; cursor: default; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .lp-tab.on { background: var(--surface); font-weight: bold; padding-bottom: 4px; }
 .lp-close { margin-left: auto; align-self: center; border: 0; background: none; width: 16px; height: 16px; padding: 0; margin-bottom: 3px; }
 .lp-close:hover { background: var(--menu-hot); outline: 1px solid var(--hot-border); }
 .lp-body { flex: 1; overflow: auto; min-height: 0; position: relative; outline: none; }
+.slides-react-root { display: none; }
+.slides-react-root.vibeoffice-react-owned { display: contents; }
 .thumbs { display: flex; flex-direction: column; gap: 10px; padding: 10px 8px 14px 4px; }
 .th { display: flex; align-items: flex-start; gap: 4px; position: relative; }
 .th-num { flex: none; width: 18px; text-align: right; padding-top: 1px; color: var(--ink); font-size: 11px; }
@@ -107,6 +113,9 @@
 .notes { flex: none; height: 92px; background: var(--surface); overflow: auto; position: relative; border-top: 1px solid var(--chrome-line); }
 .notes-in { min-height: 100%; padding: 6px 10px; font: 12px/1.35 Arial, "Arimo", sans-serif; outline: none; white-space: pre-wrap; }
 .notes-in:empty::before { content: attr(data-ph); color: var(--grid-line); }
+.notes-react-root { display: none; }
+.notes-react-root.vibeoffice-react-owned { display: block; flex: 1; min-height: 100%; }
+.notes-engine-adapter { position: absolute !important; left: -10000px !important; top: 0 !important; width: 1px !important; height: 1px !important; min-height: 1px !important; opacity: 0 !important; pointer-events: none !important; }
 .tp-btn { min-width: 70px; }
 .tp-note { color: var(--muted); margin: 4px 0; }
 .lay-grid, .dsn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; }

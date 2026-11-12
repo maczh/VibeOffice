@@ -10,11 +10,50 @@
   font: 12px/1.4 Arial, sans-serif;
 }
 .vibe-editor__engine { flex: 1 1 auto; min-width: 0; min-height: 0; }
-.vibe-editor__engine iframe { display: block; width: 100%; height: 100%; min-height: 600px; border: 0; }
+.vibe-editor__engine > * { display: block; width: 100%; height: 100%; min-height: 600px; }
 .vibe-editor__chrome { display: flex; flex: 0 0 auto; align-items: center; gap: 5px; min-height: 32px; padding: 3px 8px; border-bottom: 1px solid var(--chrome-line); color: var(--pane-ink); background: linear-gradient(var(--tb-a), var(--tb-b)); font: 11px/1.3 var(--ui-font); }
 .vibe-editor__chrome > strong { margin-right: 7px; }
 .vibe-editor__chrome > button, .vibe-editor__chrome select { min-height: 24px; padding: 2px 8px; border: 1px solid var(--tb-border); border-radius: var(--ctl-radius); color: var(--ink); background: linear-gradient(var(--btn-a), var(--btn-b)); font: inherit; }
 .vibe-editor__chrome button:hover { background: var(--menu-hot); }
 .vibe-editor__chrome-spacer { flex: 1 1 auto; }
 .vibe-editor__chrome label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.vibe-editor__url-open { display: flex; align-items: center; gap: 4px; }
+.vibe-editor__url-dialog .vibe-editor__url-open { flex-wrap: wrap; }
+.vibe-editor__url-error { flex: 1 0 100%; margin: 0; color: var(--error-ink); }
+.vibe-editor__url-open input { width: min(32vw, 320px); min-width: 120px; min-height: 24px; padding: 2px 6px; border: 1px solid var(--combo-border); border-radius: var(--ctl-radius); color: var(--ink); background: var(--surface); font: inherit; }
+.vibe-command-search { position: relative; flex: 0 1 190px; min-width: 110px; }
+.vibe-command-search > input { box-sizing: border-box; width: 100%; min-height: 24px; padding: 2px 7px; border: 1px solid var(--combo-border); border-radius: var(--ctl-radius); color: var(--ink); background: var(--surface); font: inherit; }
+.vibe-command-search__results { position: absolute; z-index: 20; top: 100%; right: 0; width: max(260px, 100%); max-height: min(60vh, 420px); overflow: auto; margin: 3px 0 0; padding: 3px; list-style: none; border: 1px solid var(--chrome-line); color: var(--ink); background: var(--surface); box-shadow: 0 4px 12px #0003; }
+.vibe-command-search__results button { display: flex; width: 100%; justify-content: space-between; gap: 12px; padding: 5px 7px; border: 0; color: inherit; background: transparent; text-align: left; font: inherit; }
+.vibe-command-search__results [aria-selected="true"] button, .vibe-command-search__results button:hover { background: var(--menu-hot); }
+.vibe-command-search__results small { color: var(--pane-ink); }
 @media (max-width: 560px) { .vibe-editor__chrome { flex-wrap: wrap; } .vibe-editor__chrome-spacer { flex-basis: 100%; height: 0; } }
+.vibeoffice-dialog { color: var(--ink, #202124); background: var(--surface, #fff); border: 1px solid var(--chrome-line, #777); box-shadow: 0 8px 32px #0005; max-width: min(92vw, 38rem); }
+.vibeoffice-dialog::backdrop { background: #0006; }
+.vibeoffice-dialog > h2 { margin: 0 0 .75rem; font: inherit; font-weight: 600; }
+.vibeoffice-message-dialog__body { display: flex; gap: .75rem; align-items: flex-start; white-space: pre-wrap; }
+.vibeoffice-message-dialog__body > span { flex: 0 0 32px; }
+.vibeoffice-message-dialog__actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+.vibeoffice-message-dialog__actions .primary { font-weight: 600; }
+.vibeoffice-about-dialog__actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.vibeoffice-prompt-dialog form { display: grid; gap: .5rem; }
+.vibeoffice-prompt-dialog input { min-width: min(60vw, 20rem); padding: .25rem .4rem; color: var(--ink); background: var(--surface); border: 1px solid var(--field-border); font: inherit; }
+.vibeoffice-prompt-dialog__actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .5rem; }
+.vibeoffice-password-dialog form { display: grid; gap: .5rem; }
+.vibeoffice-password-dialog form p { margin: 0; }
+.vibeoffice-password-dialog input { width: 100%; box-sizing: border-box; padding: .25rem .4rem; color: var(--ink); background: var(--surface); border: 1px solid var(--field-border); font: inherit; }
+.vibeoffice-password-dialog__actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .5rem; }
+.vibeoffice-link-dialog__body p { margin: .5rem 0; }
+.vibeoffice-link-dialog__body input { width: 100%; box-sizing: border-box; padding: .25rem .4rem; color: var(--ink); background: var(--surface); border: 1px solid var(--field-border); font: inherit; }
+.vibeoffice-link-dialog__copied { min-height: 1em; }
+.vibeoffice-link-dialog__actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.vibeoffice-compatibility-dialog__body p { margin: .5rem 0; }
+.vibeoffice-compatibility-dialog__body ul { max-height: 240px; overflow: auto; margin: 8px 0; padding-left: 22px; }
+.vibeoffice-compatibility-dialog__body li { margin-bottom: 8px; }
+.vibeoffice-compatibility-dialog__actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.vibeoffice-more-colors-dialog form { display: flex; flex-direction: column; gap: .5rem; }
+.vibeoffice-more-colors-dialog__actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.vibeoffice-more-colors-dialog .cc-custom input[type=number], .vibeoffice-more-colors-dialog .cc-custom input[type=text] { min-width: 0; flex: 1; box-sizing: border-box; padding: 2px 4px; color: var(--ink); background: var(--surface); border: 1px solid var(--field-border); font: inherit; }
+.vibeoffice-toast { left: 50%; right: auto; transform: translateX(-50%); }
+.vibeoffice-react-ribbon .rb-panel { overflow-x: auto; }
+.vibeoffice-react-status { display: contents; }

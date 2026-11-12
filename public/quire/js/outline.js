@@ -1,4 +1,4 @@
-/* Quire — Outline view: heading levels, promote/demote, move up/down, expand/collapse, show level. */
+/* Wordx — Outline view: heading levels, promote/demote, move up/down, expand/collapse, show level. */
 (function () {
   'use strict';
   const L = window.L, D = L.D, O = L.O, E = L.ed, LY = L.layout;

@@ -1,4 +1,4 @@
-/* Quire — horizontal and vertical rulers: margins, indents, tab stops, column and table markers,
+/* Wordx — horizontal and vertical rulers: margins, indents, tab stops, column and table markers,
  * the tab selector, and dragging all of them.
  */
 (function () {

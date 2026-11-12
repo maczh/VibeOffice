@@ -1,4 +1,4 @@
-/* Lectern — application controller. */
+/* PPTX — application controller. */
 (function () {
   'use strict';
   const L = window.L;
@@ -276,7 +276,7 @@
   function buildStatus() {
     const sb = L.$('#statusbar');
     A.sbSlide = h('div', { class: 'sb-cell fit', 'aria-live': 'polite' });
-    A.sbMsg = h('div', { class: 'sb-cell grow' });
+    A.sbMsg = h('div', { class: 'sb-cell grow', 'data-react-status': window.VO && VO.reactDirectHost ? '' : null });
     A.sbDesign = h('div', { class: 'sb-cell fit' });
     A.sbLang = h('div', { class: 'sb-cell fit', text: 'English (U.S.)' });
     const zr = h('input', { type: 'range', min: 10, max: 400, value: 100, id: 'sb-zoom', 'aria-label': 'Zoom' });
@@ -285,7 +285,7 @@
     sb.append(A.sbSlide, A.sbDesign, A.sbMsg, A.sbLang, A.sbZoom);
     L.bus.on('zoom', () => { A.sbZoom.firstChild.textContent = E.zoomPct() + '%'; zr.value = E.zoomPct(); ui.refresh(); });
   }
-  A.status = (msg) => { if (!A.sbMsg) return; A.sbMsg.textContent = L.t(msg); clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sbMsg.textContent = ''; }, 3000); };
+  A.status = (msg) => { if (!A.sbMsg) return; const text = L.t(msg); if (ui.reactStatus(text, 3000)) return; A.sbMsg.textContent = text; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sbMsg.textContent = ''; }, 3000); };
   A.updateStatus = function () {
     if (!A.sbSlide) return;
     const n = L.pres.slides.length;
@@ -294,7 +294,7 @@
     else A.sbSlide.textContent = n ? L.t('Slide {0} of {1}', E.idx + 1, n) : L.t('No slides');
     A.sbDesign.textContent = M.designName(E.design());
   };
-  A.updateTitle = () => { document.title = `${L.file.titled(A.fileName)} - Lectern`; };
+  A.updateTitle = () => { document.title = `${L.file.titled(A.fileName)} - ${window.VO?.oneDocument ? 'Lectern' : 'PPTX'}`; };
 
   /* ================= views ================= */
   A.setView = function (v) {
@@ -439,7 +439,7 @@
       else ui.msg(L.t('{0} can\'t read {1}. {2}\nMake sure the file is a PowerPoint 2007 or later presentation (.pptx).', L.APP, file.name, e && e.message ? L.t(e.message) : ''), { icon: 'error' });
     }
   };
-  /* what Lectern saves, for the desktop app's Save dialog (L.file): the presentation types are saves, the rest exports */
+  /* what PPTX saves, for the desktop app's Save dialog (L.file): the presentation types are saves, the rest exports */
   L.file.types = [{ id: 'pptx', label: L.N('PowerPoint Presentation (*.pptx)'), ext: ['pptx'] }, { id: 'pptm', label: L.N('Macro-Enabled Presentation (*.pptm)'), ext: ['pptm'] },
     { id: 'ppsx', label: L.N('PowerPoint Show (*.ppsx)'), ext: ['ppsx'] }, { id: 'ppsm', label: L.N('Macro-Enabled Show (*.ppsm)'), ext: ['ppsm'] },
     { id: 'potx', label: L.N('Design Template (*.potx)'), ext: ['potx'] }, { id: 'potm', label: L.N('Macro-Enabled Template (*.potm)'), ext: ['potm'] },
@@ -453,7 +453,7 @@
     return A.exportAs(A.fileType || 'pptx', A.fileName, L.file.native() ? 'save' : undefined);
   };
   A.saveAs = function () {
-    if (window.VO && VO.reactHost) return A.exportAs('pptx', A.fileName + '.pptx');
+    if (window.VO && VO.reactHost) return A.exportAs('pptx', A.fileName, 'react-save-as');
     /* the desktop app: the system's Save dialog picks the name and type, then the presentation is written there */
     if (L.file.native()) return (async () => {
       const c = await L.file.choose('saveAs', PRES_TYPE.test(A.fileType) ? A.fileType : 'pptx', A.fileName);
@@ -484,7 +484,7 @@
       if (!blob) return;
       const losses = L.opc.formats[type] ? await ui.compatibility(L.pres, blob.dropped) : [];
       if (losses === null) { if (how === 'chosen') L.file.cancel(); return 'declined'; }
-      const w = how ? await L.file.write(blob, how, { type, name: `${name}.${ext}` }) : { result: await L.saveFile(`${name}.${ext}`, blob) };
+      const w = how === 'react-save-as' ? { result: await L.saveFileAs(`${name}.${ext}`, blob) } : how ? await L.file.write(blob, how, { type, name: `${name}.${ext}` }) : { result: await L.saveFile(`${name}.${ext}`, blob) };
       const r = w.result;
       if (w.name) name = w.name.replace(/\.[^.]+$/, '');   // as the Save dialog left it
       if (r === 'saved') L.opc.acknowledge(L.pres, losses);
@@ -1555,7 +1555,7 @@ addEventListener('resize',fit);fit();show(0);`;
     L.hist.push('Photo Album');
     const t = M.newSlide(pres, 'title', did);
     T.setPlain(t.shapes[0].tx, 'Photo Album');
-    T.setPlain(t.shapes[1].tx, 'by ' + (pres.props.author || 'Lectern'));
+    T.setPlain(t.shapes[1].tx, 'by ' + (pres.props.author || 'PPTX'));
     M.insertSlides(pres, pres.slides.length, [t]);
     const per = layout === 'fit' || /^1/.test(layout) ? 1 : /^2/.test(layout) ? 2 : 4;
     const withTitle = /t$/.test(layout);
@@ -1720,7 +1720,7 @@ addEventListener('resize',fit);fit();show(0);`;
     const c = A.clip;
     if (!c) return;
     let mode = 'native';
-    const body = h('div', { class: 'col' }, h('div', { text: L.t('Source: {0}', c.label.slice(0, 60)), translate: 'no' }), ui.radio('ps', c.kind === 'slides' ? '&Paste as slides' : '&Paste as Lectern objects', true, () => { mode = 'native'; }), ui.radio('ps', 'Paste as &Unformatted Text', false, () => { mode = 'text'; }));
+    const body = h('div', { class: 'col' }, h('div', { text: L.t('Source: {0}', c.label.slice(0, 60)), translate: 'no' }), ui.radio('ps', c.kind === 'slides' ? '&Paste as slides' : '&Paste as PPTX objects', true, () => { mode = 'native'; }), ui.radio('ps', 'Paste as &Unformatted Text', false, () => { mode = 'text'; }));
     ui.dialog({ title: 'Paste Special', body, width: 360, buttons: [{ label: 'OK', primary: true, onClick: () => (mode === 'text' ? (TE.active() ? (L.hist.push(L.N('Paste')), TE.insertText(c.text || '')) : A.pasteText(c.text || '')) : A.pasteItem(c)) }, { label: 'Cancel' }] });
   };
   let pendingClip = null;
@@ -2221,8 +2221,6 @@ addEventListener('resize',fit);fit();show(0);`;
     if (!wantTask) { L.$('#taskpane').hidden = true; A.opts.taskOpen = false; }
     A.applyOpts();
     E.layout();
-    const prompt = window.self !== window.top ? null : null;
-    void prompt;
     ui.refresh();
     if (window.VO) VO.attach('lectern', {
       async open(f, o) {
@@ -2245,9 +2243,9 @@ addEventListener('resize',fit);fit();show(0);`;
       templates: () => L.templates.list().map(({ id, name }) => ({ id, name })),
     });
   };
-  /** Mount Lectern into a host that already contains its editor shell; returns an idempotent disposer. */
+  /** Mount PPTX into a host that already contains its editor shell; returns an idempotent disposer. */
   A.mount = async function (host) {
-    if (!L.createMountScope) throw new Error('Lectern requires the shared mount-scope runtime');
+    if (!L.createMountScope) throw new Error('PPTX requires the shared mount-scope runtime');
     const scope = L.createMountScope(host);
     try { await A.init(); }
     catch (error) { scope.dispose(); throw error; }
@@ -2260,6 +2258,8 @@ addEventListener('resize',fit);fit();show(0);`;
     const host = document.querySelector('[data-vibeoffice-engine-root]') || document.body;
     return window.VO && VO.i18n ? VO.i18n.whenReady(() => A.mount(host)) : A.mount(host);
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  if (!(window.VO && VO.reactDirectHost)) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  }
 })();

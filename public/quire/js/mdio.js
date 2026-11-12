@@ -1,4 +1,4 @@
-/* Quire — Markdown files: opening .md (or a .zip holding a .md and its pictures) as a document, and saving
+/* Wordx — Markdown files: opening .md (or a .zip holding a .md and its pictures) as a document, and saving
  * a document as GitHub-flavoured Markdown. The reader (markdown.js) gives a block tree with source lines;
  * every top-level block remembers its lines, and when the document is saved, blocks that were not edited
  * are written back exactly as they were in the file. Edited and new blocks are written in one style:
@@ -434,7 +434,7 @@
       }
     }
     flush();
-    /* footnotes written in Quire, or whose definition is not in the file any more */
+    /* footnotes written in Wordx, or whose definition is not in the file any more */
     for (const id of w.noteOrder()) if (!emitted.has(id)) { const ls = w.footnote(id); ensureGap(ls); out.push(...ls); }
     while (out.length && isBlank(out[out.length - 1]) && !(d.md && md.groups.length)) out.pop();
     let text = out.join(md.eol);

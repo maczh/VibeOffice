@@ -1,4 +1,4 @@
-/* Quire — model editing operations. All functions assume they run inside D.tx(). */
+/* Wordx — model editing operations. All functions assume they run inside D.tx(). */
 (function () {
   'use strict';
   const L = window.L, D = L.D;
@@ -6,7 +6,7 @@
   const doc = () => D.doc;
 
   /* ---------- revision marks ---------- */
-  O.author = () => L.store.get('userName', 'Quire User');
+  O.author = () => L.store.get('userName', 'Wordx User');
   O.initials = () => L.store.get('userInitials', (O.author().match(/\b\w/g) || ['Q']).join('').slice(0, 3).toUpperCase());
   O.revStamp = () => ({ author: O.author(), date: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), id: D.nid() });
   O.tracking = () => !!doc().settings.track;

@@ -1,4 +1,4 @@
-/* Quire — rendering of paragraphs, runs and tables into DOM.
+/* Wordx — rendering of paragraphs, runs and tables into DOM.
  * Every paragraph fragment is <div class="p" data-pid data-from data-to><div class="pc">…spans…</div></div>.
  * Spans that map to model content carry data-o (start offset) and data-n (length).
  */
@@ -101,7 +101,7 @@
     if (v === undefined) {
       const dv = document.createElement('div');
       dv.style.cssText = `position:absolute;visibility:hidden;left:0;top:0;width:10px;height:0;border-top:${w}px solid #000`;
-      document.body.appendChild(dv);
+      L.domHost().appendChild(dv);
       v = dv.getBoundingClientRect().height;
       dv.remove();
       snapCache.set(k, v);

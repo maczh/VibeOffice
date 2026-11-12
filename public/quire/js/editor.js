@@ -1,4 +1,4 @@
-/* Quire — editing surface. The pages live in one contentEditable host; the browser draws the caret and
+/* Wordx — editing surface. The pages live in one contentEditable host; the browser draws the caret and
  * selection natively, but every change is intercepted (beforeinput / keydown / clipboard) and applied to
  * the model, after which the affected pages are re-laid out and the selection restored.
  */

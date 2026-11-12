@@ -1,4 +1,4 @@
-/* Quire — tables: insertion, structure editing (rows, columns, merge, split), borders & shading, AutoFit,
+/* Wordx — tables: insertion, structure editing (rows, columns, merge, split), borders & shading, AutoFit,
  * sorting, formulas, conversion, Table AutoFormat styles, the Draw Table pencil and eraser, and
  * mouse resizing of columns and rows.
  */

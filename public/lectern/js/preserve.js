@@ -1,4 +1,4 @@
-/* Lectern — model-attached OOXML properties. Content parts remain model-generated. */
+/* PPTX — model-attached OOXML properties. Content parts remain model-generated. */
 (function () {
   'use strict';
   const L = window.L, K = L.opc, XML = L.xmlTree, P = (L.preserve = {}), N = K.NS;
@@ -452,7 +452,7 @@
     return { version: 1, item, sources };
   };
   P.pasteboard = function (packet) {
-    if (packet.version !== 1 || !packet.item || !Array.isArray(packet.sources)) throw new Error('Unsupported Lectern clipboard');
+    if (packet.version !== 1 || !packet.item || !Array.isArray(packet.sources)) throw new Error('Unsupported PPTX clipboard');
     const sources = K.import(packet.sources), item = K.remapSources(packet.item, sources), media = new Map();
     const restore = shape => {
       if (!P.valid(shape)) return true;

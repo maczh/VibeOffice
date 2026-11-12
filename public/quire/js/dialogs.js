@@ -1,4 +1,4 @@
-/* Quire — dialogs, part 1: shared controls and the Format menu dialogs. */
+/* Wordx — dialogs, part 1: shared controls and the Format menu dialogs. */
 (function () {
   'use strict';
   const L = window.L, D = L.D, O = L.O, E = L.ed, LY = L.layout, R = L.R;
@@ -72,6 +72,8 @@
   G.listBox = function (items, value, o) {
     o = o || {};
     const box = h('div', { class: 'listbox', style: o.height ? `height:${o.height}px` : '', translate: o.translate || null });
+    const directRoot = window.VO && window.VO.reactDirectHost && window.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) { box.id = o.id ? o.id + '-list' : nid('lb-list'); box.setAttribute('role', 'listbox'); }
     const val = (it) => (typeof it === 'object' ? it.value : it);
     const shown = (it) => { const s = typeof it === 'object' ? it.label : String(it); return o.translate === 'no' ? s : L.t(s); };
     let list = items.slice();
@@ -79,6 +81,10 @@
     const inp = o.input ? h('input', { type: 'text', class: 'listbox-in', id: o.id || nid('lb'), value: label(value), autocomplete: 'off', translate: o.translate || null }) : null;
     let cur = value;
     const render = () => {
+      if (directRoot && directRoot.isConnected) {
+        directRoot.dispatchEvent(new CustomEvent('vibeoffice-react-wordx-list-box', { detail: { target: box, items: list, value: cur, options: { translate: o.translate, onChange: o.onChange, onDbl: o.onDbl, pick: (v, double) => { pick(v); if (double && o.onDbl) o.onDbl(v); } } }, bubbles: true }));
+        return;
+      }
       L.clear(box);
       for (const it of list) {
         const v = val(it);
@@ -94,7 +100,13 @@
       const on = box.querySelector('.li.on');
       if (on) setTimeout(() => on.scrollIntoView({ block: 'nearest' }), 0);
     };
-    const mark = (v) => { for (const el of box.querySelectorAll('.li')) el.classList.toggle('on', v !== undefined && String(el._v) === String(v)); };
+    const mark = (v) => {
+      if (directRoot && directRoot.isConnected) {
+        directRoot.dispatchEvent(new CustomEvent('vibeoffice-react-wordx-list-box', { detail: { target: box, items: list, value: v, options: { translate: o.translate, onChange: o.onChange, onDbl: o.onDbl, pick: (next, double) => { pick(next); if (double && o.onDbl) o.onDbl(next); } } }, bubbles: true }));
+        return;
+      }
+      for (const el of box.querySelectorAll('.li')) el.classList.toggle('on', v !== undefined && String(el._v) === String(v));
+    };
     const pick = (v, fromInput) => { cur = v; if (inp && !fromInput) inp.value = label(v); mark(v); if (o.onChange) o.onChange(v); };
     if (inp) inp.addEventListener('input', () => {
       const v = inp.value, lc = v.toLowerCase();

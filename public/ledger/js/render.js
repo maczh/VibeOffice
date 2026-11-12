@@ -1,4 +1,4 @@
-/* Ledger — worksheet renderer (canvas): headers, gridlines, fills, text, borders, conditional formats,
+/* Excelx — worksheet renderer (canvas): headers, gridlines, fills, text, borders, conditional formats,
  * selection, frozen panes. All geometry is in CSS pixels; the canvas is scaled by devicePixelRatio. */
 (function (root) {
   'use strict';

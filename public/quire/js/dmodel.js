@@ -1,4 +1,4 @@
-/* Quire — document model.
+/* Wordx — document model.
  * A document is a tree of containers ({blocks:[...]}) holding paragraphs and tables.
  * Lengths are in points, font sizes in points, colours as 'RRGGBB' or 'auto'.
  *
@@ -327,7 +327,7 @@
       numbering: { abs: {}, nums: {} },
       hf: {}, fn: {}, en: {}, comments: {},
       settings: { defTab: 36, evenOdd: false, track: false, protect: null, fnPr: { fmt: 'decimal', pos: 'pageBottom', start: 1, restart: 'continuous' }, enPr: { fmt: 'lowerRoman', pos: 'docEnd', start: 1 }, mirror: false, fieldShade: 'selected', autoHyphen: false },
-      props: { title: '', subject: '', creator: L.store.get('userName', 'Quire User'), keywords: '', description: '', lastModifiedBy: '', category: '', company: '', manager: '', created: new Date().toISOString(), modified: new Date().toISOString(), revision: 1 },
+      props: { title: '', subject: '', creator: L.store.get('userName', 'Wordx User'), keywords: '', description: '', lastModifiedBy: '', category: '', company: '', manager: '', created: new Date().toISOString(), modified: new Date().toISOString(), revision: 1 },
       custom: {},
       theme: { major: 'Cambria', minor: 'Calibri' },
       bg: null, watermark: null, rsid: L.uid('r'),
@@ -951,7 +951,7 @@
     opts = opts || {};
     if (H.cur) { H.depth++; try { return fn(); } finally { H.depth--; } }
     /* an edit in the middle of a drag (a moved shape, a ruler marker…) comes before the drag's own step: the drag ends
-       first, as if Esc. A text selection being made (Quire's press watcher) is no edit of its own and goes on. */
+       first, as if Esc. A text selection being made (Wordx's press watcher) is no edit of its own and goes on. */
     if (L.ui && L.ui.dragging && L.ui.dragging() && !(L.ed && L.ed.pressing && L.ed.pressing())) L.ui.dragCancel();
     const t = { label, objs: new Map(), keys: new Map(), paras: new Set(), tbls: new Set(), struct: false, global: false, full: null, selBefore: D.getSel ? D.getSel() : null, merge: opts.merge || null, time: Date.now() };
     H.cur = t;

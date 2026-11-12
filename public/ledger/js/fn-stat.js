@@ -1,4 +1,4 @@
-/* Ledger — statistical functions and the special functions behind them
+/* Excelx — statistical functions and the special functions behind them
  * (erf, gamma, incomplete gamma/beta, normal / t / chi-square / F / beta / binomial distributions, regression).
  */
 (function (root) {

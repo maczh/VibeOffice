@@ -1,4 +1,4 @@
-/* Ledger — slicer/timeline views retain their frames, definitions and source caches. */
+/* Excelx — slicer/timeline views retain their frames, definitions and source caches. */
 (function (root) {
   'use strict';
   const L = root.L, K = L.opc, S = (L.slicers = {}), N = K.NS;

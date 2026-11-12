@@ -58,6 +58,7 @@ export async function openPage(app, options = {}) {
   try {
     for (const domain of ['Page', 'Runtime', 'Network']) await send(domain + '.enable');
     await send('Network.setCacheDisabled', { cacheDisabled: true });
+    if (options.bypassServiceWorker) await send('Network.setBypassServiceWorker', { bypass: true });
     // the page says it is automated (navigator.webdriver), so the assistant waits to be asked instead of walking in
     if (options.automated) await send('Emulation.setAutomationOverride', { enabled: true });
     await send('Page.addScriptToEvaluateOnNewDocument', { source: WATCH_CSP });

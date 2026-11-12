@@ -1,4 +1,4 @@
-/* Lectern — the ribbon of the Paper 2016 look (common/ribbon.js): PowerPoint's tabs and groups over Lectern's
+/* PPTX — the ribbon of the Paper 2016 look (common/ribbon.js): PowerPoint's tabs and groups over PPTX's
  * commands. Read when the ribbon is first shown, so it may use what app.js defines (A.parts, A.menus). */
 (function () {
   'use strict';

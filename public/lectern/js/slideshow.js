@@ -1,4 +1,4 @@
-/* Lectern — slide show: transitions, custom animation, pen, rehearsal. */
+/* PPTX — slide show: transitions, custom animation, pen, rehearsal. */
 (function () {
   'use strict';
   const L = window.L;
@@ -337,6 +337,7 @@
   const S = (L.show = { active: false });
   let root, stage, layer, inkCanvas, ink, popbar, raf = 0;
   let st = null; /* runtime state */
+  let removeMountCleanup = () => {};
 
   function slideOrder() {
     const pres = L.pres;
@@ -367,7 +368,7 @@
       h('button', { type: 'button', 'aria-label': 'Slide show menu', html: L.icons.get('showMenu'), onclick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); L.ui.openMenu(showMenu(), { x: r.left, y: r.top - 300 }); } }),
       h('button', { type: 'button', 'aria-label': 'Next', html: L.icons.get('showNext'), onclick: (e) => { e.stopPropagation(); S.next(); } }));
     root.append(stage, inkCanvas, popbar);
-    document.body.appendChild(root);
+    L.domHost().appendChild(root);
     const sh = pres.show || {};
     st = {
       order: opts.preview != null ? [opts.preview] : slideOrder(),
@@ -375,6 +376,7 @@
       noAnim: !!sh.noAnim, loop: !!sh.loop || !!sh.kiosk, kiosk: !!sh.kiosk, useTimings: sh.useTimings !== false, rehearse: !!opts.rehearse, preview: opts.preview != null,
       slideStart: performance.now(), times: {}, paused: false, ended: false, gotoBuf: '', blank: null, idle: 0,
     };
+    removeMountCleanup = L.addMountCleanup ? L.addMountCleanup(() => { void S.end({ dispose: true }); }) : () => {};
     let startIdx = opts.from != null ? st.order.indexOf(opts.from) : 0;
     if (startIdx < 0) startIdx = 0;
     if (opts.from == null) while (startIdx < st.order.length - 1 && pres.slides[st.order[startIdx]].hidden) startIdx++;
@@ -721,7 +723,7 @@
     if (color) root.appendChild(h('div', { class: 'blank', style: `background:${color}` }));
   }
 
-  S.end = async function () {
+  S.end = async function (options) {
     if (!S.active) return;
     cancelAnimationFrame(raf);
     if (st.running && st.running.cancel) st.running.cancel();
@@ -737,6 +739,8 @@
     const inkData = st.ink;
     const rehearse = st.rehearse ? st.times : null;
     const lastIdx = st.order[st.pos];
+    removeMountCleanup();
+    removeMountCleanup = () => {};
     root.remove();
     root = null; layer = null;
     S.active = false;
@@ -744,11 +748,11 @@
     st = null;
     L.ui.closeMenus();
     const hasInk = Object.values(inkData).some((a) => a && a.length);
-    if (hasInk) {
+    if (hasInk && !options?.dispose) {
       const r = await L.ui.msg('Do you want to keep your ink annotations?', { icon: 'question', buttons: ['&Keep', '&Discard'] });
       if (r === 0) keepInk(inkData);
     }
-    if (rehearse) {
+    if (rehearse && !options?.dispose) {
       const total = Object.values(rehearse).reduce((a, b) => a + b, 0);
       const r = await L.ui.msg(L.t('The total time for the slide show was {0}. Do you want to keep the new slide timings?', fmtTime(total)), { icon: 'question', buttons: ['&Yes', '&No'] });
       if (r === 0) {

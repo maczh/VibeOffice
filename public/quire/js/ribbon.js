@@ -1,4 +1,4 @@
-/* Quire — the ribbon of the Paper 2016 look (common/ribbon.js): Word's tabs and groups over Quire's commands.
+/* Wordx — the ribbon of the Paper 2016 look (common/ribbon.js): Word's tabs and groups over Wordx's commands.
  * Read when the ribbon is first shown, so it may use what app.js defines (A.parts, A.menus). */
 (function () {
   'use strict';

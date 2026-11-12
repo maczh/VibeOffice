@@ -1,4 +1,4 @@
-/* Quire — task panes (Getting Started, New Document, Help, Search, Clip Art, Clipboard, Research,
+/* Wordx — task panes (Getting Started, New Document, Help, Search, Clip Art, Clipboard, Research,
  * Styles and Formatting, Reveal Formatting, Mail Merge, Protect Document), the Document Map,
  * page thumbnails, Print Preview and the Reading Layout toolbar.
  */
@@ -70,7 +70,7 @@
       const q = h('input', { type: 'text', id: 'gs-search', placeholder: 'Search help', style: 'flex:1;min-width:0' });
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { P.helpQuery = q.value; TP.show('help'); } e.stopPropagation(); });
       b.append(
-        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: window.VO ? VO.editionName('Quire') : 'Quire', translate: 'no', style: 'color:var(--pane-ink)' })),
+        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: window.VO ? VO.editionName(window.VO.oneDocument ? 'Quire' : 'Wordx') : 'Wordx', translate: 'no', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
         sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new document...', () => TP.show('new')), link('sample', 'Open the welcome document', () => A().newDocument({ build: (d) => Object.assign(d, A().buildSample()) }))),
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => { P.helpTopic = 'keys'; TP.show('help'); }), link('stylesPane', 'Styles and Formatting', () => TP.show('styles')), link('mailMerge', 'Mail Merge wizard', () => TP.show('mailmerge'))));
@@ -106,7 +106,7 @@
   ];
   const KEYS = [['Ctrl+N / O / S / P', L.N('New, Open, Save, Print')], ['F12 / Shift+F12', L.N('Save As / Save')], ['Ctrl+Z / Ctrl+Y', L.N('Undo / Redo (F4 repeats)')], ['Ctrl+X / C / V', L.N('Cut, Copy, Paste')], ['Ctrl+A', L.N('Select all')], ['Ctrl+F / H / G', L.N('Find, Replace, Go To')], ['Ctrl+B / I / U', L.N('Bold, Italic, Underline')], ['Ctrl+Shift+D / W', L.N('Double / word underline')], ['Ctrl+= / Ctrl+Shift++', L.N('Subscript / Superscript')], ['Ctrl+Shift+A / K', L.N('All caps / Small caps')], ['Ctrl+Shift+> / <', L.N('Grow / Shrink font')], ['Ctrl+] / [', L.N('Font size ±1 point')], ['Ctrl+D', L.N('Font dialog')], ['Ctrl+Space / Ctrl+Q', L.N('Remove character / paragraph formatting')], ['Shift+F3', L.N('Change case')], ['Ctrl+L / E / R / J', L.N('Left, Center, Right, Justify')], ['Ctrl+1 / 2 / 5', L.N('Single, double, 1.5 line spacing')], ['Ctrl+0', L.N('Add/remove 12 pt space before')], ['Ctrl+M / Ctrl+Shift+M', L.N('Indent / outdent')], ['Ctrl+T / Ctrl+Shift+T', L.N('Hanging indent / reduce')], ['Ctrl+Shift+N', L.N('Normal style')], ['Ctrl+Alt+1 / 2 / 3', L.N('Heading 1, 2, 3')], ['Ctrl+Shift+L', L.N('List Bullet style')], ['Ctrl+Shift+S', L.N('Style box')], ['Ctrl+Enter', L.N('Page break')], ['Ctrl+Shift+Enter', L.N('Column break')], ['Shift+Enter', L.N('Line break')], ['Ctrl+Shift+Space', L.N('Nonbreaking space')], ['Ctrl+- / Ctrl+Shift+-', L.N('Optional / nonbreaking hyphen')], ['Ctrl+Alt+- ', L.N('Em dash')], ['Ctrl+Alt+C / R / T', L.N('©, ®, ™')], ['Ctrl+K', L.N('Hyperlink')], ['Ctrl+Alt+F / D', L.N('Footnote / Endnote')], ['Ctrl+Alt+M', L.N('Comment')], ['Ctrl+Shift+E', L.N('Track changes')], ['F7', L.N('Spelling and Grammar')], ['Shift+F7', L.N('Thesaurus')], ['F9 / Alt+F9', L.N('Update field / toggle field codes')], ['Ctrl+Shift+F9', L.N('Unlink fields')], ['Alt+Shift+D / T / P', L.N('Date, time, page number field')], ['F8', L.N('Extend selection')], ['Shift+F5', L.N('Go back to previous edit')], ['Alt+Shift+↑ / ↓', L.N('Move paragraph up / down')], ['Alt+Shift+← / →', L.N('Promote / demote')], ['Ctrl+Alt+P / N / O', L.N('Print Layout, Normal, Outline view')], ['Ctrl+*', L.N('Show/Hide ¶')], ['Ctrl+F1 / Shift+F1', L.N('Task pane / Reveal Formatting')], ['F1', L.N('Help')], ['Tab / Shift+Tab', L.N('Next / previous cell; list level')]];
   TP.register({
-    id: 'help', title: 'Quire Help',
+    id: 'help', title: 'Wordx Help',
     render(b) {
       const q = h('input', { type: 'text', id: 'hp-q', value: P.helpQuery || '', placeholder: 'Search', style: 'flex:1;min-width:0' });
       const res = h('div');
@@ -272,7 +272,7 @@
           const status = h('div', { class: 'tp-note', text: 'Searching...' });
           out.appendChild(status);
           try { await TH.load(); }
-          catch (e) { status.textContent = L.t('The thesaurus could not be loaded ({0}). Serve Quire from a web server rather than opening index.html as a local file.', e.message || e); return; }
+          catch (e) { status.textContent = L.t('The thesaurus could not be loaded ({0}). Serve Wordx from a web server rather than opening index.html as a local file.', e.message || e); return; }
           status.remove();
           renderThesaurus(out, text, (w) => go(w));
         }
@@ -623,7 +623,7 @@
     if (!targets.length) { A().status('There are no items of that kind in this document.'); return; }
     const cur = E.sel.f;
     const t = dir > 0 ? targets.find((x) => D.cmp(d, x, cur) > 0) : targets.slice().reverse().find((x) => D.cmp(d, x, cur) < 0);
-    if (!t) { A().status(dir > 0 ? 'Quire reached the end of the document.' : 'Quire reached the beginning of the document.'); return; }
+    if (!t) { A().status(dir > 0 ? 'Wordx reached the end of the document.' : 'Wordx reached the beginning of the document.'); return; }
     A().gotoPos(t);
   };
 
@@ -700,7 +700,7 @@
       return E.sel;
     });
     E.readOnly = true;
-    A().status(ok ? 'The document was shrunk by one page.' : 'Quire could not shrink this document by one page.');
+    A().status(ok ? 'The document was shrunk by one page.' : 'Wordx could not shrink this document by one page.');
   };
 
   /* ================= Reading Layout toolbar ================= */

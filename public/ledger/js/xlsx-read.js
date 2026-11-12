@@ -1,4 +1,4 @@
-/* Ledger — .xlsx / .xlsm reader (SpreadsheetML, transitional and strict).
+/* Excelx — .xlsx / .xlsm reader (SpreadsheetML, transitional and strict).
  * L.xlsxRead.read(bytes, {password}) → Promise<Workbook>
  */
 (function (root) {
@@ -276,7 +276,7 @@
     /* cell formats */
     const xfs = kids(kid(el, 'cellXfs'), 'xf');
     /* a stylesheet without cell formats, or a default font without a name or size, means Excel's own default
-       (the theme's body font at 11 pt), not Ledger's Arial 10 for new workbooks */
+       (the theme's body font at 11 pt), not Excelx's Arial 10 for new workbooks */
     const base = xfs.length ? styleOf(xfs[0], named[num(xfs[0], 'xfId', 0)]) : styleOf({ children: [], attrs: {} }, null);
     if (base && base.font && !base.font.name) base.font.name = (wb.theme && wb.theme.minor) || 'Calibri';
     if (base && base.font && base.font.sz == null) base.font.sz = 11;
@@ -1178,7 +1178,7 @@
           if (!opts.password) { const err = new Error('password'); err.code = 'password'; throw err; }
           try { inner = await L.officeCrypto.decrypt(bytes, opts.password); } catch (e2) {
             const unsup = e2 && e2.message === 'unsupported';
-            const err = new Error(unsup ? N('This workbook is encrypted with a method Ledger does not support (only the AES encryption Excel 2007 and later use is supported).') : N('The password you supplied is not correct. Verify that the CAPS LOCK key is off and be sure to use the correct capitalization.'));
+            const err = new Error(unsup ? N('This workbook is encrypted with a method Excelx does not support (only the AES encryption Excel 2007 and later use is supported).') : N('The password you supplied is not correct. Verify that the CAPS LOCK key is off and be sure to use the correct capitalization.'));
             err.code = unsup ? 'unsupported' : 'badpassword';
             throw err;
           }

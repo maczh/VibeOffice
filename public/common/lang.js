@@ -33,6 +33,7 @@
   if (typeof document !== 'undefined' && typeof location !== 'undefined') {
     const choice = new URLSearchParams(location.search).get('lang') || VO.lang.get();
     const lang = VO.lang.resolve(choice, navigator.languages || [navigator.language]);
-    document.documentElement.lang = lang === 'qps' ? 'qps-ploc' : lang;
+    const directRoot = window.__VIBE_OFFICE_DIRECT_HOST__?.root;
+    (directRoot && directRoot.isConnected ? directRoot : document.documentElement).lang = lang === 'qps' ? 'qps-ploc' : lang;
   }
 })();

@@ -5,7 +5,7 @@ import { legacyRuntime } from '../../tools/vite/legacy-runtime.mjs';
 
 export default defineConfig({
   publicDir: false,
-  plugins: [react({ fastRefresh: false }), legacyRuntime(['quire', 'ledger', 'lectern'])],
+  plugins: [react({ fastRefresh: false }), legacyRuntime(['wordx', 'excelx', 'pptx'])],
   server: { fs: { allow: [resolve(__dirname, '../..')] } },
   resolve: {
     alias: {

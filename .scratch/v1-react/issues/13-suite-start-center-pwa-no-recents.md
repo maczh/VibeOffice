@@ -14,4 +14,6 @@
 - [x] Existing browser Recent Files data is left untouched and is not read by the new product.
 - [x] The static production build retains installability, service-worker caching, and offline local editing.
 
-**Remaining:** Depends on Wordx/Excelx/PPTX full-parity tickets and the all-editor remote workflow ticket. The suite must compose the same-page mounted React editor packages; iframe-hosted engines are not acceptable.
+**Remaining:** Depends on Wordx/Excelx/PPTX full-parity tickets, the all-editor remote workflow ticket, and final web-wide naming cleanup. The suite now composes the direct-mounted React editor packages in the same page with zero iframe elements; it is not acceptance-complete until those remaining feature and acceptance tickets pass.
+
+2026-11-12: The React Vite build now derives PWA shortcut and screenshot routes/names for Wordx, Excelx, and PPTX while preserving the legacy public site's manifest until that entry point is migrated. The existing public service-worker suite passes (2/2), and the suite manifest is asserted through its production browser test.

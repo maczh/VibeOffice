@@ -1,4 +1,4 @@
-/* Lectern — keep unsupported frames attached to the previews the editor displays. */
+/* PPTX — keep unsupported frames attached to the previews the editor displays. */
 (function () {
   'use strict';
   const L = window.L, K = L.opc, X = L.xmlTree, F = (L.frames = {}), N = K.NS;

@@ -118,6 +118,10 @@ input, select, textarea { font: inherit; color: var(--ink); }
 
 .taskpane { flex: none; width: 262px; display: flex; flex-direction: column; background: linear-gradient(var(--pane-a), var(--pane-b)); border-left: 1px solid var(--chrome-line); min-height: 0; }
 .tp-head { flex: none; display: flex; align-items: center; gap: 2px; padding: 3px 4px; background: linear-gradient(var(--tb-a), var(--tb-b) 50%, var(--tb-c)); border-bottom: 1px solid var(--tb-border); }
+.tp-head.react-pane-adapter { display: none; }
+.react-task-head-root { display: none; }
+.react-task-head-root.vibeoffice-react-owned { display: block; }
+.react-task-head-root .tp-title { background: none; color: inherit; font: inherit; text-align: left; cursor: default; }
 .tp-nav { width: 18px; height: 18px; border: 1px solid transparent; background: none; padding: 0; display: flex; align-items: center; justify-content: center; }
 .tp-nav:not(:disabled):hover { background: var(--menu-hot); border-color: var(--hot-border); }
 .tp-nav:disabled { opacity: .4; }
@@ -125,6 +129,9 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .tp-title:hover { border-color: var(--hot-border); background: var(--menu-hot); }
 .tp-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tp-body { flex: 1; min-height: 0; overflow: auto; padding: 8px 8px 16px; }
+.tp-body.react-pane-adapter { display: none; }
+.react-task-body-root { display: none; }
+.react-task-body-root.vibeoffice-react-owned { display: contents; }
 .tp-sec { margin-bottom: 12px; }
 .tp-h { font-weight: bold; color: var(--pane-ink); border-bottom: 1px solid var(--pane-line); padding: 2px 0 3px; margin: 6px 0 6px; display: flex; align-items: center; gap: 4px; }
 .tp-link { display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: none; text-align: left; color: var(--pane-link); padding: 3px 2px; cursor: pointer; }

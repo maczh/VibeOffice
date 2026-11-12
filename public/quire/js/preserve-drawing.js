@@ -1,4 +1,4 @@
-/* Quire — retain drawing properties independently of the fields an edit owns. */
+/* Wordx — retain drawing properties independently of the fields an edit owns. */
 (function () {
   'use strict';
   const L = window.L, P = L.preserve, K = L.opc, N = K.NS;

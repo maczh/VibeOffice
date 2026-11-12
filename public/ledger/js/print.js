@@ -1,4 +1,4 @@
-/* Ledger — printing: pagination (automatic and manual page breaks, fit to pages, print titles),
+/* Excelx — printing: pagination (automatic and manual page breaks, fit to pages, print titles),
  * page rendering with headers / footers, Print Preview, and PDF output. */
 (function (root) {
   'use strict';
@@ -328,7 +328,7 @@
     const sheets = opts.what === 'workbook' ? wb.sheets.filter((s) => s.state === 'visible') : A.selectedSheets();
     const sel = opts.what === 'selection' ? G().range() : null;
     const items = P.allPages(sheets, sel);
-    if (!items.length) { ui.msg('Ledger did not find anything to print.', { icon: 'info' }); return; }
+    if (!items.length) { ui.msg('Excelx did not find anything to print.', { icon: 'info' }); return; }
     const from = Math.max(1, opts.from || 1), to = Math.min(items.length, opts.to || items.length);
     ui.busy(true, 'Preparing pages...');
     try {
@@ -359,7 +359,7 @@
     const view = h('div', { class: 'pp-view' });
     const status = h('div', { class: 'pp-status' });
     ov.append(bar, view, status);
-    document.body.appendChild(ov);
+    L.domHost().appendChild(ov);
     let i = 0, zoomed = false, showMargins = false;
     const btn = (label, fn, tip) => { const b = h('button', { type: 'button', class: 'tb-btn with-label', html: `<span class="tb-lbl">${ui.ampHTML(label)}</span>`, 'data-tip': tip || ui.stripAmp(label) }); b.addEventListener('click', fn); bar.appendChild(b); return b; };
     const bNext = btn('&Next', () => go(1));
@@ -374,14 +374,25 @@
     btn('&Close', () => close());
     btn('&Help', () => { close(); L.panes.task.show('help'); });
     const keys = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } else if (e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); go(1); } else if (e.key === 'PageUp' || e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); go(-1); } };
-    document.addEventListener('keydown', keys, true);
-    function close() { document.removeEventListener('keydown', keys, true); ov.remove(); for (const s of A.selectedSheets()) P.computeBreaks(s); G().focus(); }
+    const removeKeys = typeof L.addMountListener === 'function'
+      ? L.addMountListener(document, 'keydown', keys, true)
+      : (() => { document.addEventListener('keydown', keys, true); return () => document.removeEventListener('keydown', keys, true); })();
+    let closed = false, removeScopeCleanup = () => {};
+    removeScopeCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(() => close(true)) : () => {};
+    function close(disposed) {
+      if (closed) return;
+      closed = true;
+      removeKeys(); removeScopeCleanup(); ov.remove();
+      if (disposed) return;
+      for (const s of A.selectedSheets()) P.computeBreaks(s);
+      G().focus();
+    }
     function go(d) { const n = i + d; if (n < 0 || n >= items.length) return; i = n; draw(); }
     let token = 0;
     async function draw() {
       const my = ++token;
       bNext.disabled = i >= items.length - 1; bPrev.disabled = i <= 0;
-      if (!items.length) { view.textContent = ''; view.appendChild(h('div', { class: 'pp-empty', text: 'Ledger did not find anything to print.' })); status.textContent = ''; return; }
+      if (!items.length) { view.textContent = ''; view.appendChild(h('div', { class: 'pp-empty', text: 'Excelx did not find anything to print.' })); status.textContent = ''; return; }
       status.textContent = L.t('Preview: Page {0} of {1}', i + 1, items.length);
       const r = await renderAny(items[i], i, items.length, 1.6);
       if (my !== token) return;

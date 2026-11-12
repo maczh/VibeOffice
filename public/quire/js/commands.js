@@ -1,4 +1,4 @@
-/* Quire — command registry. Every menu item, toolbar button and shortcut runs one of these. */
+/* Wordx — command registry. Every menu item, toolbar button and shortcut runs one of these. */
 (function () {
   'use strict';
   const L = window.L, D = L.D, O = L.O, E = L.ed, LY = L.layout, ui = L.ui;
@@ -457,10 +457,10 @@
   C('newWindow', { label: '&New Window', enabled: () => false, run: () => {} });
   C('arrangeAll', { label: '&Arrange All', enabled: () => false, run: () => {} });
   C('splitWindow', { label: '&Split', checked: () => !!A.splitOn, run: () => A.toggleSplit() });
-  C('help', { label: 'Quire &Help', menuLabel: 'Quire &Help', icon: 'help', key: 'F1', tip: 'Help', run: pane('help') });
+  C('help', { label: 'Wordx &Help', menuLabel: 'Wordx &Help', icon: 'help', key: 'F1', tip: 'Help', run: pane('help') });
   C('gettingStarted', { label: '&Getting Started', run: pane('getting-started') });
   C('keyboardHelp', { label: '&Keyboard Shortcuts', run: () => { if (L.panes) { L.panes.helpTopic = 'keys'; pane('help')(); } } });
-  C('about', { label: '&About Quire', run: dlg('about') });
+  C('about', { label: '&About Wordx', run: dlg('about') });
 
   /* ================= Reviewing ================= */
   const MK = { markupFinalMarkup: ['Final Showing Markup', 'markup'], markupFinal: [L.N('Final'), 'final'], markupOriginalMarkup: ['Original Showing Markup', 'origMarkup'], markupOriginal: [L.N('Original'), 'original'] };
@@ -576,7 +576,7 @@
     const on = !app.classList.contains('fullscreen');
     app.classList.toggle('fullscreen', on);
     let btn = L.$('.closefs');
-    if (on && !btn) { btn = L.h('button', { class: 'btn closefs', type: 'button', text: 'Close Full Screen', onclick: () => A.toggleFullScreen() }); document.body.appendChild(btn); }
+    if (on && !btn) { btn = L.h('button', { class: 'btn closefs', type: 'button', text: 'Close Full Screen', onclick: () => A.toggleFullScreen() }); L.domHost().appendChild(btn); }
     if (!on && btn) btn.remove();
     LY.fitSizer();
     if (L.rulers) L.rulers.draw();

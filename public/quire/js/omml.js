@@ -1,4 +1,4 @@
-/* Quire — Office Math (OMML) to MathML, so equations from Word render as real two-dimensional math.
+/* Wordx — Office Math (OMML) to MathML, so equations from Word render as real two-dimensional math.
  * Covers the structures Word's equation tools produce: fractions, scripts, radicals, delimiters,
  * n-ary operators, functions, accents, bars, group characters, limits, matrices, equation arrays,
  * boxes, phantoms and pre-scripts. Rendering relies on the browser's MathML Core support. */

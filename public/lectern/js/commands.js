@@ -1,4 +1,4 @@
-/* Lectern — command definitions (menus, toolbars, shortcuts). */
+/* PPTX — command definitions (menus, toolbars, shortcuts). */
 (function () {
   'use strict';
   const L = window.L;
@@ -146,8 +146,8 @@
   C('speakerNotes', { label: 'Speaker Notes', icon: 'notesView', run: () => A().speakerNotesDlg() });
 
   /* ---------- Help ---------- */
-  C('help', { label: 'Lectern &Help', icon: 'help', key: 'F1', tip: 'Lectern Help', run: () => L.panes.task.show('help') });
-  C('about', { label: '&About Lectern', icon: 'about', run: () => L.dlg.about() });
+  C('help', { label: 'PPTX &Help', icon: 'help', key: 'F1', tip: 'PPTX Help', run: () => L.panes.task.show('help') });
+  C('about', { label: '&About PPTX', icon: 'about', run: () => L.dlg.about() });
   C('gettingStarted', { label: '&Getting Started', run: () => L.panes.task.show('getting-started') });
 
   /* ---------- Drawing ---------- */

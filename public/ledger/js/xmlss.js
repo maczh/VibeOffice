@@ -1,4 +1,4 @@
-/* Ledger — XML Spreadsheet 2003 (SpreadsheetML 2003, *.xml): read and write.
+/* Excelx — XML Spreadsheet 2003 (SpreadsheetML 2003, *.xml): read and write.
  * Formulas in that format use R1C1 references; they are converted to and from A1 here. */
 (function (root) {
   'use strict';

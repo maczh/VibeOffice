@@ -1,4 +1,4 @@
-/* Ledger — worksheet functions: logical, math & trig, text, information, date & time. */
+/* Excelx — worksheet functions: logical, math & trig, text, information, date & time. */
 (function (root) {
   'use strict';
   const L = root.L;

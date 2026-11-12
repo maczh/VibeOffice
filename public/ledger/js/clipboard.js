@@ -1,4 +1,4 @@
-/* Ledger — clipboard: copy / cut / paste, Paste Special, drag-and-drop moves, exchange with other programs. */
+/* Excelx — clipboard: copy / cut / paste, Paste Special, drag-and-drop moves, exchange with other programs. */
 (function (root) {
   'use strict';
   const L = root.L;

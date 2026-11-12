@@ -1,4 +1,4 @@
-/* Ledger — edit locations around preserved pivot definitions, never rebuild their contents. */
+/* Excelx — edit locations around preserved pivot definitions, never rebuild their contents. */
 (function (root) {
   'use strict';
   const L = root.L, K = L.opc, F = L.formula, P = (L.pivots = {});

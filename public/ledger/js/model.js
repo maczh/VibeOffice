@@ -1,4 +1,4 @@
-/* Ledger — workbook model.
+/* Excelx — workbook model.
  * Workbook → Sheets → sparse rows → sparse cells. Cells are small plain objects:
  *   {v: value, f?: formula text, s?: style index, rt?: rich-text runs, af?: array range (master), am?: array master cell}
  * Values: number | string | boolean | XErr | null. Styles are interned in a per-workbook table.

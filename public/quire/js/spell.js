@@ -1,5 +1,5 @@
-/* Quire — offline Spelling and Grammar.
- * The words come from the shared engine (common/spell.js); this file adds what Quire shows: grammar, a set of
+/* Wordx — offline Spelling and Grammar.
+ * The words come from the shared engine (common/spell.js); this file adds what Wordx shows: grammar, a set of
  * rules in the spirit of Word 2003's checker. Misspellings get red wavy underlines and grammar
  * problems green ones (CSS Custom Highlight API); right-click one for suggestions.
  */
@@ -311,7 +311,7 @@
     if (!lists.size) { ui.msg('The text is not marked as English, so it was not checked. Use Tools ▸ Language ▸ Set Language to mark it.', { icon: 'info', title: 'Spelling and Grammar' }); return; }
     L.ui.busy(true, 'Loading the dictionary...');
     try { for (const l of lists) await LEX.load(l); }
-    catch (e) { L.ui.busy(false); ui.msg(L.t('The dictionary could not be loaded ({0}). Quire needs to be served from a web server, not opened as a local file, for spelling to work.', e.message || e), { icon: 'warn', title: 'Spelling and Grammar' }); return; }
+    catch (e) { L.ui.busy(false); ui.msg(L.t('The dictionary could not be loaded ({0}). Wordx needs to be served from a web server, not opened as a local file, for spelling to work.', e.message || e), { icon: 'warn', title: 'Spelling and Grammar' }); return; }
     L.ui.busy(false);
     const withGrammar = opt('grammar', true);
     const issues = [];

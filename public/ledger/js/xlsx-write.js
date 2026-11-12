@@ -1,4 +1,4 @@
-/* Ledger — .xlsx / .xlsm writer (SpreadsheetML transitional).
+/* Excelx — .xlsx / .xlsm writer (SpreadsheetML transitional).
  * L.xlsxWrite.write(wb, {type:'xlsx'|'xlsm'|'xltx', password}) → Promise<Blob>
  * L.xlsxWrite.bytes(wb, opts) → Promise<Uint8Array>   (used by tests)
  */
@@ -93,7 +93,7 @@
     return s;
   }
   /* charset must precede the others in CT_Font order; rebuild in schema order for cell fonts */
-  /** a cell font; name and size missing from it are those of the Normal style (what Ledger draws) */
+  /** a cell font; name and size missing from it are those of the Normal style (what Excelx draws) */
   function cellFontXml(f, dflt) {
     f = f || {};
     dflt = dflt || {};

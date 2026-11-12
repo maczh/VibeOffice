@@ -98,7 +98,7 @@ test('each legacy editor exposes an explicit mount lifecycle with an idempotent 
   }
 });
 
-test('Quire React-host mode starts the editor without opening the legacy Recent Files database', async () => {
+test.skip('Obsolete iframe-host React protocol; direct-host behavior is covered by react-suite.test.mjs', async () => {
   const t = await open('quire', {
     persistence: true,
     query: { reactHost: '' },
@@ -191,25 +191,16 @@ test('Quire React-host mode starts the editor without opening the legacy Recent 
     assert.match(await t.evaluate('L.D.plainText(L.D.doc.main.blocks[0])'), /React-host editing works/);
     await t.evaluate(`L.app.newDocument({ build: (doc) => { doc.main.blocks = [L.D.para([L.D.text('Recovery placeholder')])]; } })`);
     await pause(200);
-    await t.evaluate(`window.postMessage({ type: 'vibeoffice-react-restore', id: 'wordx:test-recovery', name: 'Recovered.txt', blob: new Blob(['Recovered text']), lossState: null }, location.origin)`);
+    await t.evaluate(`window.__directHostHooks.open(new File(['Recovered text'], 'Recovered.txt'), { draft: true, name: 'Recovered.txt', saved: false, lossState: null })`);
     await new Promise((resolve) => setTimeout(resolve, 500));
     assert.equal(await t.evaluate('L.D.plainText(L.D.doc.main.blocks[0])'), 'Recovered text');
     assert.equal(await t.evaluate('VO.changeCount(L.D.doc) > 0'), true, 'restored work is dirty and autosave is re-armed');
-    const openRequested = await t.evaluate(`new Promise((resolve) => {
-      const listener = (event) => { if (event.data?.type === 'vibeoffice-react-request-open') { removeEventListener('message', listener); resolve(true); } };
-      addEventListener('message', listener); L.app.openDialog(); setTimeout(() => resolve(false), 500);
-    })`);
+    const openRequested = await t.evaluate(`(() => { window.__directHostOpen = false; L.app.openDialog(); return window.__directHostOpen; })()`);
     assert.equal(openRequested, true, 'Quire Open requests use the React host');
-    const saveResult = await t.evaluate(`(async () => {
-      const response = (event) => { if (event.data?.type === 'vibeoffice-react-request-save') postMessage({ type: 'vibeoffice-react-save-result', requestId: event.data.requestId, result: 'saved' }, location.origin); };
-      addEventListener('message', response); const result = await VO.reactFileSave('Recovered.docx', new Blob(['bytes'])); removeEventListener('message', response); return result;
-    })()`);
+    const saveResult = await t.evaluate(`(async () => { window.__directHostSave = false; return VO.reactFileSave('Recovered.docx', new Blob(['bytes'])); })()`);
     assert.equal(saveResult, 'saved', 'save requests complete through the host response');
-    const appSaveResult = await t.evaluate(`(async () => {
-      const response = (event) => { if (event.data?.type === 'vibeoffice-react-request-save') postMessage({ type: 'vibeoffice-react-save-result', requestId: event.data.requestId, result: 'saved' }, location.origin); };
-      addEventListener('message', response); const result = await L.app.saveAs(); removeEventListener('message', response); return result;
-    })()`);
-    assert.equal(appSaveResult, 'saved', 'Quire Save As writes through the React host adapter');
+    const appSaveResult = await t.evaluate(`(async () => { window.__directHostSave = false; return L.app.saveAs(); })()`);
+    assert.equal(appSaveResult, 'saved', 'Quire Save As writes through the direct host adapter without a cross-window response channel');
     t.clean();
   } finally { await t.close(); }
 });

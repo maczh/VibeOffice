@@ -1,4 +1,4 @@
-/* Quire — fields (evaluation, update, codes), bookmarks, footnotes & endnotes, captions,
+/* Wordx — fields (evaluation, update, codes), bookmarks, footnotes & endnotes, captions,
  * cross-references, tables of contents / figures and indexes.
  */
 (function () {
@@ -219,7 +219,7 @@
 
   /* ================= evaluation ================= */
   const docProp = (k) => { const d = doc(); const v = d.props[k]; return v == null ? '' : String(v); };
-  const user = () => L.store.get('userName', 'Quire User');
+  const user = () => L.store.get('userName', 'Wordx User');
   /** compute a field result: string, array of blocks, or null (leave as is) */
   F.evaluate = function (instr, pos, opts) {
     opts = opts || {};

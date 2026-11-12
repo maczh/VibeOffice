@@ -3,4 +3,4 @@ import { ExcelxEditor } from './index.js';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Missing #root mount element');
-createRoot(rootElement).render(<ExcelxEditor engine={{ url: '/ledger/' }} />);
+createRoot(rootElement).render(<ExcelxEditor engine={{ url: '/excelx/' }} />);

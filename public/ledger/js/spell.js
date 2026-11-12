@@ -1,4 +1,4 @@
-/* Ledger — spelling (Tools ▸ Spelling, F7) and AutoCorrect for cell entries.
+/* Excelx — spelling (Tools ▸ Spelling, F7) and AutoCorrect for cell entries.
  * The words come from the shared engine (common/spell.js); this file adds the dialog and AutoCorrect.
  */
 (function (root) {

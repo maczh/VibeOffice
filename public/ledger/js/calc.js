@@ -1,4 +1,4 @@
-/* Ledger — calculation engine.
+/* Excelx — calculation engine.
  * Values and coercion, references and arrays, the AST evaluator (implicit intersection, array formulas,
  * broadcasting), the function registry, criteria matching, and dependency-driven recalculation.
  */

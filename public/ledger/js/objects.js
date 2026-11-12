@@ -1,4 +1,4 @@
-/* Ledger — worksheet objects and their DrawingML/VML representations share an owner. */
+/* Excelx — worksheet objects and their DrawingML/VML representations share an owner. */
 (function (root) {
   'use strict';
   const L = root.L, K = L.opc, M = L.model, X = (L.sheetObjects = {}), N = K.NS;

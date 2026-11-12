@@ -1,10 +1,10 @@
-/* Quire — the height of each line, from what the line holds (its portions), as Word sizes lines.
+/* Wordx — the height of each line, from what the line holds (its portions), as Word sizes lines.
  *
  * Derived from Apache OpenOffice main/sw/source/core/text/porlay.cxx (SwLineLayout::CalcLine, lcl_HasOnlyBlanks),
  * porrst.cxx (SwBreakPortion, SwTxtFrm::EmptyHeight) and porfly.cxx (SwFlyCntPortion::SetBase) (Apache License 2.0).
  *
  * Writer builds a line from portions, each with an ascent and a descent, and makes the line as tall as the largest
- * ascent plus the largest descent. Chromium does the same with a line's inline boxes, so Quire leaves that to
+ * ascent plus the largest descent. Chromium does the same with a line's inline boxes, so Wordx leaves that to
  * Chromium and gives it the right boxes (R.lineBoxes, after R.fillRuns):
  * - text: its font's line (R.runCSS); a run of blanks only, or a superscript, counts for nothing (Word documents:
  *   blanks and tabs don't raise a line, #i3952);

@@ -1,4 +1,4 @@
-/* Ledger — cell editing: in-cell editor, formula bar, point mode, reference highlighting, AutoComplete. */
+/* Excelx — cell editing: in-cell editor, formula bar, point mode, reference highlighting, AutoComplete. */
 (function (root) {
   'use strict';
   const L = root.L;
@@ -247,7 +247,7 @@
       const chk = O.checkFormula(body);
       if (chk.error) {
         if (chk.fixed) {
-          L.ui.msg(L.t('Ledger found an error in the formula you entered. Do you want to accept the correction proposed below?\n\n={0}\n\n• To accept the correction, click Yes.\n• To close this message and correct the formula yourself, click No.', chk.fixed), { icon: 'question', buttons: ['&Yes', '&No'], width: 430 }).then((i) => {
+          L.ui.msg(L.t('Excelx found an error in the formula you entered. Do you want to accept the correction proposed below?\n\n={0}\n\n• To accept the correction, click Yes.\n• To close this message and correct the formula yourself, click No.', chk.fixed), { icon: 'question', buttons: ['&Yes', '&No'], width: 430 }).then((i) => {
             if (i === 0) { setText('=' + chk.fixed); E.commit(opts); }
             else surface.focus();
           });
@@ -598,8 +598,22 @@
     L.$('#gridwrap').appendChild(acList);
     const list = acList;
     const close = (e) => { if (acList === list && !list.contains(e.target)) hideAux(); };
-    const timer = setTimeout(() => document.addEventListener('pointerdown', close, true), 0);
-    acOff = () => { clearTimeout(timer); document.removeEventListener('pointerdown', close, true); };
+    let timer = 0, removePointer = () => {}, removeScopeCleanup = () => {}, active = true;
+    const remove = () => {
+      if (!active) return;
+      active = false;
+      clearTimeout(timer);
+      removePointer();
+      removeScopeCleanup();
+    };
+    acOff = remove;
+    removeScopeCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(remove) : () => {};
+    timer = setTimeout(() => {
+      timer = 0;
+      removePointer = typeof L.addMountListener === 'function'
+        ? L.addMountListener(document, 'pointerdown', close, true)
+        : (() => { document.addEventListener('pointerdown', close, true); return () => document.removeEventListener('pointerdown', close, true); })();
+    }, 0);
   };
   /** a key while the Alt+Down list is open (not editing): the arrows, Enter and Esc work the list; any other key
       closes it and goes on to the sheet */

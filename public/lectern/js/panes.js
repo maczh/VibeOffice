@@ -1,4 +1,4 @@
-/* Lectern — panes and alternate views. */
+/* PPTX — panes and alternate views. */
 (function () {
   'use strict';
   const L = window.L;
@@ -19,7 +19,10 @@
     close.addEventListener('click', () => L.app.toggleLeft(false));
     LP.tabs.append(LP.tabOutline, LP.tabSlides, close);
     LP.body = h('div', { class: 'lp-body', tabindex: '-1' });
-    el.append(LP.tabs, LP.body);
+    LP.reactTabsRoot = h('div', { class: 'slides-react-tabs-root', id: 'react-slides-tabs-root' });
+    LP.reactRoot = h('div', { class: 'slides-react-root', id: 'react-slides-root' });
+    LP.body.appendChild(LP.reactRoot);
+    el.append(LP.tabs, LP.reactTabsRoot, LP.body);
     LP.tabOutline.addEventListener('click', () => LP.setTab('outline'));
     LP.tabSlides.addEventListener('click', () => LP.setTab('slides'));
     LP.body.addEventListener('focus', () => { if (L.app) L.app.focusArea = 'slides'; }, true);
@@ -36,18 +39,22 @@
   };
   LP.render = function () {
     if (!LP.body) return;
-    if (E().view === 'master') { renderMasterThumbs(); return; }
-    if (LP.tab === 'outline') renderOutline();
+    if (E().view === 'master') { renderMasterThumbs(); L.bus.emit('pptx-slides-render'); return; }
+    if (LP.tab === 'outline') { renderOutline(); L.bus.emit('pptx-slides-render'); }
     else renderThumbs();
   };
   /* --- thumbnails --- */
   function thumbWidth() { return Math.max(60, (LP.body.clientWidth || 190) - 48); }
   function renderThumbs() {
+    if (LP.reactRoot && LP.reactRoot.isConnected && L.app.reactMounted) {
+      L.bus.emit('pptx-slides-render');
+      return;
+    }
     const pres = L.pres;
     const box = h('div', { class: 'thumbs', role: 'listbox', 'aria-label': 'Slides' });
     const w = thumbWidth();
     pres.slides.forEach((s, i) => box.appendChild(thumbItem(s, i, w)));
-    keepFocus(() => L.clear(LP.body).appendChild(box));
+    keepFocus(() => { L.clear(LP.body).appendChild(box); LP.body.appendChild(LP.reactRoot); });
     LP.list = box;
     scrollCur();
   }
@@ -75,12 +82,20 @@
     it.addEventListener('dblclick', () => { if (L.app.view !== 'normal') L.app.setView('normal'); });
     return it;
   }
+  LP.onThumbDown = onThumbDown;
+  LP.onThumbContext = function (e, i) {
+    e.preventDefault();
+    if (!L.app.slideSel.has(i)) { L.app.slideSel = new Set([i]); E().goto(i); }
+    L.app.contextThumb(e);
+  };
+  LP.onThumbDoubleClick = function () { if (L.app.view !== 'normal') L.app.setView('normal'); };
   function scrollCur() {
     const cur = LP.body.querySelector('.th.cur');
     if (cur) cur.scrollIntoView({ block: 'nearest' });
   }
   LP.refreshThumb = function (i) {
     if (LP.tab !== 'slides' || !LP.list || E().view === 'master') return;
+    if (LP.reactRoot && LP.reactRoot.isConnected && L.app.reactMounted) { L.bus.emit('pptx-slides-render'); return; }
     const s = L.pres.slides[i];
     const old = LP.list.querySelector(`.th[data-i="${i}"]`);
     if (!s || !old) { renderThumbs(); return; }
@@ -94,6 +109,7 @@
     if (!LP.list) return;
     L.$$('.th', LP.list).forEach((el) => { const i = +el.dataset.i; el.classList.toggle('cur', i === E().idx); el.classList.toggle('sel', L.app.slideSel.has(i)); el.setAttribute('aria-selected', String(i === E().idx)); });
     scrollCur();
+    if (LP.reactRoot && LP.reactRoot.isConnected && L.app.reactMounted) L.bus.emit('pptx-slides-mark');
   };
   function onThumbDown(e, i) {
     if (e.button !== 0) return;
@@ -147,6 +163,7 @@
       box.appendChild(it);
     });
     L.clear(LP.body).appendChild(box);
+    if (LP.reactRoot && L.app.reactMounted) LP.body.appendChild(LP.reactRoot);
     LP.list = null;
   }
 
@@ -177,6 +194,7 @@
     ol.addEventListener('keyup', syncOutlineSlide);
     ol.addEventListener('click', syncOutlineSlide);
     L.clear(LP.body).appendChild(ol);
+    if (LP.reactRoot && L.app.reactMounted) LP.body.appendChild(LP.reactRoot);
     LP.outline = ol;
     styleOutline();
   }
@@ -290,6 +308,8 @@
     NP.el = el;
     NP.ed = h('div', { class: 'notes-in', contenteditable: 'true', spellcheck: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Speaker notes', 'data-ph': L.t('Click to add notes') });
     el.appendChild(NP.ed);
+    NP.reactRoot = h('div', { class: 'notes-react-root', id: 'react-notes-root' });
+    el.appendChild(NP.reactRoot);
     NP.ed.addEventListener('input', () => {
       const s = E().slide();
       if (!s || s.isMaster) return;
@@ -305,10 +325,11 @@
     const s = E().slide();
     NP.ed.contentEditable = s && !s.isMaster ? 'true' : 'false';
     NP.ed.textContent = s && !s.isMaster ? s.notes || '' : '';
+    L.bus.emit('pptx-notes-render');
   };
 
   /* ================= Slide Sorter ================= */
-  const SO = (P.sorter = { zoom: 0.25 });
+  const SO = (P.sorter = { zoom: 0.25, reactMounted: false });
   SO.mount = function (parent) {
     SO.el = h('div', { class: 'sorter', tabindex: '-1', 'aria-label': 'Slide Sorter' });
     parent.appendChild(SO.el);
@@ -318,6 +339,7 @@
   };
   SO.render = function () {
     if (!SO.el) return;
+    if (SO.reactMounted) { L.bus.emit('pptx-sorter-render'); return; }
     const grid = h('div', { class: 'sorter-grid' });
     const w = Math.max(90, Math.round(SO.el.clientWidth ? Math.min(260, (SO.el.clientWidth - 60) / 4) : 180));
     L.pres.slides.forEach((s, i) => {
@@ -341,7 +363,8 @@
     L.clear(SO.el).appendChild(grid);
   };
   const fmtSecs = (ms) => { const s = Math.round(ms / 1000); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
-  SO.mark = function () { L.$$('.so-it', SO.el).forEach((el) => el.classList.toggle('sel', L.app.slideSel.has(+el.dataset.i))); L.app.updateStatus(); L.ui.refresh(); };
+  SO.mark = function () { L.$$('.so-it', SO.el).forEach((el) => el.classList.toggle('sel', L.app.slideSel.has(+el.dataset.i))); L.app.updateStatus(); L.ui.refresh(); if (SO.reactMounted) L.bus.emit('pptx-sorter-mark'); };
+  SO.onDown = onSorterDown;
   function onSorterDown(e, i, it) {
     if (e.button !== 0) return;
     SO.el.focus({ preventScroll: true });
@@ -383,6 +406,7 @@
   NV.mount = function (parent) { NV.el = h('div', { class: 'notespage', 'aria-label': 'Notes Page' }); parent.appendChild(NV.el); };
   NV.render = function () {
     if (!NV.el) return;
+    if (NV.reactMounted) { L.bus.emit('pptx-notespage-render'); return; }
     const s = E().slide();
     L.clear(NV.el);
     if (!s) return;
@@ -395,11 +419,12 @@
     const ny = ph * 0.075 + shh + ph * 0.05;
     const notes = h('div', { class: 'np-notes', contenteditable: 'true', spellcheck: 'true', style: `left:${pw * 0.1}px;top:${ny}px;width:${pw * 0.8}px;height:${ph - ny - ph * 0.08}px;font-size:${Math.max(11, pw / 48)}px`, role: 'textbox', 'aria-label': 'Notes' });
     notes.textContent = s.notes || '';
-    notes.addEventListener('input', () => { L.hist.push(L.N('Notes'), 'notes:' + s.id); s.notes = notes.innerText.replace(/\n$/, ''); });
+    notes.addEventListener('input', () => NV.updateNotes(s, notes.innerText.replace(/\n$/, '')));
     notes.addEventListener('paste', (e) => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData && e.clipboardData.getData('text/plain')) || ''); });
     page.append(sb, notes, h('div', { class: 'pv-hdr', style: `right:${pw * 0.05}px;bottom:${ph * 0.03}px`, text: String(E().idx + (L.pres.firstNum || 1)) }));
     NV.el.appendChild(page);
   };
+  NV.updateNotes = function (slide, text) { L.hist.push(L.N('Notes'), 'notes:' + slide.id); slide.notes = text; };
 
   /* ================= Print Preview ================= */
   const PV = (P.preview = {});
@@ -414,7 +439,7 @@
     if (!PV.el) return;
     const o = L.app.printOpts;
     L.clear(PV.bar);
-    const canPrint = window.self === window.top;
+    const canPrint = window.self === window.top || !!VO.reactDirectHost;
     if (canPrint) PV.bar.appendChild(ui.button('&Print...', () => { document.body.classList.add('printing'); window.print(); setTimeout(() => document.body.classList.remove('printing'), 500); }));
     PV.bar.append(
       h('label', { text: 'Print What:' }),
@@ -487,7 +512,9 @@
     TP.title = h('div', { class: 'tp-title', role: 'button', tabindex: '0', 'aria-haspopup': 'menu' }, h('span', { text: '' }), h('span', { class: 'dd-arrow' }));
     const close = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close task pane', html: L.icons.get('close', 12) });
     TP.body = h('div', { class: 'tp-body' });
-    el.append(h('div', { class: 'tp-head' }, TP.back, TP.fwd, TP.home, TP.title, close), TP.body);
+    TP.header = h('div', { class: 'tp-head' }, TP.back, TP.fwd, TP.home, TP.title, close);
+    TP.reactRoot = h('div', { class: 'react-task-head-root', id: 'react-task-head-root' });
+    el.append(TP.header, TP.reactRoot, TP.body);
     TP.back.addEventListener('click', () => TP.go(TP.pos - 1));
     TP.fwd.addEventListener('click', () => TP.go(TP.pos + 1));
     TP.home.addEventListener('click', () => TP.show('getting-started'));
@@ -495,6 +522,8 @@
     const openList = () => { const r = TP.title.getBoundingClientRect(); ui.openMenu(Object.values(TP.registry).filter((p) => !p.hidden).map((p) => ({ label: p.title, run: () => TP.show(p.id), checked: () => TP.current === p.id })), { left: r.left, bottom: r.bottom }); };
     TP.title.addEventListener('click', openList);
     TP.title.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openList(); } });
+    TP.reactBodyRoot = h('div', { class: 'react-task-body-root', id: 'react-task-body-root' });
+    el.appendChild(TP.reactBodyRoot);
   };
   TP.register = (p) => { TP.registry[p.id] = p; };
   TP.show = function (id) {
@@ -512,13 +541,15 @@
     TP.title.firstChild.textContent = L.t(p.title);
     TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
     L.clear(TP.body);
-    p.render(TP.body);
+    if (!(L.app.reactMounted && ['getting-started', 'new', 'help'].includes(id))) p.render(TP.body);
+    L.bus.emit('pptx-task-render');
   };
   TP.refresh = function (reason) {
     const p = TP.registry[TP.current];
     if (!p || !TP.el || TP.el.hidden) return;
     if (p.refresh) p.refresh(TP.body, reason);
     else if (p.live) { L.clear(TP.body); p.render(TP.body); }
+    L.bus.emit('pptx-task-render');
   };
   const sec = (title, ...kids) => h('div', { class: 'tp-sec' }, title ? h('div', { class: 'tp-h' }, title) : null, ...kids);
   const link = (icon, label, fn) => h('button', { class: 'tp-link', type: 'button', onclick: fn }, icon ? h('span', { html: L.icons.get(icon) }) : null, h('span', { text: label }));
@@ -532,7 +563,7 @@
       const q = h('input', { type: 'text', id: 'gs-search', placeholder: 'Search help', style: 'flex:1;min-width:0' });
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { P.helpQuery = q.value; TP.show('help'); } });
       b.append(
-        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: window.VO ? VO.editionName('Lectern') : 'Lectern', translate: 'no', style: 'color:var(--pane-ink)' })),
+        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: window.VO ? VO.editionName(window.VO.oneDocument ? 'Lectern' : 'PPTX') : 'PPTX', translate: 'no', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
         sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', L.N('Open a presentation (.pptx)...'), () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample())),
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => TP.show('help')), link('design', 'Apply a design template', () => TP.show('design')), link('animation', 'Animate your slides', () => TP.show('customAnim'))));
@@ -562,6 +593,7 @@
     [L.N('Files'), L.N('File ▸ Open reads .pptx, .ppsx and .potx files. File ▸ Save writes a .pptx that opens in PowerPoint, Keynote, Google Slides and LibreOffice. Save As also offers .ppsx, .potx, a single-file web page, a PNG of the current slide and a text outline.')],
   ];
   const KEYS = [['Ctrl+N / Ctrl+O / Ctrl+S', L.N('New, Open, Save')], ['Ctrl+M', L.N('New slide')], ['Ctrl+D', L.N('Duplicate')], ['Ctrl+Z / Ctrl+Y', L.N('Undo / Redo')], ['Ctrl+X / C / V', L.N('Cut, Copy, Paste')], ['Ctrl+A', L.N('Select all')], ['Ctrl+G / Ctrl+Shift+G', L.N('Group / Ungroup')], ['Ctrl+B / I / U', L.N('Bold, Italic, Underline')], ['Ctrl+E / L / R / J', L.N('Center, Left, Right, Justify')], ['Ctrl+Shift+> / <', L.N('Grow / Shrink font')], ['Ctrl+T', L.N('Font dialog')], ['Shift+F3', L.N('Change case')], ['Ctrl+K', L.N('Hyperlink')], ['Ctrl+F / Ctrl+H', L.N('Find / Replace')], ['Tab / Shift+Tab', L.N('Demote / Promote; next object')], [L.N('Arrow keys'), L.N('Nudge (Ctrl for fine nudge)')], ['F2', L.N('Toggle between text and object selection')], ['F5 / Shift+F5', L.N('Slide show from start / current')], ['Page Up / Page Down', L.N('Previous / next slide')], ['Ctrl+F1', L.N('Task pane')]];
+  TP.helpData = { topics: HELP, keys: KEYS };
   TP.register({
     id: 'help', title: 'Help',
     render(b) {
@@ -620,6 +652,10 @@
       }
     },
   });
+  P.reactClipboardCatalog = function () { return L.app.clipHistory.map((item, index) => ({ index, kind: item.kind, label: item.label, icon: item.kind === 'slides' ? 'sorterView' : item.kind === 'text' ? 'font' : 'autoshapes' })); };
+  P.reactPasteClipboard = function (index) { const item = L.app.clipHistory[index]; if (item) L.app.pasteItem(item); };
+  P.reactPasteAllClipboard = function () { for (const item of L.app.clipHistory.slice().reverse()) L.app.pasteItem(item); };
+  P.reactClearClipboard = function () { L.app.clipHistory.length = 0; TP.refresh(); };
 
   /* --- Slide Layout --- */
   /** a layout's picture, in the presentation's shape */
@@ -641,6 +677,16 @@
   P.layoutSVG = layoutSVG;
   /* the headings of M.LAYOUTS' groups */
   const LAYOUT_GROUPS = { 'Text Layouts': L.N('Text Layouts:'), 'Content Layouts': L.N('Content Layouts:'), 'Text and Content Layouts': L.N('Text and Content Layouts:'), 'Other Layouts': L.N('Other Layouts:') };
+  P.reactLayoutCatalog = function () {
+    const groups = {};
+    for (const layout of M.LAYOUTS) (groups[layout.group] = groups[layout.group] || []).push({ key: layout.key, name: layout.name, preview: layoutSVG(layout.key, 64) });
+    return { currentKey: E().slide() ? M.layoutInfo(E().slide().layout).key : null, groups: Object.entries(groups).map(([name, layouts]) => ({ name: LAYOUT_GROUPS[name] || name, layouts })), showWhenInserting: !!L.app.opts.layoutPaneOnNew };
+  };
+  P.reactApplyLayout = function (key) { L.app.applyLayoutToSel(key); };
+  P.reactLayoutMenu = function (key, x, y) {
+    ui.openMenu([{ label: 'Apply to &Selected Slides', run: () => L.app.applyLayoutToSel(key) }, { label: '&Reapply Master Style', run: () => L.app.applyLayoutToSel(key, true) }, '-', { label: 'Insert &New Slide', run: () => L.app.insertSlide(key) }], { x, y });
+  };
+  P.reactSetLayoutPaneOnNew = function (value) { L.app.opts.layoutPaneOnNew = value; L.app.saveOpts(); };
   TP.register({
     id: 'layout', title: 'Slide Layout',
     render(b) {
@@ -680,6 +726,35 @@
     previewCache[ck] = el;
     return el.cloneNode(true);
   }
+  P.reactDesignCatalog = function () {
+    const current = E().design();
+    const used = Array.from(new Set(L.pres.slides.map((s) => s.design))).map((id) => L.pres.designs[id]).filter(Boolean).map((design) => {
+      const slide = L.pres.slides.find((s) => s.design === design.id);
+      const preview = slide && L.render.thumb(L.pres, Object.assign({}, slide, { shapes: slide.shapes.filter((shape) => shape.ph && shape.type === 'text') }), 100, { prompts: false });
+      return { id: design.id, name: design.name, preview: preview?.outerHTML || '' };
+    });
+    return { currentId: current.id, currentName: current.name, used, available: M.DESIGNS.map((design) => ({ key: design.key, name: design.name, preview: designPreview(design.key, 100).outerHTML })) };
+  };
+  P.reactApplyDesign = function (key, all) {
+    L.app.applyDesign(key, all);
+  };
+  P.reactApplyUsedDesign = function (id) {
+    const selected = L.app.selectedSlides();
+    L.hist.push('Apply Design Template');
+    for (const slide of selected) slide.design = id;
+    E().render();
+    L.bus.emit('slides-changed');
+  };
+  P.reactBrowseDesign = function () { L.app.browseDesign(); };
+  P.reactDesignMenu = function (key, x, y) {
+    ui.openMenu([{ label: 'Apply to &All Slides', run: () => P.reactApplyDesign(key, true) }, { label: 'Apply to &Selected Slides', run: () => P.reactApplyDesign(key, false) }], { x, y });
+  };
+  P.reactColorCatalog = function () { return { current: E().design().colors, schemes: M.COLOR_SCHEMES }; };
+  P.reactApplyColorScheme = function (scheme, all) { L.app.applyColorScheme(scheme, all); };
+  P.reactColorMenu = function (scheme, x, y) {
+    ui.openMenu([{ label: 'Apply to &All Slides', run: () => P.reactApplyColorScheme(scheme, true) }, { label: 'Apply to &Selected Slides', run: () => P.reactApplyColorScheme(scheme, false) }], { x, y });
+  };
+  P.reactEditColorScheme = function () { L.app.editColorScheme(); };
   TP.register({
     id: 'design', title: 'Slide Design',
     render(b) {
@@ -750,6 +825,9 @@
     [L.N('Diamond'), { tr: { type: 'diamond' }, title: ['diamond', 'out'], body: ['diamond', 'out'] }], [L.N('Box out'), { tr: { type: 'zoom', dir: 'out' }, title: ['box', 'out'], body: ['box', 'out'] }],
   ];
   P.ANIM_SCHEMES = AS;
+  P.reactAnimationSchemes = function () { return AS.map(([name, definition], index) => ({ name, index, group: definition === 'group', definition: definition === 'group' ? null : definition })); };
+  P.reactApplyAnimationScheme = function (definition, all) { L.app.applyAnimScheme(definition, all); };
+  P.reactPlayAnimationPreview = function () { P.playSlide(); };
   TP.register({
     id: 'animSchemes', title: 'Slide Design - Animation Schemes',
     render(b) {
@@ -838,6 +916,78 @@
     function openOptions(a) { L.dlg.effectOptions(a, (o) => { L.hist.push('Effect Options'); Object.assign(a, o); renderCA(b); if (L.app.opts.autoPreview) P.playSlide(a.id); }); }
   }
   P.selectAnim = (id) => { CA.selId = id; };
+  P.reactCustomAnimationCatalog = function () {
+    const slide = E().slide();
+    if (!slide || slide.isMaster) return { available: false, animations: [], selectedId: null, hasSelection: false, autoPreview: !!L.app.opts.autoPreview, starts: [], directions: [], speeds: [] };
+    const anims = slide.anims || (slide.anims = []);
+    let step = 0;
+    const animations = anims.map((animation, index) => {
+      if (animation.start === 'click' || index === 0) step += animation.start === 'click' ? 1 : 0;
+      const shape = M.shapeById(slide, animation.sid);
+      const label = (shape ? shape.name : '?') + (shape && shape.tx ? ': ' + L.txt.plain(shape.tx).slice(0, 24) : '');
+      return { id: animation.id, sid: animation.sid, start: animation.start, dur: animation.dur, cls: animation.cls, eff: animation.eff, dir: animation.dir, by: animation.by, step: animation.start === 'click' ? String(step) : '', color: { entr: '#2f9a3a', emph: '#c9a100', exit: '#d33a2c', path: '#555' }[animation.cls], name: L.t(L.anim.name(animation)), label, tooltip: `${L.t(L.anim.name(animation))} — ${label}` };
+    });
+    const selected = anims.find((animation) => animation.id === CA.selId) || null;
+    const info = selected ? L.anim.info(selected.cls, selected.eff) : null;
+    const speed = selected ? L.anim.SPEEDS.reduce((best, item) => Math.abs(item[1] - selected.dur) < Math.abs(best - selected.dur) ? item[1] : best, 500) : 1000;
+    return { available: true, animations, selectedId: selected?.id || null, hasSelection: E().selected().length > 0, selectedName: selected ? L.t(L.anim.name(selected)) : '', selectedStart: selected?.start || 'click', selectedDirection: selected?.dir || '', selectedSpeed: speed, speedDisabled: !selected || selected.eff === 'appear' || selected.eff === 'disappear', starts: [['click', 'On Click'], ['with', 'With Previous'], ['after', 'After Previous']].map(([value, name]) => ({ value, name })), directions: info?.dirs?.map(([value, name]) => ({ value, name })) || [], speeds: L.anim.SPEEDS.map(([name, value]) => ({ name, value })), directionDisabled: !info?.dirs, autoPreview: !!L.app.opts.autoPreview };
+  };
+  function refreshReactAnimationPane() { L.bus.emit('pptx-task-render'); }
+  P.reactAddAnimationMenu = function (x, y) {
+    if (!E().selected().length) { ui.msg('Select an object on the slide first, then choose an effect.'); return; }
+    ui.openMenu(P.addEffectMenu((cls, effect) => { L.app.addAnimation(cls, effect); refreshReactAnimationPane(); }), { x, y });
+  };
+  P.reactSelectAnimation = function (id) {
+    const animation = (E().slide().anims || []).find((item) => item.id === id);
+    if (!animation) return;
+    CA.selId = id;
+    const top = E().topOf(animation.sid);
+    if (top) E().select([top.id]);
+    refreshReactAnimationPane();
+  };
+  P.reactAnimationMenu = function (id, x, y) {
+    const animation = (E().slide().anims || []).find((item) => item.id === id);
+    if (!animation) return;
+    P.reactSelectAnimation(id);
+    ui.openMenu([
+      { label: 'Start On &Click', checked: () => animation.start === 'click', run: () => P.reactUpdateAnimation('start', 'click') },
+      { label: 'Start &With Previous', checked: () => animation.start === 'with', run: () => P.reactUpdateAnimation('start', 'with') },
+      { label: 'Start &After Previous', checked: () => animation.start === 'after', run: () => P.reactUpdateAnimation('start', 'after') },
+      '-', { label: '&Effect Options...', run: () => P.reactAnimationOptions(id) }, { label: '&Timing...', run: () => P.reactAnimationOptions(id) }, '-', { label: '&Remove', run: () => P.reactRemoveAnimation(id) },
+    ], { x, y });
+  };
+  P.reactRemoveAnimation = function (id) {
+    const slide = E().slide();
+    if (!slide || !id) return;
+    L.hist.push('Remove Effect');
+    slide.anims = (slide.anims || []).filter((animation) => animation.id !== id);
+    CA.selId = null;
+    E().render();
+    L.bus.emit('slide-modified', E().idx);
+    refreshReactAnimationPane();
+  };
+  P.reactUpdateAnimation = function (key, value) {
+    const animation = (E().slide().anims || []).find((item) => item.id === CA.selId);
+    if (!animation) return;
+    L.hist.push('Modify Effect'); animation[key] = value;
+    refreshReactAnimationPane();
+    if (L.app.opts.autoPreview) P.playSlide(animation.id);
+  };
+  P.reactMoveAnimation = function (delta) {
+    const slide = E().slide(), list = slide?.anims || [], animation = list.find((item) => item.id === CA.selId);
+    if (!animation) return;
+    const index = list.indexOf(animation), target = index + delta;
+    if (target < 0 || target >= list.length) return;
+    L.hist.push('Reorder Effects'); [list[index], list[target]] = [list[target], list[index]];
+    refreshReactAnimationPane();
+  };
+  P.reactAnimationOptions = function (id) {
+    const animation = (E().slide().anims || []).find((item) => item.id === id);
+    if (!animation) return;
+    L.dlg.effectOptions(animation, (options) => { L.hist.push('Effect Options'); Object.assign(animation, options); refreshReactAnimationPane(); if (L.app.opts.autoPreview) P.playSlide(animation.id); });
+  };
+  P.reactPlayAnimation = function (id) { P.playSlide(id); };
+  P.reactSetAnimationAutoPreview = function (enabled) { L.app.opts.autoPreview = enabled; L.app.saveOpts(); refreshReactAnimationPane(); };
 
   /* --- Slide Transition --- */
   TP.register({
@@ -886,6 +1036,20 @@
     L.show.previewTransition(ov, L.pres, ed.slide(), L.pres.slides[ed.idx - 1]);
     setTimeout(() => ov.remove(), L.anim.transDur(ed.slide().trans) + 400);
   };
+  P.reactTransitionCatalog = function () {
+    const slide = E().slide(), trans = slide?.trans || {};
+    return { available: !!slide && !slide.isMaster, transitions: L.anim.TRANSITIONS.map((item, index) => ({ ...item, index })), currentName: slide ? L.anim.transName(trans) : '', speed: trans.spd || 'fast', click: trans.click !== false, after: trans.after == null ? null : trans.after / 1000, autoPreview: L.app.opts.autoPreview !== false };
+  };
+  P.reactChooseTransition = function (choice) {
+    L.app.setTransition((slide) => { const keep = { spd: slide.trans.spd, click: slide.trans.click, after: slide.trans.after }; slide.trans = Object.assign({}, keep, { type: choice.type, dir: choice.dir, thruBlk: choice.thruBlk, spokes: choice.spokes, orient: choice.orient }); for (const key in slide.trans) if (slide.trans[key] === undefined) delete slide.trans[key]; });
+    if (L.app.opts.autoPreview !== false) P.previewTransition();
+  };
+  P.reactSetTransitionSpeed = function (speed) { L.app.setTransition((slide) => { slide.trans.spd = speed; delete slide.trans.dur; }); };
+  P.reactSetTransitionClick = function (enabled) { L.app.setTransition((slide) => { slide.trans.click = enabled; }); };
+  P.reactSetTransitionAfter = function (seconds) { L.app.setTransition((slide) => { slide.trans.after = seconds == null ? null : seconds * 1000; }); };
+  P.reactTransitionToAll = function () { L.app.transitionToAll(); };
+  P.reactPreviewTransition = function () { P.previewTransition(); };
+  P.reactSetAutoPreview = function (enabled) { L.app.opts.autoPreview = enabled; L.app.saveOpts(); };
   P.playSlide = function (onlyId) {
     const ed = E();
     const host = ed.host;

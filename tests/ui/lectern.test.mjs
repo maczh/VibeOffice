@@ -47,6 +47,40 @@ const order = (u) => u.evaluate(`L.pres.slides.map((s) => s.notes).join(',')`);
 const text = (u, id) => u.evaluate(`L.ed.shape('${id}') ? L.txt.paraText(L.ed.shape('${id}').tx.ps[0]) : null`);
 const geo = (u, id) => u.evaluate(`(s => s && [s.x, s.y, s.w, s.h].map((v) => Math.round(v)))(L.ed.shape('${id}'))`);
 const count = (u) => u.evaluate(`L.ed.slide().shapes.length`);
+test('classic PPTX page keeps the legacy speaker-notes editor visible', () => lectern(async (u) => {
+  const notes = await u.evaluate(`(() => { const editor=L.panes.notes.ed, slot=document.querySelector('#react-notes-root'); const box=editor.getBoundingClientRect(); return {visible:box.width>100 && box.height>20 && getComputedStyle(editor).display!=='none', reactSlotHidden:getComputedStyle(slot).display==='none', text:editor.textContent}; })()`);
+  assert.ok(notes.visible && notes.reactSlotHidden, `classic PPTX notes remain visible when no React package is mounted; observed ${JSON.stringify(notes)}`);
+  const paneAdapters = await u.evaluate(`(() => ({
+    tabsVisible:getComputedStyle(document.querySelector('#leftpane > .lp-tabs')).display!=='none',
+    tabsSlotHidden:getComputedStyle(document.querySelector('#react-slides-tabs-root')).display==='none',
+    taskHeaderVisible:getComputedStyle(document.querySelector('#taskpane > .tp-head')).display!=='none',
+    taskSlotHidden:getComputedStyle(document.querySelector('#react-task-head-root')).display==='none',
+    taskBodyVisible:getComputedStyle(document.querySelector('#taskpane > .tp-body')).display!=='none',
+    taskBodySlotHidden:getComputedStyle(document.querySelector('#react-task-body-root')).display==='none',
+  }))()`);
+  assert.deepEqual(paneAdapters, { tabsVisible:true, tabsSlotHidden:true, taskHeaderVisible:true, taskSlotHidden:true, taskBodyVisible:true, taskBodySlotHidden:true }, 'classic PPTX panes keep their native tab, task navigation chrome, and task content when no React package is mounted');
+  await u.evaluate("L.app.setView('notes')");
+  assert.equal(await u.evaluate("!!document.querySelector('.notespage .np-page .np-notes') && !document.querySelector('.notespage')?.classList.contains('vibeoffice-react-owned')"), true, 'classic PPTX keeps its native Notes Page renderer without mounting the React package');
+  await u.evaluate("L.app.setView('normal')");
+  await u.evaluate("L.panes.task.show('help')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .help-topic') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders the Help pane without mounting React task content');
+  await u.evaluate("L.panes.task.show('clipart')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .clip-it') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders Clip Art without mounting React task content');
+  await u.evaluate("L.panes.task.show('design')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .dsn-grid .dsn-it') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders Slide Design without mounting React task content');
+  await u.evaluate("L.panes.task.show('colors')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .scheme-grid .scheme-it') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders Color Schemes without mounting React task content');
+  await u.evaluate("L.panes.task.show('animSchemes')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .trans-list .li') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders Animation Schemes without mounting React task content');
+  await u.evaluate("L.panes.task.show('layout')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .lay-grid .lay-it') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders Slide Layout without mounting React task content');
+  await u.evaluate("L.panes.task.show('transition')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .trans-list .li') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders Slide Transition without mounting React task content');
+  await u.evaluate("L.panes.task.show('customAnim')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .list-box') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders Custom Animation without mounting React task content');
+  await u.evaluate("L.panes.task.show('clipboard')");
+  assert.equal(await u.evaluate("!!document.querySelector('#taskpane > .tp-body .tp-btns') && getComputedStyle(document.querySelector('#react-task-body-root')).display==='none'"), true, 'classic PPTX still renders Clipboard without mounting React task content');
+}));
 /** AutoShapes ▸ Lines ▸ tool on the Drawing toolbar */
 async function lineTool(u, label) { await u.click(await u.el('[data-as]')); await u.pick('Lines', label); }
 /** edit boxA ("Alpha beta gamma delta epsilon") with "beta" selected */

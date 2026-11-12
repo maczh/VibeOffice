@@ -1,4 +1,4 @@
-/* Lectern — in-place rich text editing.
+/* PPTX — in-place rich text editing.
  * The DOM is authoritative while typing; formatting commands go through the
  * model (split runs → apply → re-render) so markup never drifts.
  */

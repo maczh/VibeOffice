@@ -1,9 +1,9 @@
-/* Ledger — function catalogue for Insert Function, Function Arguments and the formula ScreenTips.
+/* Excelx — function catalogue for Insert Function, Function Arguments and the formula ScreenTips.
  * Format per line: NAME|arg1;arg2;[optional];more...|Description
  *
  * Derived from Microsoft VBA documentation (github.com/MicrosoftDocs/VBA-Docs, the Excel WorksheetFunction pages;
  * Creative Commons Attribution 4.0, (c) Microsoft Corporation; common/licenses/microsoft-vba-docs-LICENSE.txt):
- * the descriptions and the argument help follow its text, in places shortened or adapted to Ledger. */
+ * the descriptions and the argument help follow its text, in places shortened or adapted to Excelx. */
 (function (root) {
   'use strict';
   const L = root.L;
@@ -66,9 +66,9 @@ YIELD|settlement;maturity;rate;pr;redemption;frequency;[basis]|Returns the yield
 YIELDDISC|settlement;maturity;pr;redemption;[basis]|Returns the annual yield for a discounted security, for example a Treasury bill.
 YIELDMAT|settlement;maturity;issue;rate;pr;[basis]|Returns the annual yield of a security that pays interest at maturity.`,
     'Date & Time': `
-DATE|year;month;day|Returns the number that represents the date in Ledger date-time code.
+DATE|year;month;day|Returns the number that represents the date in Excelx date-time code.
 DATEDIF|start_date;end_date;unit|Calculates the number of days, months or years between two dates.
-DATEVALUE|date_text|Converts a date in the form of text to a number that represents the date in Ledger date-time code.
+DATEVALUE|date_text|Converts a date in the form of text to a number that represents the date in Excelx date-time code.
 DAY|serial_number|Returns the day of the month, a number from 1 to 31.
 DAYS|end_date;start_date|Returns the number of days between the two dates.
 DAYS360|start_date;end_date;[method]|Returns the number of days between two dates based on a 360-day year (twelve 30-day months).
@@ -82,8 +82,8 @@ NETWORKDAYS|start_date;end_date;[holidays]|Returns the number of whole workdays 
 NETWORKDAYS.INTL|start_date;end_date;[weekend];[holidays]|Returns the number of whole workdays between two dates with custom weekend parameters.
 NOW||Returns the current date and time formatted as a date and time.
 SECOND|serial_number|Returns the second, a number from 0 to 59.
-TIME|hour;minute;second|Converts hours, minutes and seconds given as numbers to a Ledger serial number, formatted with a time format.
-TIMEVALUE|time_text|Converts a text time to a Ledger serial number for a time, a number from 0 (12:00:00 AM) to 0.999988426 (11:59:59 PM).
+TIME|hour;minute;second|Converts hours, minutes and seconds given as numbers to a Excelx serial number, formatted with a time format.
+TIMEVALUE|time_text|Converts a text time to a Excelx serial number for a time, a number from 0 (12:00:00 AM) to 0.999988426 (11:59:59 PM).
 TODAY||Returns the current date formatted as a date.
 WEEKDAY|serial_number;[return_type]|Returns a number from 1 to 7 identifying the day of the week of a date.
 WEEKNUM|serial_number;[return_type]|Returns the week number in the year.
@@ -546,7 +546,7 @@ WEBSERVICE|url|Returns data from a web service.`,
     range: L.N('is the range of cells you want evaluated.'), criteria: L.N('is the condition or criteria in the form of a number, expression, or text that defines which cells will be added.'), sum_range: L.N('are the actual cells to sum. If omitted, the cells in range are used.'),
     text: L.N('is the text string you want processed.'), num_chars: L.N('specifies how many characters you want.'), rate: L.N('is the interest rate per period. For example, use 6%/4 for quarterly payments at 6% APR.'),
     nper: L.N('is the total number of payment periods in an investment.'), pv: L.N('is the present value: the total amount that a series of future payments is worth now.'), fv: L.N('is the future value, or a cash balance you want to attain after the last payment is made.'), type: L.N('is a logical value: payment at the beginning of the period = 1; payment at the end of the period = 0 or omitted.'),
-    num_digits: L.N('is the number of digits to which you want to round. Negative rounds to the left of the decimal point; zero to the nearest integer.'), serial_number: L.N('is a number in the date-time code used by Ledger.'),
+    num_digits: L.N('is the number of digits to which you want to round. Negative rounds to the left of the decimal point; zero to the nearest integer.'), serial_number: L.N('is a number in the date-time code used by Excelx.'),
     array: L.N('is a range of cells or an array constant.'), k: L.N('is the position (from the largest or smallest) in the array or cell range of data to return.'), reference: L.N('is the cell or range of cells.'),
     database: L.N('is the range of cells that makes up the list or database. A database is a list of related data.'), field: L.N('is either the label of the column in double quotation marks or a number that represents the column\'s position in the list.'), criteria_range1: L.N('is the range of cells you want evaluated for the particular condition.'),
   };

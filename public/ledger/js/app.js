@@ -1,4 +1,4 @@
-/* Ledger — application controller: window chrome, workbooks, files, menus, toolbars, status bar, sheet tabs. */
+/* Excelx — application controller: window chrome, workbooks, files, menus, toolbars, status bar, sheet tabs. */
 (function (root) {
   'use strict';
   const L = root.L;
@@ -25,7 +25,7 @@
   const DEFAULT_OPTS = {
     statusBar: true, formulaBar: true, taskOpen: true, paneFollows: true, moveAfterEnter: true, enterDir: 'down', autoComplete: true, dragDrop: true,
     toolbars: { standard: true, formatting: true, drawing: false, chart: 'auto', auditing: false, reviewing: false, picture: 'auto', borders: false, list: 'auto' },
-    userName: 'Ledger User', recent: [], defaultFont: LOCALE.font || 'Arial', defaultSize: LOCALE.sz || 10, sheetsInNew: 3, r1c1: false, calcMode: 'auto', iterate: false, iterateCount: 100, iterateDelta: 0.001, autoCalcFn: 'SUM',
+    userName: 'Excelx User', recent: [], defaultFont: LOCALE.font || 'Arial', defaultSize: LOCALE.sz || 10, sheetsInNew: 3, r1c1: false, calcMode: 'auto', iterate: false, iterateCount: 100, iterateDelta: 0.001, autoCalcFn: 'SUM',
   };
   const A = (L.app = Object.assign(L.app || {}, { opts: L.clone(DEFAULT_OPTS), books: [], cur: -1, lastFill: '#FFFF00', lastFontColor: '#FF0000', lastBorder: 'bottom' }));
   const book = () => A.books[A.cur];
@@ -130,7 +130,7 @@
   };
   function updateTitle() {
     const b = book();
-    document.title = (b ? L.file.titled(b.name) + ' - ' : '') + 'Ledger';
+    document.title = (b ? L.file.titled(b.name) + ' - ' : '') + (window.VO?.oneDocument ? 'Ledger' : 'Excelx');
   }
 
   /* ------------------------------------------------------------ open */
@@ -140,7 +140,7 @@
     const files = await L.pickFiles(accept || '.xlsx,.xlsm,.xltx,.xltm,.csv,.txt,.tsv,.prn,.xml', true);
     if (files.length) A.openFiles(files);
   };
-  /** the type Ledger saves a file of these kinds as, where it is (A.openFile; a recovered draft, VO.attach's open) */
+  /** the type Excelx saves a file of these kinds as, where it is (A.openFile; a recovered draft, VO.attach's open) */
   const FILE_TYPES = { csv: 'csv', txt: 'txt', tsv: 'txt', prn: 'txt', xml: 'xmlss', htm: 'html', html: 'html' };
   A.openFiles = async function (files) {
     for (const f of files) {
@@ -181,11 +181,11 @@
             if (pw == null) return;
             return A.openFile(file, pw, opts);
           }
-          if (e.code === 'xls') { ui.busy(false); if (L.xls && L.xls.read) { w = await L.xls.read(bytes); type = 'xls'; } else throw Object.assign(new Error(L.t("'{0}' is a binary Excel 97–2003 workbook (.xls). Ledger opens .xlsx, .xlsm, .csv and XML Spreadsheet 2003 files. Open it in Excel or LibreOffice and save it as .xlsx first.", name)), { code: 'xls' }); }
+          if (e.code === 'xls') { ui.busy(false); if (L.xls && L.xls.read) { w = await L.xls.read(bytes); type = 'xls'; } else throw Object.assign(new Error(L.t("'{0}' is a binary Excel 97–2003 workbook (.xls). Excelx opens .xlsx, .xlsm, .csv and XML Spreadsheet 2003 files. Open it in Excel or LibreOffice and save it as .xlsx first.", name)), { code: 'xls' }); }
           else throw e;
         }
         type = w.ooxmlFormat || (w.macroEnabled ? 'xlsm' : 'xlsx');
-        if (w.repaired) ui.toast('This file was damaged; Ledger repaired what it could.');
+        if (w.repaired) ui.toast('This file was damaged; Excelx repaired what it could.');
       }
       A.prepare(w);
       const b = A.addBook(w, name, { type });
@@ -253,8 +253,8 @@
   };
 
   /* ------------------------------------------------------------ save */
-  /* what Ledger saves, for the desktop app's Save dialog (L.file): the workbook types are saves, the rest exports
-     (a CSV or text file Ledger opened is saved where it is) */
+  /* what Excelx saves, for the desktop app's Save dialog (L.file): the workbook types are saves, the rest exports
+     (a CSV or text file Excelx opened is saved where it is) */
   L.file.types = [{ id: 'xlsx', label: L.N('Microsoft Office Excel Workbook (*.xlsx)'), ext: ['xlsx'] }, { id: 'xlsm', label: L.N('Excel Macro-Enabled Workbook (*.xlsm)'), ext: ['xlsm'] },
     { id: 'xltx', label: L.N('Template (*.xltx)'), ext: ['xltx'] }, { id: 'xltm', label: L.N('Macro-Enabled Template (*.xltm)'), ext: ['xltm'] },
     { id: 'xmlss', label: L.N('XML Spreadsheet 2003 (*.xml)'), ext: ['xml'] }, { id: 'csv', label: L.N('CSV (Comma delimited) (*.csv)'), ext: ['csv'] },
@@ -271,7 +271,7 @@
    *  workbook's own file ('save') or what the Save dialog picked ('chosen'); without `how` there, an export that asks
    *  where. Whether it was written */
   A.saveAs = async function (type, name, how) {
-    if (window.VO && VO.reactHost && !type) { type = 'xlsx'; name = book().name.replace(/\.[^.]+$/, '') + '.xlsx'; }
+    if (window.VO && VO.reactHost && !type) { type = 'xlsx'; name = book().name.replace(/\.[^.]+$/, '') + '.xlsx'; how = 'react-save-as'; }
     const b = book();
     if (L.editor.active && !L.editor.commit()) return false;
     const w = b.wb;
@@ -301,7 +301,7 @@
       ui.busy(false);
       const losses = L.opc.formats[type] ? await ui.compatibility(w, blob.dropped) : [];
       if (losses === null) { if (how === 'chosen') L.file.cancel(); return false; }
-      const written = how ? await L.file.write(blob, how, { type, name }) : { result: await L.saveFile(name, blob) };
+      const written = how === 'react-save-as' ? { result: await L.saveFileAs(name, blob) } : how ? await L.file.write(blob, how, { type, name }) : { result: await L.saveFile(name, blob) };
       if (written.name) name = written.name;   // as the Save dialog left it
       if (written.result === 'saved') {
         L.opc.acknowledge(w, losses);
@@ -350,71 +350,69 @@
 
   /* ------------------------------------------------------------ sheet tabs */
   function renderTabs() {
-    const tabs = L.$('#tabs');
-    const w = wb();
-    const selSet = new Set(A.selectedSheetsIdx());
-    /* the same sheets: only which tab is on changes, so a press that activates a tab keeps the element under the
-       pointer, and its click and double-click (Rename) still reach it */
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) { L.bus.emit('sheet-tabs'); return; }
+    const tabs = L.$('#tabs'), w = wb(), selected = new Set(A.selectedSheetsIdx());
     const key = w.sheets.map((s) => s.state + '|' + s.name + '|' + JSON.stringify(s.tabColor || null)).join('\n');
     if (tabs._w === w && tabs._key === key && !tabs.querySelector('input')) {
-      for (const t of L.$$('.stab', tabs)) {
-        const i = t._i;
-        t.classList.toggle('on', i === w.active);
-        t.classList.toggle('sel', selSet.has(i) && i !== w.active);
-        t.setAttribute('aria-selected', i === w.active ? 'true' : 'false');
+      for (const tab of L.$$('.stab', tabs)) {
+        const i = tab._i;
+        tab.classList.toggle('on', i === w.active);
+        tab.classList.toggle('sel', selected.has(i) && i !== w.active);
+        tab.setAttribute('aria-selected', i === w.active ? 'true' : 'false');
       }
       scrollToActive(tabs);
       return;
     }
-    tabs._w = w; tabs._key = key;
-    tabs.textContent = '';
-    w.sheets.forEach((s, i) => {
-      if (s.state !== 'visible') return;
-      const t = h('div', { class: 'stab' + (i === w.active ? ' on' : '') + (selSet.has(i) && i !== w.active ? ' sel' : '') + (s.tabColor ? ' colored' : ''), role: 'tab', 'aria-selected': i === w.active ? 'true' : 'false', draggable: 'false' }, h('span', { translate: 'no', text: s.name }));
-      t._i = i;
-      if (s.tabColor) t.style.setProperty('--tabc', M.colorHex(w, s.tabColor, '#ECE9D8'));
-      t.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('input')) return;   // the name being edited in place
-        if (e.button === 2) { if (!A.selectedSheetsIdx().includes(i)) A.activateSheet(i); return; }
-        e.preventDefault();
-        if (e.button !== 0) return;
-        if (e.ctrlKey || e.metaKey) { A.toggleSheetSel(i); return; }
-        if (e.shiftKey) { A.rangeSheetSel(i); return; }
+    tabs._w = w; tabs._key = key; tabs.textContent = '';
+    w.sheets.forEach((sheet, i) => {
+      if (sheet.state !== 'visible') return;
+      const tab = h('div', { class: 'stab' + (i === w.active ? ' on' : '') + (selected.has(i) && i !== w.active ? ' sel' : '') + (sheet.tabColor ? ' colored' : ''), role: 'tab', 'aria-selected': i === w.active ? 'true' : 'false', draggable: 'false' }, h('span', { translate: 'no', text: sheet.name }));
+      tab._i = i;
+      if (sheet.tabColor) tab.style.setProperty('--tabc', M.colorHex(w, sheet.tabColor, '#ECE9D8'));
+      tab.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('input')) return;
+        if (event.button === 2) { if (!A.selectedSheetsIdx().includes(i)) A.activateSheet(i); return; }
+        event.preventDefault();
+        if (event.button !== 0) return;
+        if (event.ctrlKey || event.metaKey) { A.toggleSheetSel(i); return; }
+        if (event.shiftKey) { A.rangeSheetSel(i); return; }
         A.activateSheet(i);
-        /* drag to reorder (Ctrl copies): a mark shows where it goes; a cancel moves nothing */
         let target = null;
-        const unmark = () => L.$$('.stab', tabs).forEach((x) => x.classList.remove('drop-before'));
-        ui.drag(e, {
-          capture: t,   // the tab itself, so its click and double-click (Rename) come to it
-          threshold: 6,
-          move(ev) {
-            unmark();
-            target = null;
-            for (const el of L.$$('.stab', tabs)) { const r = el.getBoundingClientRect(); if (ev.clientX < r.left + r.width / 2) { el.classList.add('drop-before'); target = el; break; } }
-          },
-          up(ev, d) {
-            unmark();
-            if (!d.moved) return;
-            const to = target ? w.sheets.findIndex((s2) => s2.name === target.textContent) : w.sheets.length;
-            try {
-              if (ev.ctrlKey || ev.metaKey) { const c = O.copySheet(w, w.sheets[i], to); w.active = w.sheets.indexOf(c); }
-              else O.moveSheet(w, w.sheets[i], to);
-            } catch (err) { A.error(err); }
-            renderTabs(); G().paint(); ui.refresh();
-          },
+        const unmark = () => L.$$('.stab', tabs).forEach((item) => item.classList.remove('drop-before'));
+        ui.drag(event, { capture: tab, threshold: 6,
+          move(pointer) { unmark(); target = null; for (const item of L.$$('.stab', tabs)) { const rect = item.getBoundingClientRect(); if (pointer.clientX < rect.left + rect.width / 2) { item.classList.add('drop-before'); target = item; break; } } },
+          up(pointer, result) { unmark(); if (!result.moved) return; const to = target ? w.sheets.findIndex((item) => item.name === target.textContent) : w.sheets.length; try { if (pointer.ctrlKey || pointer.metaKey) { const copy = O.copySheet(w, w.sheets[i], to); w.active = w.sheets.indexOf(copy); } else O.moveSheet(w, w.sheets[i], to); } catch (error) { A.error(error); } renderTabs(); G().paint(); ui.refresh(); },
           cancel: unmark,
         });
       });
-      t.addEventListener('dblclick', () => A.renameSheetInline(i));
-      t.addEventListener('contextmenu', (e) => { e.preventDefault(); tabMenu(e, i); });
-      tabs.appendChild(t);
+      tab.addEventListener('dblclick', () => A.renameSheetInline(i));
+      tab.addEventListener('contextmenu', (event) => { event.preventDefault(); tabMenu(event, i); });
+      tabs.appendChild(tab);
     });
     scrollToActive(tabs);
   }
-  function scrollToActive(tabs) {
-    const at = tabs.querySelector('.stab.on');
-    if (at) { const r = at.getBoundingClientRect(), pr = tabs.getBoundingClientRect(); if (r.right > pr.right || r.left < pr.left) tabs.scrollLeft += r.left - pr.left - 20; }
-  }
+  function scrollToActive(tabs) { const active = tabs.querySelector('.stab.on'); if (active) { const rect = active.getBoundingClientRect(), viewport = tabs.getBoundingClientRect(); if (rect.right > viewport.right || rect.left < viewport.left) tabs.scrollLeft += rect.left - viewport.left - 20; } }
+  A.sheetTabs = () => {
+    const w = wb(), selected = new Set(A.selectedSheetsIdx());
+    return w.sheets.map((s, index) => s.state === 'visible' ? { index, name: s.name, color: s.tabColor ? M.colorHex(w, s.tabColor, '#ECE9D8') : null, active: index === w.active, selected: selected.has(index) && index !== w.active } : null).filter(Boolean);
+  };
+  A.openSheetTabMenu = (e, i) => tabMenu(e, i);
+  A.renameSheet = (i, name) => {
+    try { O.renameSheet(wb(), wb().sheets[i], name.trim()); }
+    catch (err) { A.error(err); return false; }
+    renderTabs(); G().paint(); G().focus(); ui.refresh();
+    return true;
+  };
+  A.reorderSheet = (from, to, copy) => {
+    const w = wb(), sheet = w.sheets[from];
+    if (!sheet) return;
+    const position = to == null ? w.sheets.length : to;
+    try {
+      if (copy) { const duplicate = O.copySheet(w, sheet, position); w.active = w.sheets.indexOf(duplicate); }
+      else O.moveSheet(w, sheet, position);
+    } catch (err) { A.error(err); }
+    renderTabs(); G().paint(); ui.refresh();
+  };
   A.renderTabs = renderTabs;
   let sheetSel = null; /* grouped sheets */
   A.selectedSheetsIdx = () => (sheetSel && sheetSel.size > 1 ? Array.from(sheetSel).sort((a, b) => a - b) : [wb().active]);
@@ -479,13 +477,29 @@
   };
   function buildTabNav() {
     const nav = L.$('#tabnav');
-    const arrow = (d) => `<svg width="9" height="9" viewBox="0 0 9 9">${{ first: '<path d="M1.5 1v7" stroke="#000"/><path d="M7 1.5L3 4.5 7 7.5z" fill="#000"/>', prev: '<path d="M6.5 1.5L2.5 4.5 6.5 7.5z" fill="#000"/>', next: '<path d="M2.5 1.5L6.5 4.5 2.5 7.5z" fill="#000"/>', last: '<path d="M7.5 1v7" stroke="#000"/><path d="M2 1.5L6 4.5 2 7.5z" fill="#000"/>' }[d]}</svg>`;
     const tabs = L.$('#tabs');
-    const b = (d, tip, fn) => { const x = h('button', { type: 'button', tabindex: '-1', 'aria-label': tip, 'data-tip': tip, html: arrow(d) }); x.addEventListener('click', fn); x.addEventListener('contextmenu', (e) => { e.preventDefault(); ui.openMenu(wb().sheets.map((s, k) => (s.state === 'visible' ? { label: s.name.replace(/&/g, '&&'), raw: true, checked: () => k === wb().active, radio: true, run: () => A.activateSheet(k) } : null)).filter(Boolean), { x: e.clientX, y: e.clientY }); }); nav.appendChild(x); };
-    b('first', 'First sheet', () => { tabs.scrollLeft = 0; });
-    b('prev', 'Previous sheet', () => { tabs.scrollLeft -= 60; });
-    b('next', 'Next sheet', () => { tabs.scrollLeft += 60; });
-    b('last', 'Last sheet', () => { tabs.scrollLeft = tabs.scrollWidth; });
+    if (!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected)) {
+      const paths = {
+        first: '<path d="M1.5 1v7" stroke="#000"/><path d="M7 1.5L3 4.5 7 7.5z" fill="#000"/>',
+        prev: '<path d="M6.5 1.5L2.5 4.5 6.5 7.5z" fill="#000"/>',
+        next: '<path d="M2.5 1.5L6.5 4.5 2.5 7.5z" fill="#000"/>',
+        last: '<path d="M7.5 1v7" stroke="#000"/><path d="M2 1.5L6 4.5 2 7.5z" fill="#000"/>',
+      };
+      for (const destination of ['first', 'prev', 'next', 'last']) {
+        const label = destination[0].toUpperCase() + destination.slice(1) + ' sheet';
+        const button = h('button', { type: 'button', tabindex: '-1', 'aria-label': label, 'data-tip': label, html: `<svg width="9" height="9" viewBox="0 0 9 9">${paths[destination]}</svg>` });
+        button.addEventListener('click', () => A.scrollSheetTabs(destination));
+        button.addEventListener('contextmenu', (event) => { event.preventDefault(); A.openSheetNavigationMenu(event); });
+        nav.appendChild(button);
+      }
+    }
+    A.scrollSheetTabs = (destination) => {
+      if (destination === 'first') tabs.scrollLeft = 0;
+      else if (destination === 'prev') tabs.scrollLeft -= 60;
+      else if (destination === 'next') tabs.scrollLeft += 60;
+      else tabs.scrollLeft = tabs.scrollWidth;
+    };
+    A.openSheetNavigationMenu = (e) => ui.openMenu(wb().sheets.map((s, k) => (s.state === 'visible' ? { label: s.name.replace(/&/g, '&&'), raw: true, checked: () => k === wb().active, radio: true, run: () => A.activateSheet(k) } : null)).filter(Boolean), { x: e.clientX, y: e.clientY });
     /* the split bar between tabs and the horizontal scroll bar */
     const sp = L.$('#tabsplit');
     sp.addEventListener('pointerdown', (e) => {
@@ -643,7 +657,7 @@
   function buildStatus() {
     const sb = L.$('#statusbar');
     sbMode = h('div', { class: 'sb-cell mode', text: L.N('Ready') });
-    sbText = h('div', { class: 'sb-cell grow' });
+    sbText = h('div', { class: 'sb-cell grow', 'data-react-status': window.VO && VO.reactDirectHost ? '' : null });
     sbCalc = h('div', { class: 'sb-cell calc', 'data-tip': 'Right-click to choose the AutoCalculate function' });
     sbCalc.addEventListener('contextmenu', (e) => { e.preventDefault(); calcMenu(e); });
     sbCalc.addEventListener('click', (e) => calcMenu(e));
@@ -674,13 +688,14 @@
     const fresh = circularCells().filter((n) => !warnedCircular.has(n.cell));
     if (!fresh.length) return;
     for (const n of circularCells()) warnedCircular.add(n.cell);
-    setTimeout(() => ui.msg('Ledger cannot calculate a formula. Cell references in the formula refer to the formula\'s result, creating a circular reference.\n\nTo fix it, remove or change the reference, or turn on iterative calculation (Tools ▸ Options ▸ Calculation).', { icon: 'warn' }), 0);
+    setTimeout(() => ui.msg('Excelx cannot calculate a formula. Cell references in the formula refer to the formula\'s result, creating a circular reference.\n\nTo fix it, remove or change the reference, or turn on iterative calculation (Tools ▸ Options ▸ Calculation).', { icon: 'warn' }), 0);
   });
   const updateStatus = L.debounce(() => {
     if (!sbMode || !G().wb) return;
     const ed = L.editor;
     sbMode.textContent = ed.active ? (ed.mode === 'point' ? L.t('Point|mode') : ed.mode === 'edit' ? L.t('Edit|mode') : L.t('Enter|mode')) : L.t('Ready');
-    sbText.textContent = statusText || (wb().calcPr.mode === 'manual' && wb().needsCalc ? L.t('Calculate') : '') || (A.painter.on() ? L.t('Click on the cells to apply formatting') : '') || circularText();
+    const status = statusText || (wb().calcPr.mode === 'manual' && wb().needsCalc ? L.t('Calculate') : '') || (A.painter.on() ? L.t('Click on the cells to apply formatting') : '') || circularText();
+    if (!ui.reactStatus(status)) sbText.textContent = status;
     sbInd.END.classList.toggle('off', !G().endMode());
     /* AutoCalculate */
     const fn = A.opts.autoCalcFn || 'SUM';
@@ -1308,7 +1323,7 @@
         im.onerror = () => { URL.revokeObjectURL(url); res(null); };
         im.src = url;
       });
-      if (!png) { ui.msg('Ledger cannot read this picture.', { icon: 'warn' }); return; }
+      if (!png) { ui.msg('Excelx cannot read this picture.', { icon: 'warn' }); return; }
       data = png; ext = 'png'; type = 'image/png';
     }
     if (!w.media) w.media = new Map();
@@ -1362,7 +1377,7 @@
     } else {
       const deps = [];
       wb().graph.dependents(shx, s.r, s.c, deps);
-      if (!deps.length) { ui.msg('Ledger cannot find any dependent cells.', { icon: 'warn' }); return; }
+      if (!deps.length) { ui.msg('Excelx cannot find any dependent cells.', { icon: 'warn' }); return; }
       for (const n of deps) st.arrows.push({ from: { sheet: shx, r1: s.r, c1: s.c, r2: s.r, c2: s.c }, to: { sheet: n.sh, r1: n.r, c1: n.c, r2: n.r, c2: n.c } });
     }
     G().paint();
@@ -1528,9 +1543,9 @@
       templates: () => Object.entries(L.panes.TEMPLATES).map(([id, t]) => ({ id, name: t.name })),
     });
   };
-  /** Mount Ledger into a host that already contains its editor shell; returns an idempotent disposer. */
+  /** Mount Excelx into a host that already contains its editor shell; returns an idempotent disposer. */
   A.mount = async function (host) {
-    if (!L.createMountScope) throw new Error('Ledger requires the shared mount-scope runtime');
+    if (!L.createMountScope) throw new Error('Excelx requires the shared mount-scope runtime');
     const scope = L.createMountScope(host);
     try { await A.init(); }
     catch (error) { scope.dispose(); throw error; }
@@ -1552,7 +1567,9 @@
       const host = document.querySelector('[data-vibeoffice-engine-root]') || document.body;
       return window.VO && VO.i18n ? VO.i18n.whenReady(() => A.mount(host)) : A.mount(host);
     };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-    else setTimeout(boot, 0);
+    if (!(window.VO && VO.reactDirectHost)) {
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else setTimeout(boot, 0);
+    }
   }
 })(typeof window !== 'undefined' ? window : globalThis);

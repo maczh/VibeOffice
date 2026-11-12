@@ -13,3 +13,7 @@
 - [x] Provider documentation describes the CORS requirements for browser requests.
 - [x] Conditional saves detect a changed remote revision; providers without revision metadata report that concurrent changes cannot be detected.
 - [x] Fake-provider tests can exercise provider behavior without connecting to production services.
+
+## Comments
+
+- 2026-11-12: Extended URL and WebDAV security regression coverage: credential-bearing URLs and WebDAV base URLs are rejected, and a sibling path such as `/docs-escape/` cannot pass a `/docs/` base-path boundary check. Workspace package tests pass (17/17), all workspace builds pass, and `git diff --check` is clean.

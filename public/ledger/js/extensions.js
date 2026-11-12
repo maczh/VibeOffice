@@ -1,4 +1,4 @@
-/* Ledger — retained worksheet extensions belong to their rules and sparkline groups. */
+/* Excelx — retained worksheet extensions belong to their rules and sparkline groups. */
 (function (root) {
   'use strict';
   const L = root.L, K = L.opc, E = (L.sheetExtensions = {}), N = K.NS;

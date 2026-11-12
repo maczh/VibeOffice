@@ -1,4 +1,4 @@
-/* Ledger — AutoFilter (Data ▸ Filter): the Excel 2003 drop-down list, Custom AutoFilter, Top 10, Advanced Filter helpers. */
+/* Excelx — AutoFilter (Data ▸ Filter): the Excel 2003 drop-down list, Custom AutoFilter, Top 10, Advanced Filter helpers. */
 (function (root) {
   'use strict';
   const L = root.L;
@@ -274,7 +274,8 @@
       return el;
     });
     const setAct = (i) => { if (rows[act]) rows[act].classList.remove('act'); act = i; if (rows[act]) { rows[act].classList.add('act'); rows[act].scrollIntoView({ block: 'nearest' }); } };
-    function close() { box.remove(); document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', keys, true); G().focus(); }
+    let timer = 0, cancelTimer = () => {}, removeOutside = () => {}, removeKeys = () => {};
+    function close() { clearTimeout(timer); cancelTimer(); removeOutside(); removeKeys(); box.remove(); G().focus(); }
     function outside(e) { if (!box.contains(e.target) && e.target !== btn) close(); }
     function keys(e) {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
@@ -295,14 +296,20 @@
       if (t === '…') return;
       FL.setCriterion(x, col, { values: [t] });
     }
-    document.body.appendChild(box);
+    L.domHost().appendChild(box);
     const bh = box.getBoundingClientRect();
     let left = Math.min(r.right - bh.width, window.innerWidth - bh.width - 2);
     left = Math.max(2, Math.min(left, q.x + L.$('#gridwrap').getBoundingClientRect().left));
     let top = r.bottom;
     if (top + bh.height > window.innerHeight - 4) top = Math.max(4, r.top - bh.height);
     Object.assign(box.style, { left: left + 'px', top: top + 'px' });
-    setTimeout(() => { document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', keys, true); const ci = items.indexOf(cur); setAct(ci >= 0 ? ci : 0); }, 0);
+    cancelTimer = L.addMountCleanup ? L.addMountCleanup(() => clearTimeout(timer)) : () => {};
+    timer = setTimeout(() => {
+      cancelTimer(); cancelTimer = () => {};
+      removeOutside = L.addMountListener ? L.addMountListener(document, 'pointerdown', outside, true) : (() => { document.addEventListener('pointerdown', outside, true); return () => document.removeEventListener('pointerdown', outside, true); })();
+      removeKeys = L.addMountListener ? L.addMountListener(document, 'keydown', keys, true) : (() => { document.addEventListener('keydown', keys, true); return () => document.removeEventListener('keydown', keys, true); })();
+      const ci = items.indexOf(cur); setAct(ci >= 0 ? ci : 0);
+    }, 0);
   };
 
   /* ------------------------------------------------------------ dialogs */

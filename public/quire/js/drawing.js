@@ -1,4 +1,4 @@
-/* Quire — drawing layer: inline and floating pictures, AutoShapes, text boxes, groups, charts, WordArt,
+/* Wordx — drawing layer: inline and floating pictures, AutoShapes, text boxes, groups, charts, WordArt,
  * watermarks; positioning with Word's wrapping styles; object selection, moving and resizing.
  */
 (function () {

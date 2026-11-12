@@ -1,4 +1,4 @@
-/* Ledger — table/column identities and retained external query definitions. */
+/* Excelx — table/column identities and retained external query definitions. */
 (function (root) {
   'use strict';
   const L = root.L, K = L.opc, F = L.formula, T = (L.tableKeep = {}), N = K.NS;

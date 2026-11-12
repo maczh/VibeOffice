@@ -217,7 +217,7 @@
 
 /* the UI's language (<html lang>, common/lang.js): Japanese, Korean and Chinese text in the fonts made for those UIs, after each
    look's own fonts, which have no such letters */
-:root:lang(ja) { --ui-cjk: "Meiryo UI", "Yu Gothic UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", sans-serif; }
-:root:lang(ko) { --ui-cjk: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR", sans-serif; }
-:root:lang(zh-CN) { --ui-cjk: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", sans-serif; }
-:root:lang(zh-Hant) { --ui-cjk: "Microsoft JhengHei UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans CJK TC", "Noto Sans TC", sans-serif; }
+:root:lang(ja), .vibeoffice-legacy-root:lang(ja) { --ui-cjk: "Meiryo UI", "Yu Gothic UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", sans-serif; }
+:root:lang(ko), .vibeoffice-legacy-root:lang(ko) { --ui-cjk: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR", sans-serif; }
+:root:lang(zh-CN), .vibeoffice-legacy-root:lang(zh-CN) { --ui-cjk: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", sans-serif; }
+:root:lang(zh-Hant), .vibeoffice-legacy-root:lang(zh-Hant) { --ui-cjk: "Microsoft JhengHei UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans CJK TC", "Noto Sans TC", sans-serif; }

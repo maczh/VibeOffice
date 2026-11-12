@@ -106,6 +106,7 @@
     const { menu, ribbon, toolbar, actions } = places();
     const out = [], seen = new Set();
     for (const id of Object.keys(ui.cmds)) {
+      try {
       const c = ui.cmds[id];
       if (!c.label || typeof c.label !== 'string') continue;
       if (layout === 'ribbon' && id.startsWith('tb_')) continue;   // toolbars are not shown with the ribbon
@@ -121,6 +122,7 @@
       if (seen.has(key)) continue;
       seen.add(key);
       out.push({ id, label, alias, keys: (c.keys || '').toLowerCase(), path, tip: norm(c.tip || ''), icon: c.icon, placed: !!path, toggle: id.startsWith('tb_') });
+      } catch (_error) { /* a stale command from another mounted app must not break the active search */ }
     }
     if (layout !== 'ribbon') for (const a of actions) {
       const key = a.label.toLowerCase() + '|' + a.path.join('/');
@@ -182,6 +184,7 @@
     const all = entries(layout);
     return ids.map((id) => all.find((e) => e.id === id)).filter(Boolean).map((e) => ({ id: e.id, label: e.label, where: e.path ? e.path.join(' ▸ ') : '', enabled: enabledOf(e), entry: e }));
   }
+  ui.searchResults = (query, layout) => query ? ui.searchCommands(query, layout) : recentList(layout);
   function remember(id) {
     if (!id || !L.store) return;
     L.store.set('searchRecent', [id].concat(L.store.get('searchRecent', []).filter((x) => x !== id)).slice(0, RECENT));
@@ -207,6 +210,7 @@
   let uid = 0;
 
   ui.searchBox = function () {
+    if (root.__VIBE_OFFICE_DIRECT_HOST__) return h('div', { class: 'cmd-search cmd-search-react-owned', 'aria-hidden': 'true', hidden: true });
     const listId = 'cs-list-' + ++uid;
     const inp = h('input', { type: 'search', placeholder: 'Search commands', 'aria-label': 'Search commands', 'data-tip': 'Search commands (Alt+Q)', spellcheck: 'false', autocomplete: 'off', role: 'combobox', 'aria-expanded': 'false', 'aria-controls': listId, 'aria-autocomplete': 'list' });
     const box = h('div', { class: 'cmd-search', role: 'search', html: SEARCH_ICON });
@@ -237,7 +241,7 @@
       if (!pop) {
         pop = h('div', { class: 'menu cs-pop', id: listId, role: 'listbox', 'aria-label': 'Commands' });
         pop.addEventListener('pointerdown', (e) => e.preventDefault());   // the box keeps the focus
-        document.body.append(pop);
+        (L.domHost ? L.domHost() : document.body).append(pop);
       }
       L.clear(pop);
       rows = [];
@@ -277,7 +281,7 @@
       else if (e.key === 'Tab') close();
       e.stopPropagation();   // typing here is not a shortcut for the document
     });
-    window.addEventListener('resize', close);
+    L.addMountListener ? L.addMountListener(window, 'resize', close) : window.addEventListener('resize', close);
     return box;
   };
 
@@ -285,12 +289,16 @@
   ui.searchInput = () => L.$$('.cmd-search input').find((x) => x.getClientRects().length) || null;
 
   /* Alt+Q, as in Office: to the box of the layout in use */
-  if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => {
+  if (typeof document !== 'undefined') {
+    const focusSearch = (e) => {
     if (!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey || (e.code !== 'KeyQ' && (e.key || '').toLowerCase() !== 'q')) return;
     const inp = ui.searchInput();
     if (!inp) return;
     e.preventDefault();
     e.stopPropagation();
     inp.focus();
-  }, true);
+    };
+    if (L.addMountListener) L.addMountListener(document, 'keydown', focusSearch, true);
+    else document.addEventListener('keydown', focusSearch, true);
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

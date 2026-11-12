@@ -1,4 +1,4 @@
-/* Ledger — financial functions: annuities, cash flows, depreciation, bonds and securities. */
+/* Excelx — financial functions: annuities, cash flows, depreciation, bonds and securities. */
 (function (root) {
   'use strict';
   const L = root.L;

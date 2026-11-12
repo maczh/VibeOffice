@@ -10,7 +10,8 @@
   'use strict';
   const VO = window.VO || (window.VO = {});
   const doc = typeof document !== 'undefined' ? document : null;
-  const tag = (doc && doc.documentElement.getAttribute('lang')) || 'en';
+  const directRoot = typeof window !== 'undefined' ? window.__VIBE_OFFICE_DIRECT_HOST__?.root : null;
+  const tag = (directRoot && directRoot.isConnected ? directRoot : doc && doc.documentElement).getAttribute('lang') || 'en';
   const lang = VO.lang.normalize(tag) || 'en';
 
   /* qps: each string of the English catalog (i18n/en.json, tools/i18n.mjs) mechanically changed, as a complete

@@ -1,7 +1,7 @@
-/* Lectern — drawing of charts read from PowerPoint 2007-and-later files (chart model v2, see chartModel in
+/* PPTX — drawing of charts read from PowerPoint 2007-and-later files (chart model v2, see chartModel in
  * pptx-read.js). Follows Office's conventions: automatic axis scaling, gap width and overlap, markers,
  * data labels, secondary axes, reversed and logarithmic axes, manual layout of the plot area and legend,
- * pie explosion, doughnut holes, radar webs and bubbles. Charts made in Lectern itself (model v1) keep the
+ * pie explosion, doughnut holes, radar webs and bubbles. Charts made in PPTX itself (model v1) keep the
  * PowerPoint 2003 look drawn by charts.js. */
 (function () {
   'use strict';

@@ -92,13 +92,13 @@
     pop.style.left = Math.max(2, Math.min(r.left, window.innerWidth - 320)) + 'px';
     pop.style.top = r.bottom + 'px';
     pop.append(...grp.querySelectorAll(':scope > .rb-body, :scope > .rb-label'));
-    document.body.append(pop);
+    (L.domHost ? L.domHost() : document.body).append(pop);
     const away = (e) => { if (!pop.contains(e.target) && !e.target.closest('.menu')) closeFold(); };
     const done = (e) => { if (e.target.closest('.tb-btn:not(.tb-drop)')) setTimeout(closeFold, 0); };
     const esc = (e) => { if (e.key === 'Escape' && !document.querySelector('.menu')) { e.stopPropagation(); closeFold(); btn.focus(); } };
     foldOpen = { grp, pop, away, esc };
-    document.addEventListener('pointerdown', away, true);
-    document.addEventListener('keydown', esc, true);
+    L.addMountListener ? L.addMountListener(document, 'pointerdown', away, true) : document.addEventListener('pointerdown', away, true);
+    L.addMountListener ? L.addMountListener(document, 'keydown', esc, true) : document.addEventListener('keydown', esc, true);
     pop.addEventListener('click', done);
     ui.refresh();
   }
@@ -153,6 +153,10 @@
 
   /** show a tab ('home', 'insert', … or a contextual tab's id) */
   RB.select = function (id) {
+    if (!el && root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root) {
+      root.VO.reactDirectHost.root.dispatchEvent(new root.CustomEvent('vibeoffice-react-ribbon-select', { detail: { id }, bubbles: true }));
+      return;
+    }
     if (!el) return;
     if (!allTabs().some((t) => t.id === id)) id = spec.tabs[0].id;
     cur = id;
@@ -166,6 +170,10 @@
   /* collapsed (Ctrl+F1, a double-click on a tab, the pin): only the tabs show; a tab opens its panel over the
      document until a command runs or the pointer goes elsewhere */
   RB.collapse = function (on) {
+    if (!el && root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root) {
+      root.VO.reactDirectHost.root.dispatchEvent(new root.CustomEvent('vibeoffice-react-ribbon-collapse', { detail: { collapsed: on }, bubbles: true }));
+      return;
+    }
     if (!el) return;
     on = on == null ? !el.classList.contains('collapsed') : !!on;
     el.classList.toggle('collapsed', on);
@@ -179,7 +187,7 @@
     if (peekAway) { document.removeEventListener('pointerdown', peekAway, true); peekAway = null; }
     if (on) {
       peekAway = (e) => { if (!el.contains(e.target) && !e.target.closest('.menu, .rb-pop')) peek(false); };
-      document.addEventListener('pointerdown', peekAway, true);
+      L.addMountListener ? L.addMountListener(document, 'pointerdown', peekAway, true) : document.addEventListener('pointerdown', peekAway, true);
     }
   }
   /* contextual tabs follow the selection: re-checked after every command bar refresh */
@@ -233,7 +241,7 @@
     const b = h('span', { class: 'rb-keytip' }, key);
     b.style.left = r.left + r.width / 2 + 'px';
     b.style.top = r.bottom - 7 + 'px';
-    document.body.append(b);
+    (L.domHost ? L.domHost() : document.body).append(b);
     return b;
   }
   /* the access key of the label as shown (common/i18n.js) */
@@ -249,7 +257,7 @@
     }
     const map = assign(items);
     tips = { level, map, buf: '', els: [...map].map(([k, it]) => badge(it.el, k)) };
-    document.addEventListener('keydown', tipKey, true);
+    L.addMountListener ? L.addMountListener(document, 'keydown', tipKey, true) : document.addEventListener('keydown', tipKey, true);
   }
   function clearTips(keepListener) {
     if (!tips) return;
@@ -297,13 +305,14 @@
     if (L.store.get('ribbonCollapsed', false)) el.classList.add('collapsed');
     RB.select(cur);
     L.bus.on('ui-refresh', updateContext);
-    window.addEventListener('resize', L.rafThrottle(fit));
+    L.addMountListener ? L.addMountListener(window, 'resize', L.rafThrottle(fit)) : window.addEventListener('resize', L.rafThrottle(fit));
     /* a click on a command closes a panel opened over the document */
     panelEl.addEventListener('click', (e) => { if (el.classList.contains('peek') && e.target.closest('.tb-btn:not(.tb-drop)')) setTimeout(() => peek(false), 0); });
-    document.addEventListener('keydown', (e) => {
+    const keydown = (e) => {
       if (!isRibbon()) return;
       if (e.key === 'F1' && e.ctrlKey && !e.altKey && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); RB.collapse(); }
-    }, true);
+    };
+    L.addMountListener ? L.addMountListener(document, 'keydown', keydown, true) : document.addEventListener('keydown', keydown, true);
   }
   /* ---------------------------------------------------------------- tool panels in the task pane
      The contextual sets about a selected object (Picture Tools, Drawing Tools, …) are also task-pane panels, in
@@ -360,8 +369,19 @@
   /** after the app's toolbars exist; the ribbon is built the first time a ribbon look is in use */
   RB.init = function () {
     if (!L.ribbonSpec) return;
+    const directRoot = () => root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot()) {
+      const publish = () => {
+        const hostRoot = directRoot();
+        if (!hostRoot || !hostRoot.isConnected) return;
+        spec = L.ribbonSpec();
+        hostRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-ribbon', { detail: { spec }, bubbles: true }));
+      };
+      publish();
+      return;
+    }
     if (isRibbon()) build();
     L.onLook(() => { if (isRibbon() && !el) build(); else if (isRibbon()) fit(); clearTips(); ui.refresh(); });
   };
-  RB.built = () => !!el;
+  RB.built = () => !!el || !!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root);
 })(typeof window !== 'undefined' ? window : globalThis);

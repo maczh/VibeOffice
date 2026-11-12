@@ -1,4 +1,4 @@
-/* Ledger — formula language.
+/* Excelx — formula language.
  * Tokeniser and Pratt parser for Excel A1 formulas → AST; serialiser; reference arithmetic used by
  * copy/fill, insert/delete rows and columns, moves and sheet renames.
  * References keep absolute positions (0-based) plus $ flags, so a formula can be re-printed for any cell.

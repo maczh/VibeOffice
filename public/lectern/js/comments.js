@@ -1,4 +1,4 @@
-/* Lectern — comment parts belong to slides; authors are an implicit dependency. */
+/* PPTX — comment parts belong to slides; authors are an implicit dependency. */
 (function () {
   'use strict';
   const L = window.L, K = L.opc, X = L.xmlTree, C = (L.comments = {}), N = K.NS;

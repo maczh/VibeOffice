@@ -1,4 +1,4 @@
-/* Lectern — slide renderer.
+/* PPTX — slide renderer.
  * Builds DOM for a slide in a 1pt = 1px coordinate space; callers scale it
  * with CSS transforms (editor zoom, thumbnails, slide show).
  */

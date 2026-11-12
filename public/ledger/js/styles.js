@@ -1,4 +1,4 @@
-/* Ledger — list (table) styles: the built-in Light / Medium / Dark table styles drawn from the theme colours,
+/* Excelx — list (table) styles: the built-in Light / Medium / Dark table styles drawn from the theme colours,
  * and custom table styles stored in the workbook. L.tstyle.at(sheet, r, c) → {fill, font, border} | null */
 (function (root) {
   'use strict';

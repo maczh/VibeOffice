@@ -1,4 +1,4 @@
-/* Lectern — unsupported details stay with the property or object that owns them. */
+/* PPTX — unsupported details stay with the property or object that owns them. */
 (function () {
   'use strict';
   const L = window.L, K = L.opc, X = L.xmlTree, Q = (L.properties = {}), N = K.NS;

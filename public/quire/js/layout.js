@@ -1,4 +1,4 @@
-/* Quire — layout: pagination (Print Layout), flow views (Normal, Web, Outline), headers/footers,
+/* Wordx — layout: pagination (Print Layout), flow views (Normal, Web, Outline), headers/footers,
  * columns, footnotes/endnotes, table row splitting, widow/orphan and keep rules, incremental relayout,
  * and the mapping between DOM positions and model positions.
  */

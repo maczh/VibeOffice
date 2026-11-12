@@ -1,4 +1,4 @@
-/* Ledger — dialogs, part 1: Format Cells, rows / columns / cells / sheets, Find and Replace, Go To,
+/* Excelx — dialogs, part 1: Format Cells, rows / columns / cells / sheets, Find and Replace, Go To,
  * Paste Special, Series, Save As, Properties, Zoom, Symbol, comments, Options, Protection, Hyperlink, About. */
 (function (root) {
   'use strict';
@@ -502,7 +502,7 @@
       const q = query();
       if (!q.what) return null;
       const hits = O.findAll(w, q);
-      if (!hits.length) { ui.msg("Ledger cannot find the data you're searching for.", { icon: 'info' }); return null; }
+      if (!hits.length) { ui.msg("Excelx cannot find the data you're searching for.", { icon: 'info' }); return null; }
       const s = G().sel(), cur = { si: w.active, r: s.r, c: s.c };
       const key = (x) => [w.sheets.indexOf(x.sh), q.by === 'cols' ? x.c : x.r, q.by === 'cols' ? x.r : x.c];
       const ck = [cur.si, q.by === 'cols' ? cur.c : cur.r, q.by === 'cols' ? cur.r : cur.c];
@@ -534,7 +534,7 @@
     d = ui.dialog({
       title: 'Find and Replace', width: 520, modeless: true, body: h('div', { class: 'col' }, tabsEl, results, status),
       buttons: [
-        { label: 'Replace &All', onClick: () => { const q = query(); const hits = O.findAll(w, Object.assign({}, q, { lookIn: 'formulas' })); tryRun(() => { const n = O.replaceAll(w, q, hits); ui.msg(n === 1 ? L.t('Ledger has completed its search and has made {0} replacement.', n) : L.t('Ledger has completed its search and has made {0} replacements.', n), { icon: 'info' }); }); return false; } },
+        { label: 'Replace &All', onClick: () => { const q = query(); const hits = O.findAll(w, Object.assign({}, q, { lookIn: 'formulas' })); tryRun(() => { const n = O.replaceAll(w, q, hits); ui.msg(n === 1 ? L.t('Excelx has completed its search and has made {0} replacement.', n) : L.t('Excelx has completed its search and has made {0} replacements.', n), { icon: 'info' }); }); return false; } },
         { label: '&Replace', onClick: () => { const q = query(); const s = G().sel(); const here = O.findAll(w, Object.assign({}, q, { lookIn: 'formulas', within: 'sheet', range: { r1: s.r, c1: s.c, r2: s.r, c2: s.c } })); if (here.length) tryRun(() => O.replaceAll(w, q, here)); findNext(false); return false; } },
         { label: 'F&ind All', onClick: () => { findAllBtn(); return false; } },
         { label: '&Find Next', primary: true, onClick: () => { findNext(false); return false; } },
@@ -748,21 +748,22 @@
     const s = sh(), w = wb();
     const q = G().cellRect(r, c);
     const wrapR = L.$('#gridwrap').getBoundingClientRect();
-    const author = (A().opts.userName || 'Ledger User');
+    const author = (A().opts.userName || 'Excelx User');
     const box = h('div', { class: 'cmt-edit' });
     const ta = h('textarea', { 'aria-label': 'Comment', spellcheck: 'true' });
     const initialText = cm ? L.threads.editText(cm) || '' : author + ':\n';
     ta.value = initialText;
     box.appendChild(ta);
     Object.assign(box.style, { left: (wrapR.left + q.x + q.w + 12) + 'px', top: Math.max(wrapR.top + 2, wrapR.top + q.y - 6) + 'px', width: (cm && cm.w ? cm.w * 96 / 72 : 150) + 'px', height: (cm && cm.h ? cm.h * 96 / 72 : 80) + 'px' });
-    document.body.appendChild(box);
+    L.domHost().appendChild(box);
     ta.focus();
     if (!cm) ta.setSelectionRange(ta.value.length, ta.value.length);
     let done = false;
+    let timer = 0, cancelTimer = () => {}, removeOutside = () => {};
     const finish = (save) => {
       if (done) return; done = true;
       box.remove();
-      document.removeEventListener('pointerdown', outside, true);
+      clearTimeout(timer); cancelTimer(); removeOutside();
       if (save) {
         const text = ta.value;
         const same = cm && initialText === text;
@@ -771,7 +772,11 @@
       G().paint(); G().syncObjects(); G().focus();
     };
     const outside = (e) => { if (!box.contains(e.target)) finish(true); };
-    setTimeout(() => document.addEventListener('pointerdown', outside, true), 0);
+    cancelTimer = L.addMountCleanup ? L.addMountCleanup(() => clearTimeout(timer)) : () => {};
+    timer = setTimeout(() => {
+      cancelTimer(); cancelTimer = () => {};
+      removeOutside = L.addMountListener ? L.addMountListener(document, 'pointerdown', outside, true) : (() => { document.addEventListener('pointerdown', outside, true); return () => document.removeEventListener('pointerdown', outside, true); })();
+    }, 0);
     ta.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); finish(true); } });
   };
 
@@ -991,7 +996,7 @@
     const opts = h('div', { class: 'col' }, ui.check('Show Standard and Formatting toolbars on &two rows', true, null), ui.check('Show Screen&Tips on toolbars', true, null), ui.check('Show shortcut &keys in ScreenTips', true, null));
     ui.dialog({ title: 'Customize', width: 380, body: ui.tabs([{ label: 'Toolbars', body: box }, { label: 'Options', body: opts }]), buttons: [{ label: 'Close', primary: true }] });
   };
-  D.about = () => ui.about({ name: 'Ledger', text: [
+  D.about = () => ui.about({ name: 'Excelx', text: [
     L.N('A spreadsheet that runs entirely in your browser. Workbooks are read and written as Office Open XML (.xlsx, .xlsm), CSV and text; nothing is uploaded.'),
     'The calculation engine implements more than 450 worksheet functions, array and dynamic-array formulas, structured references and iterative calculation.'] });
 })(typeof window !== 'undefined' ? window : globalThis);

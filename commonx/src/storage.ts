@@ -23,11 +23,13 @@ export interface WebDavOptions {
 export function createWebDavProvider(options: WebDavOptions): RemoteStorageProvider {
   const base = new URL(options.baseUrl);
   const allowed = new Set(options.allowedOrigins.map((origin) => new URL(origin).origin));
-  if (!['http:', 'https:'].includes(base.protocol) || !allowed.has(base.origin)) throw new TypeError('WebDAV origin is not allowed');
+  if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || !allowed.has(base.origin)) throw new TypeError('WebDAV origin is not allowed');
   const fetcher = options.fetcher ?? fetch;
   const urlFor = (id = '') => {
     const url = new URL(id, base);
-    if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) throw new TypeError('WebDAV path escaped its configured base URL');
+    const basePath = base.pathname.endsWith('/') ? base.pathname : `${base.pathname}/`;
+    const inBase = url.pathname === base.pathname.replace(/\/$/, '') || url.pathname.startsWith(basePath);
+    if (url.origin !== base.origin || url.username || url.password || !inBase) throw new TypeError('WebDAV path escaped its configured base URL');
     return url;
   };
   const request = async (url: URL, method: string, headers: Record<string, string> = {}, body?: BodyInit, signal?: AbortSignal) => {
@@ -80,7 +82,7 @@ export function createUrlReadProvider(allowedOrigins: readonly string[], fetcher
   const allowed = new Set(allowedOrigins.map((origin) => new URL(origin).origin));
   return { async read(id, signal) {
     const url = new URL(id);
-    if (!['http:', 'https:'].includes(url.protocol) || !allowed.has(url.origin)) throw new TypeError('URL origin is not allowed');
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !allowed.has(url.origin)) throw new TypeError('URL origin is not allowed');
     const response = await fetcher(url, { ...(signal ? { signal } : {}) });
     if (!response.ok) throw new Error(`URL open failed (${response.status})`);
     return { file: { id: url.href, name: decodeURIComponent(url.pathname.split('/').pop() || 'Document'), ...(response.headers.get('ETag') ? { revision: { value: response.headers.get('ETag')!, kind: 'etag' as const } } : {}) }, blob: await response.blob() };

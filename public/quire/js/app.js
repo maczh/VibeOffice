@@ -1,4 +1,4 @@
-/* Quire — application controller: window chrome, views, document lifecycle, keyboard, wiring. */
+/* Wordx — application controller: window chrome, views, document lifecycle, keyboard, wiring. */
 (function () {
   'use strict';
   const L = window.L, D = L.D, LY = L.layout, E = L.ed, O = L.O;
@@ -24,7 +24,7 @@
     showMarks: false, marks: { tabs: false, spaces: false, para: false, hidden: false, all: false }, textBoundaries: true, fieldShading: 'selected', bookmarks: false,
     smartQuotes: true, autocorrect: true, autoFormat: true, capSentence: true, autoBullets: true, autoNumbers: true, autoBorders: true, autoHeadings: false, autoUrl: true, ordinals: true, fractions: true, dashes: true,
     spell: true, unit: (L.locale && L.locale.get().unit) || 'in', recent: [], zoom: 1, view: 'print', balloons: true, pasteOptions: true, dragDrop: true, smartCut: true, typingReplaces: true,
-    userName: 'Quire User', userInitials: 'QU', markupMode: 'markup',
+    userName: 'Wordx User', userInitials: 'WX', markupMode: 'markup',
   };
   const A = (L.app = Object.assign(L.app || {}, {
     view: 'print', fileName: 'Document1', fileType: 'docx', saved: false, untitled: 1, opts: L.clone(DEFAULT_OPTS),
@@ -40,12 +40,12 @@
   A.applyOpts = () => {
     L.domHost().classList.toggle('bluebg', !!A.opts.blueBg);
     D.unit = A.opts.unit || 'in';
-    L.store.set('userName', A.opts.userName || 'Quire User');
+    L.store.set('userName', A.opts.userName || 'Wordx User');
     L.store.set('userInitials', A.opts.userInitials || '');
     L.$('#statusbar').hidden = !A.opts.statusBar;
     LY.opts.textBoundaries = A.opts.textBoundaries !== false;
     LY.opts.showBookmarks = !!A.opts.bookmarks;
-    LY.root.spellcheck = false; /* Quire draws its own spelling and grammar underlines */
+    LY.root.spellcheck = false; /* Wordx draws its own spelling and grammar underlines */
     if (L.spell) L.spell.refreshSoon(0);
     LY.root.classList.toggle('fshade', A.opts.fieldShading === 'always');
     A.updateRulers();
@@ -461,6 +461,7 @@
       rec: cell('flag', 'Record macro'), trk: cell('flag act', 'Track Changes (double-click to toggle)'), ext: cell('flag act', 'Extend selection'), ovr: cell('flag act', 'Overtype (double-click to toggle)'),
       lang: cell('act', L.N('Language')), spell: cell('act sb-spell', 'Spelling and grammar status'), msg: cell('grow'),
     };
+    if (window.VO && VO.reactDirectHost) A.sb.msg.dataset.reactStatus = '';
     A.sb.rec.textContent = L.t('REC'); A.sb.trk.textContent = L.t('TRK'); A.sb.ext.textContent = L.t('EXT'); A.sb.ovr.textContent = L.t('OVR');
     A.sb.lang.textContent = A.langName('en-US');
     A.sb.spell.innerHTML = '<svg width="18" height="14" viewBox="0 0 18 14"><rect x="1.5" y="1.5" width="11" height="11" fill="#fff" stroke="#556"/><path d="M3 4h7M3 6.5h7M3 9h5" stroke="#889"/><path d="M10 9l2.5 3 4.5-7" fill="none" stroke="#2f9a3a" stroke-width="1.6"/></svg>';
@@ -486,7 +487,7 @@
     L.addMountListener(A.sb.page, 'dblclick', () => ui.exec('goTo'));
     sb.append(A.sb.page, A.sb.sec, A.sb.pages, A.sb.at, A.sb.ln, A.sb.col, A.sb.rec, A.sb.trk, A.sb.ext, A.sb.ovr, A.sb.lang, A.sb.spell, A.sb.msg);
   }
-  A.status = (msg, ms) => { if (!A.sb) return; A.sb.msg.textContent = L.t(msg); clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sb.msg.textContent = ''; }, ms || 4000); };
+  A.status = (msg, ms) => { if (!A.sb) return; const text = L.t(msg); if (ui.reactStatus(text, ms || 4000)) return; A.sb.msg.textContent = text; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sb.msg.textContent = ''; }, ms || 4000); };
   A.updateStatus = L.debounce(function () {
     if (!A.sb) return;
     const d = doc();
@@ -548,7 +549,7 @@
     }
     return { ln, col };
   };
-  A.updateTitle = () => { document.title = `${L.file.titled(A.fileName)} - Quire`; };
+  A.updateTitle = () => { document.title = `${L.file.titled(A.fileName)} - ${window.VO?.oneDocument ? 'Quire' : 'Wordx'}`; };
 
   /* ================= rulers ================= */
   A.updateRulers = function () {
@@ -847,7 +848,7 @@
     if (!d.main.blocks.length) d.main.blocks.push(D.para());
     return d;
   };
-  /* what Quire saves, for the desktop app's Save dialog (L.file); the document types are saves, the rest exports */
+  /* what Wordx saves, for the desktop app's Save dialog (L.file); the document types are saves, the rest exports */
   L.file.types = [{ id: 'docx', label: L.N('Word Document (*.docx)'), ext: ['docx'] }, { id: 'docm', label: L.N('Word Macro-Enabled Document (*.docm)'), ext: ['docm'] },
     { id: 'dotx', label: L.N('Word Template (*.dotx)'), ext: ['dotx'] }, { id: 'dotm', label: L.N('Word Macro-Enabled Template (*.dotm)'), ext: ['dotm'] },
     { id: 'html', label: L.N('Single File Web Page (*.htm)'), ext: ['htm', 'html'] }, { id: 'rtf', label: L.N('Rich Text Format (*.rtf)'), ext: ['rtf'] },
@@ -860,7 +861,7 @@
     return A.exportAs(A.fileType || 'docx', A.fileName, L.file.native() ? 'save' : undefined);
   };
   A.saveAs = function () {
-    if (window.VO && VO.reactHost) return A.exportAs(DOC_TYPES.includes(A.fileType) ? A.fileType : 'docx', A.fileName);
+    if (window.VO && VO.reactHost) return A.exportAs(DOC_TYPES.includes(A.fileType) ? A.fileType : 'docx', A.fileName, 'react-save-as');
     /* the desktop app: the system's Save dialog picks the name and type, then the document is written there */
     if (L.file.native()) return (async () => {
       const c = await L.file.choose('saveAs', DOC_TYPES.includes(A.fileType) ? A.fileType : 'docx', A.fileName);
@@ -890,7 +891,7 @@
       if (L.fields && L.fields.beforeSave) L.fields.beforeSave();
       let blob, ext = type;
       d.props.modified = new Date().toISOString();
-      d.props.lastModifiedBy = A.opts.userName || 'Quire User';
+      d.props.lastModifiedBy = A.opts.userName || 'Wordx User';
       if (/^(docx|docm|dotx|dotm)$/.test(type)) {
         d.props.revision = (d.props.revision || 0) + 1;
         blob = await L.docx.write(d, { stats: A.docStats(), format: type });
@@ -910,7 +911,7 @@
           if (r === 0) {
             type = ext = 'mdzip';
             /* the desktop app: a .zip is another file, so the Save dialog asks again */
-            if (how) { const c = await L.file.choose('saveAs', 'mdzip', name, ['mdzip']); if (!c) return 'declined'; name = c.name; how = 'chosen'; }
+            if (how && how !== 'react-save-as') { const c = await L.file.choose('saveAs', 'mdzip', name, ['mdzip']); if (!c) return 'declined'; name = c.name; how = 'chosen'; }
             else if (A.fileType === 'md') A.fileType = 'mdzip';
           }
           ui.busy(true, 'Saving...');
@@ -926,7 +927,7 @@
       if (!blob) return;
       const losses = L.opc.formats[type] ? await ui.compatibility(d, blob.dropped) : [];
       if (losses === null) { if (how === 'chosen') L.file.cancel(); return 'declined'; }
-      const w = how ? await L.file.write(blob, how, { type, name: `${name}.${ext}` }) : { result: await L.saveFile(`${name}.${ext}`, blob) };
+      const w = how === 'react-save-as' ? { result: await L.saveFileAs(`${name}.${ext}`, blob) } : how ? await L.file.write(blob, how, { type, name: `${name}.${ext}` }) : { result: await L.saveFile(`${name}.${ext}`, blob) };
       const r = w.result;
       if (w.name) name = w.name.replace(/\.[^.]+$/, '');   // as the Save dialog left it
       if (r === 'saved') L.opc.acknowledge(d, losses);
@@ -1345,9 +1346,9 @@
     const P = (text, pPr, rPr) => D.para(text ? [D.text(text, rPr || {})] : [], pPr || {});
     const bl = d.main.blocks;
     bl.length = 0;
-    d.props.title = 'Welcome to Quire';
-    d.props.creator = 'Quire';
-    bl.push(P('Welcome to Quire', { style: 'Title' }));
+    d.props.title = 'Welcome to Wordx';
+    d.props.creator = 'Wordx';
+    bl.push(P('Welcome to Wordx', { style: 'Title' }));
     bl.push(P('A word processor in the spirit of Word — it opens and saves real .docx files.', { style: 'Subtitle' }, { i: true }));
     bl.push(P('Getting around', { style: 'Heading1' }));
     bl.push(D.para([D.text('Type anywhere on this page. Everything works the way you remember: '), D.text('bold', { b: true }), D.text(', '), D.text('italic', { i: true }), D.text(', '), D.text('underline', { u: 'single' }), D.text(', '), D.text('highlighting', { hl: 'yellow' }), D.text(', '), D.text('colors', { color: 'C00000' }), D.text(', styles, bullets, numbering, tables, headers and footers, footnotes, comments, tracked changes, fields and more.')], { jc: 'both' }));
@@ -1370,7 +1371,7 @@
     bl.push(fp);
     bl.push(P(''));
     /* header & footer with page numbers */
-    d.hf.h1 = { kind: 'hdr', id: 'h1', blocks: [D.para([D.text('Quire'), D.item('tab'), D.item('tab'), D.text('Sample document')], { style: 'Header' })] };
+    d.hf.h1 = { kind: 'hdr', id: 'h1', blocks: [D.para([D.text('Wordx'), D.item('tab'), D.item('tab'), D.text('Sample document')], { style: 'Header' })] };
     const ftr = D.para([D.item('tab'), D.text('Page ')], { style: 'Footer' });
     ftr.runs.push(D.item('fb', { fid: 'f2', instr: ' PAGE ' }), D.item('fs', { fid: 'f2' }), D.text('1'), D.item('fe', { fid: 'f2' }), D.text(' of '), D.item('fb', { fid: 'f3', instr: ' NUMPAGES ' }), D.item('fs', { fid: 'f3' }), D.text('1'), D.item('fe', { fid: 'f3' }));
     d.hf.f1 = { kind: 'ftr', id: 'f1', blocks: [ftr] };
@@ -1445,9 +1446,9 @@
       templates: () => (L.templates ? L.templates.list().map(({ id, name }) => ({ id, name })) : []),
     });
   };
-  /** Mount Quire into a host that already contains its editor shell; returns an idempotent disposer. */
+  /** Mount Wordx into a host that already contains its editor shell; returns an idempotent disposer. */
   A.mount = async function (host) {
-    if (!L.createMountScope) throw new Error('Quire requires the shared mount-scope runtime');
+    if (!L.createMountScope) throw new Error('Wordx requires the shared mount-scope runtime');
     const scope = L.createMountScope(host);
     try { await A.init(); }
     catch (error) { scope.dispose(); throw error; }
@@ -1464,6 +1465,8 @@
     const host = document.querySelector('[data-vibeoffice-engine-root]') || document.body;
     return window.VO && VO.i18n ? VO.i18n.whenReady(() => A.mount(host)) : A.mount(host);
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  if (!(window.VO && VO.reactDirectHost)) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  }
 })();

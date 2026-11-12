@@ -1,4 +1,4 @@
-/* Quire — built-in document templates (File ▸ New ▸ On my computer…). Placeholders are MACROBUTTON
+/* Wordx — built-in document templates (File ▸ New ▸ On my computer…). Placeholders are MACROBUTTON
  * fields: clicking one selects it so that typing replaces it, as in Word's templates.
  */
 (function () {

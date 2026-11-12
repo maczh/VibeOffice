@@ -1,4 +1,4 @@
-/* Quire — package ownership and model-attached OOXML preservation. */
+/* Wordx — package ownership and model-attached OOXML preservation. */
 (function () {
   'use strict';
   const L = window.L, D = L.D, K = L.opc, N = K.NS, P = (L.preserve = {});
@@ -146,12 +146,12 @@
     num: { abstractNumId: ['abs'] },
     lvlOverride: { startOverride: ['start'] },
     numbering: {},
-    // a row's and a cell's; what Quire doesn't model (w:cnfStyle, w:wBefore/wAfter, w:divId, a row's w:tblCellSpacing, cell
+    // a row's and a cell's; what Wordx doesn't model (w:cnfStyle, w:wBefore/wAfter, w:divId, a row's w:tblCellSpacing, cell
     // revisions) stays. A cell's width also changes with the table grid (the writer passes its signature as _grid)
     trPr: { trHeight: ['h', 'hRule'], cantSplit: ['cantSplit'], tblHeader: ['header'], gridBefore: ['gridBefore'], gridAfter: ['gridAfter'], jc: ['jc'], hidden: ['hidden'] },
     tblPrEx: { tblBorders: ['borders'] },
     tcPr: { tcW: ['w', '_grid'], gridSpan: ['span'], hMerge: ['hMerge'], vMerge: ['vMerge'], tcBorders: ['borders'], shd: ['shd'], noWrap: ['noWrap'], tcMar: ['mar'], textDirection: ['textDir'], tcFitText: ['fit'], vAlign: ['vAlign'], hideMark: ['hideMark'] },
-    // a style's own settings; what Quire doesn't model (aliases, locked, personal*, rsid, a table style's trPr) stays as it was
+    // a style's own settings; what Wordx doesn't model (aliases, locked, personal*, rsid, a table style's trPr) stays as it was
     style: { name: ['name'], basedOn: ['basedOn'], next: ['next'], link: ['link'], autoRedefine: ['autoRedefine'], hidden: ['hidden'], uiPriority: ['prio'], semiHidden: ['semiHidden'], unhideWhenUsed: ['unhide'], qFormat: ['q'], pPr: ['pPr'], rPr: ['rPr'], tblPr: ['tblPr'], tcPr: ['tcPr'], tblStylePr: ['cond'] },
   });
   const numberTypes = { numbering: 'w:CT_Numbering', abstractNum: 'w:CT_AbstractNum', num: 'w:CT_Num', lvlOverride: 'w:CT_NumLvl', lvl: 'w:CT_Lvl' };
@@ -635,7 +635,7 @@
     }
     return groups;
   };
-  // Told when a kept object can only be saved as what Quire shows of it; compatibility wrappers stay silent
+  // Told when a kept object can only be saved as what Wordx shows of it; compatibility wrappers stay silent
   const objectNouns = { SmartArt: 'IntelliArt', 'Embedded object': 'embedded object', 'Form control': 'form control', 'Embedded content': 'embedded content', 'Embedded document': 'embedded document', Drawing: 'drawing' };
   const objectNotice = (label, why) => /^Compatibility /.test(label) ? { what: label + ' was converted' + why, notify: false } :
     { what: 'This ' + (objectNouns[label] || 'drawing') + ' will be saved as ordinary content' + why, place: objectNouns[label] ? undefined : label, notify: true };
