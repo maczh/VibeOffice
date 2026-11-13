@@ -6,6 +6,9 @@ import type { LocalDocument, LocalDraft, RemoteFile, RemoteStorageProvider, Save
 import { WordxEditor } from '@vibeoffice/wordx';
 import { ExcelxEditor } from '@vibeoffice/excelx';
 import { PptxEditor } from '@vibeoffice/pptx';
+import '@vibeoffice/wordx/style.css';
+import '@vibeoffice/excelx/style.css';
+import '@vibeoffice/pptx/style.css';
 import './style.css';
 
 const mark = (message: string) => window.VO?.N?.(message) ?? message;

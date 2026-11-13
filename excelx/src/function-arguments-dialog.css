@@ -1,0 +1,10 @@
+.excelx-function-arguments-dialog > strong { display: block; margin-bottom: 8px; }
+.excelx-function-arguments-dialog__rows { display: grid; gap: 4px; max-height: 45vh; overflow: auto; }
+.excelx-function-arguments-dialog__rows > label { display: grid; grid-template-columns: minmax(90px, 150px) minmax(100px, 1fr) minmax(60px, 120px); align-items: center; gap: 8px; }
+.excelx-function-arguments-dialog__rows output { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.excelx-function-arguments-dialog__result { margin-top: 8px; font-family: monospace; }
+.excelx-function-arguments-dialog__description,
+.excelx-function-arguments-dialog__help,
+.excelx-function-arguments-dialog__total { margin: 6px 0; }
+.excelx-function-arguments-dialog__help { min-height: 2em; }
+.excelx-function-arguments-dialog__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }

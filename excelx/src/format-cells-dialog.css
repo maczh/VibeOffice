@@ -1,0 +1,9 @@
+.excelx-format-cells-dialog__content { min-height: 260px; }
+.excelx-format-cells-dialog__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.excelx-format-cells-dialog__actions > span { flex: 1; }
+.excelx-format-cells-dialog__protection { display: grid; gap: 8px; }
+.excelx-format-cells-dialog__protection > label { display: flex; align-items: center; gap: 6px; }
+.excelx-format-cells-dialog__protection > p { line-height: 1.4; }
+@media (max-width: 560px) {
+  .excelx-format-cells-dialog__content { max-height: min(65vh, 520px); overflow: auto; }
+}

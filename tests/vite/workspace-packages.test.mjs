@@ -68,6 +68,15 @@ test('React packages expose the same-document direct engine mount adapter', () =
   assert.doesNotMatch(runtime, /createElement\(['"]iframe/);
 });
 
+test('Excelx package stylesheet includes shared and feature-specific React dialog styles', () => {
+  const style = readFileSync(new URL('../../excelx/dist/style.css', import.meta.url), 'utf8');
+  assert.match(style, /\.vibeoffice-dialog/);
+  assert.match(style, /\.excelx-find-dialog\{position:fixed/);
+  assert.match(style, /\.excelx-find-dialog__results/);
+  assert.match(style, /\.excelx-insert-function-dialog__search/);
+  assert.match(style, /\.excelx-function-arguments-dialog__rows/);
+});
+
 test('shared provider exports the existing look and language catalogs and React hooks', async () => {
   const html = renderToStaticMarkup(createElement(VibeOfficeProvider, {
     services: { translate: (message) => message },

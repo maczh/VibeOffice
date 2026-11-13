@@ -7,6 +7,11 @@
   const { h } = L;
   const ui = L.ui;
   const D = (L.dlg = L.dlg || {});
+  let reactFunction = null, reactFunctionAction = null, reactFunctionArgs = null, reactFunctionArgsAction = null;
+  D.reactFunctionCatalog = () => reactFunction;
+  D.reactFunctionAction = (action, value) => reactFunctionAction ? reactFunctionAction(action, value) : false;
+  D.reactFunctionArgsCatalog = () => reactFunctionArgs;
+  D.reactFunctionArgsAction = (action, index, value) => reactFunctionArgsAction ? reactFunctionArgsAction(action, index, value) : false;
   let reactCustomHF = null, reactCustomHFDone = null;
   D.reactCustomHFCatalog = () => reactCustomHF;
   D.reactCustomHFApply = (sections) => {
@@ -48,6 +53,36 @@
   const MRU = () => L.store.get('fnMRU', ['SUM', 'AVERAGE', 'IF', 'HYPERLINK', 'COUNT', 'MAX', 'SIN', 'SUMIF', 'PMT', 'STDEV']);
   D.insertFunction = function (prefer) {
     const FI = L.fninfo;
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      let category = prefer ? 'All' : 'Most Recently Used', selected = prefer || null, search = '';
+      const namesFor = (cat, query) => {
+        if (query) {
+          const words = query.toLowerCase().split(/[^\p{L}\p{N}_]+/u).filter((word) => word.length > 2 || /[^\x00-\x7f]/.test(word));
+          if (!words.length) return [];
+          return FI.all().map((fn) => { const text = (fn.name + ' ' + fn.desc + ' ' + L.t(fn.desc)).toLowerCase(); let score = 0; for (const word of words) { if (fn.name.toLowerCase() === word) score += 10; if (text.includes(word)) score += 2; if (text.includes(word.replace(/s$/, ''))) score += 1; } return [fn.name, score]; }).filter((item) => item[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 30).map((item) => item[0]);
+        }
+        if (cat === 'Most Recently Used') return MRU().filter((name) => FI.get(name));
+        return FI.all().filter((fn) => cat === 'All' || fn.cat === cat).map((fn) => fn.name).sort();
+      };
+      const publish = () => {
+        let names = namesFor(category, search);
+        if (!names.includes(selected)) selected = names[0] || null;
+        const fn = selected && FI.get(selected);
+        reactFunction = { categories: FI.categories, category, search, names, selected, syntax: fn ? FI.syntax(fn) : '', description: fn ? fn.desc : '' };
+        L.bus.emit('excelx-insert-function-dialog');
+      };
+      reactFunctionAction = (action, value) => {
+        if (!reactFunction) return false;
+        if (action === 'close') { reactFunction = reactFunctionAction = null; L.bus.emit('excelx-insert-function-dialog'); return true; }
+        if (action === 'search' && typeof value === 'string') { search = value; if (search) category = 'Recommended'; publish(); return true; }
+        if (action === 'category' && (FI.categories.includes(value) || value === 'Recommended')) { category = value; if (category !== 'Recommended') search = ''; publish(); return true; }
+        if (action === 'select' && typeof value === 'string' && reactFunction.names.includes(value)) { selected = value; publish(); return true; }
+        if (action === 'open' && selected) { const name = selected; const recent = MRU().filter((item) => item !== name); recent.unshift(name); L.store.set('fnMRU', recent.slice(0, 10)); reactFunction = reactFunctionAction = null; L.bus.emit('excelx-insert-function-dialog'); D.functionArgs(name, true); return true; }
+        return false;
+      };
+      publish();
+      return;
+    }
     let cat = prefer ? 'All' : 'Most Recently Used';
     let pick = prefer || null;
     const search = h('input', { type: 'text', placeholder: 'Type a brief description of what you want to do and then click Go', style: 'flex:1;min-width:0' });
@@ -101,6 +136,40 @@
     if (existing && !fresh) { try { const ast = F.parse(existing); if (ast.t === 'fn') preset = ast.args.map((a) => F.toText(a)); } catch (e) { preset = []; } }
     const base = f.args.filter((a) => a !== '...');
     const repeating = f.args.includes('...');
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      let args = Array.from({ length: Math.max(base.length, preset.length, 1) }, (_, index) => preset[index] || '');
+      let activeHelp = L.t(f.desc);
+      const argName = (index) => { if (index < base.length) return base[index]; const last = base[base.length - 1] || 'value1'; const match = /^(\[?)([a-z_]+?)(\d+)(\]?)$/.exec(last); return match ? '[' + match[2] + (+match[3] + index - base.length + 1) + ']' : last; };
+      const callText = () => { const values = args.map((value) => value.trim()); while (values.length && !values[values.length - 1] && values.length > base.filter((arg) => !arg.startsWith('[')).length) values.pop(); return f.name + '(' + values.join(',') + ')'; };
+      const snapshot = () => {
+        const call = callText(), evaluated = evalText(call);
+        reactFunctionArgs = { name: f.name, description: f.desc, help: activeHelp, repeating, args: args.map((value, index) => { const name = argName(index), text = value.trim(); return { name, value, optional: name.startsWith('['), help: L.t(FI.argHelp(name)) || '', preview: text ? '= ' + show(evalText(text)) : name.startsWith('[') ? '' : '= ' }; }), call, result: '= ' + (evaluated == null ? '' : show(evaluated)), total: L.t('Formula result = {0}', evaluated == null ? '' : show(evaluated)) };
+        L.bus.emit('excelx-function-arguments-dialog');
+      };
+      const commit = () => {
+        const call = callText();
+        if (ed.active) {
+          const text = ed.text(), caret = G().input.selectionStart != null ? G().input.selectionStart : text.length;
+          const before = text.slice(0, caret), after = text.slice(caret);
+          const pattern = new RegExp('(?:_xlfn\\.)?' + f.name.replace('.', '\\.') + '\\($', 'i');
+          if (pattern.test(before)) ed.setText(before.replace(pattern, '') + call + after.replace(/^\)/, ''), before.replace(pattern, '').length + call.length);
+          else ed.insertText(call);
+          return;
+        }
+        if (G().guardProtect(null, true)) return;
+        ed.begin('enter', '=' + call); ed.commit();
+      };
+      reactFunctionArgsAction = (action, index, value) => {
+        if (!reactFunctionArgs) return false;
+        if (action === 'close') { reactFunctionArgs = reactFunctionArgsAction = null; L.bus.emit('excelx-function-arguments-dialog'); return true; }
+        if (action === 'set' && Number.isInteger(index) && index >= 0 && index < args.length && typeof value === 'string') { args[index] = value; activeHelp = L.t(FI.argHelp(argName(index))) || L.t(f.desc); snapshot(); return true; }
+        if (action === 'focus' && Number.isInteger(index) && index >= 0 && index < args.length) { activeHelp = L.t(FI.argHelp(argName(index))) || L.t(f.desc); if (repeating && index === args.length - 1) args = [...args, '']; snapshot(); return true; }
+        if (action === 'apply') { commit(); reactFunctionArgs = reactFunctionArgsAction = null; L.bus.emit('excelx-function-arguments-dialog'); return true; }
+        return false;
+      };
+      snapshot();
+      return;
+    }
     const rows = h('div', { class: 'fa-rows' });
     const inputs = [];
     const help = h('div', { class: 'fa-help' });
@@ -581,6 +650,7 @@
           if (key === 'area' || key === 'rows' || key === 'cols' || key === 'first') state[key] = value;
           else if (key === 'tab') state.tab = Number(value);
           else if (key.startsWith('margin.')) state.p.margins[key.slice(7)] = Number(value) || 0;
+          else if (key === 'print.fit') state.p.fit = value === 'true';
           else if (key.startsWith('print.')) state.p[key.slice(6)] = value;
           else state.p[key] = value;
           state.error = '';

@@ -12,7 +12,7 @@ function runtime(): SizeRuntime | undefined {
   return (window as Window & { L?: SizeRuntime }).L;
 }
 
-/** Shared React form for the Excelx row-height and column-width dialogs. */
+/** Shared React form for Excelx row-height, column-width, and standard-width dialogs. */
 export function ExcelxSizeDialog() {
   const [catalog, setCatalog] = useState<SizeCatalog | null>(null);
   const [value, setValue] = useState('');

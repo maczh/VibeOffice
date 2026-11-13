@@ -1,0 +1,9 @@
+.excelx-insert-function-dialog__search { display: grid; gap: 10px; }
+.excelx-insert-function-dialog__search > label { display: grid; gap: 4px; }
+.excelx-insert-function-dialog__search > label:first-child > div { display: flex; gap: 6px; }
+.excelx-insert-function-dialog__search input { min-width: 0; flex: 1; }
+.excelx-insert-function-dialog__list-label { display: grid; gap: 4px; margin-top: 8px; }
+.excelx-insert-function-dialog__list-label select { min-height: 160px; }
+.excelx-insert-function-dialog .if-syntax { margin-top: 8px; font-family: monospace; }
+.excelx-insert-function-dialog .if-desc { min-height: 2em; }
+.excelx-insert-function-dialog__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }

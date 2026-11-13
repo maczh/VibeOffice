@@ -13,6 +13,7 @@
   let reactTabColor = null, reactTabColorApply = null;
   let reactMoveCopy = null, reactMoveCopyApply = null;
   let reactGoTo = null;
+  let reactFind = null;
   let reactGoToSpecial = null, reactGoToSpecialApply = null;
   let reactPasteSpecial = null;
   let reactFillAcross = null, reactFillAcrossApply = null;
@@ -23,9 +24,28 @@
   let reactProtection = null, reactProtectionPassword = '', reactProtectionResolve = null;
   let reactWorkbookProtection = null;
   let reactComment = null;
+  let reactFormatCells = null, reactFormatCellsApply = null;
   let reactHyperlink = null;
   let reactLinks = null;
   D.reactZoomCatalog = () => reactZoom;
+  D.reactFormatCellsCatalog = () => reactFormatCells;
+  D.reactFormatCellsSetProtection = (locked, hidden) => {
+    if (!reactFormatCells || typeof locked !== 'boolean' || typeof hidden !== 'boolean') return false;
+    reactFormatCells.protection = { locked, hidden };
+    if (reactFormatCells.onProtectionChange) reactFormatCells.onProtectionChange(locked, hidden);
+    return true;
+  };
+  D.reactFormatCellsApply = () => {
+    if (!reactFormatCells || !reactFormatCellsApply) return false;
+    const apply = reactFormatCellsApply;
+    reactFormatCells = reactFormatCellsApply = null;
+    L.bus.emit('excelx-format-cells-dialog');
+    return apply();
+  };
+  D.reactFormatCellsClose = () => {
+    reactFormatCells = reactFormatCellsApply = null;
+    L.bus.emit('excelx-format-cells-dialog');
+  };
   D.reactAutoCorrectCatalog = () => reactAutoCorrect;
   D.reactAutoCorrectAction = (action, from, to, options) => {
     if (!reactAutoCorrect || !reactAutoCorrectAction) return false;
@@ -224,6 +244,11 @@
   };
   D.reactMoveCopyClose = () => { reactMoveCopy = reactMoveCopyApply = null; L.bus.emit('excelx-move-copy-sheet-dialog'); };
   D.reactGoToCatalog = () => reactGoTo;
+  D.reactFindCatalog = () => reactFind;
+  D.reactFindAction = (action, key, value) => {
+    if (!reactFind || !reactFind.action) return false;
+    return reactFind.action(action, key, value);
+  };
   D.reactGoToApply = (reference) => {
     if (!reactGoTo || typeof reference !== 'string') return false;
     if (!A().goToRef(reference.trim())) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; }
@@ -581,50 +606,59 @@
     const patBody = h('div', { class: 'fc-pat' }, ui.group('Cell shading', h('label', { text: 'Color:' }), pal, h('div', { class: 'row', style: 'gap:8px;align-items:center' }, h('span', { text: 'Pattern:' }), patBtn)), ui.group('Sample', sampleP));
     /* ---------- Protection ---------- */
     const pr = out.prot;
-    const protBody = h('div', { class: 'col' }, ui.check('&Locked', pr.locked !== false, (x) => { pr.locked = x; changed.prot = true; }), ui.check('H&idden', !!pr.hidden, (x) => { pr.hidden = x || undefined; changed.prot = true; }),
+    const protBody = h('div', { class: 'col fc-prot' }, ui.check('&Locked', pr.locked !== false, (x) => { pr.locked = x; changed.prot = true; }), ui.check('H&idden', !!pr.hidden, (x) => { pr.hidden = x || undefined; changed.prot = true; }),
       h('p', { class: 'hint', text: 'Locking cells or hiding formulas has no effect unless the worksheet is protected. To protect the worksheet, choose Protection from the Tools menu, and then choose Protect Sheet. A password is optional.' }));
     const tabs = ui.tabs([{ label: 'Number|Format Cells tab', body: numBody }, { label: 'Alignment', body: alBody }, { label: 'Font', body: fontBody }, { label: 'Border', body: borderBody }, { label: 'Patterns', body: patBody }, { label: 'Protection', body: protBody }], tab || 0);
+    const apply = () => {
+      if (target) {
+        /* modifying a named style: build the whole style */
+        const d = { nf: out.nf, align: Object.keys(al).some((k) => al[k] !== undefined) ? Object.assign({}, al) : null, font: Object.assign({}, f), fill: fillColor || pattern ? (pattern ? { pattern, fg: M.rgb(patColor), bg: fillColor ? M.rgb(fillColor) : M.rgb('#FFFFFF') } : { pattern: 'solid', fg: M.rgb(fillColor), bg: { indexed: 64 } }) : null, prot: pr.locked === false || pr.hidden ? { locked: pr.locked === false ? false : undefined, hidden: pr.hidden || undefined } : null };
+        const b = {};
+        if (edges.top) b.t = edges.top; if (edges.bottom) b.b = edges.bottom; if (edges.left) b.l = edges.left; if (edges.right) b.r = edges.right;
+        if (edges.diagUp || edges.diagDown) { b.d = edges.diagUp || edges.diagDown; if (edges.diagUp) b.du = true; if (edges.diagDown) b.dd = true; }
+        d.border = Object.keys(b).length ? b : null;
+        const nst = M.mergeStyle(st, d);
+        nst.border = d.border; nst.align = d.align; nst.fill = d.fill; nst.prot = d.prot;
+        for (const k of Object.keys(nst.font || {})) if (nst.font[k] === undefined) delete nst.font[k];
+        delete nst.xs;
+        target.apply(nst);
+        return true;
+      }
+      tryRun(() => {
+        O.tx(w, 'Format Cells', () => {
+          const delta = {};
+          if (changed.nf) delta.nf = out.nf;
+          if (changed.align) { const a = {}; for (const k of ['h', 'v', 'wrap', 'indent', 'rot', 'shrink', 'rtl', 'ltr', 'justLast']) a[k] = al[k]; delta.align = a; }
+          if (changed.font) { const fo = Object.assign({}, f); for (const k of ['b', 'i', 'u', 'strike', 'vert', 'color']) if (fo[k] === undefined) fo[k] = undefined; delta.font = fo; }
+          if (changed.fill) delta.fill = fillColor || pattern ? (pattern ? { pattern, fg: M.rgb(patColor), bg: fillColor ? M.rgb(fillColor) : M.rgb('#FFFFFF') } : { pattern: 'solid', fg: M.rgb(fillColor), bg: { indexed: 64 } }) : null;
+          if (changed.prot) delta.prot = { locked: pr.locked === false ? false : undefined, hidden: pr.hidden || undefined };
+          if (Object.keys(delta).length) O.format(s, G().ranges(), (stl) => {
+            const d2 = Object.assign({}, delta);
+            if (d2.font) d2.font = Object.assign({}, d2.font);
+            if (d2.align) { d2.align = Object.assign({}, d2.align); }
+            void stl;
+            return d2;
+          }, 'Format Cells');
+          const spec = {};
+          for (const k in touched) spec[k] = edges[k];
+          if (Object.keys(spec).length) O.borders(s, G().ranges(), spec, 'Format Cells');
+          if (mergeState === true && !merged) O.merge(s, G().ranges(), {});
+          if (mergeState === false && merged) O.unmerge(s, G().ranges());
+          if (changed.align && (al.wrap || al.rot) || changed.font) for (const r of A().selRows()) O.autoRow(s, r);
+        });
+      });
+      return true;
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      protBody.replaceChildren();
+      reactFormatCells = { title: target && target.title ? target.title : 'Format Cells', content: tabs, protection: { locked: pr.locked !== false, hidden: !!pr.hidden }, onProtectionChange: (locked, hidden) => { pr.locked = locked; pr.hidden = hidden || undefined; changed.prot = true; } };
+      reactFormatCellsApply = apply;
+      L.bus.emit('excelx-format-cells-dialog');
+      return;
+    }
     ui.dialog({
       title: target && target.title ? target.title : 'Format Cells', body: tabs, width: 520,
-      buttons: [{ label: 'OK', primary: true, onClick: () => {
-        if (target) {
-          /* modifying a named style: build the whole style */
-          const d = { nf: out.nf, align: Object.keys(al).some((k) => al[k] !== undefined) ? Object.assign({}, al) : null, font: Object.assign({}, f), fill: fillColor || pattern ? (pattern ? { pattern, fg: M.rgb(patColor), bg: fillColor ? M.rgb(fillColor) : M.rgb('#FFFFFF') } : { pattern: 'solid', fg: M.rgb(fillColor), bg: { indexed: 64 } }) : null, prot: pr.locked === false || pr.hidden ? { locked: pr.locked === false ? false : undefined, hidden: pr.hidden || undefined } : null };
-          const b = {};
-          if (edges.top) b.t = edges.top; if (edges.bottom) b.b = edges.bottom; if (edges.left) b.l = edges.left; if (edges.right) b.r = edges.right;
-          if (edges.diagUp || edges.diagDown) { b.d = edges.diagUp || edges.diagDown; if (edges.diagUp) b.du = true; if (edges.diagDown) b.dd = true; }
-          d.border = Object.keys(b).length ? b : null;
-          const nst = M.mergeStyle(st, d);
-          nst.border = d.border; nst.align = d.align; nst.fill = d.fill; nst.prot = d.prot;
-          for (const k of Object.keys(nst.font || {})) if (nst.font[k] === undefined) delete nst.font[k];
-          delete nst.xs;
-          target.apply(nst);
-          return;
-        }
-        tryRun(() => {
-          O.tx(w, 'Format Cells', () => {
-            const delta = {};
-            if (changed.nf) delta.nf = out.nf;
-            if (changed.align) { const a = {}; for (const k of ['h', 'v', 'wrap', 'indent', 'rot', 'shrink', 'rtl', 'ltr', 'justLast']) a[k] = al[k]; delta.align = a; }
-            if (changed.font) { const fo = Object.assign({}, f); for (const k of ['b', 'i', 'u', 'strike', 'vert', 'color']) if (fo[k] === undefined) fo[k] = undefined; delta.font = fo; }
-            if (changed.fill) delta.fill = fillColor || pattern ? (pattern ? { pattern, fg: M.rgb(patColor), bg: fillColor ? M.rgb(fillColor) : M.rgb('#FFFFFF') } : { pattern: 'solid', fg: M.rgb(fillColor), bg: { indexed: 64 } }) : null;
-            if (changed.prot) delta.prot = { locked: pr.locked === false ? false : undefined, hidden: pr.hidden || undefined };
-            if (Object.keys(delta).length) O.format(s, G().ranges(), (stl) => {
-              const d2 = Object.assign({}, delta);
-              if (d2.font) d2.font = Object.assign({}, d2.font);
-              if (d2.align) { d2.align = Object.assign({}, d2.align); }
-              void stl;
-              return d2;
-            }, 'Format Cells');
-            const spec = {};
-            for (const k in touched) spec[k] = edges[k];
-            if (Object.keys(spec).length) O.borders(s, G().ranges(), spec, 'Format Cells');
-            if (mergeState === true && !merged) O.merge(s, G().ranges(), {});
-            if (mergeState === false && merged) O.unmerge(s, G().ranges());
-            if (changed.align && (al.wrap || al.rot) || changed.font) for (const r of A().selRows()) O.autoRow(s, r);
-          });
-        });
-      } }, { label: 'Cancel' }],
+      buttons: [{ label: 'OK', primary: true, onClick: apply }, { label: 'Cancel' }],
     });
   };
   /** a small tile showing a fill pattern (solid: the pattern colour) */
@@ -824,14 +858,15 @@
     const results = h('div', { class: 'fr-results', hidden: true });
     const status = h('div', { class: 'hint' });
     const moreBtn = ui.button(findState.more ? 'Options <<' : 'Op&tions >>', () => { findState.more = !findState.more; optBox.hidden = !findState.more; moreBtn.innerHTML = ui.ampHTML(findState.more ? 'Options <<' : 'Op&tions >>'); });
-    const sync = () => { findState.what = what.value; findState.with = withIn.value; };
+    let reactFindDirect = false;
+    const sync = () => { if (!reactFindDirect) { findState.what = what.value; findState.with = withIn.value; } };
     const query = () => { sync(); const selRg = G().range(); const multi = G().ranges().length > 1 || selRg.r1 !== selRg.r2 || selRg.c1 !== selRg.c2; return Object.assign({}, findState, { sheet: sh(), range: findState.within === 'sheet' && multi ? selRg : null }); };
     const goTo = (hit) => { const i = w.sheets.indexOf(hit.sh); if (i !== w.active) A().activateSheet(i); G().select(hit.r, hit.c); };
     const findNext = (back) => {
       const q = query();
       if (!q.what) return null;
       const hits = O.findAll(w, q);
-      if (!hits.length) { ui.msg("Excelx cannot find the data you're searching for.", { icon: 'info' }); return null; }
+      if (!hits.length) { if (!reactFindDirect) ui.msg("Excelx cannot find the data you're searching for.", { icon: 'info' }); return null; }
       const s = G().sel(), cur = { si: w.active, r: s.r, c: s.c };
       const key = (x) => [w.sheets.indexOf(x.sh), q.by === 'cols' ? x.c : x.r, q.by === 'cols' ? x.r : x.c];
       const ck = [cur.si, q.by === 'cols' ? cur.c : cur.r, q.by === 'cols' ? cur.r : cur.c];
@@ -840,6 +875,51 @@
       goTo(hit);
       return hit;
     };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactFindDirect = true;
+      let hits = [];
+      const snapshot = (results = reactFind?.results || [], status = reactFind?.status || '') => {
+        reactFind = { mode: reactFind?.mode ?? (mode === 'replace' ? 1 : 0), state: { ...findState }, results, status, action };
+        L.bus.emit('excelx-find-dialog');
+      };
+      const resultItem = (hit, index) => {
+        const cell = hit.sh.get(hit.r, hit.c);
+        const name = w.names.find((item) => { try { const range = F.parseRange(String(item.ref).split('!').pop().replace(/\$/g, '')); return range && M.rangeContains(range, hit.r, hit.c); } catch { return false; } });
+        return { index, book: A().books[A().cur].name, sheet: hit.sh.name, name: name?.name || '', cell: F.cellName(hit.r, hit.c, true, true), value: L.csv.cellText(hit.sh, hit.r, hit.c), formula: cell?.f != null ? '=' + F.display(cell.f) : '' };
+      };
+      const action = (kind, key, value) => {
+        if (!reactFind) return false;
+        if (kind === 'close') { reactFind = null; L.bus.emit('excelx-find-dialog'); return true; }
+        if (kind === 'set' && ['what', 'with', 'within', 'by', 'lookIn', 'matchCase', 'whole', 'more'].includes(key)) {
+          findState[key] = value; snapshot([], ''); return true;
+        }
+        if (kind === 'tab' && (value === 0 || value === 1)) { reactFind.mode = value; snapshot(); return true; }
+        if (kind === 'next' || kind === 'previous') {
+          const hit = findNext(kind === 'previous');
+          snapshot(reactFind.results, hit ? L.t('Found {0}', F.cellName(hit.r, hit.c, true, true)) : (findState.what ? L.t("Excelx cannot find the data you're searching for.") : ''));
+          return !!hit;
+        }
+        if (kind === 'all') {
+          hits = O.findAll(w, query());
+          snapshot(hits.slice(0, 2000).map(resultItem), L.t('{0} cell(s) found', hits.length));
+          return true;
+        }
+        if (kind === 'select' && Number.isInteger(value) && hits[value]) { goTo(hits[value]); snapshot(reactFind.results, reactFind.status); return true; }
+        if (kind === 'replaceAll' || kind === 'replace') {
+          const q = query();
+          const found = kind === 'replaceAll' ? O.findAll(w, Object.assign({}, q, { lookIn: 'formulas' })) : O.findAll(w, Object.assign({}, q, { lookIn: 'formulas', within: 'sheet', range: (() => { const selected = G().sel(); return { r1: selected.r, c1: selected.c, r2: selected.r, c2: selected.c }; })() }));
+          let count = 0;
+          if (found.length) tryRun(() => { count = O.replaceAll(w, q, found); });
+          if (kind === 'replace') { const hit = findNext(false); snapshot([], hit ? L.t('Found {0}', F.cellName(hit.r, hit.c, true, true)) : ''); }
+          else snapshot([], count === 1 ? L.t('Excelx has completed its search and has made {0} replacement.', count) : L.t('Excelx has completed its search and has made {0} replacements.', count));
+          return true;
+        }
+        return false;
+      };
+      reactFind = { mode: mode === 'replace' ? 1 : 0, state: { ...findState }, results: [], status: '', action };
+      L.bus.emit('excelx-find-dialog');
+      return;
+    }
     const findAllBtn = () => {
       const q = query();
       const hits = O.findAll(w, q);
