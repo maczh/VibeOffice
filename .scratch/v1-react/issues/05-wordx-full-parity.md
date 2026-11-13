@@ -6,7 +6,12 @@
 
 **Blocked by:** 00: Direct editor-engine mount foundation; 04: Wordx core editor; 17: Wordx full module migration and naming.
 
-**Status:** ready-for-agent
+**Status:** in-progress
+
+## Comments
+
+- 2026-11-13: Started React-package workflow parity checks. Production Chromium opens a local Markdown `.md` file in the direct-host Wordx package and verifies the Markdown importer and rendered canvas content. This validates only the local Markdown path; remaining input/output formats, template flows, save/preservation behavior, and standalone/embedded workflows remain open.
+- 2026-11-13: Expanded the local Markdown acceptance path with a production-package GitHub-flavour document containing a checked task, pipe table, strikethrough, and fenced code. Also opened a local Markdown `.zip`, verified its packaged GIF resolves, and round-tripped the package while preserving an unrelated file and the Markdown image reference. React suite passes; other format, template, save/preservation, and standalone/embedded flows remain open.
 
 - [ ] Existing Quire formatting, page setup, tables, sections, fields, drawing, review, proofing, and other editing commands remain available.
 - [ ] Existing supported input and output formats remain available with their current behavior.

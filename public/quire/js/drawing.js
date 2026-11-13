@@ -531,18 +531,28 @@
       box.style.height = r.height + 'px';
     };
     place();
+    const direct = !!(window.VO && VO.reactDirectHost);
     for (const hn of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
       const hd = el('div', 'oh oh-' + hn);
-      hd.addEventListener('pointerdown', (ev) => startResize(ev, hn, target));
+      if (!direct) hd.addEventListener('pointerdown', (ev) => startResize(ev, hn, target));
       box.appendChild(hd);
     }
     const it = target._item;
-    if (it && it.t === 'shape') { const rh = el('div', 'oh oh-rot'); rh.addEventListener('pointerdown', (ev) => startRotate(ev, target)); box.appendChild(rh); }
+    if (it && it.t === 'shape') { const rh = el('div', 'oh oh-rot'); if (!direct) rh.addEventListener('pointerdown', (ev) => startRotate(ev, target)); box.appendChild(rh); }
     sc.appendChild(box);
     handles = box;
     box._place = place;
   }
   DR.placeHandles = () => { if (handles && handles._place && selWrap && selWrap.isConnected) handles._place(); else if (handles && selWrap && !selWrap.isConnected) reselect(); };
+  DR.reactHandleDown = (event) => {
+    const handle = event.target && event.target.closest && event.target.closest('.obj-handles .oh');
+    if (!handle || !handles || !handles.contains(handle) || !selWrap) return;
+    if (handle.classList.contains('oh-rot')) startRotate(event, selWrap);
+    else {
+      const direction = [...handle.classList].find((name) => /^oh-(nw|n|ne|e|se|s|sw|w)$/.test(name));
+      if (direction) startResize(event, direction.slice(3), selWrap);
+    }
+  };
   function reselect() {
     const os = L.ed.objSel;
     if (!os || !os.float) { DR.clearSelection(); return; }

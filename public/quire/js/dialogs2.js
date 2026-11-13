@@ -245,6 +245,7 @@
   const SUBSETS = [[L.N('Basic Latin'), 0x20, 0x7e], [L.N('Latin-1 Supplement'), 0xa0, 0xff], [L.N('Latin Extended-A'), 0x100, 0x17f], [L.N('Greek and Coptic'), 0x370, 0x3ff], [L.N('Cyrillic'), 0x400, 0x4ff], [L.N('General Punctuation'), 0x2010, 0x205e], [L.N('Currency Symbols'), 0x20a0, 0x20bf], [L.N('Letterlike Symbols'), 0x2100, 0x214f], [L.N('Number Forms'), 0x2150, 0x218b], [L.N('Arrows'), 0x2190, 0x21ff], [L.N('Mathematical Operators'), 0x2200, 0x22ff], [L.N('Miscellaneous Technical'), 0x2300, 0x23ff], [L.N('Box Drawing'), 0x2500, 0x257f], [L.N('Block Elements'), 0x2580, 0x259f], [L.N('Geometric Shapes'), 0x25a0, 0x25ff], [L.N('Miscellaneous Symbols'), 0x2600, 0x26ff], [L.N('Dingbats'), 0x2700, 0x27bf]];
   G.symbol = function (opts) {
     opts = opts || {};
+    const direct = !!(window.VO && VO.reactDirectHost);
     let cur = null;
     const recent = L.store.get('recentSymbols', ['€', '£', '¥', '©', '®', '™', '±', '≠', '≤', '≥', '÷', '×', '∞', 'µ', 'α', 'β']);
     const font = ui.select([['', L.t('(normal text)')], ['Symbol', 'Symbol'], ['Wingdings', 'Wingdings'], ['Webdings', 'Webdings']].concat(G.FONTS().map((f) => [f, f])), '', () => fill(), { id: 'sy-font', translate: 'no' });
@@ -282,7 +283,27 @@
       if (c.raw && c.font) E.insertItem(D.item('sym', { font: c.font, char: c.raw, code: c.raw.charCodeAt(0).toString(16).toUpperCase() }, O.inheritRPr(E.sel.f)), 'Insert Symbol');
       else E.insertTextAt(c.ch, 'Insert Symbol');
     };
-    const dlg = ui.dialog({ title: 'Symbol', width: 520, body: tabs, buttons: [{ label: '&Insert', primary: true, onClick: () => { doInsert(); if (opts.pick) return; return false; } }, { label: opts.pick ? 'Cancel' : 'Close' }] });
+    let symbolState = { font: '', subset: 1, tab: 0, selected: null, code: '', recent: recent.slice(0, 16), special: SPECIALS[0][0] };
+    const symbolCatalog = () => {
+      const chars = [];
+      if (symbolState.font === 'Symbol' || symbolState.font === 'Wingdings' || symbolState.font === 'Webdings') for (let c = 0x21; c <= 0xff; c++) { if (c >= 0x7f && c < 0xa1) continue; const raw = String.fromCharCode(c), ch = L.mapSymbolChar(raw, symbolState.font); if (ch) chars.push({ ch, raw, font: symbolState.font }); }
+      else { const [, a, b] = SUBSETS[symbolState.subset]; for (let c = a; c <= b; c++) chars.push({ ch: String.fromCodePoint(c), font: symbolState.font }); }
+      return { ...symbolState, fonts: ['', 'Symbol', 'Wingdings', 'Webdings', ...G.FONTS()], subsets: SUBSETS.map((s, i) => ({ value: i, label: s[0] })), chars: chars.map((c) => ({ ...c, code: c.ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') })), specials: SPECIALS.map(([ch, label, key]) => ({ value: ch, label: L.t(label) + (key ? '   ' + ui.keyText(key) : '') })) };
+    };
+    G.reactSymbolCatalog = symbolCatalog;
+    G.reactSymbolAction = (action, value) => {
+      if (action === 'font') { symbolState.font = value; symbolState.selected = null; symbolState.code = ''; }
+      else if (action === 'subset') { symbolState.subset = Number(value); symbolState.selected = null; symbolState.code = ''; }
+      else if (action === 'tab') symbolState.tab = Number(value);
+      else if (action === 'char') { cur = value; symbolState.selected = value.ch; symbolState.code = value.code; }
+      else if (action === 'recent') { cur = { ch: value, font: '' }; symbolState.selected = value; symbolState.code = value.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'); }
+      else if (action === 'special') symbolState.special = value;
+      else if (action === 'code') { symbolState.code = value; const n = parseInt(value, 16); if (!isNaN(n) && n <= 0x10ffff) { cur = { ch: String.fromCodePoint(n), font: '' }; symbolState.selected = cur.ch; } }
+      else if (action === 'insert') { tabIdx = symbolState.tab; if (tabIdx === 1) spec.set(symbolState.special); doInsert(); if (!opts.pick) { symbolState.recent = L.store.get('recentSymbols', symbolState.recent); L.bus.emit('wordx-symbol-refresh'); } }
+      return symbolCatalog();
+    };
+    const reactRoot = h('div', { id: 'react-wordx-symbol-root' });
+    const dlg = ui.dialog({ title: 'Symbol', width: 520, body: direct ? reactRoot : tabs, buttons: [{ label: '&Insert', primary: true, onClick: () => { if (direct) G.reactSymbolAction('insert'); else doInsert(); if (opts.pick) return; return false; } }, { label: opts.pick ? 'Cancel' : 'Close' }] });
     const insertBtn = dlg.buttons[0];
   };
 
@@ -347,6 +368,11 @@
       buttons: [{ label: '&Insert', primary: true, onClick: () => { L.notes.setOptions(kind.get(), settings()); L.notes.insert(kind.get(), { mark: custom.value.trim() || null }); } }, { label: 'Cancel' }, { label: '&Apply', onClick: () => { L.notes.setOptions(kind.get(), settings()); return false; } }],
     });
     function convert() {
+      if (direct) {
+        const convertRoot = h('div', { id: 'react-wordx-convert-notes-root' });
+        ui.dialog({ title: 'Convert Notes', width: 300, body: convertRoot, buttons: [{ label: 'OK', primary: true, onClick: () => L.notes.convertAll(convertRoot.querySelector('[name=react-wordx-convert-notes]:checked')?.value || 'fn') }, { label: 'Cancel' }] });
+        return;
+      }
       const r = G.radios('fn-conv', [['fn', 'Convert all &footnotes to endnotes'], ['en', 'Convert all &endnotes to footnotes']], 'fn');
       ui.dialog({ title: 'Convert Notes', width: 300, body: r, buttons: [{ label: 'OK', primary: true, onClick: () => L.notes.convertAll(r.get()) }, { label: 'Cancel' }] });
     }
@@ -354,6 +380,7 @@
 
   /* ================= Caption ================= */
   G.caption = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const labels = Array.from(new Set(F().CAPTION_LABELS.concat(L.store.get('captionLabels', []))));
     const ci = L.tables && L.tables.inTable();
     const lab = ui.select(labels.map((x) => [x, x]), ci ? 'Table' : 'Figure', () => upd(), { id: 'cp-lab', translate: 'no' });   // labels go into the document as they are
@@ -361,25 +388,44 @@
     const pos = ui.select([['below', 'Below selected item'], ['above', 'Above selected item']], ci ? 'above' : 'below', null, { id: 'cp-pos' });
     const excl = ui.check('&Exclude label from caption', false, () => upd());
     let num = { fmt: 'ARABIC', chapter: false, chapterStyle: 1, sep: '-' };
-    const upd = () => { const n = L.D.fmtNum(1, { ARABIC: 'decimal', alphabetic: 'lowerLetter', ALPHABETIC: 'upperLetter', roman: 'lowerRoman', ROMAN: 'upperRoman' }[num.fmt]); txt.value = (excl.input.checked ? '' : lab.value + ' ') + (num.chapter ? '1' + num.sep : '') + n; };
+    let reactCaption = { labels, label: lab.value, position: pos.value, exclude: false, text: '', numbering: { ...num } };
+    const captionPreview = (label, excluded, numbering) => { const n = L.D.fmtNum(1, { ARABIC: 'decimal', alphabetic: 'lowerLetter', ALPHABETIC: 'upperLetter', roman: 'lowerRoman', ROMAN: 'upperRoman' }[numbering.fmt]); return (excluded ? '' : label + ' ') + (numbering.chapter ? '1' + numbering.sep : '') + n; };
+    const upd = () => { if (direct) { txt.value = captionPreview(reactCaption.label, reactCaption.exclude, reactCaption.numbering); return; } txt.value = captionPreview(lab.value, excl.input.checked, num); };
     upd();
+    reactCaption.text = txt.value;
+    G.reactCaptionCatalog = () => ({ ...reactCaption, labels: reactCaption.labels.slice() });
+    G.reactCaptionAction = async (action, value) => {
+      if (action === 'change') { reactCaption = { ...reactCaption, ...(value || {}) }; num = { ...reactCaption.numbering }; if (!direct) { lab.value = reactCaption.label; pos.value = reactCaption.position; excl.input.checked = reactCaption.exclude; txt.value = reactCaption.text; } }
+      else if (action === 'newLabel') { const name = await ui.prompt('Label:', '', 'New Label'); if (!name) return; const list = L.store.get('captionLabels', []); if (!list.includes(name)) { list.push(name); L.store.set('captionLabels', list); } if (!direct) lab.value = name; const text = captionPreview(name, reactCaption.exclude, reactCaption.numbering); if (!direct) { upd(); } reactCaption = { ...reactCaption, labels: Array.from(new Set(F().CAPTION_LABELS.concat(list))), label: name, text: direct ? text : txt.value }; L.bus.emit('wordx-caption-refresh'); }
+      else if (action === 'deleteLabel') { if (F().CAPTION_LABELS.includes(reactCaption.label)) return; const list = L.store.get('captionLabels', []).filter((item) => item !== reactCaption.label); L.store.set('captionLabels', list); const label = F().CAPTION_LABELS[0] || 'Figure'; if (!direct) lab.value = label; const text = captionPreview(label, reactCaption.exclude, reactCaption.numbering); if (!direct) { upd(); } reactCaption = { ...reactCaption, labels: Array.from(new Set(F().CAPTION_LABELS.concat(list))), label, text: direct ? text : txt.value }; L.bus.emit('wordx-caption-refresh'); }
+      else if (action === 'numbering') numbering();
+    };
     ui.dialog({
-      title: 'Caption', width: 360, focus: txt,
-      body: h('div', { class: 'col' }, h('label', { for: 'cp-text', html: ui.ampHTML('&Caption:') }), txt, ui.group('Options', G.f('&Label:', lab), G.f('&Position:', pos), excl), h('div', { class: 'tp-btns' }, ui.button('&New Label...', async () => { const n = await ui.prompt('Label:', '', 'New Label'); if (!n) return; const list = L.store.get('captionLabels', []); if (!list.includes(n)) { list.push(n); L.store.set('captionLabels', list); } lab.appendChild(G.raw('option', { value: n }, n)); lab.value = n; upd(); }, { class: 'btn small' }), ui.button('&Delete Label', () => { if (F().CAPTION_LABELS.includes(lab.value)) return; L.store.set('captionLabels', L.store.get('captionLabels', []).filter((x) => x !== lab.value)); lab.querySelector(`option[value="${lab.value}"]`).remove(); upd(); }, { class: 'btn small' }), ui.button('N&umbering...', () => numbering(), { class: 'btn small' }))),
+      title: 'Caption', width: 360, focus: direct ? null : txt,
+      body: direct ? h('div', { id: 'react-wordx-caption-root' }) : h('div', { class: 'col' }, h('label', { for: 'cp-text', html: ui.ampHTML('&Caption:') }), txt, ui.group('Options', G.f('&Label:', lab), G.f('&Position:', pos), excl), h('div', { class: 'tp-btns' }, ui.button('&New Label...', async () => { const n = await ui.prompt('Label:', '', 'New Label'); if (!n) return; const list = L.store.get('captionLabels', []); if (!list.includes(n)) { list.push(n); L.store.set('captionLabels', list); } lab.appendChild(G.raw('option', { value: n }, n)); lab.value = n; upd(); }, { class: 'btn small' }), ui.button('&Delete Label', () => { if (F().CAPTION_LABELS.includes(lab.value)) return; L.store.set('captionLabels', L.store.get('captionLabels', []).filter((x) => x !== lab.value)); lab.querySelector(`option[value="${lab.value}"]`).remove(); upd(); }, { class: 'btn small' }), ui.button('N&umbering...', () => numbering(), { class: 'btn small' }))),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
-        const prefix = (excl.input.checked ? '' : lab.value + ' ');
-        let rest = txt.value;
-        const m = new RegExp('^' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:[\\dA-Za-z]+' + (num.chapter ? '[-.:—–]?[\\dA-Za-z]+' : '') + ')').exec(rest);
+        const label = direct ? reactCaption.label : lab.value;
+        const excluded = direct ? reactCaption.exclude : excl.input.checked;
+        const position = direct ? reactCaption.position : pos.value;
+        const currentNum = direct ? reactCaption.numbering : num;
+        const prefix = (excluded ? '' : label + ' ');
+        let rest = direct ? reactCaption.text : txt.value;
+        const m = new RegExp('^' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:[\\dA-Za-z]+' + (currentNum.chapter ? '[-.:—–]?[\\dA-Za-z]+' : '') + ')').exec(rest);
         rest = m ? rest.slice(m[0].length) : '';
-        F().insertCaption({ label: lab.value, position: pos.value, text: rest, fmt: num.fmt, chapter: num.chapter, chapterStyle: num.chapterStyle, chapterSep: num.sep, noLabel: excl.input.checked });
+        F().insertCaption({ label, position, text: rest, fmt: currentNum.fmt, chapter: currentNum.chapter, chapterStyle: currentNum.chapterStyle, chapterSep: currentNum.sep, noLabel: excluded });
       } }, { label: 'Cancel' }],
     });
     function numbering() {
+      if (direct) { num = { ...reactCaption.numbering }; }
+      let reactNum = { ...num };
+      G.reactCaptionNumberingCatalog = () => ({ ...reactNum });
+      G.reactCaptionNumberingAction = (value) => { reactNum = { ...reactNum, ...(value || {}) }; };
       const fmt = ui.select([['ARABIC', '1, 2, 3, ...'], ['alphabetic', 'a, b, c, ...'], ['ALPHABETIC', 'A, B, C, ...'], ['roman', 'i, ii, iii, ...'], ['ROMAN', 'I, II, III, ...']], num.fmt, null, { id: 'cn-fmt' });
       const chap = ui.check('Include &chapter number', num.chapter, null);
       const style = ui.select([1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => [i, 'Heading ' + i]), num.chapterStyle, null, { id: 'cn-st', translate: 'no' });   // style names
       const sep = ui.select([['-', '- (hyphen)'], ['.', '. (period)'], [':', ': (colon)'], ['—', '— (em dash)'], ['–', '– (en dash)']], num.sep, null, { id: 'cn-sep' });
-      ui.dialog({ title: 'Caption Numbering', width: 320, body: h('div', { class: 'col' }, G.f('F&ormat:', fmt), chap, G.f('Chapter starts with style:', style, 'wide'), G.f('Use separator:', sep, 'wide')), buttons: [{ label: 'OK', primary: true, onClick: () => { num = { fmt: fmt.value, chapter: chap.input.checked, chapterStyle: +style.value, sep: sep.value }; upd(); } }, { label: 'Cancel' }] });
+      const reactRoot = h('div', { id: 'react-wordx-caption-numbering-root' });
+      ui.dialog({ title: 'Caption Numbering', width: 320, body: direct ? reactRoot : h('div', { class: 'col' }, G.f('F&ormat:', fmt), chap, G.f('Chapter starts with style:', style, 'wide'), G.f('Use separator:', sep, 'wide')), buttons: [{ label: 'OK', primary: true, onClick: () => { num = direct ? reactNum : { fmt: fmt.value, chapter: chap.input.checked, chapterStyle: +style.value, sep: sep.value }; if (direct) { reactCaption = { ...reactCaption, numbering: { ...num }, text: captionPreview(reactCaption.label, reactCaption.exclude, num) }; L.bus.emit('wordx-caption-refresh'); } else upd(); } }, { label: 'Cancel' }] });
     }
   };
 
@@ -430,6 +476,31 @@
 
   /* ================= Index and Tables ================= */
   G.indexTables = function (tab) {
+    const direct = !!(window.VO && VO.reactDirectHost);
+    if (direct) {
+      const initialTab = tab === 'tof' ? 'tof' : tab === 'index' ? 'index' : 'toc';
+      const root = h('div', { id: 'react-wordx-index-tables-root' });
+      const styles = () => Object.keys(doc().styles).filter((id) => doc().styles[id].type === 'paragraph').sort((a,b)=>D.styleDisplayName(doc().styles[a]).localeCompare(D.styleDisplayName(doc().styles[b]))).map((id)=>({ id, name: D.styleDisplayName(doc().styles[id]), level: D.styleProps(doc(),id).pPr.outline }));
+      G.reactIndexTablesCatalog = () => ({ initialTab, styles: styles(), labels: ['Figure','Table','Equation'].concat(L.store.get('captionLabels', [])), leaders: [['dot','.......'],['hyphen','-------'],['underscore','_______'],['none',L.N('(none)')]] });
+      G.reactIndexTablesAction = (action, value) => {
+        if (action === 'modify') { G.style('TOC1'); return; }
+        if (action === 'mark') { G.markEntry(); return; }
+        if (action !== 'insert') return;
+        const { tab: current, toc, figures, index } = value;
+        if (current === 'toc') {
+          let instr = `TOC \\o "1-${toc.levels}"`;
+          if (toc.styles) { const st = Object.entries(toc.styles).filter(([id])=>!id.startsWith('__')&&!/^Heading\\d$/.test(id)).map(([id,level])=>`${D.styleDisplayName(doc().styles[id])},${level}`).join(','); if (!toc.styles.__outline) instr='TOC'; if (st) instr+=` \\t "${st}"`; if (toc.styles.__fields) instr+=' \\f'; }
+          if (toc.links) instr+=' \\h'; instr+=' \\z \\u'; if (!toc.show) instr+=' \\n'; else if (!toc.right) instr+=' \\p " "';
+          F().insertGenerated(instr); if (toc.format!=='template') applyTocFormat(toc.format,toc.levels);
+        } else if (current === 'tof') {
+          let instr=`TOC \\h \\z \\c "${figures.label}"`; if (!figures.include) instr+=` \\a "${figures.label}"`; if (!figures.show) instr+=' \\n'; F().insertGenerated(instr);
+        } else if (current === 'index') {
+          let instr=`INDEX \\c "${index.columns}"`; if (index.type==='runin') instr+=' \\r'; if (index.headings) instr+=' \\h "A"'; if (index.right) instr+=' \\e "\\t"'; F().insertGenerated(instr,{columns:index.columns});
+        }
+      };
+      ui.dialog({ title:'Index and Tables', width:520, body:root, buttons:[{label:'OK',primary:true,onClick:()=>{const body=root.querySelector('#react-wordx-index-tables-body');if(!body)return;const current=body.querySelector('[role=tab][aria-selected=true]')?.dataset.indexTab||initialTab;const read=(id)=>body.querySelector('#'+id);const tocStyles={};body.querySelectorAll('[data-toc-style]').forEach((input)=>{if(input.value.trim())tocStyles[input.dataset.tocStyle]=Number(input.value)});if(body.querySelector('#react-wordx-toc-outline'))tocStyles.__outline=body.querySelector('#react-wordx-toc-outline').checked;if(body.querySelector('#react-wordx-toc-fields'))tocStyles.__fields=body.querySelector('#react-wordx-toc-fields').checked;G.reactIndexTablesAction('insert',{tab:current,toc:{show:read('react-wordx-toc-show')?.checked,right:read('react-wordx-toc-right')?.checked,links:read('react-wordx-toc-links')?.checked,leader:read('react-wordx-toc-leader')?.value,levels:Number(read('react-wordx-toc-levels')?.value)||3,format:read('react-wordx-toc-format')?.value||'template',styles:Object.keys(tocStyles).length?tocStyles:null},figures:{label:read('react-wordx-tof-label')?.value||'Figure',include:read('react-wordx-tof-include')?.checked,show:read('react-wordx-tof-show')?.checked},index:{type:body.querySelector('[name=react-wordx-index-type]:checked')?.value||'indent',columns:Number(read('react-wordx-index-columns')?.value)||2,right:read('react-wordx-index-right')?.checked,headings:read('react-wordx-index-headings')?.checked}})}},{label:'Cancel'}]});
+      return;
+    }
     const leaders = [['dot', '.......'], ['hyphen', '-------'], ['underscore', '_______'], ['none', L.N('(none)')]];
     /* TOC */
     const tShow = ui.check('&Show page numbers', true, () => pvToc());
@@ -581,6 +652,7 @@
 
   /* ================= Hyperlink ================= */
   G.hyperlink = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const d = doc();
     let cur = null;
     if (E.sel) {
@@ -616,20 +688,29 @@
       { label: 'E-&mail Address', body: h('div', { class: 'col' }, h('label', { for: 'hl-mail', text: 'E-mail address:' }), mail, h('label', { for: 'hl-subj', text: 'Subject:' }), subj), onShow: () => { kind = 2; } },
     ], kind);
     let screenTip = tip;
+    let reactHyperlink = { kind, display: disp.value, address: addr.value, place: cur && cur.anchor ? cur.anchor : '', email: mail.value, subject: subj.value, screenTip, places };
+    G.reactHyperlinkCatalog = () => ({ ...reactHyperlink, places: reactHyperlink.places.slice() });
+    G.reactHyperlinkAction = async (action, value) => {
+      if (action === 'change') { reactHyperlink = { ...reactHyperlink, ...(value || {}) }; kind = reactHyperlink.kind; }
+      else if (action === 'screenTip') { const result = await ui.prompt('ScreenTip text:', reactHyperlink.screenTip, 'Set Hyperlink ScreenTip'); if (result != null) { screenTip = result; reactHyperlink = { ...reactHyperlink, screenTip: result }; L.bus.emit('wordx-hyperlink-refresh'); } }
+      else if (action === 'remove') A().removeHyperlink();
+    };
+    const reactRoot = h('div', { id: 'react-wordx-hyperlink-root' });
     ui.dialog({
       title: cur ? 'Edit Hyperlink' : 'Insert Hyperlink', width: 520, focus: kind === 0 ? addr : null,
-      body: h('div', { class: 'col' }, G.row(h('label', { for: 'hl-disp', html: ui.ampHTML('&Text to display:'), style: 'width:110px' }), h('div', { style: 'flex:1' }, disp), ui.button('ScreenTi&p...', async () => { const t = await ui.prompt('ScreenTip text:', screenTip, 'Set Hyperlink ScreenTip'); if (t != null) screenTip = t; }, { class: 'btn small' })), tabs),
+      body: direct ? reactRoot : h('div', { class: 'col' }, G.row(h('label', { for: 'hl-disp', html: ui.ampHTML('&Text to display:'), style: 'width:110px' }), h('div', { style: 'flex:1' }, disp), ui.button('ScreenTi&p...', async () => { const t = await ui.prompt('ScreenTip text:', screenTip, 'Set Hyperlink ScreenTip'); if (t != null) screenTip = t; }, { class: 'btn small' })), tabs),
       buttons: (cur ? [{ label: '&Remove Link', onClick: () => { A().removeHyperlink(); } }] : []).concat([{ label: 'OK', primary: true, onClick: () => {
         let link;
-        if (kind === 0) { let u = addr.value.trim(); if (!u) return false; if (/^www\./i.test(u)) u = 'http://' + u; link = { url: u }; }
-        else if (kind === 1) {
-          let a = place.get();
+        const form = direct ? reactHyperlink : { kind, address: addr.value, place: place.get(), email: mail.value, subject: subj.value, display: disp.value, screenTip };
+        if (form.kind === 0) { let u = form.address.trim(); if (!u) return false; if (/^www\./i.test(u)) u = 'http://' + u; link = { url: u }; }
+        else if (form.kind === 1) {
+          let a = form.place;
           if (a && a.startsWith('§')) { const p = D.byId(d, +a.slice(1)); E.edit(L.N('Bookmark'), () => { a = F().ensureParaBookmark(p, '_Toc'); return E.sel; }); }
           link = { anchor: a || '_top' };
-        } else { const m = mail.value.trim(); if (!m) return false; link = { url: 'mailto:' + m + (subj.value ? '?subject=' + encodeURIComponent(subj.value) : '') }; }
-        if (screenTip) link.tip = screenTip;
+        } else { const m = form.email.trim(); if (!m) return false; link = { url: 'mailto:' + m + (form.subject ? '?subject=' + encodeURIComponent(form.subject) : '') }; }
+        if (form.screenTip) link.tip = form.screenTip;
         if (cur?.target) link.target = cur.target; // the frame it opens in, which this dialog doesn't show
-        const text = disp.value || (kind === 0 ? addr.value : kind === 2 ? mail.value : place.get() || 'Top of the Document');
+        const text = form.display || (form.kind === 0 ? form.address : form.kind === 2 ? form.email : form.place || 'Top of the Document');
         E.edit(cur ? 'Edit Hyperlink' : 'Insert Hyperlink', () => {
           const style = D.useStyle(d, 'Hyperlink');
           if (range && !D.eqPos(range[0], range[1]) && text === selText) { O.formatRange(range[0], range[1], (r) => Object.assign(r, { link, style })); return { a: range[0], f: range[1] }; }
@@ -747,8 +828,9 @@
     { fill: { t: 'solid', c: '#CC0000' }, line: { c: '#660000', w: 0.75 }, warp: 'textArchDown' }, { fill: { t: 'solid', c: '#336633' }, warp: 'textTriangle' }, { fill: { t: 'grad', ang: 45, stops: [{ p: 0, c: '#0000FF' }, { p: 1, c: '#00FFFF' }] }, warp: 'textPlain', b: true }, { fill: { t: 'solid', c: '#FFCC00' }, line: { c: '#996600', w: 0.75 }, warp: 'textSlantDown', shadow: { dx: 2, dy: 2 } }, { fill: { t: 'solid', c: '#660099' }, warp: 'textCircle' },
   ];
   G.wordart = function (mode) {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const it = mode && L.drawing.selectedItem();
-    if (mode === true && it && it.wordart) { editText(it, (wa) => L.drawing.modifySelected('Edit LettersArt', (x) => { x.wordart = Object.assign({}, x.wordart, wa); })); return; }
+    if (mode === true && it && it.wordart) { editText(it, (wa) => L.drawing.modifySelected('Edit LettersArt', (x) => { x.wordart = Object.assign({}, x.wordart, wa); }), direct); return; }
     let pick = 0;
     const grid = h('div', { class: 'wa-grid' });
     WA_STYLES.forEach((s, i) => {
@@ -759,7 +841,15 @@
       b.addEventListener('dblclick', () => ok.click());
       grid.appendChild(b);
     });
-    const dlg = ui.dialog({ title: 'LettersArt Gallery', width: 470, body: h('div', { class: 'col' }, h('div', { text: 'Select a LettersArt style:' }), grid), buttons: [{ label: 'OK', primary: true, onClick: () => {
+    const reactRoot = h('div', { id: 'react-wordx-wordart-root' });
+    const wordartPreview = (s) => {
+      const shape = { t: 'shape', w: 66, h: 40, fill: Object.assign({ a: 1 }, s.fill), line: s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }, warp: s.warp, shadow: s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined, wordart: { text: 'LettersArt', font: 'Arial Black', b: s.b, i: s.i } };
+      return L.drawing.wordartSVG(shape).outerHTML;
+    };
+    G.reactWordartCatalog = () => ({ selected: pick, previews: WA_STYLES.map(wordartPreview) });
+    G.reactWordartAction = (action, value) => {
+      if (action === 'select') { pick = Number(value); return G.reactWordartCatalog(); }
+      if (action !== 'apply') return G.reactWordartCatalog();
       const s = WA_STYLES[pick];
       if (mode === 'gallery' && it) { L.drawing.modifySelected('LettersArt Gallery', (x) => { x.fill = Object.assign({ a: 1 }, s.fill); x.line = s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }; x.warp = s.warp; x.shadow = s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined; }); return; }
       const init = E.sel && !E.collapsed() ? O.textRange(...E.range(), ' ').trim().slice(0, 200) : 'Your Text Here';
@@ -769,20 +859,43 @@
         const w = Math.min(468, longest * wa.sz * 0.62 + 10), hh = lines.length * wa.sz * 1.15 + 6;
         const shape = { t: 'shape', geom: 'rect', w: L.round(w, 2), h: L.round(hh, 2), fill: Object.assign({ a: 1 }, s.fill), line: s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }, warp: s.warp, shadow: s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined, wordart: wa, name: 'LettersArt ' + D.nid() };
         E.edit('Insert LettersArt', () => O.insertItem(E.deleteSelection(), shape));
-      }), 0);
+      }, direct), 0);
+    };
+    const dlg = ui.dialog({ title: 'LettersArt Gallery', width: 470, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { text: 'Select a LettersArt style:' }), grid), buttons: [{ label: 'OK', primary: true, onClick: () => {
+      if (direct) { G.reactWordartAction('apply'); return; }
+      const s = WA_STYLES[pick];
+      if (mode === 'gallery' && it) { L.drawing.modifySelected('LettersArt Gallery', (x) => { x.fill = Object.assign({ a: 1 }, s.fill); x.line = s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }; x.warp = s.warp; x.shadow = s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined; }); return; }
+      const init = E.sel && !E.collapsed() ? O.textRange(...E.range(), ' ').trim().slice(0, 200) : 'Your Text Here';
+      setTimeout(() => editText({ wordart: { text: init, font: 'Arial Black', sz: 36, b: s.b, i: s.i } }, (wa) => {
+        const lines = wa.text.split('\n');
+        const longest = Math.max(...lines.map((l) => l.length), 1);
+        const w = Math.min(468, longest * wa.sz * 0.62 + 10), hh = lines.length * wa.sz * 1.15 + 6;
+        const shape = { t: 'shape', geom: 'rect', w: L.round(w, 2), h: L.round(hh, 2), fill: Object.assign({ a: 1 }, s.fill), line: s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }, warp: s.warp, shadow: s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined, wordart: wa, name: 'LettersArt ' + D.nid() };
+        E.edit('Insert LettersArt', () => O.insertItem(E.deleteSelection(), shape));
+      }, direct), 0);
     } }, { label: 'Cancel' }] });
     const ok = dlg.buttons[0];
   };
-  function editText(it, done) {
+  function editText(it, done, reactHost = !!(window.VO && VO.reactDirectHost)) {
+    const direct = !!reactHost;
     const wa = Object.assign({ text: 'Your Text Here', font: 'Arial Black', sz: 36 }, it.wordart || {});
-    const font = ui.select(G.FONTS().map((f) => [f, f]), wa.font, () => upd(), { id: 'wa-font', translate: 'no' });
-    const size = ui.select([8, 10, 12, 14, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96].map((x) => [x, String(x)]), wa.sz || 36, null, { id: 'wa-size' });
-    const b = ui.check('&Bold', !!wa.b, () => upd()), i = ui.check('&Italic', !!wa.i, () => upd());
-    const ta = h('textarea', { rows: 5, id: 'wa-text', style: 'width:100%;font-size:20px' });
-    ta.value = wa.text;
-    const upd = () => { ta.style.fontFamily = L.fontStack(font.value); ta.style.fontWeight = b.input.checked ? 'bold' : 'normal'; ta.style.fontStyle = i.input.checked ? 'italic' : 'normal'; };
-    upd();
-    ui.dialog({ title: 'Edit LettersArt Text', width: 440, focus: ta, body: h('div', { class: 'col' }, G.row(G.f('&Font:', font), G.f('&Size:', size), b, i), h('label', { for: 'wa-text', html: ui.ampHTML('&Text:') }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => done({ text: ta.value || ' ', font: font.value, sz: +size.value, b: b.input.checked || undefined, i: i.input.checked || undefined }) }, { label: 'Cancel' }] });
+    const font = direct ? null : ui.select(G.FONTS().map((f) => [f, f]), wa.font, () => upd(), { id: 'wa-font', translate: 'no' });
+    const size = direct ? null : ui.select([8, 10, 12, 14, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96].map((x) => [x, String(x)]), wa.sz || 36, null, { id: 'wa-size' });
+    const b = direct ? null : ui.check('&Bold', !!wa.b, () => upd()), i = direct ? null : ui.check('&Italic', !!wa.i, () => upd());
+    const ta = direct ? null : h('textarea', { rows: 5, id: 'wa-text', style: 'width:100%;font-size:20px' });
+    if (ta) ta.value = wa.text;
+    const upd = () => { if (ta && font && b && i) { ta.style.fontFamily = L.fontStack(font.value); ta.style.fontWeight = b.input.checked ? 'bold' : 'normal'; ta.style.fontStyle = i.input.checked ? 'italic' : 'normal'; } };
+    if (!direct) upd();
+    let reactValue = { text: wa.text, font: wa.font, sz: wa.sz || 36, b: !!wa.b, i: !!wa.i };
+    const sizes = [8, 10, 12, 14, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96];
+    const reactRoot = h('div', { id: 'react-wordx-lettersart-text-root' });
+    G.reactLettersArtTextCatalog = () => ({ ...reactValue, fonts: G.FONTS(), sizes });
+    G.reactLettersArtTextAction = (action, value) => {
+      if (action === 'change') { reactValue = { ...reactValue, ...value }; return G.reactLettersArtTextCatalog(); }
+      if (action === 'accept') done({ text: reactValue.text || ' ', font: reactValue.font, sz: +reactValue.sz, b: reactValue.b || undefined, i: reactValue.i || undefined });
+      return G.reactLettersArtTextCatalog();
+    };
+    ui.dialog({ title: 'Edit LettersArt Text', width: 440, focus: direct ? null : ta, body: direct ? reactRoot : h('div', { class: 'col' }, G.row(G.f('&Font:', font), G.f('&Size:', size), b, i), h('label', { for: 'wa-text', html: ui.ampHTML('&Text:') }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => { if (direct) G.reactLettersArtTextAction('accept'); else done({ text: ta.value || ' ', font: font.value, sz: +size.value, b: b.input.checked || undefined, i: i.input.checked || undefined }); } }, { label: 'Cancel' }] });
   }
 
   /* ================= Table dialogs ================= */
@@ -925,6 +1038,68 @@
     const { tp } = R.tblProps(d, t);
     const rg = L.tables.range();
     const total = t.grid.reduce((a, b) => a + b, 0);
+    const direct = !!(window.VO && VO.reactDirectHost);
+    if (direct) {
+      const row = t.rows[rg.r0], cell = ci.cell, cellMap = rg.map[ci.ri].find((m) => m.cell === cell);
+      const cellWidth = t.grid.slice(cellMap.c0, cellMap.c0 + cellMap.span).reduce((a, b) => a + b, 0);
+      let state = {
+        tab: tab || 0, tableWidthEnabled: !!(t.tblPr.w && t.tblPr.w.type !== 'auto' && t.tblPr.w.v), tableWidth: t.tblPr.w && t.tblPr.w.type === 'dxa' ? t.tblPr.w.v : total,
+        tableWidthUnit: t.tblPr.w && t.tblPr.w.type === 'pct' ? 'pct' : 'dxa', alignment: tp.jc === 'center' ? 'center' : tp.jc === 'right' || tp.jc === 'end' ? 'right' : 'left', indent: tp.ind || 0,
+        wrap: t.tblPr.float ? 'around' : 'none', margins: { ...tp.cellMar }, spacing: t.tblPr.cellSpacing || 0, autoResize: t.tblPr.layout !== 'fixed',
+        rowHeightEnabled: !!row.trPr.h, rowHeight: row.trPr.h || 14.4, rowHeightRule: row.trPr.hRule === 'exact' ? 'exact' : 'atLeast', allowRowBreak: !row.trPr.cantSplit, repeatHeader: !!row.trPr.header,
+        columnWidthEnabled: true, columnWidth: t.grid.slice(rg.c0, rg.c1 + 1).reduce((a, b) => a + b, 0) / (rg.c1 - rg.c0 + 1),
+        cellWidthEnabled: true, cellWidth, verticalAlignment: cell.tcPr.vAlign || 'top', sameCellMargins: !cell.tcPr.mar,
+        cellMargins: { t: cell.tcPr.mar?.t ?? tp.cellMar.t ?? 0, b: cell.tcPr.mar?.b ?? tp.cellMar.b ?? 0, l: cell.tcPr.mar?.l ?? tp.cellMar.l ?? 0, r: cell.tcPr.mar?.r ?? tp.cellMar.r ?? 0 },
+        wrapText: !cell.tcPr.noWrap, fitText: !!cell.tcPr.fitText,
+        rowLabel: rg.r1 > rg.r0 ? L.t('Rows {0}-{1}:', rg.r0 + 1, rg.r1 + 1) : L.t('Row {0}:', rg.r0 + 1),
+        columnLabel: rg.c1 > rg.c0 ? L.t('Columns {0}-{1}:', rg.c0 + 1, rg.c1 + 1) : L.t('Column {0}:', rg.c0 + 1),
+      };
+      const root = h('div', { id: 'react-wordx-table-properties-root' });
+      G.reactTablePropsCatalog = () => ({ ...state, margins: { ...state.margins }, cellMargins: { ...state.cellMargins } });
+      G.reactTablePropsAction = (action, value) => {
+        if (action === 'change' && value) { state = { ...state, ...value, margins: { ...state.margins, ...(value.margins || {}) }, cellMargins: { ...state.cellMargins, ...(value.cellMargins || {}) } }; return G.reactTablePropsCatalog(); }
+        if (action === 'borders') { G.borders(); return G.reactTablePropsCatalog(); }
+        if (action !== 'apply') return G.reactTablePropsCatalog();
+        E.edit('Table Properties', () => {
+          D.touchTbl(t);
+          const tpp = t.tblPr;
+          if (state.tableWidthEnabled) {
+            if (state.tableWidthUnit === 'pct') tpp.w = { type: 'pct', v: 5000 };
+            else { const w = state.tableWidth; tpp.w = { type: 'dxa', v: w }; const tot = t.grid.reduce((a, b) => a + b, 0) || 1; t.grid = t.grid.map((g) => L.round((g * w) / tot, 2)); }
+          } else tpp.w = { type: 'auto', v: 0 };
+          tpp.jc = state.alignment === 'left' ? undefined : state.alignment;
+          if (!tpp.jc) delete tpp.jc;
+          if (state.alignment === 'left' && state.indent) tpp.ind = state.indent; else delete tpp.ind;
+          // The legacy dialog exposes this choice but does not write tblpPr.
+          // Preserve that behavior until the editor has a complete positioning model.
+          tpp.cellMar = { ...state.margins };
+          if (state.spacing) tpp.cellSpacing = state.spacing; else delete tpp.cellSpacing;
+          tpp.layout = state.autoResize ? 'autofit' : 'fixed';
+          for (let r = rg.r0; r <= rg.r1; r++) {
+            const tr = t.rows[r].trPr;
+            if (state.rowHeightEnabled) { tr.h = state.rowHeight; tr.hRule = state.rowHeightRule; } else { delete tr.h; delete tr.hRule; }
+            if (state.allowRowBreak) delete tr.cantSplit; else tr.cantSplit = true;
+          }
+          if (state.repeatHeader) for (let r = 0; r <= rg.r1; r++) t.rows[r].trPr.header = true; else for (let r = rg.r0; r <= rg.r1; r++) delete t.rows[r].trPr.header;
+          if (state.columnWidthEnabled) for (let i = rg.c0; i <= rg.c1; i++) t.grid[i] = L.round(state.columnWidth, 2);
+          for (const c of rg.cells) {
+            c.tcPr.vAlign = state.verticalAlignment === 'top' ? undefined : state.verticalAlignment;
+            if (!c.tcPr.vAlign) delete c.tcPr.vAlign;
+            if (state.sameCellMargins) delete c.tcPr.mar; else c.tcPr.mar = { ...state.cellMargins };
+            if (state.wrapText) delete c.tcPr.noWrap; else c.tcPr.noWrap = true;
+            if (state.fitText) c.tcPr.fitText = true; else delete c.tcPr.fitText;
+          }
+          if (state.cellWidthEnabled && rg.cells.length === 1 && !state.columnWidthEnabled) {
+            const want = state.cellWidth, have = cellWidth, k = want / (have || 1);
+            for (let i = cellMap.c0; i < cellMap.c0 + cellMap.span; i++) t.grid[i] = L.round(t.grid[i] * k, 2);
+          }
+          L.tables.fixWidths(t);
+          return E.sel;
+        });
+      };
+      ui.dialog({ title: 'Table Properties', width: 430, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => G.reactTablePropsAction('apply') }, { label: 'Cancel' }] });
+      return;
+    }
     /* Table tab */
     const tW = ui.check('&Preferred width:', !!(t.tblPr.w && t.tblPr.w.type !== 'auto' && t.tblPr.w.v), null);
     const tWv = G.len(t.tblPr.w && t.tblPr.w.type === 'dxa' ? t.tblPr.w.v : total, { id: 'tp-w', min: 9 });

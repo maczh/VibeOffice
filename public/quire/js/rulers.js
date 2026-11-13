@@ -7,8 +7,21 @@
   const RU = (L.rulers = {});
   const doc = () => D.doc;
   const { h } = L;
-  let H = null, V = null, corner = null;
+  let H = null, V = null, corner = null, canvasRoot = null, verticalCanvasRoot = null, eventRoot = null, verticalEventRoot = null, markerRoot = null, verticalMarkerRoot = null;
   let tabKind = 0;
+  let reactMarkers = [];
+  let reactVerticalMarkers = [];
+  const directHost = () => !!(window.VO && VO.reactDirectHost);
+  const rulerMarker = (data, html) => {
+    if (directHost()) { reactMarkers.push({ ...data, html: html || '' }); return; }
+    const m = h('div', { class: data.className, 'data-tip': data.tip, html: html || '' });
+    if (data.left != null) m.style.left = data.left + 'px';
+    if (data.top != null) m.style.top = data.top + 'px';
+    if (data.width != null) m.style.width = data.width + 'px';
+    for (const key of ['kind', 'pos', 'cid']) if (data[key] != null) m.dataset[key] = data[key];
+    H.appendChild(m);
+  };
+  const publishReactMarkers = () => { if (directHost()) L.bus.emit('wordx-ruler-marks'); };
   const TAB_KINDS = [['left', 'Left Tab'], ['center', 'Center Tab'], ['right', 'Right Tab'], ['decimal', 'Decimal Tab'], ['bar', 'Bar Tab'], ['firstLine', 'First Line Indent'], ['hanging', 'Hanging Indent']];
   const SVG = {
     left: '<svg width="9" height="9"><path d="M2 0v7h6" stroke="#000" stroke-width="1.6" fill="none"/></svg>',
@@ -27,16 +40,26 @@
   };
   RU.mount = function (hEl, vEl, cEl) {
     H = hEl; V = vEl; corner = cEl;
-    H.appendChild(h('canvas', { class: 'r-canvas' }));
-    V.appendChild(h('canvas', { class: 'r-canvas' }));
-    const sel = h('button', { class: 'tabsel', type: 'button', 'aria-label': 'Tab type', 'data-tip': TAB_KINDS[0][1], html: SVG.left });
-    sel.addEventListener('pointerdown', (e) => e.preventDefault());
-    sel.addEventListener('click', () => { tabKind = (tabKind + 1) % TAB_KINDS.length; sel.innerHTML = SVG[TAB_KINDS[tabKind][0]]; sel.setAttribute('data-tip', L.t(TAB_KINDS[tabKind][1])); sel.setAttribute('aria-label', L.t(TAB_KINDS[tabKind][1])); });
-    corner.appendChild(sel);
-    H.addEventListener('pointerdown', onRulerDown);
-    H.addEventListener('dblclick', (e) => { if (e.target.closest('.rmark.tabstop')) { L.dlg && L.dlg.tabs(); return; } L.dlg && (state && e.clientX > state.x0 && e.clientX < state.x0 + state.w ? L.dlg.tabs() : L.dlg.pageSetup()); });
-    V.addEventListener('pointerdown', onVDown);
-    V.addEventListener('dblclick', () => L.dlg && L.dlg.pageSetup());
+    if (directHost()) {
+      canvasRoot = h('div', { id: 'react-wordx-ruler-canvas-root', style: 'display:contents' }); H.appendChild(canvasRoot);
+      verticalCanvasRoot = h('div', { id: 'react-wordx-v-ruler-canvas-root', style: 'display:contents' }); V.appendChild(verticalCanvasRoot);
+      eventRoot = h('div', { id: 'react-wordx-ruler-events-root', style: 'display:contents' }); H.appendChild(eventRoot);
+      verticalEventRoot = h('div', { id: 'react-wordx-v-ruler-events-root', style: 'display:contents' }); V.appendChild(verticalEventRoot);
+      markerRoot = h('div', { id: 'react-wordx-ruler-markers-root' }); H.appendChild(markerRoot);
+      verticalMarkerRoot = h('div', { id: 'react-wordx-v-ruler-markers-root' }); V.appendChild(verticalMarkerRoot);
+    } else { H.appendChild(h('canvas', { class: 'r-canvas' })); V.appendChild(h('canvas', { class: 'r-canvas' })); }
+    if (!directHost()) {
+      const sel = h('button', { class: 'tabsel', type: 'button', 'aria-label': 'Tab type', 'data-tip': TAB_KINDS[0][1], html: SVG.left });
+      sel.addEventListener('pointerdown', (e) => e.preventDefault());
+      sel.addEventListener('click', () => { RU.reactTabNext(); sel.innerHTML = SVG[TAB_KINDS[tabKind][0]]; sel.setAttribute('data-tip', L.t(TAB_KINDS[tabKind][1])); sel.setAttribute('aria-label', L.t(TAB_KINDS[tabKind][1])); });
+      corner.appendChild(sel);
+    }
+    if (!directHost()) {
+      H.addEventListener('pointerdown', onRulerDown);
+      H.addEventListener('dblclick', (e) => RU.reactRulerDoubleClick(e));
+      V.addEventListener('pointerdown', onVDown);
+      V.addEventListener('dblclick', () => L.dlg && L.dlg.pageSetup());
+    }
     L.onLook(() => RU.draw());   /* the canvas follows the look */
   };
   RU.drawSoon = L.rafThrottle(() => RU.draw());
@@ -65,15 +88,17 @@
     const g = geometry();
     const hr = H.getBoundingClientRect();
     const cv = H.querySelector('canvas');
+    if (!cv) return;
     const dpr = window.devicePixelRatio || 1;
     cv.width = Math.max(1, hr.width * dpr); cv.height = Math.max(1, hr.height * dpr);
     cv.style.width = hr.width + 'px'; cv.style.height = hr.height + 'px';
     const c = cv.getContext('2d');
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     c.clearRect(0, 0, hr.width, hr.height);
-    for (const m of H.querySelectorAll('.rmark')) m.remove();
+    if (directHost()) { reactMarkers = []; reactVerticalMarkers = []; }
+    else for (const m of H.querySelectorAll('.rmark')) m.remove();
     state = null;
-    if (!g) return;
+    if (!g) { publishReactMarkers(); return; }
     const z = g.z;
     const pxPt = D.PX * z;
     /* page extent and margins */
@@ -116,7 +141,7 @@
       }
     }
     state = { g, hr, origin, pxPt, textL, textR, colL, colR, pageL, pageR, x0: g.x0, w: g.w };
-    if (E.readOnly || L.app.view === 'reading') return;
+    if (E.readOnly || L.app.view === 'reading') { publishReactMarkers(); return; }
     /* indent markers */
     const pp = E.curPara();
     const ind = pp.ind || {};
@@ -129,11 +154,7 @@
     /* tab stops (custom ones) */
     for (const t of pp.tabs || []) {
       if (t.al === 'clear' || t.al === 'num') continue;
-      const m = h('div', { class: 'rmark tabstop', 'data-tip': ({ left: 'Left Tab', center: 'Center Tab', right: 'Right Tab', decimal: 'Decimal Tab', bar: 'Bar Tab', start: 'Left Tab', end: 'Right Tab' }[t.al] || L.N('Tab')), html: SVG[{ start: 'left', end: 'right' }[t.al] || t.al] || SVG.left });
-      m.style.left = base + t.pos * pxPt - 1 + 'px';
-      m.dataset.kind = 'tab';
-      m.dataset.pos = t.pos;
-      H.appendChild(m);
+      rulerMarker({ className: 'rmark tabstop', tip: ({ left: 'Left Tab', center: 'Center Tab', right: 'Right Tab', decimal: 'Decimal Tab', bar: 'Bar Tab', start: 'Left Tab', end: 'Right Tab' }[t.al] || L.N('Tab')), left: base + t.pos * pxPt - 1, kind: 'tab', pos: t.pos }, SVG[{ start: 'left', end: 'right' }[t.al] || t.al] || SVG.left);
     }
     /* default tab ticks after the last custom tab */
     c.strokeStyle = L.lookColor('ruler-deftab', '#777');
@@ -143,26 +164,24 @@
     /* column / cell boundary markers */
     if (g.ci) {
       const tr = g.frag.closest('tr');
-      if (tr) { const tds = Array.from(tr.children).filter((x) => x.dataset.cid); tds.forEach((td, i) => { if (i === 0) return; const rr = td.getBoundingClientRect(); const m = h('div', { class: 'rmark colmark', 'data-tip': 'Move Table Column' }); m.style.left = rr.left - hr.left + 'px'; m.dataset.kind = 'cell'; m.dataset.cid = tds[i - 1].dataset.cid; H.appendChild(m); }); const last = tds[tds.length - 1]; if (last) { const rr = last.getBoundingClientRect(); const m = h('div', { class: 'rmark colmark', 'data-tip': 'Move Table Column' }); m.style.left = rr.right - hr.left + 'px'; m.dataset.kind = 'cell'; m.dataset.cid = last.dataset.cid; H.appendChild(m); } }
+      if (tr) { const tds = Array.from(tr.children).filter((x) => x.dataset.cid); tds.forEach((td, i) => { if (i === 0) return; const rr = td.getBoundingClientRect(); rulerMarker({ className: 'rmark colmark', tip: 'Move Table Column', left: rr.left - hr.left, kind: 'cell', cid: tds[i - 1].dataset.cid }); }); const last = tds[tds.length - 1]; if (last) { const rr = last.getBoundingClientRect(); rulerMarker({ className: 'rmark colmark', tip: 'Move Table Column', left: rr.right - hr.left, kind: 'cell', cid: last.dataset.cid }); } }
     } else if (g.pgEl && g.sect.cols && g.sect.cols.n > 1) {
       const cols = Array.from(g.colEl.parentNode.querySelectorAll('.pg-col'));
-      cols.slice(1).forEach((col) => { const rr = col.getBoundingClientRect(); const m = h('div', { class: 'rmark colmark', 'data-tip': 'Move Column' }); m.style.left = rr.left - hr.left - 4 + 'px'; m.style.width = '8px'; m.dataset.kind = 'col'; H.appendChild(m); });
+      cols.slice(1).forEach((col) => { const rr = col.getBoundingClientRect(); rulerMarker({ className: 'rmark colmark', tip: 'Move Column', left: rr.left - hr.left - 4, width: 8, kind: 'col' }); });
     }
     drawV();
+    publishReactMarkers();
   };
   function addMark(kind, x, y, tip) {
-    const m = h('div', { class: 'rmark ind-' + kind, 'data-tip': tip, html: MARK[kind] });
-    m.style.left = x + 'px';
-    m.style.top = y + 'px';
-    m.dataset.kind = kind;
-    H.appendChild(m);
-    return m;
+    rulerMarker({ className: 'rmark ind-' + kind, tip, left: x, top: y, kind }, MARK[kind]);
   }
   function drawV() {
-    if (!V || V.hidden || !state || !state.g.pgEl) { if (V) { const cv = V.querySelector('canvas'); if (cv) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); } return; }
+    if (directHost()) reactVerticalMarkers = [];
+    if (!V || V.hidden || !state || !state.g.pgEl) { if (V) { const cv = V.querySelector('canvas'); if (cv) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); } if (directHost()) L.bus.emit('wordx-ruler-marks'); return; }
     const g = state.g;
     const vr = V.getBoundingClientRect();
     const cv = V.querySelector('canvas');
+    if (!cv) return;
     const dpr = window.devicePixelRatio || 1;
     cv.width = Math.max(1, vr.width * dpr); cv.height = Math.max(1, vr.height * dpr);
     cv.style.width = vr.width + 'px'; cv.style.height = vr.height + 'px';
@@ -174,6 +193,7 @@
     const pg = g.pg;
     c.fillStyle = L.lookColor('ruler-off', '#c9d6ee'); c.fillRect(4, top, vr.width - 8, bottom - top);
     const tT = top + pg.bodyTop * z, tB = bottom - pg.bodyBottomGap * z;
+    if (directHost()) reactVerticalMarkers = [{ kind: 'mt', top: tT - 4, left: 4, width: vr.width - 8 }, { kind: 'mb', top: tB - 4, left: 4, width: vr.width - 8 }];
     c.fillStyle = L.lookColor('ruler', '#fff'); c.fillRect(4, tT, vr.width - 8, Math.max(0, tB - tT));
     const unit = D.unit === 'cm' || D.unit === 'mm' ? 28.3465 : 72;
     const sub = unit === 72 ? 8 : 4;
@@ -190,6 +210,7 @@
     /* table row boundaries */
     if (g.ci) { const tblEl = g.frag.closest('table.tbl'); if (tblEl) { c.fillStyle = L.lookColor('ruler-row', '#7f95bd'); for (const tr of tblEl.querySelectorAll(':scope > tbody > tr')) { const rr = tr.getBoundingClientRect(); c.fillRect(4, rr.bottom - vr.top - 1, vr.width - 8, 2); } } }
     state.v = { vr, tT, tB, top, bottom };
+    publishReactMarkers();
   }
 
   /* ---------- dragging ---------- */
@@ -280,11 +301,11 @@
       RU.draw();
     }
   }
-  function onVDown(e) {
+  function onVDown(e, forcedWhich) {
     if (!state || !state.v || e.button !== 0 || E.readOnly) return;
     const v = state.v;
     const y = e.clientY - v.vr.top;
-    const which = Math.abs(y - v.tT) < 4 ? 'mt' : Math.abs(y - v.tB) < 4 ? 'mb' : null;
+    const which = forcedWhich || (Math.abs(y - v.tT) < 4 ? 'mt' : Math.abs(y - v.tB) < 4 ? 'mb' : null);
     if (!which) return;
     e.preventDefault();
     const y0 = e.clientY;
@@ -306,4 +327,13 @@
     });
   }
   RU.tabKind = () => TAB_KINDS[tabKind][0];
+  RU.reactTabState = () => ({ kind: TAB_KINDS[tabKind][0], label: L.t(TAB_KINDS[tabKind][1]) });
+  RU.reactTabNext = () => { tabKind = (tabKind + 1) % TAB_KINDS.length; return RU.reactTabState(); };
+  RU.reactMarkers = () => reactMarkers.map((marker) => ({ ...marker }));
+  RU.reactVerticalMarkers = () => reactVerticalMarkers.map((marker) => ({ ...marker }));
+  RU.reactMarkerDown = (event) => onRulerDown(event);
+  RU.reactVerticalMarginDown = (event, which) => onVDown(event, which);
+  RU.reactRulerDown = (event) => onRulerDown(event);
+  RU.reactRulerDoubleClick = (event) => { if (event.target.closest('.rmark.tabstop')) { L.dlg && L.dlg.tabs(); return; } L.dlg && (state && event.clientX > state.x0 && event.clientX < state.x0 + state.w ? L.dlg.tabs() : L.dlg.pageSetup()); };
+  RU.reactVerticalDoubleClick = () => L.dlg && L.dlg.pageSetup();
 })();

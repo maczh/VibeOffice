@@ -237,11 +237,11 @@
         try { const r = new Range(); r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); ranges.push(r); } catch (e) { /* skip */ }
       }
     }
-    CSS.highlights.set('quire-find', new Highlight(...ranges));
+    CSS.highlights.set('wordx-find', new Highlight(...ranges));
     FD.hlOpts = o;
     return n;
   };
-  FD.clearHighlight = () => { if (window.CSS && CSS.highlights) CSS.highlights.delete('quire-find'); FD.hlOpts = null; };
+  FD.clearHighlight = () => { if (window.CSS && CSS.highlights) CSS.highlights.delete('wordx-find'); FD.hlOpts = null; };
   L.bus.on('layout-done', () => { if (FD.hlOpts) setTimeout(() => { try { FD.highlightAll(FD.hlOpts); } catch (e) { FD.clearHighlight(); } }, 0); });
 
   /* ---------- Go To ---------- */
@@ -295,7 +295,10 @@
   let open = null;
   const state = { text: '', replace: '', matchCase: false, wholeWord: false, wildcards: false, soundsLike: false, allForms: false, dir: 'all', scope: 'main', format: null, replaceFormat: null, highlight: false };
   const hist = { find: [], repl: [] };
+  let formatSummary = { find: '', replace: '' };
   FD.reactCloseDialog = () => open?.dlg?.close(null);
+  FD.reactFindTab = () => open?.tab ?? 0;
+  FD.reactFindFormatState = () => ({ ...formatSummary });
   FD.reactFindState = () => ({ text: state.text, replace: state.replace, highlight: state.highlight, scope: state.scope, matchCase: state.matchCase, wholeWord: state.wholeWord, wildcards: state.wildcards, soundsLike: state.soundsLike, allForms: state.allForms, dir: state.dir, more: !!state.more });
   FD.reactFindAction = (action, field) => {
     if (action === 'focus') state.lastFocus = field;
@@ -321,14 +324,19 @@
     const fhist = h('datalist', { id: 'fr-fhist' }), rhist = h('datalist', { id: 'fr-rhist' });
     const fillHist = () => { L.clear(fhist); L.clear(rhist); for (const x of hist.find) fhist.appendChild(h('option', { value: x })); for (const x of hist.repl) rhist.appendChild(h('option', { value: x })); };
     fillHist();
-    const fmtNote = h('div', { class: 'tp-note fr-fmt' });
-    const rfmtNote = h('div', { class: 'tp-note fr-fmt' });
-    const showFmt = () => { fmtNote.textContent = state.format ? L.t('Format: {0}', describe(state.format)) : ''; rfmtNote.textContent = state.replaceFormat ? L.t('Format: {0}', describe(state.replaceFormat)) : ''; };
+    const fmtNote = h('div', direct ? { id: 'react-wordx-find-format-summary-root', class: 'tp-note fr-fmt' } : { class: 'tp-note fr-fmt' });
+    const rfmtNote = h('div', direct ? { id: 'react-wordx-replace-format-summary-root', class: 'tp-note fr-fmt' } : { class: 'tp-note fr-fmt' });
+    const showFmt = () => {
+      formatSummary = { find: state.format ? L.t('Format: {0}', describe(state.format)) : '', replace: state.replaceFormat ? L.t('Format: {0}', describe(state.replaceFormat)) : '' };
+      if (direct) L.bus.emit('wordx-find-format-summary');
+      else { fmtNote.textContent = formatSummary.find; rfmtNote.textContent = formatSummary.replace; }
+    };
     const hlChk = direct ? null : ui.check('&Highlight all items found in:', state.highlight, (v) => { state.highlight = v; });
     const scope = direct ? null : ui.select([['main', 'Main Document'], ['all', 'All stories (headers, notes, comments)']], state.scope, (v) => { state.scope = v; }, { id: 'fr-scope' });
     const findAuxRoot = direct ? h('div', { id: 'react-wordx-find-aux-root' }) : null;
     const findFormatRoot = direct ? h('div', { id: 'react-wordx-find-format-root' }) : null;
     const findMoreRoot = direct ? h('div', { id: 'react-wordx-find-more-root' }) : null;
+    const findActionsRoot = direct ? h('div', { id: 'react-wordx-find-actions-root', style: 'display:contents' }) : null;
     const opt = (k, l) => ui.check(l, state[k], (v) => { state[k] = v; if (k === 'wildcards' && v) { soundsChk.input.checked = state.soundsLike = false; formsChk.input.checked = state.allForms = false; } });
     const caseChk = opt('matchCase', 'Matc&h case'), wholeChk = opt('wholeWord', 'Find whole words onl&y'), wildChk = opt('wildcards', 'Use wildcar&ds'), soundsChk = opt('soundsLike', 'Sounds li&ke (English)'), formsChk = opt('allForms', 'Find all &word forms (English)');
     const dir = direct ? null : ui.select([['all', 'All'], ['down', 'Down'], ['up', 'Up']], state.dir, (v) => { state.dir = v; }, { id: 'fr-dir' });
@@ -360,16 +368,20 @@
     const bAll = ui.button('Replace &All', () => replaceAll());
     const bClose = ui.button('Cancel', () => dlg && dlg.close(null));
     function setButtons(t) {
+      curTab = t;
+      if (open) open.tab = t;
       L.clear(foot);
-      if (t === 2) { if (!(window.VO && VO.reactDirectHost)) foot.append(prevBtn, gotoBtn, ui.button('Close', () => dlg && dlg.close(null))); }
+      if (direct) { if (t !== 2) foot.append(moreBtn, findActionsRoot); }
+      else if (t === 2) foot.append(prevBtn, gotoBtn, ui.button('Close', () => dlg && dlg.close(null)));
       else if (t === 1) foot.append(moreBtn, bRepl, bAll, bFind, bClose);
       else foot.append(moreBtn, bFind, bClose);
       more.hidden = t === 2 || !state.more;
+      if (direct) L.bus.emit('wordx-find-tab');
     }
     const tabs = ui.tabs([
-      { label: 'Fin&d', body: findTabBody, onShow: () => { findTabBody.append(findBody, direct ? findAuxRoot : h('div', { class: 'row', style: 'align-items:center' }, hlChk, scope)); setButtons(0); curTab = 0; if (direct) L.bus.emit('wordx-find-focus'); else setTimeout(() => findIn.focus(), 0); } },
-      { label: 'Re&place', body: replTabBody, onShow: () => { replTabBody.append(findBody, replRow); setButtons(1); curTab = 1; if (direct) L.bus.emit('wordx-find-focus'); else setTimeout(() => findIn.focus(), 0); } },
-      { label: '&Go To', body: gotoTabBody, onShow: () => { setButtons(2); curTab = 2; if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-goto-focus'); else setTimeout(() => gotoIn.focus(), 0); } },
+      { label: 'Fin&d', body: findTabBody, onShow: () => { findTabBody.append(findBody, direct ? findAuxRoot : h('div', { class: 'row', style: 'align-items:center' }, hlChk, scope)); setButtons(0); if (direct) L.bus.emit('wordx-find-focus'); else setTimeout(() => findIn.focus(), 0); } },
+      { label: 'Re&place', body: replTabBody, onShow: () => { replTabBody.append(findBody, replRow); setButtons(1); if (direct) L.bus.emit('wordx-find-focus'); else setTimeout(() => findIn.focus(), 0); } },
+      { label: '&Go To', body: gotoTabBody, onShow: () => { setButtons(2); if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-goto-focus'); else setTimeout(() => gotoIn.focus(), 0); } },
     ], mode === 'replace' ? 1 : mode === 'goto' ? 2 : 0);
     const opts = () => Object.assign({}, state, { text: findInput()?.value || '', replace: replaceInput()?.value || '' });
     const remember = () => { const t = findInput()?.value || ''; if (t && !hist.find.includes(t)) hist.find.unshift(t); hist.find.length = Math.min(hist.find.length, 12); const r = replaceInput()?.value || ''; if (r && !hist.repl.includes(r)) hist.repl.unshift(r); fillHist(); state.text = t; state.replace = r; };
@@ -391,12 +403,12 @@
     const body = h('div', { class: 'col' }, tabs, more, foot);
     dlg = ui.dialog({ title: 'Find and Replace', width: 470, body, modeless: true, buttons: [], focus: mode === 'goto' ? gotoIn : (direct ? null : findIn), onClose: () => { open = null; FD.reactFindCommand = null; FD.clearHighlight(); E.refocus(); } });   /* the found text is the page's selection again */
     dlg.el.querySelector('.dlg-foot').remove();
-    dlg.el.addEventListener('keydown', (e) => {
+    if (!direct) dlg.el.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); if (curTab === 2) gotoBtn.click(); else bFind.click(); }
     });
     if (!direct) findIn.addEventListener('input', () => { if (FD.hlOpts) FD.clearHighlight(); });
     showFmt();
-    open = { select: (m) => { tabs.select(m === 'replace' ? 1 : m === 'goto' ? 2 : 0); }, dlg, more };
+    open = { select: (m) => { tabs.select(m === 'replace' ? 1 : m === 'goto' ? 2 : 0); }, dlg, more, tab: curTab };
     if (direct) FD.reactFindCommand = (action, anchor) => {
       if (action === 'clear-format') {
         if (curTab === 1 && state.lastFocus === 'repl') state.replaceFormat = null;
@@ -404,6 +416,10 @@
         showFmt();
       } else if (action === 'format' && anchor) formatMenu(anchor, curTab === 1 && state.lastFocus === 'repl' ? 'replaceFormat' : 'format');
       else if (action === 'special' && anchor) specialMenu(anchor, state.lastFocus === 'repl' ? replaceInput() : findInput());
+      else if (action === 'find-next') findNext();
+      else if (action === 'replace-one') replace();
+      else if (action === 'replace-all') replaceAll();
+      else if (action === 'close') dlg?.close(null);
     };
     function describe(f) {
       const parts = [];
@@ -414,11 +430,20 @@
     }
     function formatMenu(anchor, key) {
       const cur = state[key] || {};
-      ui.openMenu([
-        { label: '&Font...', run: () => G.font({ target: Object.assign({}, cur.rPr || {}), sample: L.t('Sample'), onOK: (r) => { const rr = Object.assign({}, cur.rPr || {}, r); for (const k in rr) if (rr[k] === undefined) delete rr[k]; state[key] = Object.assign({}, cur, { rPr: rr }); showFmt(); } }) },
-        { label: '&Style...', run: () => { const ids = Object.keys(doc().styles).filter((k) => ['paragraph', 'character'].includes(doc().styles[k].type)).sort(); const lb = G.listBox(ids.map((k) => ({ value: k, label: D.styleDisplayName(doc().styles[k]) })), cur.style || 'Normal', { height: 180, translate: 'no' }); ui.dialog({ title: key === 'format' ? 'Find Style' : 'Replace Style', width: 280, body: lb, buttons: [{ label: 'OK', primary: true, onClick: () => { state[key] = Object.assign({}, cur, { style: lb.get() }); showFmt(); } }, { label: 'Cancel' }] }); } },
-        { label: '&Highlight', run: () => { state[key] = Object.assign({}, cur, { highlight: cur.highlight === true ? false : true }); showFmt(); } },
-      ], anchor.getBoundingClientRect());
+      const choose = (kind) => {
+        if (kind === 'font') G.font({ target: Object.assign({}, cur.rPr || {}), sample: L.t('Sample'), onOK: (r) => { const rr = Object.assign({}, cur.rPr || {}, r); for (const k in rr) if (rr[k] === undefined) delete rr[k]; state[key] = Object.assign({}, cur, { rPr: rr }); showFmt(); } });
+        else if (kind === 'style') { const ids = Object.keys(doc().styles).filter((k) => ['paragraph', 'character'].includes(doc().styles[k].type)).sort(); const lb = G.listBox(ids.map((k) => ({ value: k, label: D.styleDisplayName(doc().styles[k]) })), cur.style || 'Normal', { height: 180, translate: 'no' }); ui.dialog({ title: key === 'format' ? 'Find Style' : 'Replace Style', width: 280, body: lb, buttons: [{ label: 'OK', primary: true, onClick: () => { state[key] = Object.assign({}, cur, { style: lb.get() }); showFmt(); } }, { label: 'Cancel' }] }); }
+        else if (kind === 'highlight') { state[key] = Object.assign({}, cur, { highlight: cur.highlight === true ? false : true }); showFmt(); }
+      };
+      if (direct) {
+        ui.openMenu([{ custom: (close) => {
+          FD.reactFindFormatMenuCatalog = () => [{ id: 'font', label: L.t('&Font...').replace('&', '') }, { id: 'style', label: L.t('&Style...').replace('&', '') }, { id: 'highlight', label: L.t('&Highlight').replace('&', '') }];
+          FD.reactFindFormatMenuAction = (kind) => { close(); ui.closeMenus(); FD.reactFindFormatMenuCatalog = FD.reactFindFormatMenuAction = null; choose(kind); };
+          return h('div', { id: 'react-wordx-find-format-menu-root' });
+        } }], anchor.getBoundingClientRect());
+        return;
+      }
+      ui.openMenu([{ label: '&Font...', run: () => choose('font') }, { label: '&Style...', run: () => choose('style') }, { label: '&Highlight', run: () => choose('highlight') }], anchor.getBoundingClientRect());
     }
     function specialMenu(anchor, input) {
       const ins = (code) => { const s = input.selectionStart ?? input.value.length, e = input.selectionEnd ?? s; input.value = input.value.slice(0, s) + code + input.value.slice(e); input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); input.setSelectionRange(s + code.length, s + code.length); };
@@ -427,6 +452,14 @@
       const items = isRepl ? [['^p', 'Paragraph Mark'], ['^t', 'Tab Character'], ['^^', 'Caret Character'], ['^&', 'Find What Text'], ['^c', 'Clipboard Contents'], ['^+', 'Em Dash'], ['^=', 'En Dash'], ['^l', 'Manual Line Break'], ['^m', 'Manual Page Break'], ['^n', 'Column Break'], ['^~', 'Nonbreaking Hyphen'], ['^s', 'Nonbreaking Space'], ['^-', 'Optional Hyphen']].concat(wild ? [['\\1', 'Find What Expression']] : [])
         : wild ? [['?', 'Any Character'], ['[-]', 'Character in Range'], ['<', 'Beginning of Word'], ['>', 'End of Word'], ['()', L.N('Expression')], ['[!]', L.N('Not')], ['{,}', 'Num Occurrences'], ['@', 'Previous 1 or More'], ['*', L.N('0 or More Characters')], ['^t', 'Tab Character'], ['^p', 'Paragraph Mark'], ['^l', 'Manual Line Break'], ['^m', 'Manual Page Break']]
           : [['^p', 'Paragraph Mark'], ['^t', 'Tab Character'], ['^?', 'Any Character'], ['^#', 'Any Digit'], ['^$', 'Any Letter'], ['^^', 'Caret Character'], ['^+', 'Em Dash'], ['^=', 'En Dash'], ['^g', L.N('Graphic')], ['^l', 'Manual Line Break'], ['^m', 'Manual Page Break'], ['^n', 'Column Break'], ['^~', 'Nonbreaking Hyphen'], ['^s', 'Nonbreaking Space'], ['^-', 'Optional Hyphen'], ['^w', 'White Space']];
+      if (direct) {
+        ui.openMenu([{ custom: (close) => {
+          FD.reactFindSpecialMenuCatalog = () => items.map(([code, label]) => ({ code, label: L.t(label) }));
+          FD.reactFindSpecialMenuAction = (code) => { close(); ui.closeMenus(); FD.reactFindSpecialMenuCatalog = FD.reactFindSpecialMenuAction = null; ins(code); };
+          return h('div', { id: 'react-wordx-find-special-menu-root' });
+        } }], anchor.getBoundingClientRect());
+        return;
+      }
       ui.openMenu(items.map(([c, l]) => ({ label: l, run: () => ins(c) })), anchor.getBoundingClientRect());
     }
   };

@@ -22,14 +22,17 @@
     const close = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close task pane', 'data-tip': 'Close', html: L.icons.get('close', 12) });
     TP.body = h('div', { class: 'tp-body' });
     TP.reactBody = h('div', { class: 'wordx-react-task-body-root', id: 'react-wordx-task-body' });
-    el.append(h('div', { class: 'tp-head' }, TP.back, TP.fwd, TP.home, TP.title, close), TP.reactBody, TP.body);
-    TP.back.addEventListener('click', () => TP.go(TP.pos - 1));
-    TP.fwd.addEventListener('click', () => TP.go(TP.pos + 1));
-    TP.home.addEventListener('click', () => TP.show('getting-started'));
-    close.addEventListener('click', () => A().toggleTask(false));
-    const openList = () => { const r = TP.title.getBoundingClientRect(); ui.openMenu(Object.values(TP.registry).filter((p) => !p.hidden).map((p) => ({ label: p.title, run: () => TP.show(p.id), checked: () => TP.current === p.id })), { left: r.left, bottom: r.bottom }); };
-    TP.title.addEventListener('click', openList);
-    TP.title.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openList(); } });
+    const direct = !!(window.VO && VO.reactDirectHost);
+    el.append(direct ? h('div', { class: 'tp-head' }) : h('div', { class: 'tp-head' }, TP.back, TP.fwd, TP.home, TP.title, close), TP.reactBody, TP.body);
+    if (!direct) {
+      TP.back.addEventListener('click', () => TP.go(TP.pos - 1));
+      TP.fwd.addEventListener('click', () => TP.go(TP.pos + 1));
+      TP.home.addEventListener('click', () => TP.show('getting-started'));
+      close.addEventListener('click', () => A().toggleTask(false));
+      const openList = () => { const r = TP.title.getBoundingClientRect(); ui.openMenu(Object.values(TP.registry).filter((p) => !p.hidden).map((p) => ({ label: p.title, run: () => TP.show(p.id), checked: () => TP.current === p.id })), { left: r.left, bottom: r.bottom }); };
+      TP.title.addEventListener('click', openList);
+      TP.title.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openList(); } });
+    }
     L.bus.on('sel', L.debounce(() => TP.refresh('sel'), 150));
     L.bus.on('doc-changed', L.debounce(() => TP.refresh('doc'), 300));
     L.bus.on('doc-loaded', () => TP.refresh('load'));
@@ -53,13 +56,14 @@
     if (!(window.VO && VO.reactDirectHost && ['getting-started', 'help', 'search', 'clipart', 'new', 'clipboard', 'styles', 'reveal', 'protect', 'research', 'mailmerge'].includes(id))) p.render(TP.body);
     L.bus.emit('wordx-task-render');
   };
-  P.reactTaskShellState = () => ({ current: TP.current || '', title: TP.registry[TP.current]?.title || '', backDisabled: TP.pos <= 0, forwardDisabled: TP.pos >= TP.stack.length - 1, items: Object.values(TP.registry).filter((pane) => !pane.hidden).map((pane) => ({ id: pane.id, title: pane.title, current: pane.id === TP.current })) });
-  P.reactTaskShellAction = (action, anchor) => {
+  const reactTaskPanes = () => Object.values(TP.registry).filter((pane) => !pane.hidden && !(window.VO && VO.reactDirectHost && pane.id === 'recovery'));
+  P.reactTaskShellState = () => ({ current: TP.current || '', title: TP.registry[TP.current]?.title || '', backDisabled: TP.pos <= 0, forwardDisabled: TP.pos >= TP.stack.length - 1, items: reactTaskPanes().map((pane) => ({ id: pane.id, title: pane.title, current: pane.id === TP.current })) });
+  P.reactTaskShellAction = (action, anchor, value) => {
     if (action === 'back') return TP.go(TP.pos - 1);
     if (action === 'forward') return TP.go(TP.pos + 1);
     if (action === 'home') return TP.show('getting-started');
     if (action === 'close') return A().toggleTask(false);
-    if (action === 'menu' && anchor) return ui.openMenu(Object.values(TP.registry).filter((pane) => !pane.hidden).map((pane) => ({ label: pane.title, run: () => TP.show(pane.id), checked: () => TP.current === pane.id })), anchor.getBoundingClientRect());
+    if (action === 'show') return TP.show(value);
   };
   TP.refresh = function (reason) {
     const p = TP.registry[TP.current];
@@ -862,14 +866,14 @@
       if (LY.zoom < 0.95) { LY.setMultiPage(0); LY.setZoom(1); pg.scrollIntoView({ block: 'center' }); L.$('#scroller').classList.add('zoomed'); }
       else { LY.setZoom(LY.zoomFor('wholePage')); pg.scrollIntoView({ block: 'start' }); L.$('#scroller').classList.remove('zoomed'); }
     };
-    LY.scroller.addEventListener('click', PV.click);
+    if (!(window.VO && VO.reactDirectHost)) LY.scroller.addEventListener('click', PV.click);
     ui.refresh();
   };
   PV.exit = function () {
     if (PV.bar) PV.bar.remove();
     PV.bar = null;
     if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-preview-view');
-    LY.scroller.removeEventListener('click', PV.click);
+    if (!(window.VO && VO.reactDirectHost)) LY.scroller.removeEventListener('click', PV.click);
     L.$('#scroller').classList.remove('zoomed');
     E.readOnly = false;
     LY.root.contentEditable = 'true';
@@ -879,6 +883,16 @@
   PV.multiMenu = function (anchor) {
     ui.openMenu([{
       custom: (close) => {
+        if (window.VO && VO.reactDirectHost) {
+          PV.reactMultiPageAction = (rows, columns) => {
+            close();
+            ui.closeMenus();
+            LY.setMultiPage(columns);
+            const pg = LY.pages[0], avail = LY.scroller.clientWidth - 40, availH = LY.scroller.clientHeight - 30;
+            if (pg) LY.setZoom(Math.min((avail - 16 * columns) / (pg.W * columns), (availH - 14 * rows) / (pg.H * rows)));
+          };
+          return h('div', { id: 'react-wordx-multipage-menu-root' });
+        }
         const box = h('div', { class: 'tbl-grid-pick' });
         const cells = h('div', { class: 'tgp-cells', style: 'grid-template-columns:repeat(3,24px)' });
         const lbl = h('div', { class: 'tgp-label', text: 'Cancel' });
@@ -905,6 +919,7 @@
     else if (action === 'close') A().setView(A().prevView || 'print');
     else if (action === 'help') ui.exec('help');
   };
+  P.reactPreviewClick = (event) => PV.click?.(event);
   /** Shrink One Page: reduce font sizes until the last page disappears */
   PV.shrink = function () {
     const d = doc();

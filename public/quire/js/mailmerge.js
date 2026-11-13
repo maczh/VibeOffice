@@ -12,6 +12,24 @@
   const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
   const ADDRESS_FIELDS = ['Title', 'First Name', 'Last Name', 'Company Name', 'Address Line 1', 'Address Line 2', 'City', 'State', 'ZIP Code', 'Country', 'Home Phone', 'Work Phone', 'E-mail Address'];
 
+  MM.reactRecipientsCatalog = () => {
+    const d = MM.data;
+    return d ? { name: d.name, fields: d.fields.slice(), rows: d.rows.map((values, index) => ({ index, values: values.slice(), included: d.included.has(index) })) } : null;
+  };
+  MM.reactRecipientsAction = (action, index, included) => {
+    const d = MM.data;
+    if (!d) return;
+    if (action === 'all') d.included = included ? new Set(d.rows.map((_, i) => i)) : new Set();
+    else if (action === 'row' && Number.isInteger(index) && index >= 0 && index < d.rows.length) {
+      if (included) d.included.add(index); else d.included.delete(index);
+    }
+  };
+  MM.reactAddressListCatalog = () => ({ fields: ADDRESS_FIELDS.slice(), rows: (MM.reactAddressListRows || (MM.data && MM.data.typed ? MM.data.rows : [ADDRESS_FIELDS.map(() => '')])).map((row) => row.slice()) });
+  MM.reactAddressListSetRows = (rows) => { MM.reactAddressListRows = rows.map((row) => row.slice()); };
+  MM.reactFieldCatalog = () => MM.data ? MM.data.fields.slice() : [];
+  MM.reactSelectField = (field) => { MM.reactSelectedField = field; };
+  MM.reactInsertField = (field) => MM.insertField(field);
+
   /* ---------- data sources ---------- */
   function parseDelimited(text) {
     text = text.replace(/^﻿/, '');
@@ -67,26 +85,30 @@
   MM.typeList = function () {
     const fields = ADDRESS_FIELDS.slice();
     const rows = MM.data && MM.data.typed ? MM.data.rows.map((r) => r.slice()) : [fields.map(() => '')];
+    const direct = !!(window.VO && VO.reactDirectHost);
     let cur = 0;
-    const inputs = fields.map((f, i) => { const inp = h('input', { type: 'text', id: 'mm-f' + i, style: 'width:100%' }); inp.addEventListener('input', () => { rows[cur][i] = inp.value; }); return inp; });
+    const inputs = direct ? [] : fields.map((f, i) => { const inp = h('input', { type: 'text', id: 'mm-f' + i, style: 'width:100%' }); inp.addEventListener('input', () => { rows[cur][i] = inp.value; }); return inp; });
     /* the fields' names are the data's own (they become MERGEFIELD names): not translated */
-    const grid = h('div', { style: 'display:grid;grid-template-columns:120px 1fr;gap:3px 8px;max-height:300px;overflow:auto;padding-right:4px', translate: 'no' });
-    fields.forEach((f, i) => grid.append(h('label', { for: 'mm-f' + i }, document.createTextNode(f)), inputs[i]));
-    const info = h('span');
+    const grid = direct ? null : h('div', { style: 'display:grid;grid-template-columns:120px 1fr;gap:3px 8px;max-height:300px;overflow:auto;padding-right:4px', translate: 'no' });
+    if (grid) fields.forEach((f, i) => grid.append(h('label', { for: 'mm-f' + i }, document.createTextNode(f)), inputs[i]));
+    const info = direct ? null : h('span');
     const load = () => { inputs.forEach((inp, i) => { inp.value = rows[cur][i] || ''; }); info.textContent = L.t('Entry {0} of {1}', cur + 1, rows.length); };
-    const nav = h('div', { class: 'tp-btns' },
+    const nav = direct ? null : h('div', { class: 'tp-btns' },
       ui.button('&New Entry', () => { rows.push(fields.map(() => '')); cur = rows.length - 1; load(); inputs[0].focus(); }, { class: 'btn small' }),
       ui.button('&Delete Entry', () => { if (rows.length > 1) { rows.splice(cur, 1); cur = Math.min(cur, rows.length - 1); load(); } }, { class: 'btn small' }),
       ui.button('<', () => { if (cur > 0) { cur--; load(); } }, { class: 'btn small' }), ui.button('>', () => { if (cur < rows.length - 1) { cur++; load(); } }, { class: 'btn small' }), info);
-    load();
+    if (!direct) load();
+    if (direct) MM.reactAddressListSetRows(rows);
     ui.dialog({
-      title: 'New Address List', width: 440, body: h('div', { class: 'col' }, grid, nav), buttons: [{ label: 'OK', primary: true, onClick: () => { const data = [fields].concat(rows.filter((r) => r.some(Boolean))); if (setData(L.t('Address list'), data)) MM.data.typed = true; } }, { label: 'Cancel' }],
+      title: 'New Address List', width: 440, body: h('div', { class: 'col' }, direct ? h('div', { id: 'react-wordx-new-address-list-root' }) : h('div', null, grid, nav)), buttons: [{ label: 'OK', primary: true, onClick: () => { const currentRows = direct ? MM.reactAddressListCatalog().rows : rows; const data = [fields].concat(currentRows.filter((r) => r.some(Boolean))); if (setData(L.t('Address list'), data)) MM.data.typed = true; } }, { label: 'Cancel' }],
     });
   };
   MM.recipientsDialog = function () {
     const d = MM.data;
     if (!d) return;
     let sortCol = -1, desc = false;
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const reactRoot = direct ? h('div', { id: 'react-wordx-mail-merge-recipients-root' }) : null;
     const box = h('div', { class: 'datasheet', style: 'max-height:280px' });
     const draw = () => {
       L.clear(box);
@@ -104,8 +126,8 @@
       }
       box.appendChild(t);
     };
-    draw();
-    ui.dialog({ title: 'Mail Merge Recipients', width: 620, body: h('div', { class: 'col' }, h('div', { text: L.t('Data source: {0}. Click a column heading to sort; clear a check box to leave a recipient out.', d.name) }), box), buttons: [{ label: 'OK', primary: true, onClick: () => { MM.order = null; refreshPane(); } }] });
+    if (!direct) draw();
+    ui.dialog({ title: 'Mail Merge Recipients', width: 620, body: h('div', { class: 'col' }, h('div', { text: L.t('Data source: {0}. Click a column heading to sort; clear a check box to leave a recipient out.', d.name) }), direct ? reactRoot : box), buttons: [{ label: 'OK', primary: true, onClick: () => { MM.order = null; refreshPane(); } }] });
   };
   MM.records = () => (MM.data ? MM.data.rows.map((r, i) => i).filter((i) => MM.data.included.has(i)) : []);
   MM.value = function (name) {
@@ -163,6 +185,13 @@
   };
   MM.fieldDialog = function () {
     if (!MM.data) return;
+    const direct = !!(window.VO && VO.reactDirectHost);
+    if (direct) {
+      MM.reactSelectField(MM.data.fields[0]);
+      const reactRoot = h('div', { id: 'react-wordx-mail-merge-field-root' });
+      ui.dialog({ title: 'Insert Merge Field', width: 300, body: reactRoot, buttons: [{ label: '&Insert', primary: true, onClick: () => { MM.reactInsertField(MM.reactSelectedField); return false; } }, { label: 'Close' }] });
+      return;
+    }
     const sel = h('select', { size: 10, id: 'mm-fields', style: 'width:100%', translate: 'no' });
     for (const f of MM.data.fields) sel.appendChild(h('option', { value: f }, document.createTextNode(f)));
     sel.selectedIndex = 0;

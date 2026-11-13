@@ -97,7 +97,14 @@
   function backgroundMenu() {
     return [
       { label: '&No Fill', run: () => A.setBackground(null) },
-      { custom: (close) => { const g = h('div', { class: 'color-panel' }); const grid = h('div', { class: 'cp-grid' }); for (const c of L.color.STANDARD) grid.appendChild(h('button', { class: 'cp-sw', type: 'button', style: `background:${c}`, 'aria-label': ui.colorName(c), 'data-tip': ui.colorName(c), onclick: () => { close(); A.setBackground(c.replace('#', '')); } })); g.appendChild(grid); return g; } },
+      { custom: (close) => {
+        if (window.VO && VO.reactDirectHost) {
+          A.reactBackgroundCatalog = () => L.color.STANDARD.map((color) => ({ color, name: ui.colorName(color) }));
+          A.reactBackgroundAction = (color) => { close(); A.setBackground(color.replace('#', '')); };
+          return h('div', { id: 'react-wordx-background-menu-root' });
+        }
+        const g = h('div', { class: 'color-panel' }); const grid = h('div', { class: 'cp-grid' }); for (const c of L.color.STANDARD) grid.appendChild(h('button', { class: 'cp-sw', type: 'button', style: `background:${c}`, 'aria-label': ui.colorName(c), 'data-tip': ui.colorName(c), onclick: () => { close(); A.setBackground(c.replace('#', '')); } })); g.appendChild(grid); return g;
+      } },
       { label: '&More Colors...', run: () => ui.moreColors(doc().bg ? '#' + doc().bg : null, (c) => { if (c) A.setBackground(c.replace('#', '')); }) },
       'printedWatermark',
     ];
@@ -119,6 +126,10 @@
   function tableGridPicker(r, more) {
     ui.openMenu([{
       custom: (close) => {
+        if (window.VO && VO.reactDirectHost) {
+          A.reactTableGridAction = (rows, columns) => { close(); L.tables.insert(rows, columns); };
+          return h('div', { id: 'react-wordx-table-grid-menu-root' });
+        }
         const box = h('div', { class: 'tbl-grid-pick' });
         let R = 4, C = 5;
         const cells = h('div', { class: 'tgp-cells' });
@@ -153,6 +164,10 @@
   function columnsPicker(r, more) {
     ui.openMenu([{
       custom: (close) => {
+        if (window.VO && VO.reactDirectHost) {
+          A.reactColumnsPickerAction = (columns) => { close(); A.setColumns(columns); };
+          return h('div', { id: 'react-wordx-columns-picker-menu-root' });
+        }
         const box = h('div', { class: 'tbl-grid-pick' });
         const cells = h('div', { class: 'tgp-cells', style: 'grid-template-columns:repeat(4,22px)' });
         const lbl = h('div', { class: 'tgp-label', text: 'Cancel' });
@@ -188,6 +203,12 @@
   function highlightDD(r, anchor) {
     ui.openMenu([{
       custom: (close) => {
+        if (window.VO && VO.reactDirectHost) {
+          A.reactHighlightMenuCatalog = () => HL_NAMES.map(([kind, name]) => ({ kind, name, color: L.R.HIGHLIGHT[kind] }));
+          A.reactHighlightMenuAction = (kind) => { close(); A.lastHighlight = kind; A.applyHighlight(kind); };
+          A.reactHighlightNone = () => { close(); A.applyHighlight('none'); };
+          return h('div', { id: 'react-wordx-highlight-menu-root' });
+        }
         const el = h('div', { class: 'color-panel' });
         const g = h('div', { class: 'cp-grid hl' });
         for (const [n, name] of HL_NAMES) {
@@ -209,14 +230,19 @@
   }
   A.applyFontColor = (c) => E.formatRun({ color: c === 'auto' ? undefined : c }, 'Font Color');
   const BORDER_ITEMS = [
-    ['outside', 'bordersOut', 'Outside Border'], ['all', 'bordersAll', 'All Borders'], ['top', 'bordersTop', 'Top Border'], ['bottom', 'bordersBottom', 'Bottom Border'],
-    ['left', 'bordersLeft', 'Left Border'], ['right', 'bordersRight', 'Right Border'], ['insideH', 'bordersInH', 'Inside Horizontal Border'], ['insideV', 'bordersInV', 'Inside Vertical Border'],
-    ['inside', 'bordersIn', 'Inside Border'], ['diagDown', 'bordersDiagDown', 'Diagonal Down Border'], ['diagUp', 'bordersDiagUp', 'Diagonal Up Border'], ['hline', 'hline', 'Horizontal Line'], ['none', 'bordersNone', 'No Border'],
+    ['outside', 'bordersOut', L.N('Outside Border')], ['all', 'bordersAll', L.N('All Borders')], ['top', 'bordersTop', L.N('Top Border')], ['bottom', 'bordersBottom', L.N('Bottom Border')],
+    ['left', 'bordersLeft', L.N('Left Border')], ['right', 'bordersRight', L.N('Right Border')], ['insideH', 'bordersInH', L.N('Inside Horizontal Border')], ['insideV', 'bordersInV', L.N('Inside Vertical Border')],
+    ['inside', 'bordersIn', L.N('Inside Border')], ['diagDown', 'bordersDiagDown', L.N('Diagonal Down Border')], ['diagUp', 'bordersDiagUp', L.N('Diagonal Up Border')], ['hline', 'hline', L.N('Horizontal Line')], ['none', 'bordersNone', L.N('No Border')],
   ];
   A.BORDER_ITEMS = BORDER_ITEMS;
   function bordersDD(r) {
     ui.openMenu([{
       custom: (close) => {
+        if (window.VO && VO.reactDirectHost) {
+          A.reactBorderMenuCatalog = () => BORDER_ITEMS.map(([kind, icon, label]) => ({ kind, icon: L.icons.get(icon), label }));
+          A.reactBorderMenuAction = (kind) => { close(); A.lastBorder = kind; A.applyBorder(kind); ui.refresh(); };
+          return h('div', { id: 'react-wordx-border-menu-root' });
+        }
         const g = h('div', { class: 'border-grid' });
         for (const [k, ic, n] of BORDER_ITEMS) {
           const b = h('button', { type: 'button', 'data-tip': n, 'aria-label': n, html: L.icons.get(ic) });
@@ -257,7 +283,16 @@
 
   A.openAutoShapes = function (at) {
     const r = at || (L.$('[data-as]') ? L.$('[data-as]').getBoundingClientRect() : { left: 100, bottom: 100 });
-    const grid = (list) => ({ custom: (close) => { const g = h('div', { class: 'shape-grid' }); for (const k of list) { const p = L.geom.get(k); const b = h('button', { type: 'button', 'data-tip': p.label || k, 'aria-label': p.label || k, html: L.geom.preview(k, 20) }); b.addEventListener('click', () => { close(); L.drawtool && L.drawtool.start({ geom: k, line: !!p.isLine }); }); g.appendChild(b); } return g; } });
+    const grid = (list) => ({ custom: (close) => {
+      if (window.VO && VO.reactDirectHost) {
+        A.reactShapeMenuCatalog = () => list.map((kind) => { const shape = L.geom.get(kind); return { kind, label: shape.label || kind, line: !!shape.isLine, svg: L.geom.preview(kind, 20) }; });
+        A.reactShapeMenuAction = (kind) => { const shape = L.geom.get(kind); close(); if (L.drawtool) L.drawtool.start({ geom: kind, line: !!shape.isLine }); };
+        return h('div', { id: 'react-wordx-shape-menu-root' });
+      }
+      const g = h('div', { class: 'shape-grid' });
+      for (const k of list) { const p = L.geom.get(k); const b = h('button', { type: 'button', 'data-tip': p.label || k, 'aria-label': p.label || k, html: L.geom.preview(k, 20) }); b.addEventListener('click', () => { close(); L.drawtool && L.drawtool.start({ geom: k, line: !!p.isLine }); }); g.appendChild(b); }
+      return g;
+    } });
     ui.openMenu([
       { label: '&Lines', icon: 'line', sub: ['drawLine', 'drawArrow', 'drawDblArrow'] },
       ...[['Basic Shapes', '&Basic Shapes', 'autoshapes'], ['Block Arrows', '&Block Arrows', 'arrowStyle'], ['Flowchart', '&Flowchart', 'diagram'], ['Stars and Banners', '&Stars and Banners', 'animation'], ['Callouts', '&Callouts', 'comment']].map(([g, label, icon]) => ({ label, icon, sub: [grid(L.geom.MENU[g])] })),
@@ -265,7 +300,7 @@
     ], { left: r.left, bottom: r.bottom }, { selectFirst: !at });
   };
   /* the toolbars' boxes and menus, also used by the ribbon (js/ribbon.js): each call makes a new box */
-  A.menus = { tableGrid: (r, more) => tableGridPicker(r, more), columns: (r, more) => columnsPicker(r, more), lineSpacing: (r) => lineSpacingMenu(r), borders: (r, b) => bordersDD(r, b), highlight: (r, b) => highlightDD(r, b), fontColor: (r, b) => fontColorDD(r, b) };
+  A.menus = { tableGrid: (r, more) => tableGridPicker(r, more), columns: (r, more) => columnsPicker(r, more), lineSpacing: (r) => lineSpacingMenu(r), borders: (r, b) => bordersDD(r, b), highlight: (r, b) => highlightDD(r, b), background: (r) => ui.openMenu(backgroundMenu(), r), fontColor: (r, b) => fontColorDD(r, b) };
   A.parts = {
     style: (o) => ui.combo(Object.assign({
       id: 'tb-style', width: 118, tip: 'Style', listCls: 'styles',
@@ -435,19 +470,74 @@
   };
   const lineSVG = (w, dash, extra) => `<svg width="90" height="14" viewBox="0 0 90 14"><path d="M2 7h86" stroke="#000" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} fill="none"/>${extra || ''}</svg>`;
   A.WEIGHTS = [0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6];
-  A.objLineWeightMenu = (r) => ui.openMenu([{ custom: (close) => listPanel(A.WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => L.drawing.modifySelected('Line Style', (it) => { if (it.t === 'img') it.border = Object.assign({ val: 'single', color: '000000' }, it.border || {}, { sz: w }); else it.line = Object.assign({ c: '#000000', dash: 'solid' }, it.line && it.line.t !== 'none' ? it.line : {}, { w }); }) })).concat([{ label: 'More Lines...', run: () => ui.exec('formatObject') }]), close) }], r);
-  A.objDashMenu = (r) => ui.openMenu([{ custom: (close) => listPanel([['solid', null], ['sysDot', '1 1'], ['sysDash', '3 1'], ['dash', '4 3'], ['dashDot', '4 3 1 3'], ['lgDash', '8 3'], ['lgDashDot', '8 3 1 3'], ['lgDashDotDot', '8 3 1 3 1 3']].map(([k, da]) => ({ html: lineSVG(2, da), run: () => L.drawing.modifySelected('Dash Style', (it) => { if (it.line && it.line.t !== 'none') it.line = Object.assign({}, it.line, { dash: k }); }) })), close) }], r);
+  A.objLineWeightMenu = (r) => ui.openMenu([{ custom: (close) => {
+    if (window.VO && VO.reactDirectHost) {
+      A.reactObjectWeightCatalog = () => A.WEIGHTS.map((weight) => ({ weight, label: L.t('{0} pt', weight), svg: lineSVG(Math.max(0.5, weight * 1.33)) }));
+      A.reactObjectWeightAction = (weight) => {
+        close();
+        if (weight === 'more') { ui.exec('formatObject'); return; }
+        L.drawing.modifySelected('Line Style', (it) => { if (it.t === 'img') it.border = Object.assign({ val: 'single', color: '000000' }, it.border || {}, { sz: weight }); else it.line = Object.assign({ c: '#000000', dash: 'solid' }, it.line && it.line.t !== 'none' ? it.line : {}, { w: weight }); });
+      };
+      return h('div', { id: 'react-wordx-object-weight-menu-root' });
+    }
+    return listPanel(A.WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => L.drawing.modifySelected('Line Style', (it) => { if (it.t === 'img') it.border = Object.assign({ val: 'single', color: '000000' }, it.border || {}, { sz: w }); else it.line = Object.assign({ c: '#000000', dash: 'solid' }, it.line && it.line.t !== 'none' ? it.line : {}, { w }); }) })).concat([{ label: 'More Lines...', run: () => ui.exec('formatObject') }]), close);
+  } }], r);
+  A.objDashMenu = (r) => ui.openMenu([{ custom: (close) => {
+    if (window.VO && VO.reactDirectHost) {
+      const dashes = [['solid', null, L.N('Solid')], ['sysDot', '1 1', L.N('Dotted')], ['sysDash', '3 1', L.N('Dashed')], ['dash', '4 3', L.N('Dash')], ['dashDot', '4 3 1 3', L.N('Dash Dot')], ['lgDash', '8 3', L.N('Long Dash')], ['lgDashDot', '8 3 1 3', L.N('Long Dash Dot')], ['lgDashDotDot', '8 3 1 3 1 3', L.N('Long Dash Dot Dot')]];
+      A.reactObjectDashCatalog = () => dashes.map(([kind, dash, label]) => ({ kind, label, svg: lineSVG(2, dash) }));
+      A.reactObjectDashAction = (kind) => { close(); L.drawing.modifySelected('Dash Style', (it) => { if (it.line && it.line.t !== 'none') it.line = Object.assign({}, it.line, { dash: kind }); }); };
+      return h('div', { id: 'react-wordx-object-dash-menu-root' });
+    }
+    return listPanel([['solid', null], ['sysDot', '1 1'], ['sysDash', '3 1'], ['dash', '4 3'], ['dashDot', '4 3 1 3'], ['lgDash', '8 3'], ['lgDashDot', '8 3 1 3'], ['lgDashDotDot', '8 3 1 3 1 3']].map(([k, da]) => ({ html: lineSVG(2, da), run: () => L.drawing.modifySelected('Dash Style', (it) => { if (it.line && it.line.t !== 'none') it.line = Object.assign({}, it.line, { dash: k }); }) })), close);
+  } }], r);
   A.objArrowMenu = (r) => {
     const P = [[null, null], [null, 'triangle'], ['triangle', null], ['triangle', 'triangle'], [null, 'arrow'], [null, 'stealth'], [null, 'oval'], [null, 'diamond'], ['oval', 'oval']];
     const head = (t, x, dir) => !t ? '' : t === 'oval' ? `<circle cx="${x}" cy="7" r="3"/>` : t === 'diamond' ? `<path d="M${x - 4} 7l4-4 4 4-4 4z"/>` : t === 'arrow' ? `<path d="M${x - dir * 6} 2l${dir * 6} 5-${dir * 6} 5" fill="none" stroke="#000" stroke-width="1.5"/>` : `<path d="M${x} 7l${-dir * 8} -4v8z"/>`;
-    ui.openMenu([{ custom: (close) => listPanel(P.map(([a, b]) => ({ html: `<svg width="90" height="14" viewBox="0 0 90 14" fill="#000"><path d="M6 7h78" stroke="#000" stroke-width="1.5"/>${head(a, 4, -1)}${head(b, 86, 1)}</svg>`, run: () => L.drawing.modifySelected('Arrow Style', (it) => { if (!it.line || it.line.t === 'none') return; it.line = Object.assign({}, it.line, { head: a ? { type: a, w: 'med', len: 'med' } : undefined, tail: b ? { type: b, w: 'med', len: 'med' } : undefined }); }) })), close) }], r);
+    const preview = ([a, b]) => `<svg width="90" height="14" viewBox="0 0 90 14" fill="#000"><path d="M6 7h78" stroke="#000" stroke-width="1.5"/>${head(a, 4, -1)}${head(b, 86, 1)}</svg>`;
+    ui.openMenu([{ custom: (close) => {
+      if (window.VO && VO.reactDirectHost) {
+        const labels = [L.N('No Arrowheads'), L.N('Triangle at End'), L.N('Triangle at Start'), L.N('Triangles at Both Ends'), L.N('Arrow at End'), L.N('Stealth at End'), L.N('Oval at End'), L.N('Diamond at End'), L.N('Ovals at Both Ends')];
+        A.reactObjectArrowCatalog = () => P.map((pair, index) => ({ index, label: labels[index], svg: preview(pair) }));
+        A.reactObjectArrowAction = (index) => { const [a, b] = P[index]; close(); L.drawing.modifySelected('Arrow Style', (it) => { if (!it.line || it.line.t === 'none') return; it.line = Object.assign({}, it.line, { head: a ? { type: a, w: 'med', len: 'med' } : undefined, tail: b ? { type: b, w: 'med', len: 'med' } : undefined }); }); };
+        return h('div', { id: 'react-wordx-object-arrow-menu-root' });
+      }
+      return listPanel(P.map(([a, b]) => ({ html: preview([a, b]), run: () => L.drawing.modifySelected('Arrow Style', (it) => { if (!it.line || it.line.t === 'none') return; it.line = Object.assign({}, it.line, { head: a ? { type: a, w: 'med', len: 'med' } : undefined, tail: b ? { type: b, w: 'med', len: 'med' } : undefined }); }) })), close);
+    } }], r);
   };
   A.objShadowMenu = (r) => {
     const S = [null, [3, 3], [-3, 3], [3, -3], [-3, -3], [0, 4], [4, 0], [6, 6]];
-    ui.openMenu([{ custom: (close) => { const g = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(4,30px)' }); S.forEach((s) => { const b = h('button', { type: 'button', style: 'width:30px;height:30px', 'aria-label': s ? 'Shadow Style' : 'No Shadow', html: s ? `<svg width="24" height="24"><rect x="${6 + s[0] / 1.5}" y="${6 + s[1] / 1.5}" width="12" height="12" fill="#888"/><rect x="6" y="6" width="12" height="12" fill="#fff" stroke="#000"/></svg>` : '<svg width="24" height="24"><rect x="6" y="6" width="12" height="12" fill="#fff" stroke="#000"/><path d="M3 21L21 3" stroke="#d33"/></svg>' }); b.addEventListener('click', () => { close(); L.drawing.modifySelected(L.N('Shadow'), (it) => { it.shadow = s ? { c: '#000000', a: 0.5, dx: s[0], dy: s[1], blur: 0 } : undefined; }); }); g.appendChild(b); }); return g; } }], r);
+    const preview = (s) => s ? `<svg width="24" height="24"><rect x="${6 + s[0] / 1.5}" y="${6 + s[1] / 1.5}" width="12" height="12" fill="#888"/><rect x="6" y="6" width="12" height="12" fill="#fff" stroke="#000"/></svg>` : '<svg width="24" height="24"><rect x="6" y="6" width="12" height="12" fill="#fff" stroke="#000"/><path d="M3 21L21 3" stroke="#d33"/></svg>';
+    ui.openMenu([{ custom: (close) => {
+      if (window.VO && VO.reactDirectHost) {
+        A.reactShadowMenuCatalog = () => S.map((s, index) => ({ index, label: s ? 'Shadow Style' : 'No Shadow', svg: preview(s) }));
+        A.reactShadowMenuAction = (index) => { const s = S[index]; close(); L.drawing.modifySelected(L.N('Shadow'), (it) => { it.shadow = s ? { c: '#000000', a: 0.5, dx: s[0], dy: s[1], blur: 0 } : undefined; }); };
+        return h('div', { id: 'react-wordx-shadow-menu-root' });
+      }
+      const g = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(4,30px)' });
+      S.forEach((s) => { const b = h('button', { type: 'button', style: 'width:30px;height:30px', 'aria-label': s ? 'Shadow Style' : 'No Shadow', html: preview(s) }); b.addEventListener('click', () => { close(); L.drawing.modifySelected(L.N('Shadow'), (it) => { it.shadow = s ? { c: '#000000', a: 0.5, dx: s[0], dy: s[1], blur: 0 } : undefined; }); }); g.appendChild(b); });
+      return g;
+    } }], r);
   };
-  A.borderStyleMenu = (r) => ui.openMenu([{ custom: (close) => listPanel([['single', null], ['dotted', '1 2'], ['dashed', '4 3'], ['dotDash', '4 3 1 3'], ['double', null], ['thick', null], ['triple', null], ['wave', null], ['threeDEmboss', null]].map(([k, da]) => ({ html: k === 'double' ? '<svg width="90" height="14"><path d="M2 5h86M2 9h86" stroke="#000"/></svg>' : k === 'triple' ? '<svg width="90" height="14"><path d="M2 3h86M2 7h86M2 11h86" stroke="#000"/></svg>' : k === 'wave' ? '<svg width="90" height="14"><path d="M2 7q5-5 10 0t10 0t10 0t10 0t10 0t10 0t10 0t10 0t6 0" fill="none" stroke="#000"/></svg>' : lineSVG(k === 'thick' ? 3 : 1, da), run: () => { A.borderPen.val = k; } })).concat([{ label: 'No Border', run: () => { A.borderPen.val = 'nil'; } }]), close) }], r);
-  A.borderWeightMenu = (r) => ui.openMenu([{ custom: (close) => listPanel([0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6].map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => { A.borderPen.sz = w; } })), close) }], r);
+  A.borderStyleMenu = (r) => ui.openMenu([{ custom: (close) => {
+    if (window.VO && VO.reactDirectHost) {
+      const styles = [['single', null], ['dotted', '1 2'], ['dashed', '4 3'], ['dotDash', '4 3 1 3'], ['double', null], ['thick', null], ['triple', null], ['wave', null], ['threeDEmboss', null]];
+      const names = { single: L.N('Single'), dotted: L.N('Dotted'), dashed: L.N('Dashed'), dotDash: L.N('Dot Dash'), double: L.N('Double'), thick: L.N('Thick'), triple: L.N('Triple'), wave: L.N('Wave'), threeDEmboss: L.N('3-D Emboss') };
+      A.reactBorderStyleCatalog = () => styles.map(([kind, dash]) => ({ kind, label: names[kind], svg: kind === 'double' ? '<svg width="90" height="14"><path d="M2 5h86M2 9h86" stroke="#000"/></svg>' : kind === 'triple' ? '<svg width="90" height="14"><path d="M2 3h86M2 7h86M2 11h86" stroke="#000"/></svg>' : kind === 'wave' ? '<svg width="90" height="14"><path d="M2 7q5-5 10 0t10 0t10 0t10 0t10 0t10 0t10 0t10 0t6 0" fill="none" stroke="#000"/></svg>' : lineSVG(kind === 'thick' ? 3 : 1, dash) }));
+      A.reactBorderStyleAction = (kind) => { close(); A.borderPen.val = kind; };
+      return h('div', { id: 'react-wordx-border-style-menu-root' });
+    }
+    return listPanel([['single', null], ['dotted', '1 2'], ['dashed', '4 3'], ['dotDash', '4 3 1 3'], ['double', null], ['thick', null], ['triple', null], ['wave', null], ['threeDEmboss', null]].map(([k, da]) => ({ html: k === 'double' ? '<svg width="90" height="14"><path d="M2 5h86M2 9h86" stroke="#000"/></svg>' : k === 'triple' ? '<svg width="90" height="14"><path d="M2 3h86M2 7h86M2 11h86" stroke="#000"/></svg>' : k === 'wave' ? '<svg width="90" height="14"><path d="M2 7q5-5 10 0t10 0t10 0t10 0t10 0t10 0t10 0t10 0t6 0" fill="none" stroke="#000"/></svg>' : lineSVG(k === 'thick' ? 3 : 1, da), run: () => { A.borderPen.val = k; } })).concat([{ label: 'No Border', run: () => { A.borderPen.val = 'nil'; } }]), close);
+  } }], r);
+  A.borderWeightMenu = (r) => ui.openMenu([{ custom: (close) => {
+    if (window.VO && VO.reactDirectHost) {
+      const weights = [0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6];
+      A.reactBorderWeightCatalog = () => weights.map((weight) => ({ weight, label: L.t('{0} pt', weight), svg: lineSVG(Math.max(0.5, weight * 1.33)) }));
+      A.reactBorderWeightAction = (weight) => { close(); A.borderPen.sz = weight; };
+      return h('div', { id: 'react-wordx-border-weight-menu-root' });
+    }
+    return listPanel([0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6].map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => { A.borderPen.sz = w; } })), close);
+  } }], r);
   A.picMode = (m) => L.drawing.modifySelected('Picture Color', (it) => { it.gray = m === 'gray' || undefined; it.bw = m === 'bw' || undefined; it.washout = m === 'washout' || undefined; });
   A.picAdjust = (k, d) => L.drawing.modifySelected(k === 'bright' ? L.N('Brightness') : L.N('Contrast'), (it) => { it[k] = L.clamp(L.round((it[k] || 0) + d, 2), -1, 1) || undefined; });
 
@@ -465,17 +555,20 @@
     A.sb.rec.textContent = L.t('REC'); A.sb.trk.textContent = L.t('TRK'); A.sb.ext.textContent = L.t('EXT'); A.sb.ovr.textContent = L.t('OVR');
     A.sb.lang.textContent = A.langName('en-US');
     A.sb.spell.innerHTML = '<svg width="18" height="14" viewBox="0 0 18 14"><rect x="1.5" y="1.5" width="11" height="11" fill="#fff" stroke="#556"/><path d="M3 4h7M3 6.5h7M3 9h5" stroke="#889"/><path d="M10 9l2.5 3 4.5-7" fill="none" stroke="#2f9a3a" stroke-width="1.6"/></svg>';
-    L.addMountListener(A.sb.trk, 'dblclick', () => ui.exec('trackChanges'));
-    L.addMountListener(A.sb.ovr, 'dblclick', () => { E.overtype = !E.overtype; A.updateStatus(); });
-    L.addMountListener(A.sb.ext, 'dblclick', () => { E.extend = !E.extend; A.updateStatus(); });
-    L.addMountListener(A.sb.lang, 'dblclick', () => ui.exec('setLanguage'));
-    /* click: check this document's spelling and grammar as you type, or stop (off when a document opens) */
-    L.addMountListener(A.sb.spell, 'click', () => {
-      if (!L.spell) return;
-      if (!A.opts.spell) { A.opts.spell = true; A.saveOpts && A.saveOpts(); }
-      L.spell.hidden = !L.spell.hidden;
-      A.status(L.spell.hidden ? 'Spelling and grammar are no longer marked in this document.' : 'Checking spelling and grammar as you type in this document.');
-    });
+    if (!(window.VO && VO.reactDirectHost)) {
+      L.addMountListener(A.sb.trk, 'dblclick', () => ui.exec('trackChanges'));
+      L.addMountListener(A.sb.ovr, 'dblclick', () => { E.overtype = !E.overtype; A.updateStatus(); });
+      L.addMountListener(A.sb.ext, 'dblclick', () => { E.extend = !E.extend; A.updateStatus(); });
+      L.addMountListener(A.sb.lang, 'dblclick', () => ui.exec('setLanguage'));
+      /* click: check this document's spelling and grammar as you type, or stop (off when a document opens) */
+      L.addMountListener(A.sb.spell, 'click', () => {
+        if (!L.spell) return;
+        if (!A.opts.spell) { A.opts.spell = true; A.saveOpts && A.saveOpts(); }
+        L.spell.hidden = !L.spell.hidden;
+        A.status(L.spell.hidden ? 'Spelling and grammar are no longer marked in this document.' : 'Checking spelling and grammar as you type in this document.');
+      });
+      L.addMountListener(A.sb.page, 'dblclick', () => ui.exec('goTo'));
+    }
     const spellIcon = () => {
       const on = L.spell && !L.spell.hidden && A.opts.spell !== false;
       A.sb.spell.classList.toggle('off', !on);
@@ -485,7 +578,6 @@
     L.bus.on('proof-state', spellIcon);
     L.bus.on('doc-loaded', spellIcon);
     spellIcon();
-    L.addMountListener(A.sb.page, 'dblclick', () => ui.exec('goTo'));
     sb.append(A.sb.page, A.sb.sec, A.sb.pages, A.sb.at, A.sb.ln, A.sb.col, A.sb.rec, A.sb.trk, A.sb.ext, A.sb.ovr, A.sb.lang, A.sb.spell, A.sb.msg);
   }
   A.status = (msg, ms) => { if (!A.sb) return; const text = L.t(msg); if (ui.reactStatus(text, ms || 4000)) return; A.sb.msg.textContent = text; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sb.msg.textContent = ''; }, ms || 4000); };
@@ -1267,16 +1359,39 @@
     const cmd = A.SHORTCUTS[k];
     if (cmd && !/^(cut|copy|paste)$/.test(cmd)) { e.preventDefault(); ui.exec(cmd); }
   }
+  A.reactAppKeydown = handleAppKeydown;
+  A.reactModifierKey = (e) => LY.root.classList.toggle('ctrl', e.ctrlKey || e.metaKey);
 
   /* ================= drag & drop of files ================= */
   function setupDrop() {
     let hint = null, depth = 0;
     const app = L.$('#app');
-    L.addMountListener(app, 'dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a document to open it, or pictures to insert them' }); L.domHost().appendChild(hint); } });
-    L.addMountListener(app, 'dragleave', () => { depth--; if (depth <= 0 && hint) { hint.remove(); hint = null; depth = 0; } });
-    L.addMountListener(app, 'dragover', (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); });
-    L.addMountListener(app, 'drop', (e) => {
+    const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+    A.reactDropHintActive = false;
+    A.reactDropEvent = (kind, e) => {
+      if (kind === 'enter') {
+        if (!hasFiles(e)) return;
+        depth++;
+        if (!hint && !(window.VO && VO.reactDirectHost)) {
+          hint = h('div', { class: 'drop-hint', text: 'Drop a document to open it, or pictures to insert them' });
+          L.domHost().appendChild(hint);
+        }
+        if (window.VO && VO.reactDirectHost && !A.reactDropHintActive) { A.reactDropHintActive = true; L.bus.emit('wordx-drop-hint'); }
+        return;
+      }
+      if (kind === 'leave') {
+        depth--;
+        if (depth <= 0) {
+          if (hint) { hint.remove(); hint = null; }
+          depth = 0;
+          if (A.reactDropHintActive) { A.reactDropHintActive = false; L.bus.emit('wordx-drop-hint'); }
+        }
+        return;
+      }
+      if (kind === 'over') { if (hasFiles(e)) e.preventDefault(); return; }
+      if (kind !== 'drop') return;
       if (hint) { hint.remove(); hint = null; } depth = 0;
+      if (A.reactDropHintActive) { A.reactDropHintActive = false; L.bus.emit('wordx-drop-hint'); }
       if (e.defaultPrevented) return;
       const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
       if (!files.length) return;
@@ -1284,13 +1399,20 @@
       if (files.some((f) => /\.(docx|docm|dotx|dotm|doc|txt|html?|rtf)$/i.test(f.name))) { A.openFiles(files); return; }
       const imgs = files.filter((f) => /^image\//.test(f.type) || /\.(emf|wmf)$/i.test(f.name));
       if (imgs.length) A.insertPictureFiles(imgs);
-    });
+    };
+    if (!(window.VO && VO.reactDirectHost)) {
+      L.addMountListener(app, 'dragenter', (e) => A.reactDropEvent('enter', e));
+      L.addMountListener(app, 'dragleave', (e) => A.reactDropEvent('leave', e));
+      L.addMountListener(app, 'dragover', (e) => A.reactDropEvent('over', e));
+      L.addMountListener(app, 'drop', (e) => A.reactDropEvent('drop', e));
+    }
   }
 
   /* ================= splitter (document map width) ================= */
   function setupSplitters() {
-    const sp = L.$('#split-map');
-    L.addMountListener(sp, 'pointerdown', (e) => {
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(L.$('#split-map'), 'pointerdown', A.reactMapSplitterDown);
+  }
+  A.reactMapSplitterDown = (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       const map = L.$('#docmap'), w0 = map.offsetWidth, style0 = map.style.width;
@@ -1299,23 +1421,30 @@
         up: (ev, d) => { if (d.moved) LY.fitSizer(); },
         cancel: () => { map.style.width = style0; },
       });
-    });
-  }
+  };
+  A.reactResize = L.debounce(() => { if (A.view === 'web') LY.render(); else LY.fitSizer(); if (L.rulers) L.rulers.draw(); }, 200);
+  A.reactScroll = () => { if (L.rulers) L.rulers.drawSoon(); };
+  A.reactBeforeUnload = (e) => {
+    const any = (doc() && doc().dirty) || A.docs.some((w, i) => i !== A.cur && w && w.doc && w.doc.dirty);
+    if (any) { e.preventDefault(); e.returnValue = ''; }
+  };
 
   /* ================= wiring ================= */
   function wire() {
     L.bus.on('sel', () => { A.updateStatus(); ui.refresh(); if (L.rulers) L.rulers.drawSoon(); });
-    L.bus.on('sel-done', () => { A.painter.release(); A.highlighter.release(); });
+    if (!(window.VO && VO.reactDirectHost)) L.bus.on('sel-done', () => { A.painter.release(); A.highlighter.release(); });
     L.bus.on('objsel', () => { A.updateToolbars(); ui.refresh(); });
     L.bus.on('doc-changed', () => { if (window.VO) VO.changed(doc()); A.updateStatus(); ui.refresh(); if (doc().settings.track || Object.keys(doc().comments).length) A.updateToolbars(); });
     L.bus.on('layout-done', () => { A.updateStatus(); if (L.rulers) L.rulers.drawSoon(); if (L.drawing) L.drawing.placeHandles(); E.placeHandles(); });
     L.bus.on('zoom', () => { ui.refresh(); if (L.rulers) L.rulers.draw(); if (L.drawing) L.drawing.placeHandles(); E.placeHandles(); });
-    L.addMountListener(LY.scroller, 'scroll', () => { if (L.rulers) L.rulers.drawSoon(); });
-    L.addMountListener(window, 'beforeunload', (e) => { const any = (doc() && doc().dirty) || A.docs.some((w, i) => i !== A.cur && w && w.doc && w.doc.dirty); if (any) { e.preventDefault(); e.returnValue = ''; } });
-    L.addMountListener(window, 'resize', L.debounce(() => { if (A.view === 'web') LY.render(); else LY.fitSizer(); if (L.rulers) L.rulers.draw(); }, 200));
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(LY.scroller, 'scroll', A.reactScroll);
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'beforeunload', A.reactBeforeUnload);
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'resize', A.reactResize);
     const app = L.$('#app');
-    L.addMountListener(app, 'keydown', (e) => { LY.root.classList.toggle('ctrl', e.ctrlKey || e.metaKey); });
-    L.addMountListener(app, 'keyup', (e) => { LY.root.classList.toggle('ctrl', e.ctrlKey || e.metaKey); });
+    if (!(window.VO && VO.reactDirectHost)) {
+      L.addMountListener(app, 'keydown', A.reactModifierKey);
+      L.addMountListener(app, 'keyup', A.reactModifierKey);
+    }
   }
 
   /* ================= format painter ================= */
@@ -1402,7 +1531,7 @@
     buildToolbars();
     L.ribbonUI.init();
     buildStatus();
-    L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
     LY.mount(L.$('#scroller'));
     E.init();
     if (L.rulers) L.rulers.mount(L.$('#hruler'), L.$('#vruler'), L.$('#rcorner'));

@@ -66,6 +66,16 @@ const runs = (u, b, prop) => u.evaluate(`L.D.doc.main.blocks[${b}].runs.map((r) 
 const objectState = (u) => u.evaluate(`({ handles: document.querySelectorAll('.obj-handles').length, outlined: document.querySelectorAll('.sel-obj').length, selected: !!L.ed.objSel })`);
 const TEXT = ['Source plain target words follow here', 'Second paragraph of ordinary text for clicking', 'Third paragraph with more words to paint'];
 
+test('the standalone Wordx shell uses Wordx product metadata', async () => {
+  const u = await open('quire');
+  try {
+    assert.deepEqual(await u.evaluate("({app:document.documentElement.dataset.app,appName:document.documentElement.dataset.appName,title:document.title,label:document.querySelector('#app')?.getAttribute('aria-label')})"), {
+      app: 'wordx', appName: 'Wordx', title: 'Document1 - Wordx', label: 'Wordx word processor',
+    });
+    u.clean();
+  } finally { await u.close(); }
+});
+
 test('the default Wordx sample and author metadata use the rebranded product name', async () => {
   const u = await open('quire');
   try {

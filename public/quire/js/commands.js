@@ -707,6 +707,7 @@
   /* ---------- split window ---------- */
   A.toggleSplit = function () {
     A.splitOn = !A.splitOn;
+    const direct = !!(window.VO && VO.reactDirectHost);
     let pane2 = L.$('#split2');
     if (A.splitOn) {
       if (!pane2) {
@@ -714,27 +715,27 @@
         const bar = L.h('div', { class: 'splitter h', id: 'split2-bar', role: 'separator' });
         L.$('#center').insertBefore(bar, L.$('#viewbar'));
         L.$('#center').insertBefore(pane2, bar);
-        bar.addEventListener('pointerdown', (e) => {
-          if (e.button !== 0) return;
-          e.preventDefault();
-          const h0 = pane2.offsetHeight, style0 = pane2.style.height;
-          L.ui.drag(e, {
-            move: (ev, d) => { pane2.style.height = L.clamp(h0 - d.dy, 60, window.innerHeight * 0.7) + 'px'; },
-            cancel: () => { pane2.style.height = style0; },
-          });
-        });
-        pane2.addEventListener('click', (e) => {
-          const pg = e.target.closest('.pg');
-          if (!pg) return;
-          const i = +pg.dataset.pg;
-          const real = LY.pages[i];
-          if (real) real.el.scrollIntoView({ block: 'start' });
-        });
+        if (!direct) {
+          bar.addEventListener('pointerdown', (e) => A.reactSplitDown(e));
+          pane2.addEventListener('click', (e) => { const pg = e.target.closest('.pg'); if (pg) A.reactSplitPageClick(+pg.dataset.pg); });
+        }
       }
       L.$('#split2-bar').hidden = false; pane2.hidden = false;
       A.refreshSplit();
     } else if (pane2) { pane2.hidden = true; L.$('#split2-bar').hidden = true; }
   };
+  A.reactSplitDown = function (e) {
+    if (e.button !== 0) return;
+    const pane2 = L.$('#split2');
+    if (!pane2 || pane2.hidden) return;
+    e.preventDefault();
+    const height = pane2.offsetHeight, previous = pane2.style.height;
+    L.ui.drag(e, {
+      move: (ev, delta) => { pane2.style.height = L.clamp(height - delta.dy, 60, window.innerHeight * 0.7) + 'px'; },
+      cancel: () => { pane2.style.height = previous; },
+    });
+  };
+  A.reactSplitPageClick = (index) => { const page = LY.pages[index]; if (page) page.el.scrollIntoView({ block: 'start' }); };
   A.refreshSplit = L.debounce(function () {
     const pane2 = L.$('#split2');
     if (!pane2 || pane2.hidden) return;

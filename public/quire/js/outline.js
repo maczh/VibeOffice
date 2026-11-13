@@ -136,9 +136,8 @@
   OL.toggleHeading = function (p) { if (collapsed.has(p.id)) collapsed.delete(p.id); else collapsed.add(p.id); LY.render(); E.restoreDom(true); };
   OL.show = function (n) { OL.showLevel = n || 0; collapsed.clear(); if (L.app.view === 'outline') { LY.render(); E.restoreDom(true); } L.ui.refresh(); };
   OL.toggle = function (k) { OL[k] = !OL[k]; if (L.app.view === 'outline') { LY.render(); E.restoreDom(true); } L.ui.refresh(); };
-  /* clicking an outline symbol selects the heading with its subtext; double-click expands/collapses */
-  L.bus.on('app-ready', () => {
-    L.addMountListener(LY.root, 'mousedown', (e) => {
+  /* The document renderer owns outline geometry; React owns this interaction in direct-host mode. */
+  OL.reactPointerDown = function (e) {
       if (L.app.view !== 'outline') return;
       const f = e.target.closest && e.target.closest('.flow.outline > .p');
       if (!f) return;
@@ -161,6 +160,9 @@
       const lp = last.t === 'p' ? last : D.lastPara([last]);
       LY.root.focus({ preventScroll: true });
       E.setSel(D.pos(p, 0), D.pos(lp, D.plen(lp)), { noScroll: true });
-    });
+  };
+  L.bus.on('app-ready', () => {
+    if (window.VO && VO.reactDirectHost) return;
+    L.addMountListener(LY.root, 'mousedown', OL.reactPointerDown);
   });
 })();

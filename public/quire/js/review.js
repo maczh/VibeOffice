@@ -242,8 +242,20 @@
       highlightBalloon(id);
       return;
     }
+    const initialText = c.blocks.filter((b) => b.t === 'p').map((p) => D.plainText(p)).join('\n');
+    const direct = !!(window.VO && VO.reactDirectHost);
+    if (direct) {
+      RV.reactCommentState = { id, text: initialText };
+      const reactRoot = h('div', { id: 'react-wordx-comment-edit-root' });
+      L.ui.dialog({
+        title: L.t('Comment [{0}{1}] — {2}', c.initials || '', +id + 1, c.author), width: 380, body: reactRoot,
+        buttons: [{ label: 'OK', primary: true, onClick: () => RV.reactCommentSave() }, { label: 'Cancel' }],
+        onClose: () => { RV.reactCommentState = null; },
+      });
+      return;
+    }
     const ta = h('textarea', { rows: 6, style: 'width:100%' });
-    ta.value = c.blocks.filter((b) => b.t === 'p').map((p) => D.plainText(p)).join('\n');
+    ta.value = initialText;
     L.ui.dialog({
       title: L.t('Comment [{0}{1}] — {2}', c.initials || '', +id + 1, c.author), width: 380, body: h('div', { class: 'col' }, ta), focus: ta,
       buttons: [{ label: 'OK', primary: true, onClick: () => {
@@ -256,6 +268,22 @@
           return E.sel && D.storyOf(d, E.sel.f.p).kind === 'cmt' ? D.pos(D.firstPara(d.main.blocks), 0) : E.sel;
         });
       } }, { label: 'Cancel' }],
+    });
+  };
+  RV.reactCommentCatalog = () => RV.reactCommentState ? { text: RV.reactCommentState.text } : null;
+  RV.reactCommentSetText = (text) => { if (RV.reactCommentState) RV.reactCommentState.text = text; };
+  RV.reactCommentSave = () => {
+    const state = RV.reactCommentState;
+    const d = doc();
+    const c = state && d.comments[state.id];
+    if (!c) return;
+    E.edit('Edit Comment', () => {
+      D.touchKey(d, 'comments');
+      const cc = d.comments[state.id];
+      const style = (D.firstPara(cc.blocks) || { pPr: { style: 'CommentText' } }).pPr.style || 'CommentText';
+      cc.blocks = state.text.split('\n').map((line) => D.para(line ? [D.text(line)] : [], { style }));
+      d._idxDirty = true;
+      return E.sel && D.storyOf(d, E.sel.f.p).kind === 'cmt' ? D.pos(D.firstPara(d.main.blocks), 0) : E.sel;
     });
   };
   RV.replyComment = function (id) {
@@ -364,13 +392,14 @@
         stub.classList.add('bl-' + o.id);
         LY.root.appendChild(line);
         line.classList.add('bl-' + o.id);
-        bl.addEventListener('pointerdown', () => highlightBalloon(o.id));
+        if (!(window.VO && VO.reactDirectHost)) bl.addEventListener('pointerdown', () => highlightBalloon(o.id));
       }
     }
     for (const l of LY.root.querySelectorAll(':scope > .balloon-line')) if (!l.isConnected) l.remove();
     LY.fitSizer();
   }
   RV.renderBalloons = renderBalloons;
+  RV.reactBalloonDown = (id) => highlightBalloon(String(id));
   L.bus.on('layout-done', () => {
     for (const l of LY.root.querySelectorAll(':scope > .balloon-line')) l.remove();
     renderBalloons();
@@ -436,8 +465,10 @@
         body = c.blocks.filter((b) => b.t === 'p').map((p) => D.plainText(p)).join('\n');
       }
       const el = h('div', { class: 'rp-item' }, data('rp-h', head, `color:${color}`), data('rp-b', body));
-      el.addEventListener('click', () => { const a = D.pos(it.p, it.kind === 'rev' ? it.r.a : it.o); const b = D.pos(it.p, it.kind === 'rev' ? it.r.b : it.o); app().gotoPos(a, b); if (it.kind === 'cmt') highlightBalloon(it.id); });
-      if (it.kind === 'cmt') el.addEventListener('dblclick', () => RV.editComment(it.id));
+      if (!(window.VO && VO.reactDirectHost)) {
+        el.addEventListener('click', () => { const a = D.pos(it.p, it.kind === 'rev' ? it.r.a : it.o); const b = D.pos(it.p, it.kind === 'rev' ? it.r.b : it.o); app().gotoPos(a, b); if (it.kind === 'cmt') highlightBalloon(it.id); });
+        if (it.kind === 'cmt') el.addEventListener('dblclick', () => RV.editComment(it.id));
+      }
       pane.appendChild(el);
     }
   };
@@ -454,6 +485,13 @@
   }
   RV.reviewersDialog = function () {
     const list = RV.authors();
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const reactRoot = direct ? h('div', { id: 'react-wordx-reviewers-root' }) : null;
+    RV.reactReviewersCatalog = () => RV.authors().map((author) => ({ author, color: R.authorColor(author) }));
+    if (direct) {
+      L.ui.dialog({ title: 'Reviewers', body: reactRoot, width: 300, buttons: [{ label: 'Close', primary: true }] });
+      return;
+    }
     const body = h('div', { class: 'col' }, h('div', { text: 'Reviewers in this document:' }));
     if (!list.length) body.appendChild(h('div', { class: 'tp-note', text: 'No one has tracked changes or comments yet.' }));
     for (const a of list) body.appendChild(h('div', { style: 'display:flex;align-items:center;gap:6px' }, h('span', { style: `width:12px;height:12px;background:${R.authorColor(a)};border:1px solid #555;display:inline-block` }), data('', a)));

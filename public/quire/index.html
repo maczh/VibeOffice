@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-app="quire" data-app-name="Quire">
+<html lang="en" data-app="wordx" data-app-name="Wordx">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: https://ipc.localhost; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="../common/ui.css">
 <link rel="stylesheet" href="../common/scout/scout.css">
 <style>[hidden]{display:none!important}img{max-width:100%}</style>
-<title>Quire</title>
+<title>Wordx</title>
 <meta name="theme-color" content="#2a64c8">
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
@@ -316,13 +316,13 @@ td.csel { background-image: linear-gradient(rgba(10,36,106,.3), rgba(10,36,106,.
 .bluebg .pages .pg { background: #0000a8 !important; }
 .bluebg .pages .pc, .bluebg .pages .pc span { color: #fff !important; }
 /* ---- find & replace "highlight all items" ---- */
-::highlight(quire-find) { background-color: #ffe476; color: inherit; }
+::highlight(wordx-find) { background-color: #ffe476; color: inherit; }
 /* ---- the selection while Find and Replace has the keyboard (editor.js, E.drawSel) ---- */
-::highlight(quire-sel) { background-color: Highlight; color: HighlightText; }
+::highlight(wordx-sel) { background-color: Highlight; color: HighlightText; }
 
 /* ---- proofing underlines (Word: red wavy for spelling, green wavy for grammar) ---- */
-::highlight(quire-spell) { text-decoration: underline wavy #e01b1b; text-decoration-thickness: 1px; text-underline-offset: 2px; text-decoration-skip-ink: none; }
-::highlight(quire-grammar) { text-decoration: underline wavy #1a9a1a; text-decoration-thickness: 1px; text-underline-offset: 2px; text-decoration-skip-ink: none; }
+::highlight(wordx-spell) { text-decoration: underline wavy #e01b1b; text-decoration-thickness: 1px; text-underline-offset: 2px; text-decoration-skip-ink: none; }
+::highlight(wordx-grammar) { text-decoration: underline wavy #1a9a1a; text-decoration-thickness: 1px; text-underline-offset: 2px; text-decoration-skip-ink: none; }
 .m-item.bold .m-lbl { font-weight: bold; }
 .th-sense { margin: 6px 0 2px; color: var(--pane-ink); }
 .tp-link.th-word { padding: 1px 2px 1px 14px; color: var(--ink); }
@@ -331,7 +331,7 @@ td.csel { background-image: linear-gradient(rgba(10,36,106,.3), rgba(10,36,106,.
 </style>
 </head>
 <body>
-<div id="app" class="app" aria-label="Quire word processor">
+<div id="app" class="app" aria-label="Wordx word processor">
   <div class="cmdbars">
     <div class="menurow" id="menurow"></div>
     <div class="toolbars" id="toolbars"></div>

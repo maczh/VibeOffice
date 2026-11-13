@@ -162,7 +162,7 @@
   /* ================= underlines while typing ================= */
   const HL = typeof CSS !== 'undefined' && CSS.highlights && typeof Highlight === 'function';
   let spellHL = null, gramHL = null;
-  if (HL) { spellHL = new Highlight(); gramHL = new Highlight(); CSS.highlights.set('quire-spell', spellHL); CSS.highlights.set('quire-grammar', gramHL); }
+  if (HL) { spellHL = new Highlight(); gramHL = new Highlight(); CSS.highlights.set('wordx-spell', spellHL); CSS.highlights.set('wordx-grammar', gramHL); }
   SP.ignoredOnce = new Set(); /* "p.id:a:word" */
   /* Underlines are off in every document until asked for (the status bar icon, or the Options checkbox
      "Hide spelling and grammar errors in this document"): opening a file shows it without red and green

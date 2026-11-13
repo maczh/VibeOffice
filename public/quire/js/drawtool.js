@@ -89,8 +89,11 @@
       }, 30);
     }
   }
+  DT.reactPointerDown = onDown;
+  DT.reactKeydown = (e) => { if (e.key === 'Escape' && DT.active) { DT.stop(); A().status(''); } };
   L.bus.on('app-ready', () => {
+    if (window.VO && VO.reactDirectHost) return;
     L.addMountListener(LY.scroller, 'pointerdown', onDown, true);
-    L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.key === 'Escape' && DT.active) { DT.stop(); A().status(''); } });
+    L.addMountListener(L.domHost(), 'keydown', DT.reactKeydown);
   });
 })();

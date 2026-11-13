@@ -78,11 +78,15 @@
     const shown = (it) => { const s = typeof it === 'object' ? it.label : String(it); return o.translate === 'no' ? s : L.t(s); };
     let list = items.slice();
     const label = (v) => { const it = list.find((x) => String(val(x)) === String(v)); return it ? shown(it) : v == null ? '' : String(v); };
-    const inp = o.input ? h('input', { type: 'text', class: 'listbox-in', id: o.id || nid('lb'), value: label(value), autocomplete: 'off', translate: o.translate || null }) : null;
+    const inputId = o.id || nid('lb');
+    const inputTarget = directRoot && o.input ? h('div', { id: inputId + '-react-root' }) : null;
+    const inp = o.input && !inputTarget ? h('input', { type: 'text', class: 'listbox-in', id: inputId, value: label(value), autocomplete: 'off', translate: o.translate || null }) : null;
     let cur = value;
+    let inputValue = label(value);
+    const listBoxRequest = (selected) => ({ target: box, inputTarget, inputId, inputValue, items: list, value: selected, options: { translate: o.translate, onInput: (v) => input(v), onChange: o.onChange, onDbl: o.onDbl, pick: (v, double) => { pick(v); if (double && o.onDbl) o.onDbl(v); } } });
     const render = () => {
       if (directRoot && directRoot.isConnected) {
-        directRoot.dispatchEvent(new CustomEvent('vibeoffice-react-wordx-list-box', { detail: { target: box, items: list, value: cur, options: { translate: o.translate, onChange: o.onChange, onDbl: o.onDbl, pick: (v, double) => { pick(v); if (double && o.onDbl) o.onDbl(v); } } }, bubbles: true }));
+        directRoot.dispatchEvent(new CustomEvent('vibeoffice-react-wordx-list-box', { detail: listBoxRequest(cur), bubbles: true }));
         return;
       }
       L.clear(box);
@@ -102,27 +106,29 @@
     };
     const mark = (v) => {
       if (directRoot && directRoot.isConnected) {
-        directRoot.dispatchEvent(new CustomEvent('vibeoffice-react-wordx-list-box', { detail: { target: box, items: list, value: v, options: { translate: o.translate, onChange: o.onChange, onDbl: o.onDbl, pick: (next, double) => { pick(next); if (double && o.onDbl) o.onDbl(next); } } }, bubbles: true }));
+        directRoot.dispatchEvent(new CustomEvent('vibeoffice-react-wordx-list-box', { detail: listBoxRequest(v), bubbles: true }));
         return;
       }
       for (const el of box.querySelectorAll('.li')) el.classList.toggle('on', v !== undefined && String(el._v) === String(v));
     };
-    const pick = (v, fromInput) => { cur = v; if (inp && !fromInput) inp.value = label(v); mark(v); if (o.onChange) o.onChange(v); };
-    if (inp) inp.addEventListener('input', () => {
-      const v = inp.value, lc = v.toLowerCase();
+    const pick = (v, fromInput) => { cur = v; if (!fromInput) { inputValue = label(v); if (inp) inp.value = inputValue; } mark(v); if (o.onChange) o.onChange(v); };
+    const input = (v) => {
+      inputValue = v;
+      const lc = v.toLowerCase();
       const hit = list.find((x) => shown(x).toLowerCase().startsWith(lc));
       /* a label typed in the UI's language stands for its value */
       const exact = list.find((x) => shown(x).toLowerCase() === lc);
       cur = exact && shown(exact) !== String(val(exact)) ? val(exact) : v;
       mark(hit ? val(hit) : undefined);
-      const on = box.querySelector('.li.on');
-      if (on) on.scrollIntoView({ block: 'nearest' });
+      if (directRoot && directRoot.isConnected) box.querySelector('.li.on')?.scrollIntoView({ block: 'nearest' });
+      else { const on = box.querySelector('.li.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
       if (o.onChange) o.onChange(cur);
-    });
+    };
+    if (inp) inp.addEventListener('input', () => input(inp.value));
     render();
-    const wrap = h('div', { class: 'col', style: 'gap:2px' }, inp, box);
-    wrap.get = () => (inp ? (cur != null && label(cur) === inp.value ? String(cur) : inp.value) : cur);
-    wrap.set = (v) => { cur = v; if (inp) inp.value = label(v); render(); };
+    const wrap = h('div', { class: 'col', style: 'gap:2px' }, inputTarget || inp, box);
+    wrap.get = () => (o.input ? (cur != null && label(cur) === inputValue ? String(cur) : inputValue) : cur);
+    wrap.set = (v) => { cur = v; inputValue = label(v); if (inp) inp.value = inputValue; render(); };
     wrap.setItems = (it) => { list = it; render(); };
     wrap.input = inp;
     return wrap;
@@ -159,6 +165,7 @@
    */
   G.font = function (opts) {
     opts = opts || {};
+    const direct = !!(window.VO && VO.reactDirectHost);
     const base = opts.target ? Object.assign({}, opts.base || {}, opts.target) : E.curRun();
     const val = (k) => (opts.target ? base[k] : uni(k));
     const st = { font: val('font'), sz: val('sz'), b: val('b'), i: val('i'), u: val('u'), uColor: val('uColor'), color: val('color'), strike: val('strike'), dstrike: val('dstrike'), vert: val('vert'), shadow: val('shadow'), outline: val('outline'), emboss: val('emboss'), imprint: val('imprint'), smallCaps: val('smallCaps'), caps: val('caps'), hidden: val('hidden'), w: val('w'), spacing: val('spacing'), position: val('position'), kern: val('kern'), effect: val('effect') };
@@ -210,13 +217,34 @@
     const kern = ui.check('&Kerning for fonts:', !!st.kern, (v) => set('kern', v ? kernAt.get() || 14 : undefined));
     const kernAt = ui.spin({ value: st.kern || 14, step: 1, dec: 1, unit: ' pt', min: 1, id: 'fd-kern', onChange: (v) => { if (kern.input.checked) set('kern', v); } });
     const anim = ui.select([['', '(none)'], ['blinkBackground', 'Blinking Background'], ['lights', 'Las Vegas Lights'], ['antsBlack', 'Marching Black Ants'], ['antsRed', 'Marching Red Ants'], ['shimmer', 'Shimmer'], ['sparkle', 'Sparkle Text']], st.effect || '', (v) => set('effect', v || undefined), { id: 'fd-anim', size: 7, style: 'width:100%' });
+    const root = h('div', { id: 'react-wordx-font-root' });
+    const animations = [['','(none)'],['blinkBackground','Blinking Background'],['lights','Las Vegas Lights'],['antsBlack','Marching Black Ants'],['antsRed','Marching Red Ants'],['shimmer','Shimmer'],['sparkle','Sparkle Text']];
+    const effects = fx.map(([key,label]) => [key, ui.stripAmp(label)]);
+    G.reactFontCatalog = () => ({ ...st, tab: opts.tab || 0, target: !!opts.target, fonts: FONTS(), sizes: L.SIZE_LIST.map(String), underlines: UNDERLINES.map(([value,label]) => [value,label]), animations: animations.map((item) => item.slice()), effects: effects.map((item) => item.slice()), sample: sample(), caption: pvCap.textContent });
+    G.reactFontAction = (action, value) => {
+      if (action === 'set' && value?.key) {
+        const { key, value: next } = value;
+        if (key === 'style') { st.b = /bold/i.test(next); st.i = /italic/i.test(next); changed.add('b'); changed.add('i'); }
+        else if (key === 'sup' || key === 'sub') { st.vert = next ? (key === 'sup' ? 'superscript' : 'subscript') : undefined; changed.add('vert'); }
+        else { st[key] = next; changed.add(key); }
+        if (next && key === 'strike') { st.dstrike = undefined; changed.add('dstrike'); }
+        if (next && key === 'dstrike') { st.strike = undefined; changed.add('strike'); }
+        if (next && key === 'caps') { st.smallCaps = undefined; changed.add('smallCaps'); }
+        if (next && key === 'smallCaps') { st.caps = undefined; changed.add('caps'); }
+        if (next && key === 'emboss') { st.imprint = undefined; changed.add('imprint'); }
+        if (next && key === 'imprint') { st.emboss = undefined; changed.add('emboss'); }
+        upd();
+      } else if (action === 'apply') apply();
+      else if (action === 'default') setDefault();
+      return G.reactFontCatalog();
+    };
     const tabs = ui.tabs([
       { label: 'Fo&nt', body: h('div', null, G.row(h('div', { class: 'col', style: 'flex:2;min-width:150px' }, h('label', { for: 'fd-font', html: ui.ampHTML('&Font:') }), fontLB), h('div', { class: 'col', style: 'flex:1.2;min-width:100px' }, h('label', { for: 'fd-style', html: ui.ampHTML('Font st&yle:') }), styleLB), h('div', { class: 'col', style: 'flex:0.7;min-width:60px' }, h('label', { for: 'fd-size', html: ui.ampHTML('&Size:') }), sizeLB)),
         G.row(G.f('Font &color:', color), G.f('&Underline style:', ul), G.f('Underline color:', ulColor)), ui.group('Effects', fxBox)) },
       { label: 'Cha&racter Spacing', body: h('div', { class: 'col' }, G.f('S&cale:', scale, 'wide'), G.row(G.f('&Spacing:', spKind, 'wide'), G.f('&By:', spBy, 'narrow')), G.row(G.f('&Position:', posKind, 'wide'), G.f('B&y:', posBy, 'narrow')), G.row(kern, G.f('Poi&nts and above', kernAt))) },
       { label: 'Te&xt Effects', body: h('div', { class: 'col' }, h('label', { for: 'fd-anim', text: 'Animations:' }), anim, h('div', { class: 'tp-note', text: 'Animated text effects are kept in the file; they display as plain text, as in later versions of Word.' })) },
     ], opts.tab || 0);
-    const body = h('div', null, tabs, h('div', { class: 'cd-cap', text: 'Preview' }), pv, pvCap);
+    const body = direct ? root : h('div', null, tabs, h('div', { class: 'cd-cap', text: 'Preview' }), pv, pvCap);
     ui.dialog({
       title: 'Font', width: 470, body,
       buttons: [
@@ -245,11 +273,34 @@
   /* ================= Paragraph ================= */
   G.paragraph = function (opts) {
     opts = opts || {};
+    const direct = !!(window.VO && VO.reactDirectHost);
     const pp = opts.target ? Object.assign({}, opts.base || {}, opts.target) : E.curPara();
     const paras = opts.target ? [] : E.selectedParas();
     const same = (get) => { if (opts.target || paras.length < 2) return true; const v0 = JSON.stringify(get(D.pProps(doc(), paras[0]))); return paras.every((p) => JSON.stringify(get(D.pProps(doc(), p))) === v0); };
     const st = { jc: pp.jc || 'left', l: (pp.ind && pp.ind.l) || 0, r: (pp.ind && pp.ind.r) || 0, fl: (pp.ind && pp.ind.fl) || 0, b: (pp.sp && pp.sp.b) || 0, a: (pp.sp && pp.sp.a) || 0, bAuto: !!(pp.sp && pp.sp.bAuto), aAuto: !!(pp.sp && pp.sp.aAuto), line: (pp.sp && pp.sp.line) || 1, rule: (pp.sp && pp.sp.rule) || 'auto', outline: pp.outline, contextual: !!pp.contextual, widow: pp.widow !== false, keepNext: !!pp.keepNext, keepLines: !!pp.keepLines, pageBreakBefore: !!pp.pageBreakBefore, suppressLineNumbers: !!pp.suppressLineNumbers, suppressAutoHyphens: !!pp.suppressAutoHyphens };
     const changed = new Set();
+    if (direct) {
+      const reactRoot = h('div', { id: 'react-wordx-paragraph-root' });
+      const state = () => ({ ...st, changed: Array.from(changed), sameIndents: same((p) => p.ind), levels: [['', 'Body text'], ...Array.from({ length: 9 }, (_, i) => [String(i), L.t('Level {0}', i + 1)])] });
+      G.reactParagraphCatalog = state;
+      G.reactParagraphAction = (action, value) => {
+        if (action === 'set' && value) { st[value.key] = value.value; changed.add(value.key); L.bus.emit('wordx-paragraph-refresh'); }
+        else if (action === 'spacingMode') {
+          if (value === 'single') { st.line = 1; st.rule = 'auto'; }
+          else if (value === '1.5') { st.line = 1.5; st.rule = 'auto'; }
+          else if (value === 'double') { st.line = 2; st.rule = 'auto'; }
+          else if (value === 'multiple') { st.line = st.rule === 'auto' && st.line > 0 ? st.line : 3; st.rule = 'auto'; }
+          else { st.rule = value; st.line = Math.max(st.line > 6 ? st.line : 12, 1); }
+          changed.add('line'); changed.add('rule'); L.bus.emit('wordx-paragraph-refresh');
+        }
+        return state();
+      };
+      ui.dialog({ title: 'Paragraph', width: 470, body: reactRoot, buttons: [
+        { label: '&Tabs...', onClick: () => { apply(); setTimeout(() => G.tabs(opts), 0); } },
+        { label: 'OK', primary: true, onClick: () => apply() }, { label: 'Cancel' },
+      ], onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left') });
+      return;
+    }
     const set = (k, v) => { st[k] = v; changed.add(k); drawPv(); };
     const align = ui.select([['left', 'Left'], ['center', 'Centered'], ['right', 'Right'], ['both', 'Justified'], ['distribute', 'Distributed']], st.jc, (v) => set('jc', v), { id: 'pd-al' });
     const lvl = ui.select([['', 'Body text']].concat([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [String(n - 1), L.t('Level {0}', n)])), st.outline == null || st.outline >= 9 ? '' : String(st.outline), (v) => set('outline', v === '' ? 9 : +v), { id: 'pd-lvl' });
@@ -260,8 +311,8 @@
     if (!same((p) => p.ind)) { left.input.value = ''; right.input.value = ''; }
     const before = ui.spin({ value: st.b, step: 6, dec: 1, unit: ' pt', min: 0, max: 1584, id: 'pd-b', onChange: (v) => { set('b', v); st.bAuto = false; changed.add('bAuto'); } });
     const after = ui.spin({ value: st.a, step: 6, dec: 1, unit: ' pt', min: 0, max: 1584, id: 'pd-a', onChange: (v) => { set('a', v); st.aAuto = false; changed.add('aAuto'); } });
-    if (st.bAuto) before.input.value = L.t('Auto');
-    if (st.aAuto) after.input.value = L.t('Auto');
+    if (st.bAuto && before?.input) before.input.value = L.t('Auto');
+    if (st.aAuto && after?.input) after.input.value = L.t('Auto');
     const lsKind = st.rule === 'exact' ? 'exact' : st.rule === 'atLeast' ? 'atLeast' : st.line === 1 ? 'single' : st.line === 1.5 ? '1.5' : st.line === 2 ? 'double' : 'multiple';
     const ls = ui.select([['single', 'Single|line spacing'], ['1.5', '1.5 lines'], ['double', 'Double|line spacing'], ['atLeast', 'At least'], ['exact', 'Exactly'], ['multiple', 'Multiple']], lsKind, (v) => {
       if (v === 'single') { st.line = 1; st.rule = 'auto'; at.set(''); }
@@ -272,7 +323,7 @@
       changed.add('line'); changed.add('rule'); drawPv();
     }, { id: 'pd-ls' });
     const at = ui.spin({ value: lsKind === 'single' || lsKind === '1.5' || lsKind === 'double' ? 0 : st.line, step: lsKind === 'multiple' ? 0.5 : 1, dec: 2, unit: '', min: 0, id: 'pd-at', fmt: (v) => (ls.value === 'atLeast' || ls.value === 'exact' ? L.round(v, 1) + ' pt' : v ? L.round(v, 2) + ' li' : ''), onChange: (v) => { if (ls.value === 'single' || ls.value === '1.5' || ls.value === 'double') ls.value = 'multiple'; st.line = v; st.rule = ls.value === 'atLeast' || ls.value === 'exact' ? ls.value : 'auto'; changed.add('line'); changed.add('rule'); drawPv(); } });
-    if (lsKind === 'single' || lsKind === '1.5' || lsKind === 'double') at.input.value = '';
+    if ((lsKind === 'single' || lsKind === '1.5' || lsKind === 'double') && at?.input) at.input.value = '';
     const ctxChk = ui.check("&Don't add space between paragraphs of the same style", st.contextual, (v) => set('contextual', v));
     const pv = h('div', { class: 'para-preview', style: 'width:100%;height:110px' });
     function drawPv() {
@@ -406,7 +457,9 @@
       text.style.cssText = `position:absolute;left:30px;right:30px;top:34px;display:flex;flex-direction:column;gap:5px;${mid ? 'border-bottom:' + R.borderCSS(mid) + ';padding-bottom:6px' : ''}${bd.insideV ? ';border-right:' + R.borderCSS(bd.insideV) : ''}`;
       for (const s of sides) sideBtn[s].classList.toggle('on', !!bd[s]);
     };
-    const setting = G.radios(nid('bds'), [['none', 'N&one'], ['box', 'Bo&x'], ['shadow', 'Sh&adow'], ['3d', '3-&D'], ['custom', 'C&ustom']].concat(kind === 'cell' || kind === 'table' ? [['all', 'A&ll'], ['grid', 'Gri&d']] : []), Object.keys(bd).length ? 'custom' : 'none', (v) => {
+    let presetState = Object.keys(bd).length ? 'custom' : 'none';
+    const applyPreset = (v) => {
+      presetState = v;
       for (const s of Object.keys(bd)) delete bd[s];
       o.shadow = false;
       if (v === 'none') { draw(); return; }
@@ -418,10 +471,18 @@
       if (v === 'all') for (const s of ['insideH', 'insideV']) bd[s] = Object.assign({}, pen);
       if (v === 'grid') { for (const s of outer) bd[s] = Object.assign({}, pen, { sz: Math.max(pen.sz, 1.5) }); bd.insideH = Object.assign({}, pen, { sz: 0.5 }); bd.insideV = Object.assign({}, pen, { sz: 0.5 }); }
       draw();
-    });
+    };
+    const setting = G.radios(nid('bds'), [['none', 'N&one'], ['box', 'Bo&x'], ['shadow', 'Sh&adow'], ['3d', '3-&D'], ['custom', 'C&ustom']].concat(kind === 'cell' || kind === 'table' ? [['all', 'A&ll'], ['grid', 'Gri&d']] : []), presetState, applyPreset);
     draw();
     const el = G.row(ui.group('Setting:', setting), h('div', { class: 'col', style: 'flex:1;min-width:140px' }, h('label', { html: ui.ampHTML('St&yle:') }), styleBox, G.f('&Color:', color), G.f('&Width:', width)), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), h('div', { class: 'tp-note', text: 'Click on diagram or use buttons to apply borders' }), pvBox));
     el.get = () => { const out = {}; for (const s of sides) out[s] = bd[s] ? Object.assign({}, bd[s], o.shadow ? { shadow: true } : {}) : null; return out; };
+    el.reactCatalog = () => ({ kind, sides: sides.slice(), borders: el.get(), pen: Object.assign({}, pen), setting: presetState, shadow: !!o.shadow, styles: BORDER_STYLES.map(([value, label]) => [value, label]), widths: WIDTHS.slice() });
+    el.reactAction = (action, value) => {
+      if (action === 'toggle') { if (bd[value]) delete bd[value]; else bd[value] = Object.assign({}, pen, { space: value === 'left' || value === 'right' ? 4 : 1 }); presetState = 'custom'; setting.value = 'custom'; draw(); }
+      else if (action === 'preset') { setting.value = value; applyPreset(value); }
+      else if (action === 'pen' && value) { pen[value.key] = value.value; }
+      return el.reactCatalog();
+    };
     return el;
   }
   G.borders = function (tab, opts) {
@@ -450,20 +511,40 @@
     const pattColor = G.color(shdCur.color && shdCur.color !== 'auto' ? shdCur.color : 'auto', { id: 'bd-pcol' });
     const shdApply = ui.select(inTbl ? [['cell', 'Cell'], ['table', 'Table'], ['para', 'Paragraph'], ['text', 'Text']] : [['para', 'Paragraph'], ['text', 'Text']], target === 'style' ? 'para' : target, null, { id: 'bd-sapply' });
     showFill();
+    const direct = !!(window.VO && VO.reactDirectHost);
+    const reactRoot = h('div', { id: 'react-wordx-borders-root' });
+    let reactTab = tab === 'page' ? 1 : tab === 'shading' ? 2 : 0;
+    let reactTarget = target === 'style' ? 'para' : target;
+    let reactPageApply = pb.display || 'section', reactShadingApply = reactTarget, reactPattern = patt.value, reactPatternColor = pattColor.get();
+    G.reactBordersCatalog = () => ({ tab: reactTab, inTable: !!inTbl, target: reactTarget, showApply: !opts.target, applyOptions: inTbl ? [['cell','Cell'],['table','Table'],['para','Paragraph'],['text','Text']] : [['para','Paragraph'],['text','Text']], pageOptions: [['all','Whole document'],['section','This section'],['firstPage','This section - First page only'],['notFirstPage','This section - All except first page']], border: pnl.reactCatalog(), page: pagePnl.reactCatalog(), pageApply: reactPageApply, shadingApply: reactShadingApply, fill, pattern: reactPattern, patternColor: reactPatternColor, patterns: SHD_PATTERNS.map(([value,label]) => [value,label]), colors: L.color.STANDARD.slice() });
+    G.reactBordersAction = (action, value) => {
+      if (action === 'tab') reactTab = value;
+      else if (action === 'target') { target = reactTarget = value; reactShadingApply = value; if (applyTo?.value !== undefined) applyTo.value = value; shdApply.value = value; }
+      else if (action === 'pageApply') reactPageApply = value;
+      else if (action === 'shadingApply') reactShadingApply = value;
+      else if (action === 'fill') { fill = value || null; showFill(); }
+      else if (action === 'pattern') reactPattern = value;
+      else if (action === 'patternColor') reactPatternColor = value;
+      else if (action === 'border' && value) pnl.reactAction(value.action, value.value);
+      else if (action === 'page' && value) pagePnl.reactAction(value.action, value.value);
+      L.bus.emit('wordx-borders-refresh');
+      return G.reactBordersCatalog();
+    };
     const tabs = ui.tabs([
       { label: '&Borders', body: h('div', null, pnl, opts.target ? null : G.f('Appl&y to:', applyTo)) },
       { label: '&Page Border', body: h('div', null, pagePnl, G.f('Apply t&o:', pageApply)) },
       { label: '&Shading', body: h('div', null, G.row(h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Fill' }), ui.button('No Fill', () => { fill = null; showFill(); }, { class: 'btn small' }), fillGrid, fillName, ui.button('&More Colors...', () => ui.moreColors(fill ? '#' + fill : null, (c) => { if (c) { fill = c.replace('#', '').toUpperCase(); showFill(); } }), { class: 'btn small' })), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pvShd)), ui.group('Patterns', G.row(G.f('St&yle:', patt), G.f('&Color:', pattColor))), opts.target ? null : G.f('Apply t&o:', shdApply)) },
     ], tab === 'page' ? 1 : tab === 'shading' ? 2 : 0);
     ui.dialog({
-      title: 'Borders and Shading', width: 540, body: tabs,
+      title: 'Borders and Shading', width: 540, body: direct ? reactRoot : tabs,
       buttons: [{ label: '&Horizontal Line...', onClick: () => { A().insertHorizontalLine(); } }, { label: 'OK', primary: true, onClick: () => apply() }, { label: 'Cancel' }],
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
     });
     function apply() {
       const bd = pnl.get();
       const clean = (o) => { const out = {}; for (const k in o) if (o[k]) out[k] = o[k]; return Object.keys(out).length ? out : undefined; };
-      const shd = fill || patt.value !== 'clear' ? { val: patt.value, fill: fill || 'auto', color: pattColor.get() || 'auto' } : undefined;
+      const pattern = direct ? reactPattern : patt.value, patternColor = direct ? reactPatternColor : pattColor.get();
+      const shd = fill || pattern !== 'clear' ? { val: pattern, fill: fill || 'auto', color: patternColor || 'auto' } : undefined;
       if (opts.onOK) { opts.onOK({ borders: clean(bd), shd }); return; }
       E.edit('Borders and Shading', () => {
         /* borders */
@@ -486,15 +567,16 @@
           }
         }
         /* shading */
-        const sa = shdApply.value;
+        const sa = direct ? reactShadingApply : shdApply.value;
         if (sa === 'para') O.setParaProps(E.selectedParas(), (pPr) => { pPr.shd = shd; });
         else if (sa === 'text' && !E.collapsed()) { const [a, b] = E.range(); O.setRunProps(a, b, { shd }); }
         else if (sa === 'cell' || sa === 'table') { const rg = L.tables.range(); D.touchTbl(rg.tbl); const cells = sa === 'table' ? rg.tbl.rows.flatMap((r) => r.cells) : rg.cells; for (const c of cells) { if (shd) c.tcPr.shd = shd; else delete c.tcPr.shd; } }
         /* page borders */
         const pbd = pagePnl.get();
         const pclean = clean(pbd);
-        const holders = pageApply.value === 'all' ? D.sections(d).map((s) => ({ holder: s.endPara || d })) : [{ holder: sect.holder }];
-        for (const hh of holders) { D.touchKey(hh.holder, 'sect'); const sc = hh.holder === d ? d.sect : hh.holder.sect; sc.borders = pclean ? Object.assign({}, pclean, { display: pageApply.value === 'firstPage' || pageApply.value === 'notFirstPage' ? pageApply.value : undefined, offsetFrom: (sc.borders && sc.borders.offsetFrom) || 'text' }) : null; }
+        const pageScope = direct ? reactPageApply : pageApply.value;
+        const holders = pageScope === 'all' ? D.sections(d).map((s) => ({ holder: s.endPara || d })) : [{ holder: sect.holder }];
+        for (const hh of holders) { D.touchKey(hh.holder, 'sect'); const sc = hh.holder === d ? d.sect : hh.holder.sect; sc.borders = pclean ? Object.assign({}, pclean, { display: pageScope === 'firstPage' || pageScope === 'notFirstPage' ? pageScope : undefined, offsetFrom: (sc.borders && sc.borders.offsetFrom) || 'text' }) : null; }
         return E.sel;
       });
     }
@@ -504,6 +586,7 @@
   const BULLET_GALLERY = [['•', 'Symbol', ''], ['o', 'Courier New', 'o'], ['▪', 'Wingdings', ''], ['❖', 'Wingdings', ''], ['➢', 'Wingdings', ''], ['✓', 'Wingdings', ''], ['◆', 'Wingdings', '']];
   const NUM_GALLERY = [['decimal', '%1.'], ['decimal', '%1)'], ['upperRoman', '%1.'], ['upperLetter', '%1.'], ['lowerLetter', '%1)'], ['lowerLetter', '%1.'], ['lowerRoman', '%1.']];
   G.bullets = function (tab) {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const p = E.sel ? E.sel.f.p : null;
     const info = p && L.lists ? L.lists.info(p) : null;
     let choice = null;
@@ -536,14 +619,29 @@
       if (choice.kind === 'number') return D.makeNumberAbs(choice.it[0], choice.it[1]);
       return D.makeOutlineAbs(choice.it);
     };
-    const tabs = ui.tabs([{ label: '&Bulleted', body: gB }, { label: '&Numbered', body: h('div', null, gN, ui.group('List numbering', numOpts)) }, { label: 'O&utline Numbered', body: gO }], tab != null ? tab : info ? (info.fmt === 'bullet' ? 0 : 1) : 0);
+    const initialTab = tab != null ? tab : info ? (info.fmt === 'bullet' ? 0 : 1) : 0;
+    const tabs = ui.tabs([{ label: '&Bulleted', body: gB }, { label: '&Numbered', body: h('div', null, gN, ui.group('List numbering', numOpts)) }, { label: 'O&utline Numbered', body: gO }], initialTab);
+    const reactRoot = h('div', { id: 'react-wordx-bullets-root' });
+    let reactTab = initialTab;
+    let reactSelected = null;
+    G.reactBulletsCatalog = () => ({ tab: reactTab, restart, selected: reactSelected, bullet: BULLET_GALLERY.map((it, index) => ({ index, lines: [it[0], it[0], it[0]] })), number: NUM_GALLERY.map((it, index) => ({ index, lines: [1, 2, 3].map((n) => it[1].replace('%1', D.fmtNum(n, it[0]))) })), outline: D.OUTLINE_PRESETS.slice(0, 7).map((it, index) => ({ index, headings: !!it.headings, lines: [0, 1, 2].map((k) => { const [fmt, text] = it.lv(k); return text.replace(/%(\d)/g, (m, x) => D.fmtNum(1, +x - 1 === k ? fmt : it.lv(+x - 1)[0])); }) })) });
+    G.reactBulletsAction = (action, value) => {
+      if (action === 'tab') reactTab = Number(value);
+      else if (action === 'restart') restart = !!value;
+      else if (action === 'pick') { const { kind, index } = value; reactSelected = value.none ? `${kind}:none` : `${kind}:${index}`; const it = kind === 'bullet' ? BULLET_GALLERY[index] : kind === 'number' ? NUM_GALLERY[index] : D.OUTLINE_PRESETS[index]; choice = value.none ? { none: true } : { kind, it }; }
+      else if (action === 'reset') { L.lists.remove(); return; }
+      else if (action === 'customize') { const a = abs() || (info ? L.clone(D.numDef(doc(), info.numId).abs) : D.makeBulletAbs('•', 'Symbol', '')); dlg.close(null); G.customizeList(a, info ? info.lvl : 0); return; }
+      else if (action === 'apply') { if (!choice) return; if (choice.none) { L.lists.remove(); return; } const a = abs(); if (choice.kind === 'outline' && choice.it.headings) applyHeadingNumbering(a); else L.lists.apply(a, { restart, newList: !info || restart }); }
+      return G.reactBulletsCatalog();
+    };
     let okBtn;
-    const dlg = ui.dialog({
-      title: 'Bullets and Numbering', width: 450, body: tabs,
+    let dlg;
+    dlg = ui.dialog({
+      title: 'Bullets and Numbering', width: 450, body: direct ? reactRoot : tabs,
       buttons: [
-        { label: '&Reset', onClick: () => { L.lists.remove(); return true; } },
-        { label: 'Customi&ze...', onClick: () => { const a = abs() || (info ? L.clone(D.numDef(doc(), info.numId).abs) : D.makeBulletAbs('•', 'Symbol', '')); dlg.close(null); G.customizeList(a, info ? info.lvl : 0); return false; } },
-        { label: 'OK', primary: true, onClick: () => { if (!choice) return; if (choice.none) { L.lists.remove(); return; } const a = abs(); if (choice.kind === 'outline' && choice.it.headings) applyHeadingNumbering(a); else L.lists.apply(a, { restart, newList: !info || restart }); } },
+        { label: '&Reset', onClick: () => { if (direct) G.reactBulletsAction('reset'); else L.lists.remove(); return true; } },
+        { label: 'Customi&ze...', onClick: () => { if (direct) G.reactBulletsAction('customize'); else { const a = abs() || (info ? L.clone(D.numDef(doc(), info.numId).abs) : D.makeBulletAbs('•', 'Symbol', '')); dlg.close(null); G.customizeList(a, info ? info.lvl : 0); } return false; } },
+        { label: 'OK', primary: true, onClick: () => { if (direct) G.reactBulletsAction('apply'); else { if (!choice) return; if (choice.none) { L.lists.remove(); return; } const a = abs(); if (choice.kind === 'outline' && choice.it.headings) applyHeadingNumbering(a); else L.lists.apply(a, { restart, newList: !info || restart }); } } },
         { label: 'Cancel' },
       ],
     });
@@ -568,7 +666,9 @@
     const multi = abs.multi === 'multilevel';
     const lvList = G.listBox([1, 2, 3, 4, 5, 6, 7, 8, 9].map(String), String(cur + 1), { height: 140, onChange: (v) => { save(); cur = +v - 1; load(); } });
     const numText = h('input', { type: 'text', id: 'cl-text', style: 'width:140px' });
-    const numStyle = ui.select([['decimal', '1, 2, 3, ...'], ['upperRoman', 'I, II, III, ...'], ['lowerRoman', 'i, ii, iii, ...'], ['upperLetter', 'A, B, C, ...'], ['lowerLetter', 'a, b, c, ...'], ['ordinal', '1st, 2nd, 3rd, ...'], ['cardinalText', 'One, Two, Three, ...'], ['ordinalText', 'First, Second, Third, ...'], ['decimalZero', '01, 02, 03, ...'], ['bullet', 'Bullet'], ['none', '(none)']], abs.levels[cur].fmt, () => { save(); drawPv(); }, { id: 'cl-style' });
+    const numStyleItems = [['decimal', '1, 2, 3, ...'], ['upperRoman', 'I, II, III, ...'], ['lowerRoman', 'i, ii, iii, ...'], ['upperLetter', 'A, B, C, ...'], ['lowerLetter', 'a, b, c, ...'], ['ordinal', '1st, 2nd, 3rd, ...'], ['cardinalText', 'One, Two, Three, ...'], ['ordinalText', 'First, Second, Third, ...'], ['decimalZero', '01, 02, 03, ...'], ['bullet', 'Bullet'], ['none', '(none)']];
+    for (const level of abs.levels) if (!numStyleItems.some(([value]) => value === level.fmt)) numStyleItems.push([level.fmt, level.custFmt || 'Original format']);
+    const numStyle = ui.select(numStyleItems, abs.levels[cur].fmt, () => { save(); drawPv(); }, { id: 'cl-style' });
     const start = G.num(abs.levels[cur].start || 1, { min: 0, id: 'cl-start', onChange: () => drawPv() });
     const bulletCh = h('button', { type: 'button', class: 'btn', style: 'min-width:40px;font-size:16px' });
     const align = ui.select([['left', 'Left'], ['center', 'Centered'], ['right', 'Right']], abs.levels[cur].jc || 'left', () => drawPv(), { id: 'cl-al' });
@@ -576,10 +676,11 @@
     const tabAfter = G.len(36, { id: 'cl-tab', min: 0 });
     const indentAt = G.len(36, { id: 'cl-ind', min: 0, onChange: () => drawPv() });
     const follow = ui.select([['tab', 'Tab character'], ['space', 'Space'], ['nothing', 'Nothing']], abs.levels[cur].suff || 'tab', null, { id: 'cl-follow' });
-    const linkStyle = ui.select([['', '(no style)']], '', null, { id: 'cl-link' });
-    for (let i = 1; i <= 9; i++) linkStyle.appendChild(raw('option', { value: 'Heading' + i }, 'Heading ' + i));   // style names, as the document has them
+    const linkStyleItems = [['', '(no style)'], ...Array.from({ length: 9 }, (_, i) => ['Heading' + (i + 1), 'Heading ' + (i + 1)])];
+    const linkStyle = ui.select(linkStyleItems, '', null, { id: 'cl-link' });
     linkStyle.value = abs.levels[cur].pStyle || '';
     const legal = ui.check('&Legal style numbering', !!abs.levels[cur].isLgl, null);
+    let legalChecked = !!abs.levels[cur].isLgl;
     const pv = h('div', { class: 'para-preview', style: 'height:150px;width:180px;font:9px Arial,Arimo,sans-serif;gap:5px', translate: 'no' });
     let bullet = { ch: abs.levels[cur].glyph || '•', font: (abs.levels[cur].rPr && abs.levels[cur].rPr.font) || 'Symbol', raw: abs.levels[cur].text };
     let fontR = Object.assign({}, abs.levels[cur].rPr || {});
@@ -587,7 +688,7 @@
     function load() {
       const lv = abs.levels[cur];
       numText.value = (lv.text || '').replace(/%(\d)/g, (m, x) => `{${x}}`);
-      if (!Array.from(numStyle.options).some(o => o.value === lv.fmt)) numStyle.appendChild(h('option', { value: lv.fmt }, lv.custFmt || 'Original format'));
+      if (!numStyleItems.some(([value]) => value === lv.fmt)) numStyleItems.push([lv.fmt, lv.custFmt || 'Original format']);
       numStyle.value = lv.fmt;
       start.set(lv.start == null ? 1 : lv.start);
       align.value = lv.jc || 'left';
@@ -597,7 +698,8 @@
       tabAfter.set(lv.tabPos != null ? lv.tabPos : ind.l || 0);
       follow.value = lv.suff || 'tab';
       linkStyle.value = lv.pStyle || '';
-      legal.input.checked = !!lv.isLgl;
+      legalChecked = !!lv.isLgl;
+      if (legal.input) legal.input.checked = legalChecked;
       bullet = { ch: lv.glyph || L.mapSymbolChar(lv.text || '•', lv.rPr && lv.rPr.font) || '•', font: (lv.rPr && lv.rPr.font) || 'Symbol', raw: lv.text };
       fontR = Object.assign({}, lv.rPr || {});
       bulletCh.textContent = bullet.ch;
@@ -620,7 +722,7 @@
       if (tp != null && Math.abs(tp - ind) > 0.5) lv.tabPos = L.round(tp, 2); else delete lv.tabPos;
       lv.suff = follow.value;
       if (linkStyle.value) lv.pStyle = linkStyle.value; else delete lv.pStyle;
-      if (legal.input.checked) lv.isLgl = true; else delete lv.isLgl;
+      if (legalChecked) lv.isLgl = true; else delete lv.isLgl;
     }
     function drawPv() {
       save();
@@ -638,6 +740,24 @@
     const bulletRow = G.row(G.f('Bullet character:', bulletCh), ui.button('&Font...', () => G.font({ target: fontR, sample: bullet.ch, onOK: (r) => { Object.assign(fontR, r); drawPv(); } }), { class: 'btn small' }));
     const numRow = h('div', { class: 'col' }, G.row(G.f('Number f&ormat:', numText), ui.button('&Font...', () => G.font({ target: fontR, sample: '1.', onOK: (r) => { Object.assign(fontR, r); drawPv(); } }), { class: 'btn small' })), G.row(G.f('&Number style:', numStyle), G.f('&Start at:', start)), multi ? G.row(G.f('Lin&k level to style:', linkStyle), legal) : null);
     load();
+    if (window.VO && VO.reactDirectHost) {
+      const root = h('div', { id: 'react-wordx-customize-list-root' });
+      const catalog = () => ({ multi, level: cur, levels: Array.from({ length: multi ? 9 : 1 }, (_, i) => [i, `Level ${i + 1}`]), text: numText.value, format: numStyle.value, formats: numStyleItems.map((option) => option.slice()), start: start.get(), align: align.value, alignedAt: alignedAt.get(), tabAfter: tabAfter.get(), indentAt: indentAt.get(), follow: follow.value, follows: [['tab', 'Tab character'], ['space', 'Space'], ['nothing', 'Nothing']], style: linkStyle.value, styles: linkStyleItems.map((option) => option.slice()), legal: legalChecked, bullet: bullet.ch, preview: Array.from(pv.children, (item) => item.firstChild?.textContent || '') });
+      G.reactCustomizeListCatalog = catalog;
+      G.reactCustomizeListAction = (action, value) => {
+        if (action === 'level') { save(); cur = Math.max(0, Math.min(8, Number(value))); load(); }
+        else if (action === 'change' && value) {
+          const setters = { text: (v) => { numText.value = String(v); }, format: (v) => { numStyle.value = String(v); }, start: (v) => start.set(Number(v)), align: (v) => { align.value = String(v); }, alignedAt: (v) => alignedAt.set(Number(v)), tabAfter: (v) => tabAfter.set(Number(v)), indentAt: (v) => indentAt.set(Number(v)), follow: (v) => { follow.value = String(v); }, style: (v) => { linkStyle.value = String(v); }, legal: (v) => { legalChecked = !!v; if (legal.input) legal.input.checked = legalChecked; }, bullet: (v) => { bullet = { ...bullet, ch: String(v), raw: String(v) }; bulletCh.textContent = String(v); } };
+          setters[value.key]?.(value.value); drawPv();
+        } else if (action === 'symbol') bulletCh.click();
+        else if (action === 'bullet-font') G.font({ target: fontR, sample: bullet.ch, onOK: (r) => { Object.assign(fontR, r); drawPv(); } });
+        else if (action === 'number-font') G.font({ target: fontR, sample: '1.', onOK: (r) => { Object.assign(fontR, r); drawPv(); } });
+        else if (action === 'apply') { save(); L.lists.apply(abs, {}); }
+        return catalog();
+      };
+      ui.dialog({ title: L.t(isBullet ? 'Customize Bulleted List' : multi ? 'Customize Outline Numbered List' : 'Customize Numbered List'), width: 520, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => G.reactCustomizeListAction('apply') }, { label: 'Cancel' }] });
+      return;
+    }
     ui.dialog({
       title: L.t(isBullet ? 'Customize Bulleted List' : multi ? 'Customize Outline Numbered List' : 'Customize Numbered List'), width: 520,
       body: G.row(multi ? h('div', { class: 'col', style: 'width:60px' }, h('label', { html: ui.ampHTML('Le&vel') }), lvList) : null, h('div', { class: 'col', style: 'flex:1;min-width:250px' }, bulletRow, numRow, ui.group('Number position', G.row(G.f('Alignment:', align), G.f('&Aligned at:', alignedAt))), ui.group('Text position', G.row(G.f('Ta&b space after:', tabAfter), G.f('&Indent at:', indentAt)), G.f('Follow number with:', follow))), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)),
@@ -647,6 +767,7 @@
 
   /* ================= Columns ================= */
   G.columns = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const d = doc();
     const s = A().curSect();
     const sect = s.sect;
@@ -693,17 +814,28 @@
     build();
     const applyTo = ui.select([['section', 'This section'], ['all', 'Whole document'], ['forward', 'This point forward']], D.sections(d).length > 1 ? 'section' : 'all', null, { id: 'cd-apply' });
     const newCol = ui.check('Start new col&umn', false, null);
+    const reactRoot = h('div', { id: 'react-wordx-columns-root' });
+    const initialRows = Array.from({ length: Math.min(Math.max(cols.n, 1), 4) }, (_, i) => ({ width: `${widths[i]?.w.get() || (bodyW - (cols.space || 36) * (cols.n - 1)) / cols.n} pt`, spacing: `${widths[i]?.spc.get() ?? cols.space ?? 36} pt` }));
+    let reactColumns = { n: cols.n, eq: cols.eq !== false, sep: !!cols.sep, rows: initialRows, applyTo: applyTo.value, newColumn: false };
+    const makeReactRows = (n, eq, presetWidths) => Array.from({ length: Math.min(Math.max(n, 1), 4) }, (_, i) => ({ width: `${presetWidths ? L.round((bodyW - 36) * presetWidths[i], 2) : eq ? (bodyW - 36 * (n - 1)) / n : cols.w[i]?.w || (bodyW - 36 * (n - 1)) / n} pt`, spacing: `${i < n - 1 ? cols.w[i]?.space ?? 36 : 0} pt` }));
+    G.reactColumnsCatalog = () => ({ ...reactColumns, applyOptions: D.sections(d).length > 1 ? [['section', 'This section'], ['all', 'Whole document'], ['forward', 'This point forward']] : [['all', 'Whole document'], ['forward', 'This point forward']] });
+    G.reactColumnsAction = (action, value) => {
+      if (action === 'change') reactColumns = { ...reactColumns, ...(value || {}) };
+      else if (action === 'preset') { const { n: count, eq: equal, fractions } = value; reactColumns = { ...reactColumns, n: count, eq: equal, rows: makeReactRows(count, equal, fractions) }; }
+    };
     ui.dialog({
       title: 'Columns', width: 470,
-      body: h('div', null, ui.group('Presets', presetBox), G.row(G.f('&Number of columns:', n, 'wide'), sep), ui.group('Width and spacing', tbl, eq), G.row(G.f('&Apply to:', applyTo), newCol, h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv))),
+      body: direct ? reactRoot : h('div', null, ui.group('Presets', presetBox), G.row(G.f('&Number of columns:', n, 'wide'), sep), ui.group('Width and spacing', tbl, eq), G.row(G.f('&Apply to:', applyTo), newCol, h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv))),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
-        const nn = Math.max(1, n.get());
-        const out = { n: nn, space: widths[0] ? widths[0].spc.get() || 36 : 36, eq: eq.input.checked, sep: sep.input.checked, w: [] };
-        if (!out.eq) out.w = widths.map((x, i) => ({ w: L.round(x.w.get(), 2), space: i < nn - 1 ? L.round(x.spc.get() || 0, 2) : 0 }));
+        const nn = Math.max(1, direct ? reactColumns.n : n.get());
+        const parseReactLen = (text, fallback) => { const parsed = D.parseLen(text, D.unit || 'in'); return parsed == null || !Number.isFinite(parsed) ? fallback : parsed; };
+        const out = { n: nn, space: direct ? parseReactLen(reactColumns.rows[0]?.spacing || '', 36) : widths[0] ? widths[0].spc.get() || 36 : 36, eq: direct ? reactColumns.eq : eq.input.checked, sep: direct ? reactColumns.sep : sep.input.checked, w: [] };
+        if (!out.eq) out.w = direct ? reactColumns.rows.map((row, i) => ({ w: L.round(parseReactLen(row.width, 36), 2), space: i < nn - 1 ? L.round(parseReactLen(row.spacing, 0), 2) : 0 })) : widths.map((x, i) => ({ w: L.round(x.w.get(), 2), space: i < nn - 1 ? L.round(x.spc.get() || 0, 2) : 0 }));
         if (nn === 1) { out.w = []; out.eq = true; }
         E.edit(L.N('Columns'), () => {
-          if (applyTo.value === 'all') { for (const sc of D.sections(d)) { const hd = sc.endPara || d; D.touchKey(hd, 'sect'); (hd === d ? d.sect : hd.sect).cols = L.clone(out); } }
-          else if (applyTo.value === 'forward') {
+          const target = direct ? reactColumns.applyTo : applyTo.value;
+          if (target === 'all') { for (const sc of D.sections(d)) { const hd = sc.endPara || d; D.touchKey(hd, 'sect'); (hd === d ? d.sect : hd.sect).cols = L.clone(out); } }
+          else if (target === 'forward') {
             /* continuous section break at the caret's paragraph start */
             const pos = E.sel.f;
             const tb = D.topBlock(d, pos.p);
@@ -720,7 +852,7 @@
           } else { D.touchKey(s.holder, 'sect'); (s.holder === d ? d.sect : s.holder.sect).cols = L.clone(out); }
           return E.sel;
         });
-        if (newCol.input.checked) E.enter('column');
+        if (direct ? reactColumns.newColumn : newCol.input.checked) E.enter('column');
       } }, { label: 'Cancel' }],
     });
   };
@@ -729,6 +861,7 @@
   /* the names of the paper sizes (D.PAPER) as the Paper size box shows them */
   const PAPER_NAMES = { Letter: L.N('Letter'), Legal: L.N('Legal'), Executive: L.N('Executive'), 'B5 (JIS)': L.N('B5 (JIS)'), Tabloid: L.N('Tabloid'), Statement: L.N('Statement'), 'Envelope #10': L.N('Envelope #10'), 'Envelope DL': L.N('Envelope DL'), 'Envelope C5': L.N('Envelope C5'), 'Envelope Monarch': L.N('Envelope Monarch') };
   G.pageSetup = function (tab) {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const d = doc();
     const s = A().curSect();
     const sect = L.clone(s.sect);
@@ -752,6 +885,7 @@
     const multiSect = D.sections(d).length > 1;
     const applyTo = ui.select(multiSect ? [['section', 'This section'], ['forward', 'This point forward'], ['all', 'Whole document']] : [['all', 'Whole document'], ['forward', 'This point forward']], multiSect ? 'section' : 'all', null, { id: 'ps-apply' });
     let lnNum = sect.lnNum ? Object.assign({}, sect.lnNum) : null;
+    let reactPageValues = null;
     const pv = h('div', { class: 'ps-page', style: 'margin:6px auto' });
     function drawPv() {
       const W = pw.get() || sect.pgW, H = ph.get() || sect.pgH;
@@ -770,20 +904,37 @@
       { label: '&Layout', body: h('div', null, ui.group('Section', G.f('Section sta&rt:', start)), ui.group('Headers and footers', evenOdd, firstPg, G.row(G.f('From edge: &Header:', hdr, 'wide'), G.f('&Footer:', ftr, 'narrow'))), ui.group('Page', G.f('&Vertical alignment:', vAlign)), h('div', { class: 'tp-btns' }, ui.button('Line &Numbers...', () => lineNumbers()), ui.button('&Borders...', () => G.borders('page')))) },
     ], tab === 'paper' ? 1 : tab === 'layout' ? 2 : 0);
     function lineNumbers() {
+      const direct = !!(window.VO && VO.reactDirectHost);
       const on = ui.check('Add &line numbering', !!lnNum, null);
       const startAt = G.num(lnNum ? lnNum.start || 1 : 1, { min: 1, id: 'ln-start' });
       const from = G.len(lnNum && lnNum.distance != null ? lnNum.distance : null, { id: 'ln-from', autoLabel: L.N('Auto'), min: 0 });
       const countBy = G.num(lnNum ? lnNum.countBy || 1 : 1, { min: 1, max: 100, id: 'ln-by' });
       const restart = G.radios('ln-r', [['newPage', 'Restart each &page'], ['newSection', 'Restart each &section'], ['continuous', '&Continuous']], lnNum ? lnNum.restart || 'newPage' : 'newPage');
-      ui.dialog({ title: 'Line Numbers', width: 300, body: h('div', { class: 'col' }, on, G.f('Start &at:', startAt), G.f('From &text:', from), G.f('Count &by:', countBy), ui.group('Numbering:', restart)), buttons: [{ label: 'OK', primary: true, onClick: () => { lnNum = on.input.checked ? { start: startAt.get(), distance: from.get(), countBy: countBy.get(), restart: restart.get() } : null; } }, { label: 'Cancel' }] });
+      let state = { enabled: !!lnNum, start: lnNum ? lnNum.start || 1 : 1, distance: lnNum && lnNum.distance != null ? `${lnNum.distance} pt` : L.t('Auto'), countBy: lnNum ? lnNum.countBy || 1 : 1, restart: lnNum ? lnNum.restart || 'newPage' : 'newPage' };
+      G.reactLineNumbersCatalog = () => ({ ...state, restarts: [['newPage', 'Restart each page'], ['newSection', 'Restart each section'], ['continuous', 'Continuous']] });
+      G.reactLineNumbersAction = (action, value) => {
+        if (action === 'change') state = { ...state, ...(value || {}) };
+        else if (action === 'apply') { const parsed = D.parseLen(state.distance, D.unit || 'in'); lnNum = state.enabled ? { start: Math.max(1, Number(state.start) || 1), distance: parsed == null ? null : Math.max(0, parsed), countBy: Math.max(1, Math.min(100, Number(state.countBy) || 1)), restart: state.restart } : null; if (direct && reactPageValues) reactPageValues.lnNum = lnNum; }
+      };
+      const reactRoot = h('div', { id: 'react-wordx-line-numbers-root' });
+      ui.dialog({ title: 'Line Numbers', width: 300, body: direct ? reactRoot : h('div', { class: 'col' }, on, G.f('Start &at:', startAt), G.f('From &text:', from), G.f('Count &by:', countBy), ui.group('Numbering:', restart)), buttons: [{ label: 'OK', primary: true, onClick: () => { if (direct) G.reactLineNumbersAction('apply'); else lnNum = on.input.checked ? { start: startAt.get(), distance: from.get(), countBy: countBy.get(), restart: restart.get() } : null; } }, { label: 'Cancel' }] });
     }
+    reactPageValues = { mt: sect.mt, mb: sect.mb, ml: sect.ml, mr: sect.mr, gutter: sect.gutter || 0, pgW: sect.pgW, pgH: sect.pgH, orient, type: start.value, titlePg: !!sect.titlePg, hdr: sect.hdr, ftr: sect.ftr, vAlign: sect.vAlign || 'top', lnNum, evenOdd: !!d.settings.evenOdd, multi: d.settings.bookFold ? 'bookFold' : d.settings.mirror ? 'mirror' : 'normal', gutterAtTop: !!d.settings.gutterAtTop, applyTo: applyTo.value, tab: tab === 'paper' ? 1 : tab === 'layout' ? 2 : 0 };
+    G.reactPageSetupCatalog = () => ({ ...reactPageValues, papers: D.PAPER.map((p) => ({ value: p[0], label: PAPER_NAMES[p[0]] || p[0], width: p[1], height: p[2] })), paper: paper.value, starts: [['continuous', 'Continuous'], ['nextColumn', 'New column'], ['nextPage', 'New page'], ['evenPage', 'Even page'], ['oddPage', 'Odd page']], applyOptions: multiSect ? [['section', 'This section'], ['forward', 'This point forward'], ['all', 'Whole document']] : [['all', 'Whole document'], ['forward', 'This point forward']] });
+    G.reactPageSetupAction = (action, value) => {
+      if (action === 'change') reactPageValues = { ...reactPageValues, ...(value || {}) };
+      else if (action === 'lineNumbers') lineNumbers();
+      else if (action === 'borders') G.borders('page');
+      else if (action === 'default') setDefault();
+    };
+    const reactRoot = h('div', { id: 'react-wordx-page-setup-root' });
     ui.dialog({
-      title: 'Page Setup', width: 440, body: h('div', null, tabs, pvBox()),
+      title: 'Page Setup', width: 440, body: direct ? reactRoot : h('div', null, tabs, pvBox()),
       buttons: [{ label: '&Default...', onClick: () => { setDefault(); return false; } }, { label: 'OK', primary: true, onClick: () => apply() }, { label: 'Cancel' }],
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
     });
     function values() {
-      return { mt: mt.get(), mb: mb.get(), ml: ml.get(), mr: mr.get(), gutter: gutter.get() || 0, pgW: pw.get(), pgH: ph.get(), orient, type: start.value, titlePg: firstPg.input.checked, hdr: hdr.get(), ftr: ftr.get(), vAlign: vAlign.value, lnNum };
+      return direct ? { ...reactPageValues } : { mt: mt.get(), mb: mb.get(), ml: ml.get(), mr: mr.get(), gutter: gutter.get() || 0, pgW: pw.get(), pgH: ph.get(), orient, type: start.value, titlePg: firstPg.input.checked, hdr: hdr.get(), ftr: ftr.get(), vAlign: vAlign.value, lnNum };
     }
     async function setDefault() {
       const r = await ui.msg('Do you want to change the default settings for page setup?\nThis change will affect all new documents.', { icon: 'question', buttons: ['&Yes', '&No'] });
@@ -795,10 +946,11 @@
       const v = values();
       E.edit('Page Setup', () => {
         D.touchKey(d, 'settings');
-        d.settings.evenOdd = evenOdd.input.checked;
-        d.settings.mirror = multi.value === 'mirror' || multi.value === 'bookFold';
-        d.settings.bookFold = multi.value === 'bookFold' || undefined;
-        d.settings.gutterAtTop = gutPos.value === 'top' || undefined;
+        d.settings.evenOdd = direct ? reactPageValues.evenOdd : evenOdd.input.checked;
+        const multiMode = direct ? reactPageValues.multi : multi.value;
+        d.settings.mirror = multiMode === 'mirror' || multiMode === 'bookFold';
+        d.settings.bookFold = multiMode === 'bookFold' || undefined;
+        d.settings.gutterAtTop = (direct ? reactPageValues.gutterAtTop : gutPos.value === 'top') || undefined;
         const assign = (hd) => { D.touchKey(hd, 'sect'); const sc = hd === d ? d.sect : hd.sect; Object.assign(sc, v); };
         if (applyTo.value === 'all') for (const sc of D.sections(d)) assign(sc.endPara || d);
         else if (applyTo.value === 'forward') {
@@ -893,6 +1045,7 @@
 
   /* ================= Printed Watermark ================= */
   G.watermark = function () {
+    const direct = !!(window.VO && VO.reactDirectHost);
     const d = doc();
     const wm = d.watermark || {};
     let media = wm.type === 'picture' ? wm.media : null;
@@ -908,18 +1061,25 @@
     const color = G.color(wm.color || 'C0C0C0', { id: 'wm-col', automatic: false });
     const semi = ui.check('&Semitransparent', wm.semi !== false, null);
     const layout = G.radios('wm-l', [['diagonal', '&Diagonal'], ['horizontal', 'H&orizontal']], wm.layout || 'diagonal');
+    let reactWatermark = { kind: wm.type || 'none', media, pictureName: media ? L.t('Picture selected') : '', scale: wm.scale || 'auto', washout: wm.washout !== false, text: wm.text || 'ASAP', font: wm.font || 'Times New Roman', size: wm.size || 'auto', color: wm.color || 'C0C0C0', semi: wm.semi !== false, layout: wm.layout || 'diagonal' };
+    G.reactWatermarkCatalog = () => ({ ...reactWatermark, fonts: FONTS() });
+    G.reactWatermarkAction = async (action, value) => {
+      if (action === 'change') reactWatermark = { ...reactWatermark, ...(value || {}) };
+      else if (action === 'picture') { const f = (await L.pickFiles('image/*'))[0]; if (!f) return; reactWatermark = { ...reactWatermark, kind: 'picture', media: L.media.add(new Blob([await L.readAsArrayBuffer(f)], { type: f.type }), f.name), pictureName: f.name }; L.bus.emit('wordx-watermark-refresh'); }
+    };
+    const reactRoot = h('div', { id: 'react-wordx-watermark-root' });
     ui.dialog({
       title: 'Printed Watermark', width: 400,
-      body: h('div', { class: 'col' }, kind, ui.group('Picture', G.row(pic, picName), G.row(G.f('Sca&le:', scale), washout)), ui.group('Text', dl, G.f('&Text:', text), G.f('&Font:', font), G.f('&Size:', size), G.f('&Color:', color), semi, G.f('Layout:', layout))),
+      body: direct ? reactRoot : h('div', { class: 'col' }, kind, ui.group('Picture', G.row(pic, picName), G.row(G.f('Sca&le:', scale), washout)), ui.group('Text', dl, G.f('&Text:', text), G.f('&Font:', font), G.f('&Size:', size), G.f('&Color:', color), semi, G.f('Layout:', layout))),
       buttons: [{ label: '&Apply', onClick: () => { apply(); return false; } }, { label: 'OK', primary: true, onClick: () => apply() }, { label: 'Cancel' }],
     });
     function apply() {
-      const k = kind.get();
+      const k = direct ? reactWatermark.kind : kind.get();
       E.edit('Printed Watermark', () => {
         D.touchKey(d, 'watermark');
         if (k === 'none') d.watermark = null;
-        else if (k === 'picture') d.watermark = media ? { type: 'picture', media, scale: scale.value === 'auto' ? null : +scale.value, washout: washout.input.checked } : null;
-        else d.watermark = { type: 'text', text: text.value || 'DRAFT', font: font.value, size: size.value === 'auto' ? 0 : +size.value, color: color.get() || 'C0C0C0', semi: semi.input.checked, layout: layout.get() };
+        else if (k === 'picture') { const image = direct ? reactWatermark.media : media; const scaleValue = direct ? reactWatermark.scale : scale.value; d.watermark = image ? { type: 'picture', media: image, scale: scaleValue === 'auto' ? null : +scaleValue, washout: direct ? reactWatermark.washout : washout.input.checked } : null; }
+        else d.watermark = direct ? { type: 'text', text: reactWatermark.text || 'DRAFT', font: reactWatermark.font, size: reactWatermark.size === 'auto' ? 0 : +reactWatermark.size, color: reactWatermark.color || 'C0C0C0', semi: reactWatermark.semi, layout: reactWatermark.layout } : { type: 'text', text: text.value || 'DRAFT', font: font.value, size: size.value === 'auto' ? 0 : +size.value, color: color.get() || 'C0C0C0', semi: semi.input.checked, layout: layout.get() };
         return E.sel;
       });
     }
@@ -976,6 +1136,53 @@
 
   /* ================= Style (New / Modify) ================= */
   G.style = function (id) {
+    const direct = !!(window.VO && VO.reactDirectHost);
+    if (direct) {
+      const d = doc(), isNew = !id, src = isNew ? null : d.styles[id] || D.builtinStyles()[id], curP = E.sel ? E.sel.f.p : null;
+      const st = isNew ? { name: 'Style' + (Object.keys(d.styles).length + 1), type: 'paragraph', basedOn: curP ? curP.pPr.style || 'Normal' : 'Normal', next: null, pPr: {}, rPr: {} } : L.clone(src);
+      if (isNew && curP) { const pp=L.clone(curP.pPr);delete pp.style;delete pp.num;delete pp.sect;st.pPr=pp;const it=curP.runs.find((x)=>x.t==='text');if(it){st.rPr=L.clone(it.rPr);delete st.rPr.style;delete st.rPr.link;delete st.rPr.ins;delete st.rPr.del;} }
+      const effective = () => { const base=st.basedOn?(st.type==='character'?D.charStyleProps(d,st.basedOn):D.styleProps(d,st.basedOn).rPr):d.defaults.rPr;return Object.assign({},base,st.rPr); };
+      const styleOptions = () => Object.keys(d.styles).filter((key)=>d.styles[key].type===(st.type==='character'?'character':st.type)&&key!==id).map((key)=>({id:key,name:D.styleDisplayName(d.styles[key])})).sort((a,b)=>a.name.localeCompare(b.name));
+      const snapshot = () => { const r=effective(),p=st.type==='paragraph'?D.mergePPr(st.basedOn?D.styleProps(d,st.basedOn).pPr:{},st.pPr):{};return {name:isNew?st.name:D.styleDisplayName(st),builtIn:!!st.builtin,isNew,type:st.type,basedOn:st.basedOn||'',next:st.next||(isNew?'__self':id),styles:styleOptions(),fonts:FONTS(),sizes:L.SIZE_LIST.map(String),font:r.font||'Times New Roman',size:r.sz||12,bold:!!r.b,italic:!!r.i,underline:r.u&&r.u!=='none'?'single':'none',color:r.color&&r.color!=='auto'?'#'+r.color:'#000000',automaticColor:!r.color||r.color==='auto',align:p.jc||'left',autoRedefine:!!st.autoRedefine,preview:{font:r.font||'Times New Roman',size:Math.min(r.sz||12,24),bold:!!r.b,italic:!!r.i,underline:r.u&&r.u!=='none',color:r.color&&r.color!=='auto'?'#'+r.color:'#000000',align:({center:'center',right:'right',both:'justify'}[p.jc]||'left')}}; };
+      const root = h('div',{id:'react-wordx-style-root'});
+      G.reactStyleCatalog = snapshot;
+      G.reactStyleAction = (action,value) => {
+        if (action==='change') {
+          if ('name' in value) st.name=value.name;
+          if ('type' in value) st.type=value.type;
+          if ('basedOn' in value) st.basedOn=value.basedOn||null;
+          if ('next' in value) st.next=value.next||null;
+          if ('font' in value) st.rPr.font=value.font;
+          if ('size' in value) st.rPr.sz=Number(value.size);
+          if ('bold' in value) st.rPr.b=!!value.bold;
+          if ('italic' in value) st.rPr.i=!!value.italic;
+          if ('underline' in value) st.rPr.u=value.underline==='none'?'none':'single';
+          if ('color' in value) st.rPr.color=value.color;
+          if ('automaticColor' in value) st.rPr.color=value.automaticColor?undefined:st.rPr.color;
+          if ('align' in value) st.pPr.jc=value.align;
+          if ('autoRedefine' in value) st.autoRedefine=value.autoRedefine||undefined;
+          return snapshot();
+        }
+        if (action==='color') { ui.colorMenu(value,{mode:'font',automatic:true},(c)=>{st.rPr.color=c&&c.auto?undefined:typeof c==='string'?c.replace('#','').toUpperCase():st.rPr.color;L.bus.emit('wordx-style-refresh');});return; }
+        if (action==='format') { const anchor=value; ui.openMenu([
+          {label:'&Font...',run:()=>G.font({target:st.rPr,base:effective(),onOK:(r)=>{Object.assign(st.rPr,r);for(const k in r)if(r[k]===undefined)delete st.rPr[k];L.bus.emit('wordx-style-refresh');}})},
+          {label:'&Paragraph...',enabled:()=>st.type==='paragraph',run:()=>G.paragraph({target:st.pPr,base:st.basedOn?D.styleProps(d,st.basedOn).pPr:{},onOK:(p)=>{st.pPr=D.mergePPr(st.pPr,p);L.bus.emit('wordx-style-refresh');}})},
+          {label:'&Tabs...',enabled:()=>st.type==='paragraph',run:()=>G.tabs({target:st.pPr,onOK:(p)=>{st.pPr.tabs=p.tabs;L.bus.emit('wordx-style-refresh');}})},
+          {label:'&Border...',enabled:()=>st.type==='paragraph',run:()=>G.borders(null,{target:st.pPr,onOK:(r)=>{st.pPr.borders=r.borders;st.pPr.shd=r.shd;L.bus.emit('wordx-style-refresh');}})},
+          {label:'&Language...',run:()=>G.language({onOK:(lang)=>{st.rPr.lang=lang;L.bus.emit('wordx-style-refresh');}})},
+          {label:'&Numbering...',enabled:()=>st.type==='paragraph',run:()=>A().status('Apply numbering to text, then use Update to Match Selection to add it to the style.')},
+        ],anchor.getBoundingClientRect());return; }
+        if (action==='save') {
+          const nm=String(value.name||'').trim();if(!nm){ui.msg('Please enter a name for the style.',{icon:'warn'});return false;}
+          const exists=D.findStyleByName(d,nm);if(isNew&&exists){ui.msg(L.t('A style named {0} already exists.',nm),{icon:'warn'});return false;}
+          const sid=isNew?D.uniqueStyleId(d,nm):id;
+          E.edit(isNew?'New Style':'Modify Style',()=>{D.touchKey(d,'styles');const out=Object.assign({},st,{id:sid,name:isNew||!st.builtin?nm:st.name});if(out.next==='__self')out.next=sid;if(isNew){out.custom=true;out.q=true;delete out.builtin;}d.styles[sid]=out;D.stylesChanged();return E.sel;});
+          if(isNew&&st.type==='paragraph'&&E.sel&&curP)A().applyStyle(sid);return sid;
+        }
+      };
+      ui.dialog({title:isNew?'New Style':'Modify Style',width:520,body:root,buttons:[{label:'Format ▾',onClick:(close,button)=>{G.reactStyleAction('format',button);return false;}},{label:'OK',primary:true,onClick:()=>G.reactStyleAction('save',Object.fromEntries(['name','type','basedOn','next','font','size','bold','italic','underline','color','align','autoRedefine'].map((key)=>{const el=root.querySelector('[data-style-field="'+key+'"]');return [key,key==='bold'||key==='italic'||key==='autoRedefine'?!!el?.checked:el?.value??''];})))},{label:'Cancel'}],onOpen:(el)=>el.querySelector('.dlg-foot .btn').classList.add('left')});
+      return;
+    }
     const d = doc();
     const isNew = !id;
     const src = isNew ? null : d.styles[id] || D.builtinStyles()[id];

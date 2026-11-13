@@ -146,10 +146,10 @@
     selDrawn = !!on && can;
     if (!can) return;
     const [a, b] = on && E.sel ? E.range().map((p) => LY.posToDom(p)) : [];
-    if (!a || !b) { CSS.highlights.delete('quire-sel'); return; }
+    if (!a || !b) { CSS.highlights.delete('wordx-sel'); return; }
     const r = document.createRange();
-    try { r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); } catch (e) { CSS.highlights.delete('quire-sel'); return; }
-    CSS.highlights.set('quire-sel', new Highlight(r));
+    try { r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); } catch (e) { CSS.highlights.delete('wordx-sel'); return; }
+    CSS.highlights.set('wordx-sel', new Highlight(r));
   };
   L.bus.on('layout-done', () => { if (selDrawn) E.drawSel(true); });
   /** pull a pending DOM selection into the model before acting on a key (selectionchange is asynchronous) */
@@ -672,22 +672,26 @@
     L.addMountListener(L.domHost(), 'pointerdown', onPagePointerDown, true);
     L.addMountListener(document, 'selectionchange', E.onSelectionChange);
     L.addMountListener(L.domHost(), 'dragend', clearDragData, true);
-    root.addEventListener('beforeinput', onBeforeInput);
-    root.addEventListener('keydown', onKeyDown);
-    root.addEventListener('compositionstart', onCompStart);
-    root.addEventListener('compositionend', onCompEnd);
-    root.addEventListener('paste', onPaste);
-    root.addEventListener('copy', (e) => onCopy(e, false));
-    root.addEventListener('cut', (e) => onCopy(e, true));
-    root.addEventListener('drop', onDrop);
-    root.addEventListener('dragstart', onDragStart);
-    root.addEventListener('dragover', (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); });
-    root.addEventListener('mousedown', onMouseDown);
-    root.addEventListener('click', onClick);
-    root.addEventListener('dblclick', onDblClick);
-    root.addEventListener('contextmenu', (e) => { if (L.app && L.app.contextMenu) L.app.contextMenu(e); });
-    root.addEventListener('focus', () => { root.classList.add('focused'); });
-    root.addEventListener('blur', () => { root.classList.remove('focused'); });
+    const editorEvents = {
+      beforeinput: onBeforeInput,
+      keydown: onKeyDown,
+      compositionstart: onCompStart,
+      compositionend: onCompEnd,
+      paste: onPaste,
+      copy: (e) => onCopy(e, false),
+      cut: (e) => onCopy(e, true),
+      drop: onDrop,
+      dragstart: onDragStart,
+      dragover: (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); },
+      mousedown: onMouseDown,
+      click: onClick,
+      dblclick: onDblClick,
+      contextmenu: (e) => { if (L.app && L.app.contextMenu) L.app.contextMenu(e); },
+      focus: () => { root.classList.add('focused'); },
+      blur: () => { root.classList.remove('focused'); },
+    };
+    E.reactEvent = (type, event) => { const handler = editorEvents[type]; if (handler) handler(event); };
+    if (!(window.VO && VO.reactDirectHost)) for (const [type, handler] of Object.entries(editorEvents)) root.addEventListener(type, handler);
     L.bus.on('doc-changed', (info) => {
       if (E.composing) { E.needLayout = info; return; }
       LY.update(info);
@@ -849,7 +853,7 @@
     try {
       e.clipboardData.setData('text/plain', data.text);
       e.clipboardData.setData('text/html', data.html);
-      e.clipboardData.setData('application/x-quire', JSON.stringify({ blocks: data.blocks, media: data.media, preserved: data.preserved }));
+      e.clipboardData.setData('application/x-wordx', JSON.stringify({ blocks: data.blocks, media: data.media, preserved: data.preserved }));
     } catch (err) { /* ignore */ }
     E.clip = data;
     if (cut) E.edit(L.N('Cut'), () => E.deleteSelection());
@@ -869,7 +873,7 @@
     if (!E.sel) return;
     const cd = e.clipboardData;
     let q = null;
-    try { q = cd.getData('application/x-quire'); } catch (err) { /* ignore */ }
+    try { q = cd.getData('application/x-wordx'); } catch (err) { /* ignore */ }
     if (q) { try { const o = JSON.parse(q); const blocks = o.preserved ? await L.preserve.hydrateClipboard(L.opc.remapSources(o.blocks, L.opc.import(o.preserved))) : o.blocks; E.pasteBlocks(blocks); return; } catch (err) { /* fall through */ } }
     const files = Array.from(cd.files || []).filter((f) => /^image\//.test(f.type));
     if (files.length && L.app && L.app.insertPictureFiles) { L.app.insertPictureFiles(files); return; }
@@ -895,7 +899,7 @@
   /* internal drag & drop of text: dragData is the text dragged from this page, until the drag ends (dropped
      anywhere, or cancelled); a drop carries its mark, so a drop from elsewhere never moves it */
   let dragData = null;
-  const DRAG_MARK = 'application/x-quire-drag';
+  const DRAG_MARK = 'application/x-wordx-drag';
   const dndOff = () => !!(L.app && L.app.opts && L.app.opts.dragDrop === false);
   function onDragStart(e) {
     dragData = null;
