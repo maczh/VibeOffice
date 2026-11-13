@@ -5,6 +5,8 @@ type HelpEntry = [string, string];
 interface ClipArtItem { id: string; name: string; svg: string }
 interface ClipboardItem { index: number; text: string; table: boolean }
 interface WordxRuntime {
+  spell?: { reactSpellCatalog?(): { kind: string; label: string; before: string; word: string; after: string; suggestions: string[]; language: string; grammar: boolean; showExplain: boolean; canChangeAll: boolean; canAuto: boolean } | null; reactSpellChoose?(value: string): void; reactSpellAction?(action: string, value?: unknown): void };
+  preserve?: { reactControlCatalog?(): { name: string; type: string; value: string; choices: Array<{ value: string; text: string }> } | null; reactControlSetValue?(value: string): void };
   mailmerge?: {
     reactRecipientsCatalog?(): { name: string; fields: string[]; rows: Array<{ index: number; values: string[]; included: boolean }> } | null;
     reactRecipientsAction?(action: 'all' | 'row', index: number, included: boolean): void;
@@ -682,6 +684,51 @@ function ReviewersDialogBody({ L }: { L: WordxRuntime }) {
 function CommentEditDialogBody({ L }: { L: WordxRuntime }) {
   const [text, setText] = useState(() => L.review?.reactCommentCatalog?.()?.text || '');
   return <textarea autoFocus rows={6} style={{ width: '100%' }} value={text} onChange={(event) => { const next = event.currentTarget.value; setText(next); L.review?.reactCommentSetText?.(next); }} />;
+}
+
+function ContentControlDialogBody({ L }: { L: WordxRuntime }) {
+  const catalog = L.preserve?.reactControlCatalog?.();
+  const [value, setValue] = useState(catalog?.value || '');
+  const update = (next: string) => { setValue(next); L.preserve?.reactControlSetValue?.(next); };
+  if (!catalog) return null;
+  return <div className="col" data-react-owned="content-control-value">
+    <label htmlFor="react-wordx-content-control-value">{tr(L, 'Value:')}</label>
+    {catalog.type === 'dropDownList' ? <select id="react-wordx-content-control-value" size={Math.min(8, catalog.choices.length || 1)} value={value} onChange={(event) => update(event.currentTarget.value)}>{catalog.choices.map(({ value: choice, text }, index) => <option key={`${choice}-${index}`} value={choice}>{text}</option>)}</select>
+      : <input id="react-wordx-content-control-value" type={catalog.type === 'date' ? 'date' : 'text'} value={value} onChange={(event) => update(event.currentTarget.value)} />}
+  </div>;
+}
+
+function SpellCheckDialogBody({ L }: { L: WordxRuntime }) {
+  const [revision, refresh] = useState(0);
+  useEffect(() => L.bus ? L.bus.on('wordx-spell-refresh', () => refresh((value) => value + 1)) : undefined, [L]);
+  const catalog = L.spell?.reactSpellCatalog?.();
+  const [choice, setChoice] = useState('');
+  useEffect(() => { setChoice(catalog?.suggestions[0] || ''); }, [revision]);
+  if (!catalog) return null;
+  const action = (name: string) => L.spell?.reactSpellAction?.(name);
+  const noSuggestions = catalog.suggestions.length === 0;
+  return <div className="row" data-react-owned="spell-check" style={{ flexWrap: 'nowrap' }}>
+    <div className="col" style={{ flex: 1, minWidth: 0 }}>
+      <div className="cd-cap">{tr(L, catalog.label)}</div>
+      <div className="sg-context" contentEditable={false} translate="no">{catalog.before}<span className={catalog.kind === 'spelling' ? 'sg-bad' : 'sg-gram'}>{catalog.word}</span>{catalog.after}</div>
+      <label htmlFor="react-wordx-spell-suggestions">{tr(L, 'Suggestions:')}</label>
+      <select id="react-wordx-spell-suggestions" size={6} style={{ width: '100%' }} value={choice} onChange={(event) => { const next = event.currentTarget.value; setChoice(next); L.spell?.reactSpellChoose?.(next); }} onDoubleClick={() => action('change')}>
+        {noSuggestions ? <option value="" disabled>{tr(L, catalog.kind === 'spelling' ? '(No Spelling Suggestions)' : '(No Suggestions)')}</option> : catalog.suggestions.map((suggestion, index) => <option key={`${suggestion}-${index}`} value={suggestion} translate={suggestion === ' ' || suggestion === 'Delete Repeated Word' ? undefined : 'no'}>{suggestion === ' ' ? tr(L, '(single space)') : tr(L, suggestion)}</option>)}
+      </select>
+      <div className="field"><label>{tr(L, 'Dictionary language:')}</label><span>{tr(L, catalog.language)}</span></div>
+      <label><input type="checkbox" checked={catalog.grammar} onChange={(event) => L.spell?.reactSpellAction?.('grammar', event.currentTarget.checked)} /> {tr(L, 'Check grammar')}</label>
+    </div>
+    <div className="col" style={{ width: 140 }}>
+      <button className="btn" onClick={() => action('ignore-once')}>{tr(L, 'Ignore Once')}</button>
+      <button className="btn" onClick={() => action('ignore-all')}>{tr(L, catalog.kind === 'spelling' ? 'Ignore All' : 'Ignore Rule')}</button>
+      <button className="btn" onClick={() => action('add')}>{tr(L, catalog.kind === 'spelling' ? 'Add to Dictionary' : 'Next Sentence')}</button>
+      <div style={{ height: 16 }} />
+      <button className="btn" onClick={() => action('change')} disabled={noSuggestions && catalog.kind !== 'repeat'}>{tr(L, 'Change')}</button>
+      {catalog.canChangeAll && <button className="btn" onClick={() => action('change-all')} disabled={noSuggestions}>{tr(L, 'Change All')}</button>}
+      {catalog.canAuto && <button className="btn" onClick={() => action('auto-correct')}>{tr(L, 'AutoCorrect')}</button>}
+      {catalog.showExplain && <button className="btn" onClick={() => action('explain')}>{tr(L, 'Explain...')}</button>}
+    </div>
+  </div>;
 }
 
 function FindOptionsControls({ L }: { L: WordxRuntime }) {
@@ -2018,6 +2065,8 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   const [mergeFieldMount, setMergeFieldMount] = useState<HTMLElement | null>(null);
   const [reviewersMount, setReviewersMount] = useState<HTMLElement | null>(null);
   const [commentEditMount, setCommentEditMount] = useState<HTMLElement | null>(null);
+  const [contentControlMount, setContentControlMount] = useState<HTMLElement | null>(null);
+  const [spellCheckMount, setSpellCheckMount] = useState<HTMLElement | null>(null);
   const [tableAutoFormatMount, setTableAutoFormatMount] = useState<HTMLElement | null>(null);
   const [tabsDialogMount, setTabsDialogMount] = useState<HTMLElement | null>(null);
   const [paragraphDialogMount, setParagraphDialogMount] = useState<HTMLElement | null>(null);
@@ -2157,6 +2206,8 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
     let mergeFieldTarget: HTMLElement | null = null;
     let reviewersTarget: HTMLElement | null = null;
     let commentEditTarget: HTMLElement | null = null;
+    let contentControlTarget: HTMLElement | null = null;
+    let spellCheckTarget: HTMLElement | null = null;
     let tableAutoFormatTarget: HTMLElement | null = null;
     let tabsDialogTarget: HTMLElement | null = null;
     let paragraphDialogTarget: HTMLElement | null = null;
@@ -2355,6 +2406,10 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
       if (nextReviewers !== reviewersTarget) { reviewersTarget = nextReviewers; setReviewersMount(reviewersTarget); }
       const nextCommentEdit = host.querySelector<HTMLElement>('#react-wordx-comment-edit-root');
       if (nextCommentEdit !== commentEditTarget) { commentEditTarget = nextCommentEdit; setCommentEditMount(commentEditTarget); }
+      const nextContentControl = host.querySelector<HTMLElement>('#react-wordx-content-control-root');
+      if (nextContentControl !== contentControlTarget) { contentControlTarget = nextContentControl; setContentControlMount(contentControlTarget); }
+      const nextSpellCheck = host.querySelector<HTMLElement>('#react-wordx-spell-check-root');
+      if (nextSpellCheck !== spellCheckTarget) { spellCheckTarget = nextSpellCheck; setSpellCheckMount(spellCheckTarget); }
       const nextTableAutoFormat = host.querySelector<HTMLElement>('#react-wordx-table-autoformat-root');
       if (nextTableAutoFormat !== tableAutoFormatTarget) { tableAutoFormatTarget = nextTableAutoFormat; setTableAutoFormatMount(tableAutoFormatTarget); }
       const nextTabsDialog = host.querySelector<HTMLElement>('#react-wordx-tabs-root');
@@ -2559,7 +2614,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   }, [host, current]);
   if (!L) return null;
   const dropHint = dropHintActive ? createPortal(<div className="drop-hint" data-react-owned="wordx-drop-hint">{tr(L, 'Drop a document to open it, or pictures to insert them')}</div>, host) : null;
-  const docMap = <>{mapMount ? createPortal(<DocumentMap key="wordx-document-map" L={L} />, mapMount) : null}{mailMergeRecipientsMount ? createPortal(<MailMergeRecipientsDialogBody key="wordx-mail-merge-recipients-dialog" L={L} />, mailMergeRecipientsMount) : null}{newAddressListMount ? createPortal(<NewAddressListDialogBody key="wordx-new-address-list-dialog" L={L} />, newAddressListMount) : null}{mergeFieldMount ? createPortal(<InsertMergeFieldDialogBody key="wordx-mail-merge-field-dialog" L={L} />, mergeFieldMount) : null}{reviewersMount ? createPortal(<ReviewersDialogBody key="wordx-reviewers-dialog" L={L} />, reviewersMount) : null}{commentEditMount ? createPortal(<CommentEditDialogBody key="wordx-comment-edit-dialog" L={L} />, commentEditMount) : null}</>;
+  const docMap = <>{mapMount ? createPortal(<DocumentMap key="wordx-document-map" L={L} />, mapMount) : null}{mailMergeRecipientsMount ? createPortal(<MailMergeRecipientsDialogBody key="wordx-mail-merge-recipients-dialog" L={L} />, mailMergeRecipientsMount) : null}{newAddressListMount ? createPortal(<NewAddressListDialogBody key="wordx-new-address-list-dialog" L={L} />, newAddressListMount) : null}{mergeFieldMount ? createPortal(<InsertMergeFieldDialogBody key="wordx-mail-merge-field-dialog" L={L} />, mergeFieldMount) : null}{reviewersMount ? createPortal(<ReviewersDialogBody key="wordx-reviewers-dialog" L={L} />, reviewersMount) : null}{commentEditMount ? createPortal(<CommentEditDialogBody key="wordx-comment-edit-dialog" L={L} />, commentEditMount) : null}{contentControlMount ? createPortal(<ContentControlDialogBody key="wordx-content-control-dialog" L={L} />, contentControlMount) : null}{spellCheckMount ? createPortal(<SpellCheckDialogBody key="wordx-spell-check-dialog" L={L} />, spellCheckMount) : null}</>;
   const review = reviewMount ? createPortal(<ReviewingPane key="wordx-reviewing-pane" L={L} />, reviewMount) : null;
   const reading = readingMount ? createPortal(<ReadingToolbar key="wordx-reading-toolbar" L={L} />, readingMount) : null;
   const preview = readingMount ? createPortal(<PrintPreviewToolbar key="wordx-print-preview-toolbar" L={L} />, readingMount) : null;

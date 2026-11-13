@@ -49,19 +49,41 @@
     vbar = new Scrollbar(L.$('#vscroll'), 'v', (pos, how) => scrollTo('v', pos, how));
     hbar = new Scrollbar(L.$('#hscroll'), 'h', (pos, how) => scrollTo('h', pos, how));
     G.setWorkbook(wb);
-    wrap.addEventListener('pointerdown', onPointerDown);
-    wrap.addEventListener('pointermove', onHover);
-    wrap.addEventListener('dblclick', onDblClick);
-    wrap.addEventListener('wheel', onWheel, { passive: false });
-    wrap.addEventListener('contextmenu', onContext);
-    wrap.addEventListener('focus', () => G.focus());
-    inp.addEventListener('keydown', onKey);
-    inp.addEventListener('input', onInput);
-    inp.addEventListener('compositionstart', () => { if (!L.editor.active) L.editor.begin('enter', ''); });
-    inp.addEventListener('copy', (e) => { if (L.editor.active) return; e.preventDefault(); L.clip.copy(e, false); });
-    inp.addEventListener('cut', (e) => { if (L.editor.active) return; e.preventDefault(); L.clip.copy(e, true); });
-    inp.addEventListener('paste', (e) => { if (L.editor.active) return; e.preventDefault(); L.clip.paste(e); });
-    new ResizeObserver(() => G.paint(true)).observe(wrap);
+    const onFocus = () => G.focus();
+    const onCompositionStart = () => { if (!L.editor.active) L.editor.begin('enter', ''); };
+    const onCopy = (e) => { if (L.editor.active) return; e.preventDefault(); L.clip.copy(e, false); };
+    const onCut = (e) => { if (L.editor.active) return; e.preventDefault(); L.clip.copy(e, true); };
+    const onPaste = (e) => { if (L.editor.active) return; e.preventDefault(); L.clip.paste(e); };
+    const handlers = { pointerdown: onPointerDown, pointermove: onHover, dblclick: onDblClick, wheel: onWheel, contextmenu: onContext, focus: onFocus, keydown: onKey, input: onInput, compositionstart: onCompositionStart, copy: onCopy, cut: onCut, paste: onPaste };
+    const direct = !!(root.VO && root.VO.reactDirectHost);
+    if (direct) {
+      G.reactMountInteractions = () => {
+        if (!wrap || !inp) return () => {};
+        const resizeObserver = new ResizeObserver(() => G.paint(true));
+        resizeObserver.observe(wrap);
+        for (const [type, handler] of Object.entries(handlers)) (type === 'keydown' || type === 'input' || type === 'compositionstart' || type === 'copy' || type === 'cut' || type === 'paste' ? inp : wrap).addEventListener(type, handler, type === 'wheel' ? { passive: false } : undefined);
+        G.reactInteractionMounted = true;
+        return () => {
+          for (const [type, handler] of Object.entries(handlers)) (type === 'keydown' || type === 'input' || type === 'compositionstart' || type === 'copy' || type === 'cut' || type === 'paste' ? inp : wrap).removeEventListener(type, handler);
+          resizeObserver.disconnect();
+          G.reactInteractionMounted = false;
+        };
+      };
+    } else {
+      wrap.addEventListener('pointerdown', onPointerDown);
+      wrap.addEventListener('pointermove', onHover);
+      wrap.addEventListener('dblclick', onDblClick);
+      wrap.addEventListener('wheel', onWheel, { passive: false });
+      wrap.addEventListener('contextmenu', onContext);
+      wrap.addEventListener('focus', onFocus);
+      inp.addEventListener('keydown', onKey);
+      inp.addEventListener('input', onInput);
+      inp.addEventListener('compositionstart', onCompositionStart);
+      inp.addEventListener('copy', onCopy);
+      inp.addEventListener('cut', onCut);
+      inp.addEventListener('paste', onPaste);
+      new ResizeObserver(() => G.paint(true)).observe(wrap);
+    }
     G.focus();
   };
   G.setWorkbook = function (wb) {

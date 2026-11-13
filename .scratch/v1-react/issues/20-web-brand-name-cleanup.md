@@ -4,7 +4,7 @@
 
 **Blocked by:** 17: Wordx full module migration and naming; 18: Excelx full module migration and naming; 19: PPTX full module migration and naming.
 
-**Status:** claimed
+**Status:** in-progress
 
 **Progress:** React package and suite runtime routes now use `/wordx/`, `/excelx/`, and `/pptx/`; the Vite adapter maps those routes to the still-legacy engine source directories internally. The React build transforms its PWA shortcuts and screenshot paths to the new route/product names without changing the still-live classic public manifest. Standalone outputs are cleaned before emitting only their new routes. Legacy source folder names and many classic app identifiers/strings remain, so the repository-wide brand audit is not complete.
 

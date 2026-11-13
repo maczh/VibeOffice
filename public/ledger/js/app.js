@@ -655,21 +655,28 @@
 
   /* ------------------------------------------------------------ status bar */
   let sbMode, sbText, sbCalc, sbInd = {};
+  let reactStatusBar = false;
+  let statusSnapshot = { mode: L.t('Ready'), text: '', calculation: '', end: false };
+  A.statusSnapshot = () => statusSnapshot;
   function buildStatus() {
     const sb = L.$('#statusbar');
+    reactStatusBar = !!(window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected);
     sbMode = h('div', { class: 'sb-cell mode', text: L.N('Ready') });
     sbText = h('div', { class: 'sb-cell grow', 'data-react-status': window.VO && VO.reactDirectHost ? '' : null });
     sbCalc = h('div', { class: 'sb-cell calc', 'data-tip': 'Right-click to choose the AutoCalculate function' });
-    sbCalc.addEventListener('contextmenu', (e) => { e.preventDefault(); calcMenu(e); });
-    sbCalc.addEventListener('click', (e) => calcMenu(e));
-    sb.append(sbMode, sbText, sbCalc);
-    for (const k of [L.N('CAPS'), L.N('NUM'), L.N('SCRL'), L.N('END')]) { sbInd[k] = h('div', { class: 'sb-cell ind off', text: k }); sb.appendChild(sbInd[k]); }
-    L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.getModifierState) { sbInd.CAPS.classList.toggle('off', !e.getModifierState('CapsLock')); sbInd.NUM.classList.toggle('off', !e.getModifierState('NumLock')); sbInd.SCRL.classList.toggle('off', !e.getModifierState('ScrollLock')); G().scrollLock = e.getModifierState('ScrollLock'); } }, true);
+    if (!reactStatusBar) {
+      sbCalc.addEventListener('contextmenu', (e) => { e.preventDefault(); calcMenu(e); });
+      sbCalc.addEventListener('click', (e) => calcMenu(e));
+      sb.append(sbMode, sbText, sbCalc);
+    }
+    for (const k of [L.N('CAPS'), L.N('NUM'), L.N('SCRL'), L.N('END')]) { sbInd[k] = h('div', { class: 'sb-cell ind off', text: k }); if (!reactStatusBar) sb.appendChild(sbInd[k]); }
+    if (!reactStatusBar) L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.getModifierState) { sbInd.CAPS.classList.toggle('off', !e.getModifierState('CapsLock')); sbInd.NUM.classList.toggle('off', !e.getModifierState('NumLock')); sbInd.SCRL.classList.toggle('off', !e.getModifierState('ScrollLock')); G().scrollLock = e.getModifierState('ScrollLock'); } }, true);
   }
   function calcMenu(e) {
     const fns = [['NONE', '&None'], ['AVERAGE', '&Average'], ['COUNTA', '&Count'], ['COUNT', 'C&ount Nums'], ['MAX', '&Max'], ['MIN', 'M&in'], ['SUM', '&Sum']];
     ui.openMenu(fns.map(([k, l]) => ({ label: l, radio: true, checked: () => A.opts.autoCalcFn === k, run: () => { A.opts.autoCalcFn = k; A.saveOpts(); updateStatus(); } })), { x: e.clientX, y: e.clientY - 150 });
   }
+  A.openAutoCalculateMenu = calcMenu;
   /* circular references: "Circular: B4" in the status bar, and Excel's warning the first time one appears */
   let warnedCircular = new WeakSet();
   function circularCells() {
@@ -694,15 +701,23 @@
   const updateStatus = L.debounce(() => {
     if (!sbMode || !G().wb) return;
     const ed = L.editor;
-    sbMode.textContent = ed.active ? (ed.mode === 'point' ? L.t('Point|mode') : ed.mode === 'edit' ? L.t('Edit|mode') : L.t('Enter|mode')) : L.t('Ready');
+    const mode = ed.active ? (ed.mode === 'point' ? L.t('Point|mode') : ed.mode === 'edit' ? L.t('Edit|mode') : L.t('Enter|mode')) : L.t('Ready');
     const status = statusText || (wb().calcPr.mode === 'manual' && wb().needsCalc ? L.t('Calculate') : '') || (A.painter.on() ? L.t('Click on the cells to apply formatting') : '') || circularText();
-    if (!ui.reactStatus(status)) sbText.textContent = status;
-    sbInd.END.classList.toggle('off', !G().endMode());
+    const end = G().endMode();
+    if (!reactStatusBar) {
+      sbMode.textContent = mode;
+      if (!ui.reactStatus(status)) sbText.textContent = status;
+      sbInd.END.classList.toggle('off', !end);
+    }
     /* AutoCalculate */
     const fn = A.opts.autoCalcFn || 'SUM';
     const s = G().sel();
     const multi = s.ranges.length > 1 || s.ranges.some((r) => r.r1 !== r.r2 || r.c1 !== r.c2);
-    if (!multi || fn === 'NONE') { sbCalc.textContent = ''; return; }
+    if (!multi || fn === 'NONE') {
+      if (reactStatusBar) { statusSnapshot = { mode, text: status, calculation: '', end }; L.bus.emit('excelx-statusbar', statusSnapshot); }
+      else sbCalc.textContent = '';
+      return;
+    }
     let sum = 0, cnt = 0, cnta = 0, mx = -Infinity, mn = Infinity, err = false, guard = 0;
     for (const rg of s.ranges) {
       const rr = O.clip(sh(), rg);
@@ -727,7 +742,8 @@
     else if (fn === 'COUNT') t = L.t('Count Nums={0}', cnt);
     else if (fn === 'MAX') t = L.t('Max={0}', show(cnt ? mx : 0));
     else if (fn === 'MIN') t = L.t('Min={0}', show(cnt ? mn : 0));
-    sbCalc.textContent = t;
+    if (reactStatusBar) { statusSnapshot = { mode, text: status, calculation: t, end }; L.bus.emit('excelx-statusbar', statusSnapshot); }
+    else sbCalc.textContent = t;
   }, 60);
   A.updateStatus = updateStatus;
 
@@ -1439,6 +1455,8 @@
 
   /* ------------------------------------------------------------ drag & drop of files */
   function setupDrop() {
+    const directHost = window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected;
+    if (directHost) return;
     let hint = null, depth = 0;
     const app = L.$('#app');
     app.addEventListener('dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a workbook to open it, or pictures to insert them' }); L.domHost().appendChild(hint); } });

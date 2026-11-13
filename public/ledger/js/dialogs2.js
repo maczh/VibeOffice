@@ -14,6 +14,226 @@
   const wb = () => G().wb;
   const tryRun = (fn) => { try { fn(); } catch (e) { A().error(e); } G().paint(); G().syncObjects(); ui.refresh(); };
   const num = (v, d) => { const x = parseFloat(String(v).replace(/,/g, '')); return isNaN(x) ? d : x; };
+  let reactSort = null, reactSortApply = null;
+  let reactCreateList = null, reactCreateListApply = null;
+  let reactAdvancedFilter = null, reactAdvancedFilterApply = null;
+  let reactSubtotals = null, reactSubtotalsApply = null, reactSubtotalsRemove = null;
+  let reactOutlineSettings = null, reactOutlineSettingsApply = null, reactOutlineSettingsCreate = null;
+  let reactDataTable = null, reactDataTableApply = null;
+  let reactGoalSeek = null;
+  let reactConsolidate = null, reactConsolidateApply = null;
+  let reactPivot = null, reactPivotApply = null;
+  let reactDataForm = null;
+  let reactValidation = null, reactValidationApply = null, reactValidationClear = null;
+  let reactTextColumns = null, reactTextColumnsParse = null, reactTextColumnsApply = null;
+  let reactAutoFormat = null, reactAutoFormatApply = null;
+  let reactStyle = null, reactStyleUpdate = null, reactStyleAction = null;
+  let reactCFFormat = null, reactCFFormatDone = null;
+  let reactConditional = null, reactConditionalSubmit = null;
+  D.reactConditionalCatalog = () => reactConditional;
+  D.reactConditionalFormat = (index, state) => {
+    if (!reactConditional || !Number.isInteger(index) || !state || !Array.isArray(state.conditions) || !state.conditions[index]) return false;
+    reactConditional = state;
+    D.cfFormat(state.conditions[index].dxf || {}, (dxf) => { if (!reactConditional?.conditions[index]) return; reactConditional = { ...reactConditional, conditions: reactConditional.conditions.map((item, i) => i === index ? { ...item, dxf } : item) }; L.bus.emit('excelx-conditional-format-dialog'); });
+    return true;
+  };
+  D.reactConditionalApply = (state) => {
+    if (!reactConditional || !reactConditionalSubmit || !state || !Array.isArray(state.conditions) || !state.conditions.length || state.conditions.length > 3) return false;
+    reactConditional = state;
+    if (!reactConditionalSubmit(state.conditions)) return false;
+    reactConditional = reactConditionalSubmit = null; L.bus.emit('excelx-conditional-format-dialog'); return true;
+  };
+  D.reactConditionalClose = () => { reactConditional = reactConditionalSubmit = null; L.bus.emit('excelx-conditional-format-dialog'); };
+  D.reactCFFormatCatalog = () => reactCFFormat;
+  D.reactCFFormatApply = (state) => {
+    if (!reactCFFormat || !reactCFFormatDone || !state) return false;
+    const d = JSON.parse(JSON.stringify(reactCFFormat.source || {})), f = d.font || {};
+    if (state.fontStyle !== '') { f.b = /b/.test(state.fontStyle) || undefined; f.i = /i/.test(state.fontStyle) || undefined; }
+    if (state.underline === 'none') delete f.u; else if (state.underline !== '') f.u = state.underline;
+    if (state.fontColor) f.color = M.rgb(state.fontColor); else delete f.color;
+    if (state.strike) f.strike = true; else delete f.strike;
+    if (Object.keys(f).length) d.font = f; else delete d.font;
+    if (state.fillColor) d.fill = { pattern: 'solid', fg: M.rgb(state.fillColor), bg: M.rgb(state.fillColor) }; else delete d.fill;
+    const b = d.border || {}, edges = state.border || {};
+    if (edges.outline) for (const key of ['t', 'b', 'l', 'r']) b[key] = { style: 'thin' }; else for (const key of ['t', 'b', 'l', 'r']) delete b[key];
+    for (const [key, side] of [['t', 'top'], ['b', 'bottom'], ['l', 'left'], ['r', 'right']]) if (edges[side]) b[key] = { style: 'thin' }; else if (!edges.outline) delete b[key];
+    if (Object.keys(b).length) d.border = b; else delete d.border;
+    const done = reactCFFormatDone; reactCFFormat = reactCFFormatDone = null; L.bus.emit('excelx-cf-format-dialog'); done(d); return true;
+  };
+  D.reactCFFormatClear = () => { if (!reactCFFormatDone) return; const done = reactCFFormatDone; reactCFFormat = reactCFFormatDone = null; L.bus.emit('excelx-cf-format-dialog'); done({}); };
+  D.reactCFFormatClose = () => { reactCFFormat = reactCFFormatDone = null; L.bus.emit('excelx-cf-format-dialog'); };
+  D.reactStyleCatalog = () => reactStyle;
+  D.reactStyleUpdate = (name) => { if (reactStyleUpdate && typeof name === 'string') { reactStyle = reactStyleUpdate(name); L.bus.emit('excelx-style-dialog'); } };
+  D.reactStyleAction = (action, name, includes) => {
+    if (!reactStyle || !reactStyleAction || !['add', 'delete', 'modify', 'apply'].includes(action) || typeof name !== 'string') return false;
+    const run = reactStyleAction;
+    if (action !== 'modify' && action !== 'delete' && action !== 'add' && (!includes || !Object.keys(reactStyle.includes).every((key) => typeof includes[key] === 'boolean'))) return false;
+    if (run(action, name, includes || reactStyle.includes) !== false) { reactStyle = reactStyleUpdate = reactStyleAction = null; L.bus.emit('excelx-style-dialog'); return true; }
+    return false;
+  };
+  D.reactStyleClose = () => { reactStyle = reactStyleUpdate = reactStyleAction = null; L.bus.emit('excelx-style-dialog'); };
+  D.reactAutoFormatCatalog = () => reactAutoFormat;
+  D.reactAutoFormatApply = (name, parts) => {
+    if (!reactAutoFormat || !reactAutoFormatApply || !reactAutoFormat.items.some((item) => item.name === name) || !parts || !Object.keys(reactAutoFormat.parts).every((key) => typeof parts[key] === 'boolean')) return false;
+    const apply = reactAutoFormatApply;
+    reactAutoFormat = reactAutoFormatApply = null;
+    L.bus.emit('excelx-auto-format-dialog');
+    tryRun(() => apply(name, parts));
+    return true;
+  };
+  D.reactAutoFormatClose = () => { reactAutoFormat = reactAutoFormatApply = null; L.bus.emit('excelx-auto-format-dialog'); };
+  D.reactTextColumnsCatalog = () => reactTextColumns;
+  D.reactTextColumnsPreview = (state) => reactTextColumnsParse ? reactTextColumnsParse(state) : [];
+  D.reactTextColumnsApply = (state) => {
+    if (!reactTextColumns || !reactTextColumnsApply || !state) return false;
+    const apply = reactTextColumnsApply;
+    tryRun(() => apply(state));
+    return true;
+  };
+  D.reactTextColumnsClose = () => { reactTextColumns = reactTextColumnsParse = reactTextColumnsApply = null; L.bus.emit('excelx-text-columns-dialog'); };
+  D.reactSortCatalog = () => reactSort;
+  D.reactSortApply = (state) => {
+    if (!reactSort || !reactSortApply || !state || !Array.isArray(state.keys) || state.keys.length !== 3 || state.keys.some((key) => key.c != null && !Number.isInteger(key.c)) || (state.list != null && (!Number.isInteger(state.list) || !O.customLists[state.list]))) return false;
+    const apply = reactSortApply;
+    reactSort = reactSortApply = null;
+    L.bus.emit('excelx-sort-dialog');
+    tryRun(() => apply(state));
+    return true;
+  };
+  D.reactSortClose = () => { reactSort = reactSortApply = null; L.bus.emit('excelx-sort-dialog'); };
+  D.reactCreateListCatalog = () => reactCreateList;
+  D.reactCreateListSelection = () => F.quoteSheet(sh().name) + '!' + F.absRangeName(G().range());
+  D.reactCreateListApply = (reference, header) => {
+    if (!reactCreateList || !reactCreateListApply || typeof reference !== 'string') return false;
+    const parsed = parseRef(reference);
+    if (!parsed) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; }
+    const apply = reactCreateListApply;
+    reactCreateList = reactCreateListApply = null;
+    L.bus.emit('excelx-create-list-dialog');
+    tryRun(() => apply(parsed, !!header));
+    return true;
+  };
+  D.reactCreateListClose = () => { reactCreateList = reactCreateListApply = null; L.bus.emit('excelx-create-list-dialog'); };
+  D.reactAdvancedFilterCatalog = () => reactAdvancedFilter;
+  D.reactAdvancedFilterApply = (state) => {
+    if (!reactAdvancedFilter || !reactAdvancedFilterApply || !state) return false;
+    const list = parseRef(String(state.list || ''));
+    const criteria = String(state.criteria || '').trim() ? parseRef(String(state.criteria)) : null;
+    const destination = state.copy ? parseRef(String(state.destination || '')) : null;
+    if (!list) { ui.msg('The list range is not valid.', { icon: 'warn' }); return false; }
+    if (String(state.criteria || '').trim() && !criteria) { ui.msg('The criteria range is not valid.', { icon: 'warn' }); return false; }
+    if (state.copy && !destination) { ui.msg('The extract range is not valid.', { icon: 'warn' }); return false; }
+    const apply = reactAdvancedFilterApply;
+    reactAdvancedFilter = reactAdvancedFilterApply = null;
+    L.bus.emit('excelx-advanced-filter-dialog');
+    tryRun(() => apply(list, criteria, destination, !!state.unique));
+    return true;
+  };
+  D.reactAdvancedFilterClose = () => { reactAdvancedFilter = reactAdvancedFilterApply = null; L.bus.emit('excelx-advanced-filter-dialog'); };
+  D.reactSubtotalsCatalog = () => reactSubtotals;
+  D.reactSubtotalsApply = (state) => {
+    if (!reactSubtotals || !reactSubtotalsApply || !state || !Array.isArray(state.add) || !state.add.every(Number.isInteger) || !Number.isInteger(state.at) || !Number.isInteger(state.fn)) return false;
+    const apply = reactSubtotalsApply;
+    reactSubtotals = reactSubtotalsApply = reactSubtotalsRemove = null;
+    L.bus.emit('excelx-subtotals-dialog');
+    tryRun(() => apply(state));
+    return true;
+  };
+  D.reactSubtotalsRemove = () => {
+    if (!reactSubtotals || !reactSubtotalsRemove) return false;
+    const remove = reactSubtotalsRemove;
+    reactSubtotals = reactSubtotalsApply = reactSubtotalsRemove = null;
+    L.bus.emit('excelx-subtotals-dialog');
+    tryRun(remove);
+    return true;
+  };
+  D.reactSubtotalsClose = () => { reactSubtotals = reactSubtotalsApply = reactSubtotalsRemove = null; L.bus.emit('excelx-subtotals-dialog'); };
+  D.reactOutlineSettingsCatalog = () => reactOutlineSettings;
+  D.reactOutlineSettingsApply = (state) => {
+    if (!reactOutlineSettings || !reactOutlineSettingsApply || !state) return false;
+    const apply = reactOutlineSettingsApply;
+    reactOutlineSettings = reactOutlineSettingsApply = reactOutlineSettingsCreate = null;
+    L.bus.emit('excelx-outline-settings-dialog');
+    tryRun(() => apply(state));
+    return true;
+  };
+  D.reactOutlineSettingsCreate = () => { if (reactOutlineSettingsCreate) reactOutlineSettingsCreate(); };
+  D.reactOutlineSettingsClose = () => { reactOutlineSettings = reactOutlineSettingsApply = reactOutlineSettingsCreate = null; L.bus.emit('excelx-outline-settings-dialog'); };
+  D.reactDataTableCatalog = () => reactDataTable;
+  D.reactDataTableApply = (state) => {
+    if (!reactDataTable || !reactDataTableApply || !state) return false;
+    const row = String(state.row || '').trim() ? parseRef(String(state.row), true) : null;
+    const column = String(state.column || '').trim() ? parseRef(String(state.column), true) : null;
+    if (!row && !column) { ui.msg('Input cell reference is not valid.', { icon: 'warn' }); return false; }
+    const apply = reactDataTableApply;
+    reactDataTable = reactDataTableApply = null;
+    L.bus.emit('excelx-data-table-dialog');
+    tryRun(() => apply(row, column));
+    return true;
+  };
+  D.reactDataTableClose = () => { reactDataTable = reactDataTableApply = null; L.bus.emit('excelx-data-table-dialog'); };
+  D.reactGoalSeekCatalog = () => reactGoalSeek;
+  D.reactGoalSeekApply = (state) => {
+    if (!reactGoalSeek || reactGoalSeek.stage !== 'form' || !state) return false;
+    const target = parseRef(String(state.target || ''), true), changing = parseRef(String(state.changing || ''), true), goal = num(state.goal, NaN);
+    if (!target || !(target.sheet.get(target.r1, target.c1) && target.sheet.get(target.r1, target.c1).f != null)) { ui.msg('Cell must contain a formula.', { icon: 'warn' }); return false; }
+    if (!changing || (changing.sheet.get(changing.r1, changing.c1) && changing.sheet.get(changing.r1, changing.c1).f != null)) { ui.msg('Cell must contain a value.', { icon: 'warn' }); return false; }
+    if (isNaN(goal)) { ui.msg('Invalid value.', { icon: 'warn' }); return false; }
+    const w = wb(), result = D.solveGoal(w, target, changing, goal), before = result.start;
+    tryRun(() => { const cell = changing.sheet.get(changing.r1, changing.c1); if (cell) cell.v = before; C.changed(w, [{ sh: changing.sheet, r: changing.r1, c: changing.c1 }]); O.tx(w, 'Goal Seek', () => O.setValue(changing.sheet, changing.r1, changing.c1, result.x, true)); });
+    reactGoalSeek = { stage: 'status', ok: result.ok, cell: F.cellName(target.r1, target.c1), goal: String(goal), current: L.csv.cellText(target.sheet, target.r1, target.c1) };
+    L.bus.emit('excelx-goal-seek-dialog');
+    return true;
+  };
+  D.reactGoalSeekStatusAction = (undo) => { if (!reactGoalSeek || reactGoalSeek.stage !== 'status') return; reactGoalSeek = null; L.bus.emit('excelx-goal-seek-dialog'); if (undo) A().undo(); };
+  D.reactGoalSeekClose = () => { reactGoalSeek = null; L.bus.emit('excelx-goal-seek-dialog'); };
+  D.reactConsolidateCatalog = () => reactConsolidate;
+  D.reactConsolidateAdd = (reference) => {
+    if (!reactConsolidate || typeof reference !== 'string' || !parseRef(reference)) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; }
+    if (!reactConsolidate.refs.includes(reference.trim())) reactConsolidate.refs = reactConsolidate.refs.concat(reference.trim());
+    L.bus.emit('excelx-consolidate-dialog'); return true;
+  };
+  D.reactConsolidateDelete = (index) => {
+    if (!reactConsolidate || !Number.isInteger(index) || index < 0 || index >= reactConsolidate.refs.length) return false;
+    reactConsolidate.refs = reactConsolidate.refs.filter((_, i) => i !== index);
+    L.bus.emit('excelx-consolidate-dialog'); return true;
+  };
+  D.reactConsolidateApply = (state) => {
+    if (!reactConsolidate || !reactConsolidateApply || !state || !Array.isArray(state.refs) || !['SUM', 'COUNT', 'AVERAGE', 'MAX', 'MIN', 'PRODUCT', 'COUNTNUMS', 'STDEV', 'STDEVP', 'VAR', 'VARP'].includes(state.fn) || state.refs.some((reference) => !parseRef(reference))) return false;
+    const apply = reactConsolidateApply;
+    reactConsolidate = reactConsolidateApply = null;
+    L.bus.emit('excelx-consolidate-dialog');
+    tryRun(() => apply(state)); return true;
+  };
+  D.reactConsolidateClose = () => { reactConsolidate = reactConsolidateApply = null; L.bus.emit('excelx-consolidate-dialog'); };
+  D.reactPivotCatalog = () => reactPivot;
+  D.reactPivotApply = (reference, state) => {
+    if (!reactPivot || !reactPivotApply || typeof reference !== 'string' || !state) return false;
+    const parsed = parseRef(reference);
+    if (!parsed) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; }
+    if (!Number.isInteger(state.row) || !Number.isInteger(state.data) || !['', 'sum', 'count', 'average', 'max', 'min', 'countNums'].includes(state.fn) || !['new', 'here'].includes(state.where)) return false;
+    const apply = reactPivotApply;
+    reactPivot = reactPivotApply = null;
+    L.bus.emit('excelx-pivot-dialog');
+    tryRun(() => apply(parsed, state)); return true;
+  };
+  D.reactPivotClose = () => { reactPivot = reactPivotApply = null; L.bus.emit('excelx-pivot-dialog'); };
+  D.reactDataFormCatalog = () => reactDataForm && reactDataForm.catalog;
+  D.reactDataFormAction = (action, values) => {
+    if (!reactDataForm || !['new', 'delete', 'restore', 'prev', 'next', 'criteria', 'enter', 'close'].includes(action)) return false;
+    reactDataForm.run(action, values);
+    return true;
+  };
+  D.reactDataFormClose = () => { reactDataForm = null; L.bus.emit('excelx-data-form-dialog'); };
+  D.reactValidationCatalog = () => reactValidation;
+  D.reactValidationApply = (state) => {
+    if (!reactValidation || !reactValidationApply || !state) return false;
+    if (!reactValidationApply(state)) return false;
+    reactValidation = reactValidationApply = reactValidationClear = null;
+    L.bus.emit('excelx-validation-dialog'); return true;
+  };
+  D.reactValidationClear = () => { if (reactValidationClear) reactValidationClear(); };
+  D.reactValidationClose = () => { reactValidation = reactValidationApply = reactValidationClear = null; L.bus.emit('excelx-validation-dialog'); };
   const val = (s, r, c) => C.cellValue(s, r, c);
   const textOf = (s, r, c) => L.csv.cellText(s, r, c);
   /** a reference box: type a range or pick one on the sheet */
@@ -56,6 +276,18 @@
     let header = rg.table ? true : O.guessHeader(s, rg);
     const st = { keys: [{ c: Math.max(rg.c1, Math.min(rg.c2, sel.c)), desc: false }, { c: null, desc: false }, { c: null, desc: false }], caseSensitive: false, byCols: false, list: null };
     G().selectRange(rg, { r: sel.r, c: sel.c }, { noScroll: true });
+    const apply = (state) => {
+      const keys = state.keys.filter((k) => k.c != null).map((k, i) => ({ index: state.byCols ? k.c - rg.r1 : k.c - rg.c1, desc: k.desc, list: i === 0 && state.list != null ? O.customLists[state.list] : undefined }));
+      if (!keys.length) return;
+      O.sort(s, { r1: rg.r1, c1: rg.c1, r2: rg.r2, c2: rg.c2 }, keys, { header: state.header, caseSensitive: state.caseSensitive, byCols: state.byCols });
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const choices = (byCols) => byCols ? Array.from({ length: rg.r2 - rg.r1 + 1 }, (_, i) => ({ value: rg.r1 + i, label: L.t('Row {0}', rg.r1 + i + 1) })) : Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => ({ value: rg.c1 + i, label: colLabel(s, rg, header, rg.c1 + i) }));
+      reactSort = { range: { ...rg }, header, selection: { row: sel.r, column: sel.c }, state: JSON.parse(JSON.stringify(st)), columns: choices(false), rows: choices(true), lists: O.customLists.map((list, index) => ({ value: index, label: list.slice(0, 4).join(', ') })) };
+      reactSortApply = (state) => apply({ ...state, header: !!state.header });
+      L.bus.emit('excelx-sort-dialog');
+      return;
+    }
     const body = h('div', { class: 'col' });
     const draw = () => {
       body.textContent = '';
@@ -73,11 +305,7 @@
         ui.group('Orientation', ui.radio('so-o', 'Sort &top to bottom', !st.byCols, () => { st.byCols = false; st.keys.forEach((k) => { k.c = null; }); st.keys[0].c = sel.c; }), ui.radio('so-o', 'Sort &left to right', st.byCols, () => { st.byCols = true; st.keys.forEach((k) => { k.c = null; }); st.keys[0].c = sel.r; }))),
       buttons: [{ label: 'OK', primary: true, onClick: () => draw() }, { label: 'Cancel' }] });
     };
-    ui.dialog({ title: 'Sort', width: 360, body, buttons: [{ label: '&Options...', onClick: () => { options(); return false; } }, { label: 'OK', primary: true, onClick: () => tryRun(() => {
-      const keys = st.keys.filter((k) => k.c != null).map((k, i) => ({ index: st.byCols ? k.c - rg.r1 : k.c - rg.c1, desc: k.desc, list: i === 0 && st.list != null ? O.customLists[st.list] : undefined }));
-      if (!keys.length) return;
-      O.sort(s, { r1: rg.r1, c1: rg.c1, r2: rg.r2, c2: rg.c2 }, keys, { header, caseSensitive: st.caseSensitive, byCols: st.byCols });
-    }) }, { label: 'Cancel' }] });
+    ui.dialog({ title: 'Sort', width: 360, body, buttons: [{ label: '&Options...', onClick: () => { options(); return false; } }, { label: 'OK', primary: true, onClick: () => tryRun(() => apply({ ...st, header })) }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Validation */
@@ -132,25 +360,41 @@
       if (p && typeof p.v === 'number') return String(p.v);
       throw new Error('The value you entered is not a valid number, date or time.');
     };
+    const applyState = (next) => {
+      Object.assign(st, next);
+      v1.value = next.value1 || ''; v2.value = next.value2 || ''; pt.value = next.promptTitle || ''; pm.value = next.prompt || ''; et.value = next.errorTitle || ''; em.value = next.error || '';
+      let f1, f2;
+      try {
+        f1 = st.type === 'none' ? undefined : toFormula(v1.value);
+        f2 = ['whole', 'decimal', 'date', 'time', 'textLength'].includes(st.type) && (st.op === 'between' || st.op === 'notBetween') ? toFormula(v2.value) : undefined;
+        if (st.type !== 'none' && f1 == null) throw new Error(st.type === 'list' ? L.t('You must enter a value in the Source box.') : L.t('You must enter a value in the Minimum box.'));
+        if (f2 === null) throw new Error('You must enter a value in the Maximum box.');
+      } catch (error) { ui.msg(error.message, { icon: 'warn' }); return false; }
+      const rule = { type: st.type, op: ['whole', 'decimal', 'date', 'time', 'textLength'].includes(st.type) ? st.op : undefined, allowBlank: st.allowBlank, showDrop: st.showDrop !== false, showInput: st.showInput !== false, showError: st.showError !== false, errorStyle: st.errorStyle, f1: f1 == null ? undefined : f1, f2: f2 == null ? undefined : f2, promptTitle: pt.value || undefined, prompt: pm.value || undefined, errorTitle: et.value || undefined, error: em.value || undefined, ime: st.ime };
+      if (st.x14) { rule.x14 = true; rule.extKeep = st.extKeep; }
+      tryRun(() => O.tx(w, L.N('Validation'), () => {
+        let target = ranges;
+        if (st.applyAll && cur) target = target.concat(cur.ranges);
+        for (const range of target) O.removeRangeRules(s, range, 'dv');
+        if (st.type !== 'none' || rule.prompt || rule.promptTitle) O.setDV(s, s.dv.concat([Object.assign({ ranges: target.map((range) => Object.assign({}, range)) }, rule)]));
+      }));
+      return true;
+    };
+    const clearRules = () => tryRun(() => O.tx(w, L.N('Validation'), () => { for (const range of ranges) O.removeRangeRules(s, range, 'dv'); }));
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactValidation = {
+        state: { type: st.type, op: st.op, allowBlank: st.allowBlank, showDrop: st.showDrop !== false, showInput: st.showInput !== false, showError: st.showError !== false, errorStyle: st.errorStyle || 'stop', value1: st.type === 'list' && /^"/.test(st.f1 || '') ? shows : toInput(st.f1), value2: toInput(st.f2), promptTitle: st.promptTitle || '', prompt: st.prompt || '', errorTitle: st.errorTitle || '', error: st.error || '', ime: st.ime || '', applyAll: false },
+        types: [['none', 'Any value'], ['whole', 'Whole number'], ['decimal', 'Decimal'], ['list', 'List'], ['date', 'Date'], ['time', 'Time'], ['textLength', 'Text length'], ['custom', 'Custom']],
+        operators: [['between', 'between'], ['notBetween', 'not between'], ['equal', 'equal to'], ['notEqual', 'not equal to'], ['greaterThan', 'greater than'], ['lessThan', 'less than'], ['greaterThanOrEqual', 'greater than or equal to'], ['lessThanOrEqual', 'less than or equal to']],
+        errorStyles: [['stop', 'Stop'], ['warning', 'Warning'], ['information', 'Information']],
+        imeModes: [['', 'No Control'], ['on', 'On'], ['off', 'Off (English mode)'], ['disabled', 'Disable']],
+      };
+      reactValidationApply = applyState; reactValidationClear = clearRules;
+      L.bus.emit('excelx-validation-dialog'); return;
+    }
     ui.dialog({ title: 'Data Validation', width: 440, body: ui.tabs([{ label: 'Settings', body: settings }, { label: 'Input Message', body: input }, { label: 'Error Alert', body: error }, { label: 'IME Mode', body: ime }]),
-      buttons: [{ label: '&Clear All', onClick: () => { tryRun(() => O.tx(w, L.N('Validation'), () => { for (const rg of ranges) O.removeRangeRules(s, rg, 'dv'); })); } },
-        { label: 'OK', primary: true, onClick: () => {
-          let f1, f2;
-          try {
-            f1 = st.type === 'none' ? undefined : toFormula(v1.value);
-            f2 = ['whole', 'decimal', 'date', 'time', 'textLength'].includes(st.type) && (st.op === 'between' || st.op === 'notBetween') ? toFormula(v2.value) : undefined;
-            if (st.type !== 'none' && f1 == null) throw new Error(st.type === 'list' ? L.t('You must enter a value in the Source box.') : L.t('You must enter a value in the Minimum box.'));
-            if (f2 === null) throw new Error('You must enter a value in the Maximum box.');
-          } catch (e) { ui.msg(e.message, { icon: 'warn' }); return false; }
-          const rule = { type: st.type, op: ['whole', 'decimal', 'date', 'time', 'textLength'].includes(st.type) ? st.op : undefined, allowBlank: st.allowBlank, showDrop: st.showDrop !== false, showInput: st.showInput !== false, showError: st.showError !== false, errorStyle: st.errorStyle, f1: f1 == null ? undefined : f1, f2: f2 == null ? undefined : f2, promptTitle: pt.value || undefined, prompt: pm.value || undefined, errorTitle: et.value || undefined, error: em.value || undefined, ime: st.ime };
-          if (st.x14) { rule.x14 = true; rule.extKeep = st.extKeep; }
-          tryRun(() => O.tx(w, L.N('Validation'), () => {
-            let target = ranges;
-            if (st.applyAll && cur) target = target.concat(cur.ranges);
-            for (const rg of target) O.removeRangeRules(s, rg, 'dv');
-            if (st.type !== 'none' || rule.prompt || rule.promptTitle) O.setDV(s, s.dv.concat([Object.assign({ ranges: target.map((x) => Object.assign({}, x)) }, rule)]));
-          }));
-        } }, { label: 'Cancel' }] });
+      buttons: [{ label: '&Clear All', onClick: clearRules },
+        { label: 'OK', primary: true, onClick: () => applyState({ ...st, value1: v1.value, value2: v2.value, promptTitle: pt.value, prompt: pm.value, errorTitle: et.value, error: em.value }) }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Subtotals */
@@ -162,6 +406,40 @@
     if (rg.r2 <= rg.r1) { ui.msg('Excelx cannot determine which row in your list or selection contains column labels, which are required for this command.', { icon: 'warn' }); return; }
     const cols = Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => rg.c1 + i);
     const st = { at: rg.c1, fn: 9, add: new Set([rg.c2]), replace: true, pageBreak: false, below: true };
+    const apply = (state = st) => {
+      st.at = state.at; st.fn = state.fn; st.add = new Set(state.add); st.replace = !!state.replace; st.pageBreak = !!state.pageBreak; st.below = !!state.below;
+      if (!st.add.size) return;
+      const fnName = SUBFN.find((x) => x[0] === st.fn)[1];
+      O.structural(s, L.N('Subtotals'), () => {
+        let r2 = rg.r2;
+        if (st.replace) { for (let r = r2; r > rg.r1; r--) { const row = s.rows[r]; if (row && row.cells.some((cl) => cl && cl.f != null && /^SUBTOTAL\(/i.test(cl.f))) { O.insertLines(s, 'r', r, -1); r2--; } } }
+        const groups = [];
+        let start = rg.r1 + 1;
+        const key = (r) => textOf(s, r, st.at).toLowerCase();
+        for (let r = rg.r1 + 2; r <= r2 + 1; r++) if (r > r2 || key(r) !== key(start)) { groups.push([start, r - 1]); start = r; }
+        const bold = (r, c) => { const cl = s.get(r, c) || { v: null }; const n = Object.assign({}, cl); n.s = w.styles.derive(cl.s || 0, { font: { b: true } }); s.put(r, c, n); };
+        for (let g = groups.length - 1; g >= 0; g--) {
+          const [a, b] = groups[g];
+          const at = st.below ? b + 1 : a;
+          O.insertLines(s, 'r', at, 1);
+          const ga = st.below ? a : a + 1, gb = st.below ? b : b + 1;
+          s.put(at, st.at, { v: textOf(s, ga, st.at) + (st.fn === 9 ? ' Total' : ' ' + fnName) }); bold(at, st.at);
+          for (const c of st.add) { s.put(at, c, { f: `SUBTOTAL(${st.fn},${F.rangeName({ r1: ga, c1: c, r2: gb, c2: c })})`, v: null, dirty: true }); bold(at, c); }
+          for (let r = ga; r <= gb; r++) s.rowObj(r).level = 2;
+          s.rowObj(at).level = 1;
+          if (st.pageBreak && g > 0) s.print.rowBreaks = (s.print.rowBreaks || []).concat([st.below ? at + 1 : at]).sort((x, y) => x - y);
+        }
+        const dataEnd = r2 + groups.length;
+        const gt = st.below ? dataEnd + 1 : rg.r1 + 1;
+        O.insertLines(s, 'r', gt, 1);
+        const lastData = st.below ? dataEnd : dataEnd + 1;
+        s.put(gt, st.at, { v: st.fn === 9 ? 'Grand Total' : 'Grand ' + fnName }); bold(gt, st.at);
+        for (const c of st.add) { s.put(gt, c, { f: `SUBTOTAL(${st.fn},${F.rangeName({ r1: st.below ? rg.r1 + 1 : rg.r1 + 2, c1: c, r2: lastData, c2: c })})`, v: null, dirty: true }); bold(gt, c); }
+        s.outline.levelRow = 3; s.outline.below = st.below;
+        if (s.maxR < gt) s.maxR = gt;
+        LY.invalidate(s);
+      });
+    };
     const addBox = h('div', { class: 'lbox checks', translate: 'no' }, ...cols.map((c) => ui.check(colLabel(s, rg, true, c), st.add.has(c), (v) => { if (v) st.add.add(c); else st.add.delete(c); })));
     const removeAll = () => tryRun(() => O.structural(s, 'Remove Subtotals', () => {
       for (let r = rg.r2; r > rg.r1; r--) { const row = s.rows[r]; if (row && row.cells.some((cl) => cl && cl.f != null && /^SUBTOTAL\(/i.test(cl.f))) O.insertLines(s, 'r', r, -1); }
@@ -169,52 +447,18 @@
       s.outline.levelRow = 0;
       LY.invalidate(s);
     }));
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactSubtotals = { columns: cols.map((c) => ({ value: c, label: colLabel(s, rg, true, c) })), functions: SUBFN.map(([value, label]) => ({ value, label })), initial: { at: st.at, fn: st.fn, add: [...st.add], replace: st.replace, pageBreak: st.pageBreak, below: st.below } };
+      reactSubtotalsApply = apply; reactSubtotalsRemove = removeAll;
+      L.bus.emit('excelx-subtotals-dialog');
+      return;
+    }
     ui.dialog({ title: 'Subtotal', width: 340, body: h('div', { class: 'col' },
       ui.field('&At each change in:', ui.select(cols.map((c) => [c, colLabel(s, rg, true, c)]), st.at, (v) => { st.at = +v; }, { translate: 'no' })),
       ui.field('&Use function:', ui.select(SUBFN, st.fn, (v) => { st.fn = +v; })),
       h('label', { text: 'Add subtotal to:' }), addBox,
       ui.check('Replace &current subtotals', true, (v) => { st.replace = v; }), ui.check('&Page break between groups', false, (v) => { st.pageBreak = v; }), ui.check('&Summary below data', true, (v) => { st.below = v; })),
-    buttons: [{ label: '&Remove All', onClick: removeAll }, { label: 'OK', primary: true, onClick: () => tryRun(() => {
-      if (!st.add.size) return;
-      const fnName = SUBFN.find((x) => x[0] === st.fn)[1];
-      O.structural(s, L.N('Subtotals'), () => {
-        let r2 = rg.r2;
-        if (st.replace) { for (let r = r2; r > rg.r1; r--) { const row = s.rows[r]; if (row && row.cells.some((cl) => cl && cl.f != null && /^SUBTOTAL\(/i.test(cl.f))) { O.insertLines(s, 'r', r, -1); r2--; } } }
-        /* groups: runs of equal values in the "at each change" column */
-        const groups = [];
-        let start = rg.r1 + 1;
-        const key = (r) => textOf(s, r, st.at).toLowerCase();
-        for (let r = rg.r1 + 2; r <= r2 + 1; r++) if (r > r2 || key(r) !== key(start)) { groups.push([start, r - 1]); start = r; }
-        const bold = (r, c) => { const cl = s.get(r, c) || { v: null }; const n = Object.assign({}, cl); n.s = w.styles.derive(cl.s || 0, { font: { b: true } }); s.put(r, c, n); };
-        /* insert from the bottom so earlier rows keep their numbers */
-        const totalRows = [];
-        for (let g = groups.length - 1; g >= 0; g--) {
-          const [a, b] = groups[g];
-          const at = st.below ? b + 1 : a;
-          O.insertLines(s, 'r', at, 1);
-          const ga = st.below ? a : a + 1, gb = st.below ? b : b + 1;
-          s.put(at, st.at, { v: textOf(s, ga, st.at) + (st.fn === 9 ? ' Total' : ' ' + fnName) });
-          bold(at, st.at);
-          for (const c of st.add) { s.put(at, c, { f: `SUBTOTAL(${st.fn},${F.rangeName({ r1: ga, c1: c, r2: gb, c2: c })})`, v: null, dirty: true }); bold(at, c); }
-          totalRows.push(at);
-          for (let r = ga; r <= gb; r++) { const o = s.rowObj(r); o.level = 2; }
-          s.rowObj(at).level = 1;
-          if (st.pageBreak && g > 0) s.print.rowBreaks = (s.print.rowBreaks || []).concat([st.below ? at + 1 : at]).sort((x, y) => x - y);
-        }
-        /* grand total */
-        const dataEnd = r2 + groups.length;
-        const gt = st.below ? dataEnd + 1 : rg.r1 + 1;
-        O.insertLines(s, 'r', gt, 1);
-        const lastData = st.below ? dataEnd : dataEnd + 1;
-        s.put(gt, st.at, { v: st.fn === 9 ? 'Grand Total' : 'Grand ' + fnName });
-        bold(gt, st.at);
-        for (const c of st.add) { s.put(gt, c, { f: `SUBTOTAL(${st.fn},${F.rangeName({ r1: st.below ? rg.r1 + 1 : rg.r1 + 2, c1: c, r2: lastData, c2: c })})`, v: null, dirty: true }); bold(gt, c); }
-        s.outline.levelRow = 3;
-        s.outline.below = st.below;
-        if (s.maxR < gt) s.maxR = gt;
-        LY.invalidate(s);
-      });
-    }) }, { label: 'Cancel' }] });
+    buttons: [{ label: '&Remove All', onClick: removeAll }, { label: 'OK', primary: true, onClick: () => tryRun(() => apply(st)) }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Text to Columns */
@@ -229,6 +473,34 @@
     if (!st.delims.tab && !st.delims.comma && !st.fixed) st.delims.space = true;
     const delimStr = () => (st.delims.tab ? '\t' : '') + (st.delims.semi ? ';' : '') + (st.delims.comma ? ',' : '') + (st.delims.space ? ' ' : '') + (st.delims.other ? st.delims.other[0] : '');
     const parse = () => (st.fixed ? L.csv.parseFixed(text, st.breaks || (st.breaks = L.csv.guessBreaks(text))) : rows.map((t) => (L.csv.parse(t, { delims: delimStr(), quote: st.quote, merge: st.merge })[0] || [''])));
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const toState = () => ({ fixed: st.fixed, delims: { ...st.delims }, merge: st.merge, quote: st.quote, breaks: st.breaks ? [...st.breaks] : [], formats: [...st.formats], dest: st.dest });
+      const fromState = (state) => { st.fixed = !!state.fixed; st.delims = { ...state.delims }; st.merge = !!state.merge; st.quote = state.quote || ''; st.breaks = state.breaks || []; st.formats = state.formats || []; st.dest = state.dest || st.dest; };
+      reactTextColumns = { state: toState(), delimiterLabels: [['tab', '&Tab'], ['semi', 'Se&micolon'], ['comma', '&Comma'], ['space', '&Space']], formatChoices: [['general', '&General'], ['text', '&Text'], ['MDY', '&Date (MDY)'], ['DMY', 'Date (DM&Y)'], ['YMD', 'Date (&YMD)'], ['skip', 'Do not import column (s&kip)']] };
+      reactTextColumnsParse = (state) => { fromState(state); return parse().slice(0, 12); };
+      reactTextColumnsApply = (state) => {
+        fromState(state);
+        const to = parseRef(st.dest, false) || { sheet: s, r1: rg0.r1, c1: rg0.c1 };
+        const data = parse(), dsh = to.sheet || s, n = Math.max(...data.map((r) => r.length));
+        let busy = false;
+        for (let i = 0; i < data.length && !busy; i++) for (let c = 1; c < n; c++) { const cl = dsh.get(to.r1 + i, to.c1 + c); if (cl && cl.v != null && !(dsh === s && to.c1 + c === rg0.c1)) busy = true; }
+        const go = () => O.tx(w, 'Text to Columns', () => data.forEach((row, i) => {
+          let c = 0;
+          row.forEach((t, j) => {
+            const f = st.formats[j] || 'general'; if (f === 'skip') return;
+            const x = L.csv.convert(t, f, { date1904: w.date1904 }), old = dsh.get(to.r1 + i, to.c1 + c), cl = Object.assign({}, old || {});
+            delete cl.f; delete cl.rt; cl.v = x.v == null ? null : x.v;
+            if (x.f != null) { cl.f = x.f; cl.dirty = true; }
+            if (x.nf) cl.s = w.styles.derive(cl.s || 0, { nf: x.nf });
+            O.put(dsh, to.r1 + i, to.c1 + c, cl.v == null && cl.f == null && !cl.s ? null : cl); c++;
+          });
+        }));
+        if (busy) ui.msg('Do you want to replace the contents of the destination cells?', { icon: 'question', buttons: ['OK', 'Cancel'] }).then((r) => { if (r === 0) tryRun(go); }); else go();
+        D.reactTextColumnsClose();
+      };
+      L.bus.emit('excelx-text-columns-dialog');
+      return;
+    }
     const preview = h('div', { class: 'tiw-preview' });
     let selCol = 0;
     const drawPrev = () => {
@@ -291,6 +563,16 @@
     const s = sh();
     const rg = listRange();
     let copy = false, unique = false;
+    const apply = (lr, cr, dest, onlyUnique) => {
+      const n = L.filter.advanced(lr.sheet, { r1: lr.r1, c1: lr.c1, r2: Math.min(lr.r2, lr.sheet.maxR), c2: lr.c2 }, cr ? cr.sheet : null, cr ? { r1: cr.r1, c1: cr.c1, r2: cr.r2, c2: cr.c2 } : null, { unique: onlyUnique, copyTo: dest ? { sheet: dest.sheet, r: dest.r1, c: dest.c1 } : null });
+      A().status(L.t('{0} of {1} records found', n, lr.r2 - lr.r1));
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactAdvancedFilter = { list: F.quoteSheet(s.name) + '!' + F.absRangeName(rg), criteria: '', destination: '', copy: false, unique: false };
+      reactAdvancedFilterApply = apply;
+      L.bus.emit('excelx-advanced-filter-dialog');
+      return;
+    }
     const list = refBox(F.quoteSheet(s.name) + '!' + F.absRangeName(rg), 220);
     const crit = refBox('', 220), to = refBox('', 220);
     to.hidden = true;
@@ -302,29 +584,31 @@
       if (crit.input.value.trim() && !cr) { ui.msg('The criteria range is not valid.', { icon: 'warn' }); return false; }
       const dest = copy ? parseRef(to.input.value) : null;
       if (copy && !dest) { ui.msg('The extract range is not valid.', { icon: 'warn' }); return false; }
-      tryRun(() => {
-        const n = L.filter.advanced(lr.sheet, { r1: lr.r1, c1: lr.c1, r2: Math.min(lr.r2, lr.sheet.maxR), c2: lr.c2 }, cr ? cr.sheet : null, cr ? { r1: cr.r1, c1: cr.c1, r2: cr.r2, c2: cr.c2 } : null, { unique, copyTo: dest ? { sheet: dest.sheet, r: dest.r1, c: dest.c1 } : null });
-        A().status(L.t('{0} of {1} records found', n, lr.r2 - lr.r1));
-      });
+      tryRun(() => apply(lr, cr, dest, unique));
     } }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Data Form */
   D.dataForm = function () {
     const s = sh(), w = wb();
+    const reactMode = !!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected);
     let rg = listRange();
     if (rg.r2 <= rg.r1 && !(s.get(rg.r1, rg.c1))) { ui.msg('No list was found. Select a cell within your list.', { icon: 'warn' }); return; }
     const cols = Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => rg.c1 + i);
-    let rec = 1, criteria = null;
-    const inputs = cols.map((c) => { const i = h('input', { type: 'text', style: 'width:100%' }); i.dataset.c = c; return i; });
+    let rec = 1, criteria = null, criteriaMode = false;
+    const inputs = cols.map((c) => { const i = reactMode ? { value: '', readOnly: false, dataset: { c } } : h('input', { type: 'text', style: 'width:100%' }); i.dataset.c = c; return i; });
     const count = h('div', { class: 'df-count' });
-    const fieldsBox = h('div', { class: 'df-fields', translate: 'no' }, ...cols.map((c, k) => ui.field(L.t('{0}:', colLabel(s, rg, true, c)), inputs[k])));
+    const fieldsBox = reactMode ? null : h('div', { class: 'df-fields', translate: 'no' }, ...cols.map((c, k) => ui.field(L.t('{0}:', colLabel(s, rg, true, c)), inputs[k])));
     const total = () => rg.r2 - rg.r1;
     const load = () => {
       if (criteria) return;
       const r = rg.r1 + rec;
       cols.forEach((c, k) => { const cl = s.get(r, c); inputs[k].value = rec > total() ? '' : cl && cl.f != null ? textOf(s, r, c) : cl && cl.v != null ? L.editor.cellText(s, r, c) : ''; inputs[k].readOnly = !!(cl && cl.f != null) && rec <= total(); });
       count.textContent = rec > total() ? L.t('New Record') : L.t('{0} of {1}', rec, total());
+      if (reactMode && reactDataForm) {
+        reactDataForm.catalog = { title: s.name, fields: cols.map((c) => L.t('{0}:', colLabel(s, rg, true, c))), values: inputs.map((input) => input.value), readOnly: inputs.map((input) => input.readOnly), count: count.textContent, criteriaMode };
+        L.bus.emit('excelx-data-form-dialog');
+      }
     };
     const save = () => {
       if (criteria || rec > total() + 1) return;
@@ -337,7 +621,32 @@
     };
     const matches = (r) => cols.every((c, k) => { const q = criteria[k]; if (!q) return true; const t = textOf(s, r, c); const m = /^(<=|>=|<>|<|>|=)?(.*)$/.exec(q); const op = m[1] || '', x = m[2]; const n = num(x, null); const v = val(s, r, c); if (op && n != null && typeof v === 'number') return op === '<' ? v < n : op === '>' ? v > n : op === '<=' ? v <= n : op === '>=' ? v >= n : op === '<>' ? v !== n : v === n; return op === '<>' ? t.toLowerCase() !== x.toLowerCase() : t.toLowerCase().startsWith(x.toLowerCase()); });
     const find = (d) => { for (let k = rec + d; k >= 1 && k <= total(); k += d) if (!criteria || matches(rg.r1 + k)) return k; return null; };
+    const runReact = (action, values) => {
+      if (Array.isArray(values)) values.forEach((value, index) => { if (inputs[index]) inputs[index].value = String(value); });
+      if (action === 'new') { save(); rec = total() + 1; load(); return; }
+      if (action === 'delete') {
+        if (rec > total()) return;
+        ui.msg('Displayed record will be permanently deleted', { icon: 'warn', buttons: ['OK', 'Cancel'] }).then((result) => {
+          if (result !== 0) return;
+          tryRun(() => O.shiftCells(s, { r1: rg.r1 + rec, c1: rg.c1, r2: rg.r1 + rec, c2: rg.c2 }, 'up', false));
+          rg = Object.assign({}, rg, { r2: rg.r2 - 1 }); rec = Math.min(rec, Math.max(1, total())); load();
+        });
+        return;
+      }
+      if (action === 'restore') { load(); return; }
+      if (action === 'prev' || action === 'next') { save(); const index = find(action === 'next' ? 1 : -1); if (index) { rec = index; load(); } return; }
+      if (action === 'criteria') {
+        if (!criteriaMode) { save(); criteriaMode = true; criteria = inputs.map(() => ''); inputs.forEach((input) => { input.value = ''; input.readOnly = false; }); count.textContent = L.t('Criteria'); }
+        else { criteria = inputs.map((input) => input.value.trim()); const index = find(1) || find(-1) || rec; const query = criteria; criteriaMode = false; criteria = null; rec = index; load(); criteria = query; criteria = query.some(Boolean) ? query : null; }
+        if (reactDataForm) reactDataForm.catalog = { title: s.name, fields: cols.map((c) => L.t('{0}:', colLabel(s, rg, true, c))), values: inputs.map((input) => input.value), readOnly: inputs.map((input) => input.readOnly), count: criteriaMode ? L.t('Criteria') : count.textContent, criteriaMode };
+        L.bus.emit('excelx-data-form-dialog'); return;
+      }
+      if (action === 'enter') { save(); if (rec <= total()) rec++; load(); return; }
+      if (action === 'close') { save(); reactDataForm = null; L.bus.emit('excelx-data-form-dialog'); }
+    };
+    if (reactMode) reactDataForm = { catalog: null, run: runReact };
     load();
+    if (reactMode) { L.bus.emit('excelx-data-form-dialog'); return; }
     const btn = (label, fn) => ui.button(label, fn, { style: 'width:100%' });
     let critMode = null;
     const side = h('div', { class: 'col df-side' }, count,
@@ -359,16 +668,23 @@
     const s = sh(), w = wb();
     if (A().tableAt()) { ui.msg('A list cannot overlap another list.', { icon: 'warn' }); return; }
     const rg = listRange();
-    const ref = refBox(F.absRangeName(rg), 200);
     let header = O.guessHeader(s, rg) || rg.r2 > rg.r1 && typeof s.val(rg.r1, rg.c1) === 'string';
+    const apply = (p, hasHeader) => {
+      const t = D.makeTable(p.sheet, { r1: p.r1, c1: p.c1, r2: Math.min(p.r2, Math.max(p.r1 + 1, p.sheet.maxR)), c2: p.c2 }, hasHeader);
+      G().selectRange(t.ref, { r: t.ref.r1 + 1, c: t.ref.c1 });
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactCreateList = { reference: F.absRangeName(rg), header };
+      reactCreateListApply = apply;
+      L.bus.emit('excelx-create-list-dialog');
+      return;
+    }
+    const ref = refBox(F.absRangeName(rg), 200);
     ui.dialog({ title: 'Create List', width: 320, body: h('div', { class: 'col' }, h('div', { text: 'Where is the data for your list?' }), ref, ui.check('&My list has headers', header, (v) => { header = v; })),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         const p = parseRef(ref.input.value);
         if (!p) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; }
-        tryRun(() => {
-          const t = D.makeTable(p.sheet, { r1: p.r1, c1: p.c1, r2: Math.min(p.r2, Math.max(p.r1 + 1, p.sheet.maxR)), c2: p.c2 }, header);
-          G().selectRange(t.ref, { r: t.ref.r1 + 1, c: t.ref.c1 });
-        });
+        tryRun(() => apply(p, header));
       } }, { label: 'Cancel' }] });
   };
   /** turn a range into a list (table); adds a header row when the data has none */
@@ -394,8 +710,15 @@
   D.outlineSettings = function () {
     const s = sh();
     const o = Object.assign({}, s.outline);
+    const apply = (state) => { const old = s.outline; O.tx(s.wb, 'Outline Settings', () => { s.outline = Object.assign({}, s.outline, state); s.wb.undo.op(() => { s.outline = old; }, () => { s.outline = Object.assign({}, old, state); }); }); };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactOutlineSettings = { below: o.below !== false, right: o.right !== false, applyStyles: !!o.applyStyles };
+      reactOutlineSettingsApply = apply; reactOutlineSettingsCreate = () => A().autoOutline();
+      L.bus.emit('excelx-outline-settings-dialog');
+      return;
+    }
     ui.dialog({ title: 'Settings', width: 300, body: h('div', { class: 'col' }, ui.group('Direction', ui.check('Summary rows &below detail', o.below !== false, (v) => { o.below = v; }), ui.check('Summary columns to ri&ght of detail', o.right !== false, (v) => { o.right = v; })), ui.check('&Automatic styles', !!o.applyStyles, (v) => { o.applyStyles = v; })),
-      buttons: [{ label: '&Create', onClick: () => A().autoOutline() }, { label: 'OK', primary: true, onClick: () => tryRun(() => { const old = s.outline; O.tx(s.wb, 'Outline Settings', () => { s.outline = Object.assign({}, s.outline, o); s.wb.undo.op(() => { s.outline = old; }, () => { s.outline = Object.assign({}, old, o); }); }); }) }, { label: 'Cancel' }] });
+      buttons: [{ label: '&Create', onClick: () => A().autoOutline() }, { label: 'OK', primary: true, onClick: () => tryRun(() => apply(o)) }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Conditional Formatting (Excel 2003) */
@@ -440,6 +763,30 @@
       if (p && typeof p.v === 'boolean') return p.v ? 'TRUE' : 'FALSE';
       return '"' + t.replace(/"/g, '""') + '"';
     };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const stylePreview = (d) => { const f = d.font || {}, css = []; if (f.b) css.push('font-weight:bold'); if (f.i) css.push('font-style:italic'); if (f.u || f.strike) css.push('text-decoration:' + (f.u ? 'underline ' : '') + (f.strike ? 'line-through' : '')); if (f.color) css.push('color:' + M.colorHex(w, f.color)); if (d.fill && (d.fill.fg || d.fill.bg)) css.push('background:' + M.colorHex(w, d.fill.fg || d.fill.bg)); if (d.border) css.push('outline:1px solid #000;outline-offset:-3px'); return css.join(';'); };
+      reactConditional = { conditions: conds.map((condition) => ({ ...condition, preview: stylePreview(condition.dxf) })), operators: CF_OPS };
+      reactConditionalSubmit = (edited) => {
+        const rules = [];
+        try {
+          for (const cd of edited) {
+            if (cd.kind === 'formula') { if (!String(cd.v1).trim()) continue; const f = toStore(cd.v1[0] === '=' ? cd.v1 : '=' + cd.v1); rules.push({ ...cd.keep, type: 'expression', op: undefined, f: [f], dxf: cd.dxf }); }
+            else { const f1 = toStore(cd.v1); if (f1 == null) continue; const two = cd.op === 'between' || cd.op === 'notBetween'; const f2 = two ? toStore(cd.v2) : null; if (two && f2 == null) { ui.msg('You must enter a value in both boxes for between conditions.', { icon: 'warn' }); return false; } rules.push({ ...cd.keep, type: 'cellIs', op: cd.op, f: two ? [f1, f2] : [f1], dxf: cd.dxf }); }
+          }
+        } catch (e) { ui.msg(e.message || 'The formula contains an error.', { icon: 'warn' }); return false; }
+        tryRun(() => O.tx(w, 'Conditional Formatting', () => {
+          for (const rg of ranges) O.removeRangeRules(s, rg, 'cf', editable);
+          if (!rules.length) return;
+          const out = rules.map((r, i) => { const dx = w.dxfs.push(r.dxf) - 1; return { ...r, dxf: dx, priority: i + 1 }; });
+          const others = s.cf.flatMap((x) => x.rules).sort((a, b) => (a.priority || 0) - (b.priority || 0));
+          const shifted = s.cf.map((x) => Object.assign({}, x, { rules: x.rules.map((r) => Object.assign({}, r, { priority: out.length + 1 + others.indexOf(r) })) }));
+          O.setCF(s, shifted.concat([{ ranges: ranges.map((r) => Object.assign({}, r)), rules: out }]));
+        }));
+        return true;
+      };
+      L.bus.emit('excelx-conditional-format-dialog');
+      return;
+    }
     ui.dialog({ title: 'Conditional Formatting', width: 560, body,
       buttons: [{ label: '&Add >>', onClick: () => { if (conds.length < 3) { conds.push({ kind: 'value', op: 'between', v1: '', v2: '', dxf: {} }); draw(); } return false; } },
         { label: '&Delete...', onClick: () => { const checks = conds.map((c, i) => ui.check(L.t('Condition {0}', i + 1), false, null)); ui.dialog({ title: 'Delete Conditional Format', width: 260, body: ui.group('Select condition(s) to delete:', ...checks), buttons: [{ label: 'OK', primary: true, onClick: () => { for (let i = checks.length - 1; i >= 0; i--) if (checks[i].input.checked) conds.splice(i, 1); if (!conds.length) conds.push({ kind: 'value', op: 'between', v1: '', v2: '', dxf: {} }); draw(); } }, { label: 'Cancel' }] }); return false; } },
@@ -469,6 +816,13 @@
     const w = wb();
     const d = JSON.parse(JSON.stringify(dxf || {}));
     const f = d.font || {};
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const border = d.border || {};
+      reactCFFormat = { source: d, state: { fontStyle: f.b == null && f.i == null ? '' : (f.b ? 'b' : '') + (f.i ? 'i' : '') || 'r', underline: f.u || '', fontColor: f.color ? M.colorHex(w, f.color) : '', strike: !!f.strike, fillColor: d.fill && (d.fill.fg || d.fill.bg) ? M.colorHex(w, d.fill.fg || d.fill.bg) : '', border: { outline: !!(border.t && border.b && border.l && border.r), top: !!border.t, bottom: !!border.b, left: !!border.l, right: !!border.r } } };
+      reactCFFormatDone = done;
+      L.bus.emit('excelx-cf-format-dialog');
+      return;
+    }
     const styleSel = ui.select([['', '(unchanged)'], ['r', 'Regular'], ['i', 'Italic'], ['b', 'Bold'], ['bi', 'Bold Italic']], f.b == null && f.i == null ? '' : (f.b ? 'b' : '') + (f.i ? 'i' : '') || 'r', (v) => { if (!v) { delete f.b; delete f.i; } else { f.b = /b/.test(v); f.i = /i/.test(v); } });
     const uSel = ui.select([['', '(unchanged)'], ['none', 'None'], ['single', 'Single'], ['double', 'Double']], f.u || '', (v) => { if (!v) delete f.u; else f.u = v === 'none' ? undefined : v; });
     const col = (get, set, mode) => { const b = h('button', { type: 'button', class: 'swatch-btn wide', style: `background:${get() || 'transparent'}` }, h('span', { text: get() ? '' : 'Automatic' }), h('span', { class: 'dd-arrow' })); b.addEventListener('click', () => ui.colorMenu(b, { mode, grid: true }, (c) => { if (c.auto || c.none) { set(null); b.style.background = 'transparent'; b.firstChild.textContent = c.none ? L.t('No Color') : L.t('Automatic'); } else if (typeof c === 'string') { set(c); b.style.background = c; b.firstChild.textContent = ''; } })); return b; };
@@ -508,6 +862,46 @@
     if (rg.r1 === rg.r2 && rg.c1 === rg.c2) { ui.msg('Cannot detect a table around the active cell.\n\nSelect the range you want to AutoFormat.', { icon: 'warn' }); return; }
     let pick = 'Simple';
     const parts = { nf: true, border: true, font: true, fill: true, align: true, size: true };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const data = [['', 'Jan', 'Feb', 'Mar', 'Total'], ['East', 7, 7, 5, 19], ['West', 6, 4, 7, 17], ['South', 8, 7, 9, 24], ['Total', 21, 18, 21, 60]];
+      const cssFor = (role, value) => {
+        const css = [], f = role.font || {};
+        if (f.b) css.push('font-weight:bold'); if (f.i) css.push('font-style:italic'); if (f.color) css.push('color:' + M.colorHex(w, f.color));
+        if (role.fill) css.push('background:' + M.colorHex(w, role.fill.fg));
+        const b = role.border || {};
+        for (const [k, side] of [['t', 'top'], ['b', 'bottom'], ['l', 'left'], ['r', 'right']]) if (b[k]) css.push(`border-${side}:${b[k].style === 'medium' ? 2 : b[k].style === 'double' ? 3 : 1}px ${b[k].style === 'double' ? 'double' : 'solid'} ${M.colorHex(w, b[k].color, '#000')}`);
+        if (typeof value === 'number') css.push('text-align:right');
+        return css.join(';');
+      };
+      const items = Object.keys(AUTOFMT).map((name) => {
+        const spec = AUTOFMT[name];
+        return { name, rows: data.map((row, r) => row.map((value, c) => {
+          const role = !spec ? {} : r === 0 ? spec.head : r === data.length - 1 ? spec.total : c === 0 && spec.first ? spec.first : spec.band && r % 2 === 0 ? Object.assign({}, spec.body, spec.band) : spec.body;
+          return { value: String(value), style: cssFor(role, value) };
+        })) };
+      });
+      reactAutoFormat = { items, parts: { ...parts } };
+      reactAutoFormatApply = (name, selectedParts) => {
+        const spec = AUTOFMT[name];
+        O.tx(w, L.N('AutoFormat'), () => {
+          for (let r = rg.r1; r <= rg.r2; r++) for (let c = rg.c1; c <= rg.c2; c++) {
+            const cl = s.get(r, c) || { v: null };
+            const isTotal = r === rg.r2 && rg.r2 > rg.r1 + 1 && /total/i.test(String(s.val(r, rg.c1) || ''));
+            const role = !spec ? null : r === rg.r1 ? spec.head : isTotal ? spec.total : c === rg.c1 && spec.first ? spec.first : spec.band && (r - rg.r1) % 2 === 0 ? Object.assign({}, spec.body, spec.band) : spec.body;
+            const d = {};
+            if (selectedParts.font) d.font = role && role.font ? Object.assign({ b: undefined, i: undefined, color: undefined }, role.font) : { b: undefined, i: undefined, color: undefined };
+            if (selectedParts.fill) d.fill = role && role.fill ? role.fill : null;
+            if (selectedParts.border) d.border = role && role.border ? Object.assign({ t: null, b: null, l: null, r: null }, role.border) : { t: null, b: null, l: null, r: null };
+            if (selectedParts.nf && role && role.nf && typeof s.val(r, c) === 'number') d.nf = role.nf;
+            if (selectedParts.align && r === rg.r1 && c > rg.c1 && role) d.align = { h: 'center' };
+            const ns = w.styles.derive(cl.s || 0, d); if (ns !== (cl.s || 0)) O.put(s, r, c, Object.assign({}, cl, { s: ns }));
+          }
+          if (selectedParts.size) O.autofitCols(s, Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => rg.c1 + i), { r1: rg.r1, r2: rg.r2 });
+        });
+      };
+      L.bus.emit('excelx-auto-format-dialog');
+      return;
+    }
     const grid = h('div', { class: 'afmt-grid' });
     const sample = (name) => {
       const spec = AUTOFMT[name];
@@ -587,6 +981,46 @@
       const old = w.cellStyles;
       O.tx(w, L.N('Style'), () => { w.cellStyles = list; w.undo.op(() => { w.cellStyles = old; }, () => { w.cellStyles = list; }); });
     };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const catalog = (n, includes) => {
+        const st = styleOf(n) || cur, fo = st.font || {}, bi = fo.b && fo.i ? L.t('Bold Italic') : fo.b ? L.t('Bold') : fo.i ? L.t('Italic') : '';
+        const labels = [['nf', L.N('Number'), st.nf || 'General'], ['align', L.N('Alignment'), st.align && st.align.h ? L.t(ALIGN_NAMES[st.align.h] || st.align.h) : L.t('General, Bottom Aligned')], ['font', L.N('Font'), `${LY.fontName(w, fo)} ${fo.sz || 10}${bi ? ' ' + bi : ''}`], ['border', L.N('Border'), st.border ? L.t('Borders') : L.t('No Borders')], ['fill', L.N('Patterns'), st.fill ? L.t('Shaded') : L.t('No Shading')], ['prot', L.N('Protection'), st.prot && st.prot.locked === false ? L.t('Unlocked') : L.t('Locked')]];
+        return { name: n, names, includes: { ...includes }, descriptions: labels.map(([key, label, value]) => ({ key, label, value })) };
+      };
+      reactStyle = catalog(name, inc);
+      reactStyleUpdate = (n) => catalog(n, inc);
+      reactStyleAction = (action, n, includes) => {
+        n = n.trim() || 'Normal';
+        if (action === 'add') { save(n, fromCell()); reactStyle = catalog(n, includes); L.bus.emit('excelx-style-dialog'); return false; }
+        if (action === 'delete') {
+          if (n === 'Normal') { ui.msg('The Normal style cannot be deleted.', { icon: 'warn' }); return false; }
+          const old = w.cellStyles, list = old.filter((c) => c.name !== n);
+          O.tx(w, L.N('Style'), () => { w.cellStyles = list; w.undo.op(() => { w.cellStyles = old; }, () => { w.cellStyles = list; }); });
+          reactStyle = catalog('Normal', includes); L.bus.emit('excelx-style-dialog'); return false;
+        }
+        if (action === 'modify') {
+          const base = styleOf(n) || cur;
+          D.formatCells(0, { style: base, title: L.t('Format Cells - {0}', n), apply: (newSt) => { if (n === 'Normal') { const old = w.styles.list[0], st = Object.freeze(Object.assign({}, newSt)); O.tx(w, 'Modify Style', () => { const set = (x) => { w.styles.map.delete(JSON.stringify(w.styles.list[0])); w.styles.list[0] = x; w.styles.map.set(JSON.stringify(x), 0); w._mdw = null; for (const s2 of w.sheets) LY.invalidate(s2); }; set(st); w.undo.op(() => set(old), () => set(st)); O.markStructural(); }); } else save(n, newSt); reactStyle = catalog(n, includes); L.bus.emit('excelx-style-dialog'); } });
+          return false;
+        }
+        let st = styleOf(n);
+        if (!w.cellStyles.some((c) => c.name === n) && BUILTIN_STYLES[n] == null) { save(n, fromCell()); st = styleOf(n) || fromCell(); }
+        O.format(s, G().ranges(), () => {
+          const d = {};
+          if (includes.nf) d.nf = st && st.nf;
+          if (includes.align) d.align = st && st.align;
+          if (includes.font) d.font = Object.assign({ b: undefined, i: undefined, u: undefined, color: undefined }, st && st.font);
+          if (includes.border) d.border = st && st.border ? Object.assign({ t: null, b: null, l: null, r: null }, st.border) : { t: null, b: null, l: null, r: null };
+          if (includes.fill) d.fill = st && st.fill;
+          if (includes.prot) d.prot = st && st.prot;
+          d.xs = n === 'Normal' ? undefined : n;
+          return d;
+        }, L.N('Style'));
+        return true;
+      };
+      L.bus.emit('excelx-style-dialog');
+      return;
+    }
     ui.dialog({ title: 'Style', width: 420, body: h('div', { class: 'col' }, ui.field('&Style name:', nameIn), dl, ui.group('Style includes', descBox)),
       buttons: [
         { label: '&Add', onClick: () => { const n = nameIn.value.trim(); if (!n) return false; save(n, fromCell()); describe(); return false; } },
@@ -627,6 +1061,11 @@
   /* ================================================================ Goal Seek */
   D.goalSeek = function () {
     const s = sh(), w = wb(), sel = G().sel();
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactGoalSeek = { stage: 'form', target: F.cellName(sel.r, sel.c, true, true), goal: '', changing: '' };
+      L.bus.emit('excelx-goal-seek-dialog');
+      return;
+    }
     const setC = refBox(F.cellName(sel.r, sel.c, true, true), 120), toV = h('input', { type: 'text', style: 'width:120px' }), byC = refBox('', 120);
     ui.dialog({ title: 'Goal Seek', width: 300, body: h('div', { class: 'col' }, ui.field('S&et cell:', setC), ui.field('To &value:', toV), ui.field('By &changing cell:', byC)),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
@@ -741,12 +1180,18 @@
     const s = sh();
     const rg = O.clip(s, G().range());
     if (rg.r2 <= rg.r1 && rg.c2 <= rg.c1) { ui.msg('Select the table range: the formula and input values must be included.', { icon: 'warn' }); return; }
+    const apply = (row, column) => D.buildDataTable(s, rg, row, column);
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactDataTable = { row: '', column: '' }; reactDataTableApply = apply;
+      L.bus.emit('excelx-data-table-dialog');
+      return;
+    }
     const rowIn = refBox('', 120), colIn = refBox('', 120);
     ui.dialog({ title: 'Table', width: 300, body: h('div', { class: 'col' }, ui.field('&Row input cell:', rowIn), ui.field('&Column input cell:', colIn)),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         const ri = rowIn.input.value.trim() ? parseRef(rowIn.input.value, true) : null, ci = colIn.input.value.trim() ? parseRef(colIn.input.value, true) : null;
         if (!ri && !ci) { ui.msg('Input cell reference is not valid.', { icon: 'warn' }); return false; }
-        tryRun(() => D.buildDataTable(s, rg, ri, ci));
+        tryRun(() => apply(ri, ci));
       } }, { label: 'Cancel' }] });
   };
   /** fill a one- or two-variable data table (values; the TABLE() master keeps it recalculable on save) */
@@ -780,39 +1225,43 @@
     const s = sh(), w = wb(), sel = G().sel();
     let fn = 'SUM', top = false, left = false;
     const refs = (w._consRefs || []).slice();
+    const apply = (state) => {
+      w._consRefs = state.refs.slice();
+      const srcs = state.refs.map((t) => parseRef(t)).filter(Boolean);
+      if (!srcs.length) return;
+      const rowKeys = [], colKeys = [], data = new Map();
+      for (const p of srcs) {
+        const r0 = p.r1 + (state.top ? 1 : 0), c0 = p.c1 + (state.left ? 1 : 0);
+        for (let r = r0; r <= Math.min(p.r2, p.sheet.maxR); r++) for (let c = c0; c <= Math.min(p.c2, p.sheet.maxC); c++) {
+          const rk = state.left ? String(L.csv.cellText(p.sheet, r, p.c1)) : String(r - r0);
+          const ck = state.top ? String(L.csv.cellText(p.sheet, p.r1, c)) : String(c - c0);
+          if (!rowKeys.includes(rk)) rowKeys.push(rk);
+          if (!colKeys.includes(ck)) colKeys.push(ck);
+          const k = rk + '\u0001' + ck, value = val(p.sheet, r, c);
+          if (!data.has(k)) data.set(k, []);
+          data.get(k).push(value);
+        }
+      }
+      const agg = (values) => { const nums = values.filter((x) => typeof x === 'number'); switch (state.fn) { case 'COUNT': return values.filter((x) => x != null && x !== '').length; case 'COUNTNUMS': return nums.length; case 'AVERAGE': return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0; case 'MAX': return nums.length ? Math.max(...nums) : 0; case 'MIN': return nums.length ? Math.min(...nums) : 0; case 'PRODUCT': return nums.reduce((a, b) => a * b, 1); case 'STDEV': case 'STDEVP': case 'VAR': case 'VARP': { const mean = nums.reduce((a, b) => a + b, 0) / (nums.length || 1), sum = nums.reduce((a, b) => a + (b - mean) * (b - mean), 0), variance = sum / Math.max(1, state.fn.endsWith('P') ? nums.length : nums.length - 1); return /STDEV/.test(state.fn) ? Math.sqrt(variance) : variance; } default: return nums.reduce((a, b) => a + b, 0); } };
+      O.tx(w, L.N('Consolidate'), () => {
+        const r0 = sel.r + (state.top ? 1 : 0), c0 = sel.c + (state.left ? 1 : 0);
+        if (state.top) colKeys.forEach((key, j) => O.put(s, sel.r, c0 + j, { v: key }));
+        if (state.left) rowKeys.forEach((key, i) => O.put(s, r0 + i, sel.c, { v: key }));
+        rowKeys.forEach((rk, i) => colKeys.forEach((ck, j) => { const values = data.get(rk + '\u0001' + ck); if (values) O.put(s, r0 + i, c0 + j, { v: agg(values) }); }));
+      });
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactConsolidate = { functions: CONS_FN.map(([value, label]) => ({ value, label })), refs: refs.slice(), fn, top, left };
+      reactConsolidateApply = apply;
+      L.bus.emit('excelx-consolidate-dialog'); return;
+    }
     const refIn = refBox('', 220);
     const box = h('div');
     let cur = -1;
     const draw = () => { box.textContent = ''; box.appendChild(D.list(refs.map((x, i) => [i, x]), cur >= 0 ? cur : null, (i) => { cur = i; refIn.input.value = refs[i]; }, { class: 'lbox short', translate: 'no' })); };
     draw();
     ui.dialog({ title: 'Consolidate', width: 380, body: h('div', { class: 'col' }, ui.field('&Function:', ui.select(CONS_FN, fn, (v) => { fn = v; })), ui.field('&Reference:', refIn), h('div', { class: 'row', style: 'gap:6px' }, ui.button('&Add', () => { const t = refIn.input.value.trim(); if (!parseRef(t)) { ui.msg('Reference is not valid.', { icon: 'warn' }); return; } if (!refs.includes(t)) refs.push(t); draw(); }), ui.button('&Delete', () => { if (cur >= 0) { refs.splice(cur, 1); cur = -1; draw(); } })), h('label', { text: 'All r&eferences:' }), box, ui.group('Use labels in', ui.check('&Top row', false, (v) => { top = v; }), ui.check('&Left column', false, (v) => { left = v; }))),
-      buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => {
-        w._consRefs = refs.slice();
-        const srcs = refs.map((t) => parseRef(t)).filter(Boolean);
-        if (!srcs.length) return;
-        const rowKeys = [], colKeys = [];
-        const data = new Map();
-        for (const p of srcs) {
-          const r0 = p.r1 + (top ? 1 : 0), c0 = p.c1 + (left ? 1 : 0);
-          for (let r = r0; r <= Math.min(p.r2, p.sheet.maxR); r++) for (let c = c0; c <= Math.min(p.c2, p.sheet.maxC); c++) {
-            const rk = left ? String(L.csv.cellText(p.sheet, r, p.c1)) : String(r - r0);
-            const ck = top ? String(L.csv.cellText(p.sheet, p.r1, c)) : String(c - c0);
-            if (!rowKeys.includes(rk)) rowKeys.push(rk);
-            if (!colKeys.includes(ck)) colKeys.push(ck);
-            const v = val(p.sheet, r, c);
-            const k = rk + '\u0001' + ck;
-            if (!data.has(k)) data.set(k, []);
-            data.get(k).push(v);
-          }
-        }
-        const agg = (vals) => { const n = vals.filter((x) => typeof x === 'number'); switch (fn) { case 'COUNT': return vals.filter((x) => x != null && x !== '').length; case 'COUNTNUMS': return n.length; case 'AVERAGE': return n.length ? n.reduce((a, b) => a + b, 0) / n.length : 0; case 'MAX': return n.length ? Math.max(...n) : 0; case 'MIN': return n.length ? Math.min(...n) : 0; case 'PRODUCT': return n.reduce((a, b) => a * b, 1); case 'STDEV': case 'STDEVP': case 'VAR': case 'VARP': { const m = n.reduce((a, b) => a + b, 0) / (n.length || 1); const ss = n.reduce((a, b) => a + (b - m) * (b - m), 0); const vv = ss / Math.max(1, fn.endsWith('P') ? n.length : n.length - 1); return /STDEV/.test(fn) ? Math.sqrt(vv) : vv; } default: return n.reduce((a, b) => a + b, 0); } };
-        O.tx(w, L.N('Consolidate'), () => {
-          const r0 = sel.r + (top ? 1 : 0), c0 = sel.c + (left ? 1 : 0);
-          if (top) colKeys.forEach((k, j) => O.put(s, sel.r, c0 + j, { v: k }));
-          if (left) rowKeys.forEach((k, i) => O.put(s, r0 + i, sel.c, { v: k }));
-          rowKeys.forEach((rk, i) => colKeys.forEach((ck, j) => { const vals = data.get(rk + '\u0001' + ck); if (vals) O.put(s, r0 + i, c0 + j, { v: agg(vals) }); }));
-        });
-      }) }, { label: 'Close' }] });
+      buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => apply({ refs, fn, top, left })) }, { label: 'Close' }] });
   };
 
   /* ================================================================ PivotTable report (static summary) */
@@ -824,6 +1273,11 @@
     const cols = Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => [rg.c1 + i, colLabel(s, rg, true, rg.c1 + i)]);
     const numericCol = cols.find(([c]) => typeof val(s, rg.r1 + 1, c) === 'number');
     const st = { row: cols[0][0], col: '', data: numericCol ? numericCol[0] : cols[cols.length - 1][0], fn: numericCol ? 'sum' : 'count', page: '', pageVal: '', where: 'new' };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactPivot = { reference: F.quoteSheet(s.name) + '!' + F.absRangeName(rg), columns: cols.map(([value, label]) => ({ value, label })), functions: PIV_FN.map(([value, label]) => ({ value, label })), initial: { ...st } };
+      reactPivotApply = (p, state) => D.buildPivot(p, state);
+      L.bus.emit('excelx-pivot-dialog'); return;
+    }
     const src = refBox(F.quoteSheet(s.name) + '!' + F.absRangeName(rg), 220);
     const opt = (k, none) => ui.select((none ? [['', L.t('(none)')]] : []).concat(cols), st[k], (v) => { st[k] = v === '' ? '' : +v; }, { translate: 'no' });
     ui.dialog({ title: 'PivotTable and PivotChart Wizard', width: 420, body: h('div', { class: 'col' },

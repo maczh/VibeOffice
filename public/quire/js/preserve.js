@@ -1005,11 +1005,29 @@
     if (!c || !typed(c) || c.converted) return;
     const apply = value => L.ed.edit('Content Control Value', () => P.setControlValue(c.key, value));
     if (c.type === 'checkbox') { apply(!c.checked); return; }
+    if (window.VO && VO.reactDirectHost) {
+      const selectedChoice = (c.choices || []).find(choice => c.value === choice.value || record.text === choice.text);
+      const value = c.type === 'date' ? (c.value || attr(child(child(K.parse(c.shell.xml), 'sdtPr'), 'date'), 'fullDate') || '').slice(0, 10) : selectedChoice?.value ?? c.value ?? record.text;
+      P.reactControlState = { name: c.name, type: c.type, value, choices: (c.choices || []).map(choice => ({ ...choice })) };
+      const root = L.h('div', { id: 'react-wordx-content-control-root' });
+      L.ui.dialog({
+        title: c.name, width: 340, body: root,
+        buttons: [{ label: 'OK', primary: true, onClick: () => {
+          const state = P.reactControlCatalog();
+          if (state.type === 'date' && !state.value) { root.querySelector('input')?.focus(); return false; }
+          apply(state.value);
+        } }, { label: 'Cancel' }],
+        onClose: () => { P.reactControlState = null; },
+      });
+      return;
+    }
     const input = c.type === 'dropDownList' ? L.h('select', {}, ...(c.choices || []).map(v => L.h('option', { value: v.value, selected: c.value === v.value || record.text === v.text }, v.text)))
       : L.h('input', { type: c.type === 'date' ? 'date' : 'text', value: c.type === 'date' ? (c.value || attr(child(child(K.parse(c.shell.xml), 'sdtPr'), 'date'), 'fullDate') || '').slice(0, 10) : c.value ?? record.text });
     L.ui.dialog({ title: c.name, width: 340, body: L.h('label', { class: 'col' }, 'Value:', input), buttons: [
       { label: 'OK', primary: true, onClick: () => { if (c.type === 'date' && !input.value) { input.focus(); return false; } apply(input.value); } }, { label: 'Cancel' } ] });
   };
+  P.reactControlCatalog = () => P.reactControlState ? { ...P.reactControlState } : null;
+  P.reactControlSetValue = value => { if (P.reactControlState) P.reactControlState.value = String(value); };
   P.clipboard = function (blocks) {
     const refs = [];
     const visit = value => {

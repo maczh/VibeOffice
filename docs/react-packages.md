@@ -6,6 +6,48 @@ In direct-host Wordx mode, split-view separator dragging/navigation from a clone
 
 Selected-object resize and rotate handle pointer events are likewise delegated to the React interaction effect in direct-host mode; the existing drawing engine continues to perform geometry changes and gestures.
 
+Excelx direct-host mode binds the canvas grid's pointer, hover, double-click, wheel, context-menu, keyboard, input, composition, and clipboard events from a React effect; the grid's resize observer is created and disconnected by the same effect. The existing grid controller retains hit-testing, selection, editing, scrolling, clipboard, rendering, and drawing behavior; effect teardown removes listeners and observation when the editor unmounts. Classic standalone pages continue binding the same handlers and observer through their original bootstrap.
+
+Excelx's direct-host status bar is React-rendered from a snapshot supplied by the workbook/app engine, including mode, transient status target, calculation summary and lock/end indicators. React owns its key-state listener and AutoCalculate click/context-menu action; calculations and menu commands remain engine-backed. Classic pages retain their original status markup and listeners.
+
+Excelx direct-host file drag/drop hint and drag event lifetime are owned by a React effect. Workbook filtering/open and image insertion delegate to the existing app methods; classic pages retain their original drop handler.
+
+The Excelx Zoom dialog body is React-rendered in direct-host mode, including five presets, Fit Selection and custom percentage; confirmation calls the existing grid zoom/selection operations. The shared native modal shell handles focus and cancellation, while classic pages keep the legacy dialog body.
+
+Excelx Row Height, Column Width, and Standard Width forms share a React dialog component with the same numeric ranges and existing engine mutation callbacks; classic pages keep the legacy forms.
+
+Excelx Insert Cells, Delete Cells, Group, and Ungroup direction choices are React-rendered in direct-host mode; the original shift/whole-row/whole-column operations and Promise results remain engine-backed, and classic pages retain the native dialogs.
+
+Excelx Insert Sheet is React-rendered with Worksheet, Chart, and built-in template choices plus its General/Spreadsheet Solutions tabs; worksheet insertion, chart creation, and template sheet cloning remain in the existing workbook services.
+Excelx Unhide Sheet is React-rendered in direct-host mode with a document-data worksheet list and disabled confirmation when no hidden sheets exist; restoring and activating a sheet remains an existing workbook transaction, with the classic dialog retained outside React-host mode.
+Excelx Format Tab Color is React-rendered with the standard-color palette and No Color action; selection writes through the existing grouped-sheet transaction and the classic dialog remains available outside React-host mode.
+Excelx Move or Copy Sheet is React-rendered for open-workbook and before-sheet selection plus copy mode; sheet cloning/movement, cross-workbook cell/style transfer and optional source deletion remain in the existing workbook operations.
+Excelx Go To is React-rendered for references and the defined-name/table list; navigation and validation call the existing app API, while Go To Special continues through its current engine dialog.
+Excelx Go To Special is React-rendered for all selection kinds and formula-result type filters; the existing range-search, precedent/dependent, comparison, and selection logic remains the operation layer.
+Excelx Paste Special is React-rendered for paste types, arithmetic operations, Skip blanks, Transpose, and Paste Link; all variants dispatch to the existing clipboard paste service.
+Excelx Text to Columns is React-rendered for delimited/fixed-width modes, delimiter and qualifier settings, per-column formats, destination and live preview; parsing/conversion uses the existing CSV engine and writes through one undoable workbook transaction.
+Excelx AutoFormat's gallery, live style samples, optional number/border/font/pattern/alignment/size groups, and selected preset are React-rendered; style derivation, column autofit, and the single undoable workbook transaction remain in the engine adapter.
+Excelx's Style selector, style description/include flags, and Add/Delete/Apply actions are React-rendered; its Modify action still hands off to the existing Format Cells dialog, which remains a migration item.
+Excelx Conditional Formatting's reduced Format Cells child dialog is React-rendered across Font, Border, and Patterns tabs; the selected differential style returns through the existing conditional-rule editor callback.
+Excelx Conditional Formatting's condition list, value/formula modes, operators, thresholds, three-condition limit, format handoff, and removal controls are React-rendered; formula translation, differential-format registration, priority updates, and undo remain in the existing workbook engine.
+Excelx Fill Across Worksheets is React-rendered for All, Contents, and Formats; the selected-sheet write loop remains a single existing workbook transaction.
+Excelx Series is React-rendered for direction, linear/growth/date/autofill mode, date units, Trend, step and stop values; fill-series and autofill calculations remain in the existing engine.
+Excelx Symbol is React-rendered for font/subset selection, Unicode character grids, special-character choices, code-point feedback, and insertion; text enters the active editor through its existing insertion API.
+Excelx workbook Properties is React-rendered across Summary, Statistics, Contents, and Custom tabs; metadata and custom-property edits commit together through the undoable workbook transaction.
+Excelx Sort and nested Sort Options are React-rendered for three keys, order, headers, custom-list sorting, case sensitivity, and horizontal/vertical orientation; the selected range is sorted by the existing engine operation.
+Excelx Create List is React-rendered with a selection-derived range, range-picker handoff, and header detection/override; table creation and selection remain on the existing workbook operations.
+Excelx Advanced Filter is React-rendered for in-place/copy mode, list/criteria/destination ranges, and unique-record filtering; range parsing, filtering and result status remain backed by the existing filter service.
+Excelx Subtotals is React-rendered for grouping column, aggregate function, target columns, replacement, page breaks, summary placement, and Remove All; row insertion, outline metadata, subtotal formulas, and undo remain in the workbook operations.
+Excelx Outline Settings is React-rendered for summary-row/column direction and automatic styles; Auto Outline and the undoable workbook settings transaction remain on the existing app APIs.
+Excelx Data Table's row/column input-cell reference dialog is React-rendered; reference validation and one-/two-variable table calculation stay in the existing workbook service.
+Excelx Goal Seek's target inputs and result/status dialog are React-rendered; cell validation, iterative solving, value updates, and Cancel-to-undo behavior reuse the existing workbook APIs.
+Excelx Consolidate is React-rendered for aggregate choice, validated source-reference management, row/column labels, and deletion; the existing aggregation and destination-range transaction remains in the workbook operation.
+Excelx PivotTable and PivotChart Wizard is React-rendered for source range, row/column/data/page fields, aggregation, and output location; report materialization remains in the existing workbook builder.
+Excelx Data Form is React-rendered for record fields, New/Delete/Restore/Find navigation, Criteria filtering, and commit-on-close; search matching and cell edits continue through the existing worksheet model operations.
+Excelx Data Validation is React-rendered across Settings, Input Message, Error Alert, and IME Mode tabs, including criteria-dependent bounds and toggles; formula parsing, rule replacement, Clear All, and undo remain in the existing validation operations.
+
+The direct-host Wordx Spelling and Grammar dialog is rendered by React, including the highlighted issue context, suggestion selection, grammar toggle, language label, and proofing actions. Dictionary loading, rule evaluation, ignore/add/change/autocorrect behavior, undo, and document edits continue through the existing proofing and document services; the classic page keeps its original dialog.
+
 ## Wordx source-module disposition
 
 This is an ownership inventory, not a claim that migration is complete. All 34 files under `public/quire/js/` still load through the compatibility runtime. Document, format, and layout services may remain imperative; every UI and interaction surface must move to React. “Partial” means some React ownership exists while legacy UI/coordination remains.
@@ -18,20 +60,20 @@ This is an ownership inventory, not a claim that migration is complete. All 34 f
 | `dialogs.js`, `dialogs2.js`, `dialogs3.js` | React dialog portals in `task-content.tsx`; partial, unmigrated bodies/orchestration remain classic. |
 | `dmodel.js`, `ops.js` | Wordx document-model/operation services; imperative model, no UI ownership. |
 | `docx-read.js`, `docx-write.js`, `htmlio.js`, `markdown.js`, `mdio.js`, `omml.js`, `rtf.js` | Wordx format import/export services; imperative, no UI ownership. |
-| `drawing.js` | Wordx drawing model/mutation service; partial, React owns selected dialogs/controls. |
+| `drawing.js` | Wordx drawing model/mutation service; direct-host resize/rotate gesture ownership is React, with drawing geometry/mutation engine-backed. |
 | `drawtool.js` | Wordx interaction adapter and React controls; partial, legacy gesture/selection handling remains. |
 | `editor.js` | Wordx editor adapter and React chrome; partial, editing engine remains imperative. |
 | `fields.js` | Wordx field service plus React field dialogs; partial, field operations remain imperative. |
 | `find.js` | Wordx matcher/highlight service plus React Find/Replace/Go To and formatting/special menus; partial. |
 | `layout.js`, `portions.js` | Wordx pagination, shaping and measurement services; imperative, no UI ownership. |
-| `mailmerge.js` | Wordx merge service plus React wizard in `task-content.tsx`; partial. |
+| `mailmerge.js` | Wordx merge/source service plus React wizard and all direct-host dialog bodies; source parsing and merge operations remain imperative. |
 | `outline.js` | Wordx outline/navigation adapter plus React interaction bridge; partial, calculations/navigation remain services. |
 | `panes.js` | Wordx pane catalog/adapters plus React task bodies; partial, legacy renderers remain as fallback. |
 | `preserve.js`, `preserve-drawing.js` | Wordx OOXML preservation services; imperative, no UI ownership. |
 | `render.js` | Wordx document-content rendering service; imperative, React owns surrounding editor chrome. |
-| `review.js` | Wordx review service plus React Reviewing Pane; partial, model/operations remain imperative. |
+| `review.js` | Wordx review service plus React Reviewing Pane, reviewer/comment dialogs, and direct-host balloon interaction; change/comment operations remain imperative. |
 | `rulers.js` | Wordx geometry/paint/drag services plus React surfaces; partial, geometry and painting remain services. |
-| `spell.js` | Wordx proofing/highlight service plus React settings/dialogs; partial, proofing engine remains imperative. |
+| `spell.js` | Wordx proofing/highlight service plus React settings and direct-host Spelling and Grammar dialog; partial, proofing engine remains imperative. |
 | `tables.js` | Wordx table model/mutation service plus React table dialogs; partial. |
 | `templates.js` | Wordx template catalog/creation service plus React picker/dialogs; partial. |
 
@@ -96,6 +138,8 @@ The Wordx Find and Replace search/replacement input rows (including Enter-to-fin
 The Wordx Mail Merge Recipients dialog table and selection controls are React-rendered from the existing recipient catalog. Numeric-aware column sorting and include-all/per-recipient checkboxes update the engine's recipient selection set; source parsing and merge behavior remain service operations. The New Address List dialog fields, entry navigation, add/delete controls, and count are also React-rendered; committing still writes through the existing address-list source service. Insert Merge Field choices are rendered by React, with Insert and double-click continuing through the existing field-insertion transaction. Classic Wordx pages keep all three original dialog bodies.
 
 The Wordx Reviewers dialog is React-rendered from the review engine's author/color catalog, including its empty state; reviewer identity and color assignment remain engine services. Edit Comment's textarea is also React-controlled and sends the same text into the existing undo-aware comment mutation; classic pages retain the native textarea body.
+
+The Wordx typed-content-control Value dialog is React-rendered for date, text/combo, and dropdown controls. Choice catalogs and values continue through the OOXML preservation service, which keeps the same date validation and undo-aware value mutation.
 
 In Wordx direct-host mode, the Getting Started pane (without Recent Files), New Document task-pane body, Help body, Basic File Search pane, Clip Art pane, Office Clipboard pane, Styles and Formatting pane, Reveal Formatting pane, Protect Document pane, Research pane, six-step Mail Merge wizard, task-pane navigation header, Reviewing Pane, Document Map, page-thumbnail rail, status bar, Go To tab and Find/Replace controls/options, Sort and Sort Text dialog body, Table AutoFormat style list/preview/special-format controls, Tabs, Change Case, Text Direction, and Theme dialog bodies/previews, Bookmark dialog body, Insert Object dialog body, Equation dialog body, Break dialog body, Date and Time dialog body, Page Numbers and Page Number Format dialog bodies, Insert Cells, Delete Cells and Split Cells dialog bodies, Insert Table, Convert Text to Table, Convert Table to Text and Formula dialog bodies, Reading Layout toolbar, and Print Preview toolbar are React-rendered. Creation, open/help/style/mail-merge navigation, search selection, artwork insertion, clipboard history, paste, Paste All, Clear All, applying formatting, opening formatting dialogs, protection confirmation, thesaurus lookup, document search, merge actions, pane Back/Forward/Home/menu/Close, review selection/comment editing, heading navigation, thumbnail navigation, Go To navigation, bookmark creation/deletion/selection, existing-file selection, equation symbols and insertion, page/column/wrapping and section-break actions, date-format preferences and field/text insertion, page-number position/alignment/first-page controls, numbering format/chapter/start settings, cell insertion/deletion/splitting directions, table dimension/AutoFit/style and remembered-size handling, text/table separators and conversion options, sorting paragraphs/table rows, table style preview and application, adding/removing/alignment/leader/default-spacing of tab stops, case transformation, text direction for text boxes/table cells, applying document themes, formula functions/bookmark references/number formats and field insertion, status actions, Reading Layout commands, and preview controls delegate to existing editor APIs. Page artwork remains engine-generated and is cloned as non-editable thumbnail content. Classic Wordx pages retain their original renderers.
 

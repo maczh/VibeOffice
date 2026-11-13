@@ -7,6 +7,152 @@
   const { h } = L;
   const ui = L.ui;
   const D = (L.dlg = L.dlg || {});
+  let reactZoom = null;
+  let reactSize = null, reactSizeApply = null, reactShift = null, reactShiftApply = null, reactShiftResolve = null;
+  let reactInsertSheet = null, reactInsertSheetApply = null, reactUnhide = null, reactUnhideApply = null;
+  let reactTabColor = null, reactTabColorApply = null;
+  let reactMoveCopy = null, reactMoveCopyApply = null;
+  let reactGoTo = null;
+  let reactGoToSpecial = null, reactGoToSpecialApply = null;
+  let reactPasteSpecial = null;
+  let reactFillAcross = null, reactFillAcrossApply = null;
+  let reactSeries = null, reactSeriesApply = null;
+  let reactSymbol = null, reactSymbolInsert = null;
+  let reactProperties = null, reactPropertiesApply = null;
+  D.reactZoomCatalog = () => reactZoom;
+  D.reactZoomClose = () => { reactZoom = null; L.bus.emit('excelx-zoom'); };
+  D.reactSizeCatalog = () => reactSize;
+  D.reactSizeApply = (value) => {
+    if (!reactSize || !reactSizeApply) return false;
+    if (!(value >= reactSize.min && value <= reactSize.max)) { ui.msg(L.t('Enter a number between {0} and {1}.', reactSize.min, reactSize.max), { icon: 'warn' }); return false; }
+    const apply = reactSizeApply;
+    reactSize = reactSizeApply = null;
+    L.bus.emit('excelx-size-dialog');
+    tryRun(() => apply(value));
+    return true;
+  };
+  D.reactSizeClose = () => { reactSize = reactSizeApply = null; L.bus.emit('excelx-size-dialog'); };
+  D.reactShiftCatalog = () => reactShift;
+  D.reactShiftApply = (key) => {
+    if (!reactShift || !reactShiftApply || !reactShift.options.some((option) => option.value === key)) return false;
+    const apply = reactShiftApply;
+    const resolve = reactShiftResolve;
+    reactShift = reactShiftApply = null;
+    reactShiftResolve = null;
+    L.bus.emit('excelx-shift-dialog');
+    if (resolve) resolve(key); else tryRun(() => apply(key));
+    return true;
+  };
+  D.reactShiftClose = () => { const resolve = reactShiftResolve; reactShift = reactShiftApply = reactShiftResolve = null; L.bus.emit('excelx-shift-dialog'); if (resolve) resolve(null); };
+  D.reactInsertSheetCatalog = () => reactInsertSheet;
+  D.reactInsertSheetApply = (value) => {
+    if (!reactInsertSheet || !reactInsertSheetApply || !reactInsertSheet.options.some((option) => option.value === value)) return false;
+    const apply = reactInsertSheetApply;
+    reactInsertSheet = reactInsertSheetApply = null;
+    L.bus.emit('excelx-insert-sheet-dialog');
+    apply(value);
+    return true;
+  };
+  D.reactInsertSheetClose = () => { reactInsertSheet = reactInsertSheetApply = null; L.bus.emit('excelx-insert-sheet-dialog'); };
+  D.reactUnhideCatalog = () => reactUnhide;
+  D.reactUnhideApply = (index) => {
+    if (!reactUnhide || !reactUnhideApply || !reactUnhide.options.some((option) => option.index === index)) return false;
+    const apply = reactUnhideApply;
+    reactUnhide = reactUnhideApply = null;
+    L.bus.emit('excelx-unhide-sheet-dialog');
+    apply(index);
+    return true;
+  };
+  D.reactUnhideClose = () => { reactUnhide = reactUnhideApply = null; L.bus.emit('excelx-unhide-sheet-dialog'); };
+  D.reactTabColorCatalog = () => reactTabColor;
+  D.reactTabColorApply = (color) => {
+    if (!reactTabColor || !reactTabColorApply || (color !== null && !reactTabColor.options.some((option) => option.color === color))) return false;
+    const apply = reactTabColorApply;
+    reactTabColor = reactTabColorApply = null;
+    L.bus.emit('excelx-tab-color-dialog');
+    apply(color);
+    return true;
+  };
+  D.reactTabColorClose = () => { reactTabColor = reactTabColorApply = null; L.bus.emit('excelx-tab-color-dialog'); };
+  D.reactMoveCopyCatalog = () => reactMoveCopy;
+  D.reactMoveCopyApply = (book, before, copy) => {
+    if (!reactMoveCopy || !reactMoveCopyApply || !reactMoveCopy.books.some((item) => item.index === book) || !reactMoveCopy.books[book]) return false;
+    const target = reactMoveCopy.books[book];
+    if (!Number.isInteger(before) || before < 0 || before > target.sheets.length) return false;
+    const apply = reactMoveCopyApply;
+    reactMoveCopy = reactMoveCopyApply = null;
+    L.bus.emit('excelx-move-copy-sheet-dialog');
+    tryRun(() => apply(book, before, !!copy));
+    return true;
+  };
+  D.reactMoveCopyClose = () => { reactMoveCopy = reactMoveCopyApply = null; L.bus.emit('excelx-move-copy-sheet-dialog'); };
+  D.reactGoToCatalog = () => reactGoTo;
+  D.reactGoToApply = (reference) => {
+    if (!reactGoTo || typeof reference !== 'string') return false;
+    if (!A().goToRef(reference.trim())) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; }
+    reactGoTo = null;
+    L.bus.emit('excelx-go-to-dialog');
+    return true;
+  };
+  D.reactGoToSpecial = () => { if (!reactGoTo) return; reactGoTo = null; L.bus.emit('excelx-go-to-dialog'); D.goToSpecial(); };
+  D.reactGoToClose = () => { reactGoTo = null; L.bus.emit('excelx-go-to-dialog'); };
+  D.reactGoToSpecialCatalog = () => reactGoToSpecial;
+  D.reactGoToSpecialApply = (state) => {
+    if (!reactGoToSpecial || !reactGoToSpecialApply || !state || !['comments', 'constants', 'formulas', 'blanks', 'region', 'array', 'objects', 'rowdiff', 'coldiff', 'prec', 'dep', 'last', 'visible', 'cf', 'dv'].includes(state.kind)) return false;
+    const apply = reactGoToSpecialApply;
+    reactGoToSpecial = reactGoToSpecialApply = null;
+    L.bus.emit('excelx-go-to-special-dialog');
+    apply(state);
+    return true;
+  };
+  D.reactGoToSpecialClose = () => { reactGoToSpecial = reactGoToSpecialApply = null; L.bus.emit('excelx-go-to-special-dialog'); };
+  D.reactPasteSpecialCatalog = () => reactPasteSpecial;
+  D.reactPasteSpecialApply = (state, link = false) => {
+    if (!reactPasteSpecial || !state || !['all', 'formulas', 'values', 'formats', 'comments', 'validation', 'noBorders', 'colWidths', 'formulasNF', 'valuesNF'].includes(state.what) || !['none', 'add', 'sub', 'mul', 'div'].includes(state.op)) return false;
+    const apply = link ? { link: true } : { what: state.what, op: state.op, skipBlanks: !!state.skipBlanks, transpose: !!state.transpose };
+    reactPasteSpecial = null;
+    L.bus.emit('excelx-paste-special-dialog');
+    tryRun(() => L.clip.pasteInternal(apply));
+    return true;
+  };
+  D.reactPasteSpecialClose = () => { reactPasteSpecial = null; L.bus.emit('excelx-paste-special-dialog'); };
+  D.reactFillAcrossCatalog = () => reactFillAcross;
+  D.reactFillAcrossApply = (what) => {
+    if (!reactFillAcross || !reactFillAcrossApply || !reactFillAcross.options.some((option) => option.value === what)) return false;
+    const apply = reactFillAcrossApply;
+    reactFillAcross = reactFillAcrossApply = null;
+    L.bus.emit('excelx-fill-across-dialog');
+    apply(what);
+    return true;
+  };
+  D.reactFillAcrossClose = () => { reactFillAcross = reactFillAcrossApply = null; L.bus.emit('excelx-fill-across-dialog'); };
+  D.reactSeriesCatalog = () => reactSeries;
+  D.reactSeriesApply = (state) => {
+    if (!reactSeries || !reactSeriesApply || !state || !['linear', 'growth', 'date', 'auto'].includes(state.type) || !['day', 'weekday', 'month', 'year'].includes(state.unit)) return false;
+    const apply = reactSeriesApply;
+    reactSeries = reactSeriesApply = null;
+    L.bus.emit('excelx-series-dialog');
+    apply(state);
+    return true;
+  };
+  D.reactSeriesClose = () => { reactSeries = reactSeriesApply = null; L.bus.emit('excelx-series-dialog'); };
+  D.reactSymbolCatalog = () => reactSymbol;
+  D.reactSymbolInsert = (character) => {
+    if (!reactSymbol || !reactSymbolInsert || typeof character !== 'string' || Array.from(character).length !== 1) return false;
+    reactSymbolInsert(character);
+    return true;
+  };
+  D.reactSymbolClose = () => { reactSymbol = reactSymbolInsert = null; L.bus.emit('excelx-symbol-dialog'); };
+  D.reactPropertiesCatalog = () => reactProperties;
+  D.reactPropertiesApply = (summary, custom) => {
+    if (!reactProperties || !reactPropertiesApply || !summary || !Array.isArray(custom)) return false;
+    const apply = reactPropertiesApply;
+    reactProperties = reactPropertiesApply = null;
+    L.bus.emit('excelx-properties-dialog');
+    apply(summary, custom);
+    return true;
+  };
+  D.reactPropertiesClose = () => { reactProperties = reactPropertiesApply = null; L.bus.emit('excelx-properties-dialog'); };
   const G = () => L.grid;
   const A = () => L.app;
   const sh = () => G().sheet();
@@ -352,30 +498,42 @@
   D.patternURL = patternURL;
 
   /* ================================================================ rows, columns, cells */
-  const sizeDialog = (title, label, value, min, max, apply) => {
+  const sizeDialog = (title, label, value, min, max, apply, kind) => {
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactSize = { title, label, value: String(value), min, max, kind };
+      reactSizeApply = apply;
+      L.bus.emit('excelx-size-dialog');
+      return;
+    }
     const inp = h('input', { type: 'text', value: String(value), style: 'width:80px' });
     ui.dialog({ title, width: 260, body: ui.field(label, inp), buttons: [{ label: 'OK', primary: true, onClick: () => { const v = num(inp.value, NaN); if (!(v >= min && v <= max)) { ui.msg(L.t('Enter a number between {0} and {1}.', min, max), { icon: 'warn' }); return false; } tryRun(() => apply(v)); } }, { label: 'Cancel' }] });
   };
   D.rowHeight = function () {
     const s = sh(), rows = A().selRows();
     const pts = rows.map((r) => M.rowPt(s, r));
-    sizeDialog('Row Height', 'Row &height:', pts.every((p) => p === pts[0]) ? pts[0] : '', 0, 409, (v) => O.setRowHeight(s, rows, v));
+    sizeDialog('Row Height', 'Row &height:', pts.every((p) => p === pts[0]) ? pts[0] : '', 0, 409, (v) => O.setRowHeight(s, rows, v), 'row-height');
   };
   D.colWidth = function () {
     const s = sh(), cols = A().selCols();
     const mdw = M.mdw(s.wb);
     const ch = cols.map((c) => M.pxToChars(M.colPx(s, c), mdw));
-    sizeDialog('Column Width', '&Column width:', ch.every((x) => x === ch[0]) ? ch[0] : '', 0, 255, (v) => O.setColWidth(s, cols, v === 0 ? 0 : M.pxToWidth(M.charsToPx(v, mdw), mdw)));
+    sizeDialog('Column Width', '&Column width:', ch.every((x) => x === ch[0]) ? ch[0] : '', 0, 255, (v) => O.setColWidth(s, cols, v === 0 ? 0 : M.pxToWidth(M.charsToPx(v, mdw), mdw)), 'column-width');
   };
   D.standardWidth = function () {
     const s = sh(), mdw = M.mdw(s.wb);
     sizeDialog('Standard Width', '&Standard column width:', M.pxToChars(M.defaultColPx(s), mdw), 0, 255, (v) => {
       const old = { d: s.defColW, b: s.baseColW };
       O.tx(s.wb, 'Standard Width', () => { s.defColW = M.pxToWidth(M.charsToPx(v, mdw), mdw); s.baseColW = Math.round(v); LY.invalidate(s); s.wb.undo.op(() => { s.defColW = old.d; s.baseColW = old.b; LY.invalidate(s); }, () => { s.defColW = M.pxToWidth(M.charsToPx(v, mdw), mdw); s.baseColW = Math.round(v); LY.invalidate(s); }); });
-    });
+    }, 'standard-width');
   };
   const shiftDialog = (title, items, apply, def) => {
     let pick = def || items[0][0];
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactShift = { title, selected: pick, options: items.map(([value, label]) => ({ value, label })) };
+      reactShiftApply = apply;
+      L.bus.emit('excelx-shift-dialog');
+      return;
+    }
     const radios = items.map(([k, label]) => ui.radio('shift', label, k === pick, () => { pick = k; }));
     ui.dialog({ title, width: 240, body: ui.group(title.replace(/\.\.\.$/, ''), ...radios), buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => apply(pick)) }, { label: 'Cancel' }] });
   };
@@ -394,6 +552,14 @@
     });
   };
   D.groupRowsCols = function (d) {
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      return new Promise((resolve) => {
+        reactShift = { title: d > 0 ? 'Group' : 'Ungroup', selected: 'r', options: [['r', '&Rows'], ['c', '&Columns']].map(([value, label]) => ({ value, label })) };
+        reactShiftApply = (key) => key;
+        reactShiftResolve = resolve;
+        L.bus.emit('excelx-shift-dialog');
+      });
+    }
     return new Promise((res) => {
       let pick = 'r';
       ui.dialog({ title: d > 0 ? 'Group' : 'Ungroup', width: 220, body: ui.group(d > 0 ? 'Group' : 'Ungroup', ui.radio('grp', '&Rows', true, () => { pick = 'r'; }), ui.radio('grp', '&Columns', false, () => { pick = 'c'; })), buttons: [{ label: 'OK', primary: true, onClick: () => res(pick) }, { label: 'Cancel', onClick: () => res(null) }] }).done.then(() => res(null));
@@ -403,11 +569,7 @@
   /* ================================================================ sheets */
   D.insertSheetDlg = function () {
     const items = [['ws', L.N('Worksheet')], ['chart', L.N('Chart')]].concat(Object.keys(L.panes.TEMPLATES).map((k) => ['tpl:' + k, L.panes.TEMPLATES[k].name]));
-    let pick = 'ws';
-    const lb = list(items, 'ws', (v) => { pick = v; });
-    const d = ui.dialog({ title: 'Insert', width: 360, body: ui.tabs([{ label: 'General', body: h('div', { class: 'col' }, lb) }, { label: 'Spreadsheet Solutions', body: h('div', { class: 'tp-note', text: 'Templates are listed on the General tab.' }) }]), buttons: [{ label: 'OK', primary: true, onClick: () => go() }, { label: 'Cancel' }] });
-    lb.ondbl = () => { d.close(0); go(); };
-    function go() {
+    function go(pick) {
       if (pick === 'ws') A().insertSheet();
       else if (pick === 'chart') L.chartWizard.open({ sheet: true });
       else {
@@ -429,41 +591,64 @@
         });
       }
     }
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactInsertSheet = { options: items.map(([value, label]) => ({ value, label })) };
+      reactInsertSheetApply = go;
+      L.bus.emit('excelx-insert-sheet-dialog');
+      return;
+    }
+    let pick = 'ws';
+    const lb = list(items, 'ws', (v) => { pick = v; });
+    const d = ui.dialog({ title: 'Insert', width: 360, body: ui.tabs([{ label: 'General', body: h('div', { class: 'col' }, lb) }, { label: 'Spreadsheet Solutions', body: h('div', { class: 'tp-note', text: 'Templates are listed on the General tab.' }) }]), buttons: [{ label: 'OK', primary: true, onClick: () => go(pick) }, { label: 'Cancel' }] });
+    lb.ondbl = () => { d.close(0); go(pick); };
   };
   D.moveCopySheet = function () {
     const w = wb();
     const sheets = A().selectedSheets();
-    const books = A().books.map((b, i) => [i, b.name]);
-    let book = A().cur, before = w.sheets.indexOf(sheets[0]) + 1, copy = false;
-    const lb = h('div');
-    const drawList = () => { lb.textContent = ''; const tw = A().books[book].wb; lb.appendChild(list(tw.sheets.map((s, i) => [i, s.name]).concat([[tw.sheets.length, L.t('(move to end)')]]), Math.min(before, tw.sheets.length), (v) => { before = v; }, { translate: 'no' })); };
-    drawList();
-    ui.dialog({ title: 'Move or Copy', width: 320, body: h('div', { class: 'col' }, h('div', { text: 'Move selected sheets' }), ui.field('&To book:', ui.select(books, book, (v) => { book = +v; before = A().books[book].wb.sheets.length; drawList(); }, { translate: 'no' })), h('label', { text: '&Before sheet:' }), lb, ui.check('&Create a copy', false, (v) => { copy = v; })),
-      buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => {
-        const tw = A().books[book].wb;
-        if (tw === w) {
-          let at = before;
-          for (const s of sheets) { if (copy) { const c = O.copySheet(w, s, at); at = w.sheets.indexOf(c) + 1; w.active = w.sheets.indexOf(c); } else { O.moveSheet(w, s, at); at = w.sheets.indexOf(s) + 1; } }
-        } else {
-          /* another open workbook: copy the cells, styles and settings across */
-          for (const s of sheets) {
-            const ns = O.addSheet(tw, tw.sheetByName(s.name) ? tw.nextSheetName(s.name) : s.name, before);
-            const remap = new Map();
-            const sid = (i) => { if (!i) return i; if (!remap.has(i)) remap.set(i, tw.styles.add(JSON.parse(JSON.stringify(w.styles.get(i))))); return remap.get(i); };
-            s.rows.forEach((row, r) => { if (row) { const nr = ns.rowObj(r); Object.assign(nr, row, { cells: [] }); if (row.s) nr.s = sid(row.s); row.cells.forEach((cl, c) => { if (cl) { const n = Object.assign({}, cl, { s: sid(cl.s), _gnode: null }); if (n.f != null) n.dirty = true; ns.put(r, c, n); } }); } });
-            ns.cols = s.cols.map((x) => (x ? Object.assign({}, x, x.s ? { s: sid(x.s) } : {}) : x));
-            ns.merges = s.merges.map((m) => Object.assign({}, m));
-            ns.print = JSON.parse(JSON.stringify(s.print)); ns.view = JSON.parse(JSON.stringify(s.view)); ns.tabColor = s.tabColor;
-            O.recalc(tw, null, true);
-            if (!copy) O.deleteSheet(w, s);
-          }
+    const selectedBefore = w.sheets.indexOf(sheets[0]) + 1;
+    const books = A().books.map((book, index) => ({ index, name: book.name, sheets: book.wb.sheets.map((sheet) => sheet.name) }));
+    const apply = (book, before, copy) => {
+      const tw = A().books[book].wb;
+      if (tw === w) {
+        let at = before;
+        for (const sheet of sheets) { if (copy) { const created = O.copySheet(w, sheet, at); at = w.sheets.indexOf(created) + 1; w.active = w.sheets.indexOf(created); } else { O.moveSheet(w, sheet, at); at = w.sheets.indexOf(sheet) + 1; } }
+      } else {
+        /* another open workbook: copy the cells, styles and settings across */
+        for (const sheet of sheets) {
+          const created = O.addSheet(tw, tw.sheetByName(sheet.name) ? tw.nextSheetName(sheet.name) : sheet.name, before);
+          const remap = new Map();
+          const sid = (i) => { if (!i) return i; if (!remap.has(i)) remap.set(i, tw.styles.add(JSON.parse(JSON.stringify(w.styles.get(i))))); return remap.get(i); };
+          sheet.rows.forEach((row, r) => { if (row) { const nr = created.rowObj(r); Object.assign(nr, row, { cells: [] }); if (row.s) nr.s = sid(row.s); row.cells.forEach((cl, c) => { if (cl) { const n = Object.assign({}, cl, { s: sid(cl.s), _gnode: null }); if (n.f != null) n.dirty = true; created.put(r, c, n); } }); } });
+          created.cols = sheet.cols.map((x) => (x ? Object.assign({}, x, x.s ? { s: sid(x.s) } : {}) : x));
+          created.merges = sheet.merges.map((m) => Object.assign({}, m));
+          created.print = JSON.parse(JSON.stringify(sheet.print)); created.view = JSON.parse(JSON.stringify(sheet.view)); created.tabColor = sheet.tabColor;
+          O.recalc(tw, null, true);
+          if (!copy) O.deleteSheet(w, sheet);
         }
-        A().renderTabs();
-      }) }, { label: 'Cancel' }] });
+      }
+      A().renderTabs();
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactMoveCopy = { books, book: A().cur, before: Math.min(selectedBefore, w.sheets.length) };
+      reactMoveCopyApply = apply;
+      L.bus.emit('excelx-move-copy-sheet-dialog');
+      return;
+    }
+    let book = A().cur, before = selectedBefore, copy = false;
+    const lb = h('div');
+    const drawList = () => { lb.textContent = ''; const tw = A().books[book].wb; lb.appendChild(list(tw.sheets.map((sheet, i) => [i, sheet.name]).concat([[tw.sheets.length, L.t('(move to end)')]]), Math.min(before, tw.sheets.length), (v) => { before = v; }, { translate: 'no' })); };
+    drawList();
+    ui.dialog({ title: 'Move or Copy', width: 320, body: h('div', { class: 'col' }, h('div', { text: 'Move selected sheets' }), ui.field('&To book:', ui.select(books.map(({ index, name }) => [index, name]), book, (v) => { book = +v; before = A().books[book].wb.sheets.length; drawList(); }, { translate: 'no' })), h('label', { text: '&Before sheet:' }), lb, ui.check('&Create a copy', false, (v) => { copy = v; })), buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => apply(book, before, copy)) }, { label: 'Cancel' }] });
   };
   D.unhideSheet = function () {
     const w = wb();
     const hidden = w.sheets.map((s, i) => [i, s]).filter(([, s]) => s.state === 'hidden');
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactUnhide = { options: hidden.map(([index, sheet]) => ({ index, label: sheet.name })), selected: hidden.length ? hidden[0][0] : null };
+      reactUnhideApply = (index) => { tryRun(() => { O.sheetProp(w, w.sheets[index], 'state', 'visible', 'Unhide Sheet'); w.active = index; A().renderTabs(); }); };
+      L.bus.emit('excelx-unhide-sheet-dialog');
+      return;
+    }
     const lb = list(hidden.map(([i, s]) => [i, s.name]), hidden.length ? hidden[0][0] : null, null, { translate: 'no' });
     const d = ui.dialog({ title: 'Unhide', width: 280, body: h('div', { class: 'col' }, h('label', { text: '&Unhide sheet:' }), lb), buttons: [{ label: 'OK', primary: true, onClick: () => go() }, { label: 'Cancel' }] });
     lb.ondbl = () => { d.close(0); go(); };
@@ -472,13 +657,20 @@
   D.tabColor = function () {
     const w = wb(), sheets = A().selectedSheets();
     let pick = sheets[0].tabColor ? M.colorHex(w, sheets[0].tabColor) : null;
+    const apply = (color) => tryRun(() => { O.tx(w, 'Tab Color', () => { for (const s of sheets) O.sheetProp(w, s, 'tabColor', color ? M.rgb(color) : null); }); A().renderTabs(); });
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactTabColor = { options: L.color.STANDARD.map((color) => ({ color, label: ui.colorName(color) })), selected: pick };
+      reactTabColorApply = apply;
+      L.bus.emit('excelx-tab-color-dialog');
+      return;
+    }
     const grid = h('div', { class: 'cp-grid' });
     const none = h('button', { type: 'button', class: 'cp-wide', text: 'No Color' });
     const mark = () => { L.$$('.cp-sw', grid).forEach((b) => b.classList.toggle('on', b.dataset.c === pick)); none.classList.toggle('on', !pick); };
     none.addEventListener('click', () => { pick = null; mark(); });
     for (const c of L.color.STANDARD) { const b = h('button', { type: 'button', class: 'cp-sw', style: `background:${c}`, 'data-tip': ui.colorName(c), 'aria-label': ui.colorName(c) }); b.dataset.c = c; b.addEventListener('click', () => { pick = c; mark(); }); grid.appendChild(b); }
     mark();
-    ui.dialog({ title: 'Format Tab Color', width: 260, body: h('div', { class: 'col' }, ui.group('Tab Color', none, grid)), buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => { O.tx(w, 'Tab Color', () => { for (const s of sheets) O.sheetProp(w, s, 'tabColor', pick ? M.rgb(pick) : null); }); A().renderTabs(); }) }, { label: 'Cancel' }] });
+    ui.dialog({ title: 'Format Tab Color', width: 260, body: h('div', { class: 'col' }, ui.group('Tab Color', none, grid)), buttons: [{ label: 'OK', primary: true, onClick: () => apply(pick) }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Find and Replace */
@@ -550,20 +742,23 @@
   D.goTo = function () {
     const w = wb();
     const names = w.names.filter((n) => !n.hidden && !/^_xlnm\./i.test(n.name) && (n.scope == null || n.scope === w.active)).map((n) => n.name).concat(w.tables.map((t) => t.name)).concat(A().lastGoTo || []);
+    const options = Array.from(new Set(names));
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactGoTo = { options };
+      L.bus.emit('excelx-go-to-dialog');
+      return;
+    }
     const ref = h('input', { type: 'text', style: 'width:100%' });
-    const lb = list(Array.from(new Set(names)), null, (v) => { ref.value = v; }, { translate: 'no' });
+    const lb = list(options, null, (v) => { ref.value = v; }, { translate: 'no' });
     const d = ui.dialog({ title: 'Go To', width: 320, body: h('div', { class: 'col' }, h('label', { text: 'Go to:' }), lb, ui.field('&Reference:', ref)),
       buttons: [{ label: '&Special...', onClick: () => { d.close(null); D.goToSpecial(); return false; } }, { label: 'OK', primary: true, onClick: () => { if (!A().goToRef(ref.value.trim())) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; } } }, { label: 'Cancel' }] });
     lb.ondbl = (v) => { d.close(0); A().goToRef(v); };
   };
   D.goToSpecial = function () {
     const st = { kind: 'constants', types: { n: true, t: true, l: true, e: true }, arr: 'row' };
-    const sub = (k) => h('div', { class: 'gs-sub' }, ...[['n', L.N('Numbers')], ['t', L.N('Text')], ['l', L.N('Logicals')], ['e', L.N('Errors')]].map(([t, l]) => ui.check(l, true, (v) => { st.types[t] = v; })));
-    const r = (k, label, extra) => h('div', null, ui.radio('gts', label, k === 'constants', () => { st.kind = k; }), extra || null);
-    const body = h('div', { class: 'gs-grid' },
-      h('div', { class: 'col' }, r('comments', 'Co&mments'), r('constants', 'C&onstants'), r('formulas', '&Formulas', sub('f')), r('blanks', '&Blanks'), r('region', 'Current &region'), r('array', 'Current &array'), r('objects', 'O&bjects')),
-      h('div', { class: 'col' }, r('rowdiff', 'Ro&w differences'), r('coldiff', 'Col&umn differences'), r('prec', '&Precedents'), r('dep', '&Dependents'), r('last', 'La&st cell'), r('visible', 'Visible cells onl&y'), r('cf', 'Condi&tional formats'), r('dv', 'Data &validation')));
-    ui.dialog({ title: 'Go To Special', width: 400, body, buttons: [{ label: 'OK', primary: true, onClick: () => {
+    const apply = (state = st) => {
+      Object.assign(st, state);
+      return tryRun(() => {
       const s = sh(), sel = G().sel();
       const scope = (() => { const rg = G().range(); const single = G().ranges().length === 1 && rg.r1 === rg.r2 && rg.c1 === rg.c2; return single ? { r1: 0, c1: 0, r2: Math.max(0, s.maxR), c2: Math.max(0, s.maxC) } : O.clip(s, rg); })();
       const out = [];
@@ -583,8 +778,8 @@
         case 'objects': if (s.drawings.length) G().selectObject(s.drawings[0]); return;
         case 'prec': case 'dep': {
           const cell = s.get(sel.r, sel.c);
-          if (st.kind === 'prec') { if (cell && cell.f != null) { const p = C.precedents(w, s, C.astOf(cell), sel.r, sel.c); for (const a of p.refs) if (a.sheet === s) out.push({ r1: a.r1, c1: a.c1, r2: a.r2, c2: a.c2 }); } }
-          else { const deps = []; w.graph.dependents(s, sel.r, sel.c, deps); for (const n of deps) if (n.sh === s) add(n.r, n.c); }
+          if (st.kind === 'prec') { if (cell && cell.f != null) { const p = C.precedents(wb(), s, C.astOf(cell), sel.r, sel.c); for (const a of p.refs) if (a.sheet === s) out.push({ r1: a.r1, c1: a.c1, r2: a.r2, c2: a.c2 }); } }
+          else { const deps = []; wb().graph.dependents(s, sel.r, sel.c, deps); for (const n of deps) if (n.sh === s) add(n.r, n.c); }
           break;
         }
         case 'rowdiff': case 'coldiff': {
@@ -598,11 +793,24 @@
       }
       if (!out.length) { ui.msg('No cells were found.', { icon: 'info' }); return false; }
       G().selectRange(out[0], { r: out[0].r1, c: out[0].c1 });
-      const s2 = G().sel();
-      s2.ranges = out.slice(0, 5000);
-      s2.active = 0;
+      const selected = G().sel();
+      selected.ranges = out.slice(0, 5000);
+      selected.active = 0;
       G().changed();
-    } }, { label: 'Cancel' }] });
+      });
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactGoToSpecial = { kind: st.kind, types: { ...st.types } };
+      reactGoToSpecialApply = apply;
+      L.bus.emit('excelx-go-to-special-dialog');
+      return;
+    }
+    const sub = (k) => h('div', { class: 'gs-sub' }, ...[['n', L.N('Numbers')], ['t', L.N('Text')], ['l', L.N('Logicals')], ['e', L.N('Errors')]].map(([t, l]) => ui.check(l, true, (v) => { st.types[t] = v; })));
+    const r = (k, label, extra) => h('div', null, ui.radio('gts', label, k === 'constants', () => { st.kind = k; }), extra || null);
+    const body = h('div', { class: 'gs-grid' },
+      h('div', { class: 'col' }, r('comments', 'Co&mments'), r('constants', 'C&onstants'), r('formulas', '&Formulas', sub('f')), r('blanks', '&Blanks'), r('region', 'Current &region'), r('array', 'Current &array'), r('objects', 'O&bjects')),
+      h('div', { class: 'col' }, r('rowdiff', 'Ro&w differences'), r('coldiff', 'Col&umn differences'), r('prec', '&Precedents'), r('dep', '&Dependents'), r('last', 'La&st cell'), r('visible', 'Visible cells onl&y'), r('cf', 'Condi&tional formats'), r('dv', 'Data &validation')));
+    ui.dialog({ title: 'Go To Special', width: 400, body, buttons: [{ label: 'OK', primary: true, onClick: () => apply() }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Paste Special */
@@ -610,6 +818,11 @@
     const st = { what: 'all', op: 'none', skipBlanks: false, transpose: false };
     const what = [['all', '&All'], ['formulas', '&Formulas'], ['values', '&Values'], ['formats', 'Forma&ts'], ['comments', '&Comments'], ['validation', 'Validatio&n'], ['noBorders', 'All e&xcept borders'], ['colWidths', 'Column &widths'], ['formulasNF', 'Formulas and number f&ormats'], ['valuesNF', 'Values and number for&mats']];
     const ops = [['none', 'N&one'], ['add', 'A&dd'], ['sub', '&Subtract'], ['mul', 'M&ultiply'], ['div', 'D&ivide']];
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactPasteSpecial = { what: what.map(([value, label]) => ({ value, label })), ops: ops.map(([value, label]) => ({ value, label })), state: { ...st } };
+      L.bus.emit('excelx-paste-special-dialog');
+      return;
+    }
     const half = (arr, name, key) => { const radios = arr.map(([k, l]) => ui.radio(name, l, k === st[key], () => { st[key] = k; })); const m = Math.ceil(radios.length / 2); return h('div', { class: 'ps-cols' }, h('div', { class: 'col' }, ...radios.slice(0, m)), h('div', { class: 'col' }, ...radios.slice(m))); };
     ui.dialog({ title: 'Paste Special', width: 400, body: h('div', { class: 'col' }, ui.group('Paste', half(what, 'ps-what', 'what')), ui.group('Operation', half(ops, 'ps-op', 'op')), h('div', { class: 'row', style: 'gap:24px' }, ui.check('Skip &blanks', false, (v) => { st.skipBlanks = v; }), ui.check('Transpos&e', false, (v) => { st.transpose = v; }))),
       buttons: [{ label: 'Paste &Link', onClick: () => tryRun(() => L.clip.pasteInternal({ link: true })) }, { label: 'OK', primary: true, onClick: () => tryRun(() => L.clip.pasteInternal(st)) }, { label: 'Cancel' }] });
@@ -621,6 +834,16 @@
     const st = { rows: rg.c2 - rg.c1 > rg.r2 - rg.r1, type: 'linear', unit: 'day', trend: false };
     const first = s.get(rg.r1, rg.c1);
     if (first && typeof first.v === 'number' && NF.isDate(LY.styleOf(s, rg.r1, rg.c1, first).nf || 'General')) st.type = 'date';
+    const apply = (state) => tryRun(() => {
+      if (state.type === 'auto') { const src = state.rows ? { r1: rg.r1, c1: rg.c1, r2: rg.r2, c2: rg.c1 } : { r1: rg.r1, c1: rg.c1, r2: rg.r1, c2: rg.c2 }; O.autoFill(s, src, rg, 'auto'); return; }
+      O.fillSeries(s, rg, { rows: state.rows, type: state.type, unit: state.unit, step: num(state.step, 1), stop: state.stop.trim() ? num(state.stop, null) : null, trend: state.trend });
+    });
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactSeries = { state: { ...st, step: '1', stop: '' }, range: { rows: rg.r2 - rg.r1 + 1, columns: rg.c2 - rg.c1 + 1 } };
+      reactSeriesApply = apply;
+      L.bus.emit('excelx-series-dialog');
+      return;
+    }
     const step = h('input', { type: 'text', value: '1', style: 'width:80px' }), stop = h('input', { type: 'text', value: '', style: 'width:80px' });
     const units = [['day', '&Day'], ['weekday', '&Weekday'], ['month', '&Month'], ['year', '&Year']].map(([k, l]) => ui.radio('ser-u', l, k === 'day', () => { st.unit = k; }));
     ui.dialog({ title: 'Series', width: 380, body: h('div', { class: 'col' },
@@ -630,15 +853,12 @@
         ui.group('Date unit', ...units)),
       ui.check('T&rend', false, (v) => { st.trend = v; }),
       h('div', { class: 'row', style: 'gap:10px' }, ui.field('&Step value:', step), ui.field('St&op value:', stop))),
-    buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => {
-      if (st.type === 'auto') { const src = st.rows ? { r1: rg.r1, c1: rg.c1, r2: rg.r2, c2: rg.c1 } : { r1: rg.r1, c1: rg.c1, r2: rg.r1, c2: rg.c2 }; O.autoFill(s, src, rg, 'auto'); return; }
-      O.fillSeries(s, rg, { rows: st.rows, type: st.type, unit: st.unit, step: num(step.value, 1), stop: stop.value.trim() ? num(stop.value, null) : null, trend: st.trend });
-    }) }, { label: 'Cancel' }] });
+    buttons: [{ label: 'OK', primary: true, onClick: () => apply({ rows: st.rows, type: st.type, unit: st.unit, trend: st.trend, step: step.value, stop: stop.value }) }, { label: 'Cancel' }] });
   };
   D.fillAcross = function () {
     const sheets = A().selectedSheets();
-    let what = 'all';
-    ui.dialog({ title: 'Fill Across Worksheets', width: 260, body: ui.group('Fill', ...[['all', '&All'], ['contents', '&Contents'], ['formats', '&Formats']].map(([k, l], i) => ui.radio('fa', l, i === 0, () => { what = k; }))), buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => {
+    const options = [['all', '&All'], ['contents', '&Contents'], ['formats', '&Formats']];
+    const apply = (what) => tryRun(() => {
       const src = sh(), w = wb();
       O.tx(w, 'Fill Across Worksheets', () => {
         for (const rg0 of G().ranges()) {
@@ -655,7 +875,15 @@
           }
         }
       });
-    }) }, { label: 'Cancel' }] });
+    });
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactFillAcross = { options: options.map(([value, label]) => ({ value, label })), selected: 'all' };
+      reactFillAcrossApply = apply;
+      L.bus.emit('excelx-fill-across-dialog');
+      return;
+    }
+    let what = 'all';
+    ui.dialog({ title: 'Fill Across Worksheets', width: 260, body: ui.group('Fill', ...options.map(([k, l], i) => ui.radio('fa', l, i === 0, () => { what = k; }))), buttons: [{ label: 'OK', primary: true, onClick: () => apply(what) }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Save As */
@@ -697,25 +925,50 @@
   /* ================================================================ Properties */
   D.properties = function () {
     const w = wb(), p = w.props;
-    const fld = (k, label) => { const i = h('input', { type: 'text', value: p[k] || '', style: 'width:100%' }); i.dataset.k = k; return ui.field(label, i); };
-    const summary = h('div', { class: 'col props' }, fld('title', '&Title:'), fld('subject', '&Subject:'), fld('creator', '&Author:'), fld('manager', '&Manager:'), fld('company', 'C&ompany:'), fld('category', 'Ca&tegory:'), fld('keywords', '&Keywords:'), fld('description', 'C&omments:'));
+    const summaryKeys = ['title', 'subject', 'creator', 'manager', 'company', 'category', 'keywords', 'description'];
     const cells = w.sheets.reduce((n, s) => { let k = 0; s.rows.forEach((row) => { if (row) row.cells.forEach((cl) => { if (cl && (cl.v != null || cl.f != null)) k++; }); }); return n + k; }, 0);
     const formulas = w.sheets.reduce((n, s) => { let k = 0; s.rows.forEach((row) => { if (row) row.cells.forEach((cl) => { if (cl && cl.f != null) k++; }); }); return n + k; }, 0);
-    const stats = h('table', { class: 'kv' }, ...[['Created:', p.created ? new Date(p.created).toLocaleString() : ''], ['Modified:', p.modified ? new Date(p.modified).toLocaleString() : ''], ['Last saved by:', p.lastModifiedBy || ''], ['Application:', p.application || ''], ['Sheets:', w.sheets.length], ['Cells with data:', cells], ['Formulas:', formulas], ['Defined names:', w.names.filter((n) => !n.hidden).length], ['Lists (tables):', w.tables.length]].map(([k, v]) => h('tr', null, h('td', { text: k }), h('td', { translate: 'no', text: String(v) }))));
-    const contents = h('div', { class: 'col' }, h('b', { text: 'Worksheets' }), ...w.sheets.map((s) => h('div', { translate: 'no', text: '   ' + (s.state !== 'visible' ? L.t('{0} (hidden)', s.name) : s.name) })), h('b', { text: 'Named Ranges' }), ...w.names.filter((n) => !n.hidden).map((n) => h('div', { translate: 'no', text: '   ' + n.name })));
+    const statsData = [['Created:', p.created ? new Date(p.created).toLocaleString() : ''], ['Modified:', p.modified ? new Date(p.modified).toLocaleString() : ''], ['Last saved by:', p.lastModifiedBy || ''], ['Application:', p.application || ''], ['Sheets:', w.sheets.length], ['Cells with data:', cells], ['Formulas:', formulas], ['Defined names:', w.names.filter((n) => !n.hidden).length], ['Lists (tables):', w.tables.length]].map(([label, value]) => ({ label, value: String(value) }));
     const custom = (p.custom || []).slice();
+    const restore = (snapshot) => { for (const key of Object.keys(p)) if (!Object.prototype.hasOwnProperty.call(snapshot, key)) delete p[key]; Object.assign(p, snapshot); };
+    const apply = (summary, properties) => {
+      const old = Object.assign({}, p), now = Object.assign({}, p, summary, { custom: properties });
+      O.tx(w, L.N('Properties'), () => { Object.assign(p, now); w.undo.op(() => restore(old), () => Object.assign(p, now)); });
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactProperties = {
+        title: L.t('{0} Properties', A().books[A().cur].name),
+        summary: Object.fromEntries(summaryKeys.map((key) => [key, p[key] || ''])),
+        stats: statsData,
+        sheets: w.sheets.map((sheet) => ({ name: sheet.name, hidden: sheet.state !== 'visible' })),
+        names: w.names.filter((item) => !item.hidden).map((item) => item.name),
+        custom,
+      };
+      reactPropertiesApply = apply;
+      L.bus.emit('excelx-properties-dialog');
+      return;
+    }
+    const fld = (k, label) => { const i = h('input', { type: 'text', value: p[k] || '', style: 'width:100%' }); i.dataset.k = k; return ui.field(label, i); };
+    const summary = h('div', { class: 'col props' }, fld('title', '&Title:'), fld('subject', '&Subject:'), fld('creator', '&Author:'), fld('manager', '&Manager:'), fld('company', 'C&ompany:'), fld('category', 'Ca&tegory:'), fld('keywords', '&Keywords:'), fld('description', 'C&omments:'));
+    const stats = h('table', { class: 'kv' }, ...statsData.map(({ label, value }) => h('tr', null, h('td', { text: label }), h('td', { translate: 'no', text: value }))));
+    const contents = h('div', { class: 'col' }, h('b', { text: 'Worksheets' }), ...w.sheets.map((s) => h('div', { translate: 'no', text: '   ' + (s.state !== 'visible' ? L.t('{0} (hidden)', s.name) : s.name) })), h('b', { text: 'Named Ranges' }), ...w.names.filter((n) => !n.hidden).map((n) => h('div', { translate: 'no', text: '   ' + n.name })));
     const cbox = h('div');
     const drawCustom = () => { cbox.textContent = ''; cbox.appendChild(h('table', { class: 'kv' }, ...custom.map((c, i) => h('tr', null, h('td', { translate: 'no', text: c.name }), h('td', { translate: 'no', text: c.value }), h('td', null, ui.button('Delete', () => { custom.splice(i, 1); drawCustom(); }, { class: 'btn small' })))))); };
     drawCustom();
     const cn = h('input', { type: 'text', placeholder: 'Name' }), cv = h('input', { type: 'text', placeholder: 'Value' });
     const customTab = h('div', { class: 'col' }, h('div', { class: 'row', style: 'gap:6px' }, cn, cv, ui.button('&Add', () => { if (!cn.value.trim()) return; custom.push({ name: cn.value.trim(), type: 'lpwstr', value: cv.value }); cn.value = cv.value = ''; drawCustom(); })), cbox);
     ui.dialog({ title: L.t('{0} Properties', A().books[A().cur].name), width: 420, body: ui.tabs([{ label: 'Summary', body: summary }, { label: 'Statistics', body: stats }, { label: 'Contents', body: contents }, { label: 'Custom', body: customTab }]),
-      buttons: [{ label: 'OK', primary: true, onClick: () => { const old = Object.assign({}, p); const now = Object.assign({}, p); L.$$('input[data-k]', summary).forEach((i) => { now[i.dataset.k] = i.value; }); now.custom = custom; O.tx(w, L.N('Properties'), () => { Object.assign(p, now); w.undo.op(() => Object.assign(p, old), () => Object.assign(p, now)); }); } }, { label: 'Cancel' }] });
+      buttons: [{ label: 'OK', primary: true, onClick: () => { const old = Object.assign({}, p); const now = Object.assign({}, p); L.$$('input[data-k]', summary).forEach((i) => { now[i.dataset.k] = i.value; }); now.custom = custom; O.tx(w, L.N('Properties'), () => { Object.assign(p, now); w.undo.op(() => restore(old), () => Object.assign(p, now)); }); } }, { label: 'Cancel' }] });
   };
 
   /* ================================================================ Zoom, Symbol */
   D.zoom = function () {
     const s = sh();
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactZoom = { zoom: s.view.zoom || 100 };
+      L.bus.emit('excelx-zoom');
+      return;
+    }
     let z = s.view.zoom || 100, fit = false;
     const custom = h('input', { type: 'text', value: String(z) + '%', style: 'width:60px' });
     const opts = [200, 100, 75, 50, 25].map((v) => ui.radio('zoom', v + '%', v === z, () => { z = v; fit = false; }));
@@ -723,23 +976,29 @@
       buttons: [{ label: 'OK', primary: true, onClick: () => { if (fit) { A().zoomToSelection(); return; } if (custom === document.activeElement || ![200, 100, 75, 50, 25].includes(z)) z = parseInt(custom.value, 10) || z; if (!(z >= 10 && z <= 400)) { ui.msg('Enter a number between 10 and 400.', { icon: 'warn' }); return false; } G().setZoom(z); } }, { label: 'Cancel' }] });
   };
   D.symbol = function () {
-    const font = h('input', { type: 'text', value: 'Arial', style: 'width:140px' });
     const ranges = [['Basic Latin', 0x20, 0x7e], ['Latin-1 Supplement', 0xa1, 0xff], ['Latin Extended-A', 0x100, 0x17f], [L.N('Greek'), 0x391, 0x3c9], [L.N('Cyrillic'), 0x410, 0x44f], ['General Punctuation', 0x2010, 0x205e], ['Currency Symbols', 0x20a0, 0x20bf], ['Letterlike Symbols', 0x2100, 0x214f], ['Number Forms', 0x2150, 0x218b], [L.N('Arrows'), 0x2190, 0x21ff], ['Mathematical Operators', 0x2200, 0x22ff], ['Box Drawing', 0x2500, 0x257f], ['Geometric Shapes', 0x25a0, 0x25ff], ['Miscellaneous Symbols', 0x2600, 0x26ff], [L.N('Dingbats'), 0x2700, 0x27bf]];
+    const specialOptions = [['—', L.N('— Em Dash')], ['–', L.N('– En Dash')], ['©', L.N('© Copyright')], ['®', L.N('® Registered')], ['™', L.N('™ Trademark')], ['§', L.N('§ Section')], ['¶', L.N('¶ Paragraph')], ['…', L.N('… Ellipsis')], ['‘', L.N('‘ Single Opening Quote')], ['’', L.N('’ Single Closing Quote')], ['“', L.N('“ Double Opening Quote')], ['”', L.N('” Double Closing Quote')], [' ', 'Nonbreaking Space']];
+    const insert = (character) => {
+      if (L.editor.active) { L.editor.insertText(character); return; }
+      L.editor.begin('edit');
+      L.editor.insertText(character);
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactSymbol = { ranges: ranges.map(([label, start, end], index) => ({ index, label, start, end })), special: specialOptions.map(([value, label]) => ({ value, label })) };
+      reactSymbolInsert = insert;
+      L.bus.emit('excelx-symbol-dialog');
+      return;
+    }
+    const font = h('input', { type: 'text', value: 'Arial', style: 'width:140px' });
     let pick = null;
     const grid = h('div', { class: 'sym-grid', translate: 'no' });
     const info = h('div', { class: 'hint' });
-    const draw = (i) => { grid.textContent = ''; const [, a, b] = ranges[i]; for (let cp = a; cp <= b; cp++) { const ch = String.fromCodePoint(cp); const btn = h('button', { type: 'button', translate: 'no', text: ch, 'aria-label': 'U+' + cp.toString(16).toUpperCase() }); btn.style.fontFamily = LY.fontStack(font.value); btn.addEventListener('click', () => { L.$$('button', grid).forEach((x) => x.classList.remove('on')); btn.classList.add('on'); pick = ch; info.textContent = L.t('Character code: {0} (Unicode hex)', cp.toString(16).toUpperCase().padStart(4, '0')); }); btn.addEventListener('dblclick', () => { pick = ch; insert(); }); grid.appendChild(btn); } };
+    const draw = (i) => { grid.textContent = ''; const [, a, b] = ranges[i]; for (let cp = a; cp <= b; cp++) { const ch = String.fromCodePoint(cp); const btn = h('button', { type: 'button', translate: 'no', text: ch, 'aria-label': 'U+' + cp.toString(16).toUpperCase() }); btn.style.fontFamily = LY.fontStack(font.value); btn.addEventListener('click', () => { L.$$('button', grid).forEach((x) => x.classList.remove('on')); btn.classList.add('on'); pick = ch; info.textContent = L.t('Character code: {0} (Unicode hex)', cp.toString(16).toUpperCase().padStart(4, '0')); }); btn.addEventListener('dblclick', () => { pick = ch; insert(pick); }); grid.appendChild(btn); } };
     const sub = ui.select(ranges.map((r, i) => [i, r[0]]), 1, (v) => draw(+v));
     draw(1);
     const special = list([['—', L.N('— Em Dash')], ['–', L.N('– En Dash')], ['©', L.N('© Copyright')], ['®', L.N('® Registered')], ['™', L.N('™ Trademark')], ['§', L.N('§ Section')], ['¶', L.N('¶ Paragraph')], ['…', L.N('… Ellipsis')], ['‘', L.N('‘ Single Opening Quote')], ['’', L.N('’ Single Closing Quote')], ['“', L.N('“ Double Opening Quote')], ['”', L.N('” Double Closing Quote')], [' ', 'Nonbreaking Space']], null, (v) => { pick = v; });
-    const insert = () => {
-      if (!pick) return;
-      if (L.editor.active) { L.editor.insertText(pick); return; }
-      L.editor.begin('edit');
-      L.editor.insertText(pick);
-    };
     ui.dialog({ title: 'Symbol', width: 520, body: ui.tabs([{ label: '&Symbols', body: h('div', { class: 'col' }, h('div', { class: 'row', style: 'gap:10px' }, ui.field('&Font:', font), ui.field('Su&bset:', sub)), grid, info) }, { label: 'S&pecial Characters', body: special }]),
-      buttons: [{ label: '&Insert', primary: true, onClick: () => { insert(); return false; } }, { label: 'Close' }] });
+      buttons: [{ label: '&Insert', primary: true, onClick: () => { if (pick) insert(pick); return false; } }, { label: 'Close' }] });
   };
 
   /* ================================================================ comments */
