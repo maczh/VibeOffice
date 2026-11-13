@@ -19,7 +19,144 @@
   let reactSeries = null, reactSeriesApply = null;
   let reactSymbol = null, reactSymbolInsert = null;
   let reactProperties = null, reactPropertiesApply = null;
+  let reactAutoCorrect = null, reactAutoCorrectAction = null;
+  let reactProtection = null, reactProtectionPassword = '', reactProtectionResolve = null;
+  let reactWorkbookProtection = null;
+  let reactComment = null;
+  let reactHyperlink = null;
+  let reactLinks = null;
   D.reactZoomCatalog = () => reactZoom;
+  D.reactAutoCorrectCatalog = () => reactAutoCorrect;
+  D.reactAutoCorrectAction = (action, from, to, options) => {
+    if (!reactAutoCorrect || !reactAutoCorrectAction) return false;
+    if (action === 'add' || action === 'delete') {
+      reactAutoCorrectAction(action, from, to);
+      reactAutoCorrect.entries = Array.from(L.autocorrect.list().entries()).sort((a, b) => a[0].localeCompare(b[0]));
+      L.bus.emit('excelx-auto-correct-dialog');
+      return true;
+    }
+    if (action === 'save') {
+      reactAutoCorrectAction('save', '', '', options || {});
+      reactAutoCorrect = reactAutoCorrectAction = null;
+      L.bus.emit('excelx-auto-correct-dialog');
+      return true;
+    }
+    if (action === 'close') {
+      reactAutoCorrect = reactAutoCorrectAction = null;
+      L.bus.emit('excelx-auto-correct-dialog');
+      return true;
+    }
+    return false;
+  };
+  D.reactProtectionCatalog = () => reactProtection;
+  D.reactProtectionAction = async (action, value) => {
+    if (!reactProtection) return false;
+    if (action === 'close') {
+      const resolve = reactProtectionResolve;
+      reactProtection = null; reactProtectionPassword = ''; reactProtectionResolve = null;
+      L.bus.emit('excelx-protection-dialog');
+      if (resolve) resolve(false);
+      return true;
+    }
+    if (action === 'submit' && reactProtection.mode === 'unprotect') {
+      const s = sh(), attrs = s.protection && s.protection.attrs || {};
+      if (!(await checkPw(attrs, String(value || '')))) { ui.msg('The password you supplied is not correct. Verify that the CAPS LOCK key is off and be sure to use the correct capitalization.', { icon: 'warn' }); return false; }
+      tryRun(() => O.setProtection(s, null));
+      reactProtection = null; L.bus.emit('excelx-protection-dialog');
+      return true;
+    }
+    if (action === 'submit' && reactProtection.mode === 'protect') {
+      const allow = value && value.allow;
+      if (!allow || !Object.keys(reactProtection.allow).every((key) => typeof allow[key] === 'boolean')) return false;
+      const password = String(value.password || '');
+      if (password) { reactProtectionPassword = password; reactProtection = { ...reactProtection, mode: 'confirm' }; L.bus.emit('excelx-protection-dialog'); return true; }
+      const s = sh(), attrs = { sheet: '1', objects: allow.objects ? '0' : '1', scenarios: allow.scenarios ? '0' : '1' };
+      for (const key of ['formatCells', 'formatColumns', 'formatRows', 'insertColumns', 'insertRows', 'insertHyperlinks', 'deleteColumns', 'deleteRows', 'sort', 'autoFilter', 'pivotTables']) attrs[key] = allow[key] ? '0' : '1';
+      if (!allow.selectLockedCells) attrs.selectLockedCells = '1'; if (!allow.selectUnlockedCells) attrs.selectUnlockedCells = '1';
+      tryRun(() => O.setProtection(s, { attrs })); reactProtection = null; L.bus.emit('excelx-protection-dialog'); return true;
+    }
+    if (action === 'confirm' && reactProtection.mode === 'confirm') {
+      if (String(value || '') !== reactProtectionPassword) { ui.msg('Confirmation password is not identical.', { icon: 'warn' }); return false; }
+      const s = sh(), allow = reactProtection.allow;
+      const attrs = { sheet: '1', objects: allow.objects ? '0' : '1', scenarios: allow.scenarios ? '0' : '1', password: D.legacyHash(reactProtectionPassword) };
+      for (const key of ['formatCells', 'formatColumns', 'formatRows', 'insertColumns', 'insertRows', 'insertHyperlinks', 'deleteColumns', 'deleteRows', 'sort', 'autoFilter', 'pivotTables']) attrs[key] = allow[key] ? '0' : '1';
+      if (!allow.selectLockedCells) attrs.selectLockedCells = '1'; if (!allow.selectUnlockedCells) attrs.selectUnlockedCells = '1';
+      tryRun(() => O.setProtection(s, { attrs })); reactProtection = null; reactProtectionPassword = ''; L.bus.emit('excelx-protection-dialog'); return true;
+    }
+    return false;
+  };
+  D.reactWorkbookProtectionCatalog = () => reactWorkbookProtection;
+  D.reactWorkbookProtectionAction = async (action, value) => {
+    if (!reactWorkbookProtection) return false;
+    if (action === 'close') { reactWorkbookProtection = null; L.bus.emit('excelx-workbook-protection-dialog'); return true; }
+    const w = wb();
+    if (action === 'unprotect') {
+      const a = w.protection && w.protection.attrs || {};
+      const legacy = a.workbookPassword ? { password: a.workbookPassword } : a.workbookHashValue ? { hashValue: a.workbookHashValue, saltValue: a.workbookSaltValue, spinCount: a.workbookSpinCount, algorithmName: a.workbookAlgorithmName } : null;
+      if (legacy && !(await checkPw(legacy, String(value || '')))) { ui.msg('The password you supplied is not correct.', { icon: 'warn' }); return false; }
+      const old = w.protection;
+      O.tx(w, 'Unprotect Workbook', () => { w.protection = null; w.undo.op(() => { w.protection = old; }, () => { w.protection = null; }); });
+      reactWorkbookProtection = null; L.bus.emit('excelx-workbook-protection-dialog'); ui.refresh(); return true;
+    }
+    if (action === 'protect' && value && typeof value.structure === 'boolean' && typeof value.windows === 'boolean') {
+      const attrs = {}; if (value.password) attrs.workbookPassword = D.legacyHash(value.password);
+      const protection = { attrs, structure: value.structure, windows: value.windows };
+      O.tx(w, 'Protect Workbook', () => { w.protection = protection; w.undo.op(() => { w.protection = null; }, () => { w.protection = protection; }); });
+      reactWorkbookProtection = null; L.bus.emit('excelx-workbook-protection-dialog'); ui.refresh(); return true;
+    }
+    return false;
+  };
+  D.reactCommentCatalog = () => reactComment;
+  D.reactCommentFinish = (save, value, width, height) => {
+    if (!reactComment) return false;
+    const current = reactComment; reactComment = null;
+    L.bus.emit('excelx-comment-editor');
+    if (save) {
+      const text = String(value || ''), same = current.comment && current.initialText === text;
+      if (!same) tryRun(() => O.tx(current.workbook, current.comment ? 'Edit Comment' : 'Insert Comment', () => O.setComment(current.sheet, current.row, current.column, L.threads.editNote(Object.assign({}, current.comment || { author: current.author, visible: false }, { text, runs: undefined, w: width * 0.75 || undefined, h: height * 0.75 || undefined }), text))));
+    }
+    G().paint(); G().syncObjects(); G().focus();
+    return true;
+  };
+  D.reactHyperlinkCatalog = () => reactHyperlink && reactHyperlink.catalog;
+  D.reactHyperlinkAction = (action, state) => {
+    if (!reactHyperlink) return false;
+    const current = reactHyperlink, { sheet: s, workbook: w, row, column, link: cur } = current;
+    if (action === 'close') { reactHyperlink = null; L.bus.emit('excelx-hyperlink-dialog'); return true; }
+    if (action === 'remove') {
+      if (!cur) return false;
+      tryRun(() => O.clear(s, [{ r1: row, c1: column, r2: row, c2: column }], 'hyperlinks'));
+      reactHyperlink = null; L.bus.emit('excelx-hyperlink-dialog'); return true;
+    }
+    if (action !== 'apply' || !state || !['web', 'place', 'mail'].includes(state.kind)) return false;
+    const next = { ref: { r1: row, c1: column, r2: row, c2: column } };
+    if (state.kind === 'web') { let target = String(state.address || '').trim(); if (!target) return false; if (!/^[a-z]+:/i.test(target) && /^www\.|\.[a-z]{2,}(\/|$)/i.test(target)) target = 'http://' + target; next.target = target; }
+    else if (state.kind === 'mail') { if (!String(state.email || '').trim()) return false; next.target = 'mailto:' + String(state.email).trim() + (state.subject ? '?subject=' + encodeURIComponent(state.subject) : ''); }
+    else { if (!state.sheet) return false; next.location = String(state.sheet).startsWith('name:') ? String(state.sheet).slice(5) : F.quoteSheet(state.sheet) + '!' + (String(state.cell || '').trim() || 'A1'); }
+    const display = String(state.text || '') || next.target || next.location;
+    next.display = display; if (state.tooltip) next.tooltip = state.tooltip;
+    tryRun(() => O.tx(w, L.N('Hyperlink'), () => {
+      O.setLinks(s, s.links.filter((item) => !M.rangeContains(item.ref, row, column)).concat([next]));
+      const cell = s.get(row, column);
+      if (!cell || cell.f == null) {
+        if (!cell || cell.v == null || String(cell.v) !== display) O.setValue(s, row, column, display, true);
+        const updated = s.get(row, column), style = w.cellStyles.find((item) => item.name === 'Hyperlink'), copy = Object.assign({}, updated);
+        copy.s = w.styles.derive(updated.s || 0, style ? { font: Object.assign({}, w.styles.get(style.style).font) } : { font: { u: 'single', color: M.rgb('#0000FF') } });
+        O.put(s, row, column, copy);
+      }
+    }));
+    reactHyperlink = null; L.bus.emit('excelx-hyperlink-dialog'); return true;
+  };
+  D.reactLinksCatalog = () => reactLinks;
+  D.reactLinksAction = (action) => {
+    if (!reactLinks) return false;
+    if (action === 'close') { reactLinks = null; L.bus.emit('excelx-links-dialog'); return true; }
+    if (action === 'break' && reactLinks.items.length) {
+      tryRun(() => { O.tx(reactLinks.workbook, 'Break Links', () => { for (const sheet of reactLinks.workbook.sheets) sheet.rows.forEach((row, r) => { if (row) row.cells.forEach((cell, c) => { if (cell && cell.f != null && /\[\d+\]/.test(cell.f)) O.setValue(sheet, r, c, cell.v, true); }); }); }); reactLinks.workbook.externalLinks = []; });
+      reactLinks = null; L.bus.emit('excelx-links-dialog'); return true;
+    }
+    return false;
+  };
   D.reactZoomClose = () => { reactZoom = null; L.bus.emit('excelx-zoom'); };
   D.reactSizeCatalog = () => reactSize;
   D.reactSizeApply = (value) => {
@@ -1008,6 +1145,12 @@
     const q = G().cellRect(r, c);
     const wrapR = L.$('#gridwrap').getBoundingClientRect();
     const author = (A().opts.userName || 'Excelx User');
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const initialText = cm ? L.threads.editText(cm) || '' : author + ':\n';
+      reactComment = { row: r, column: c, comment: cm ? Object.assign({}, cm) : null, initialText, author, workbook: w, sheet: s, left: wrapR.left + q.x + q.w + 12, top: Math.max(wrapR.top + 2, wrapR.top + q.y - 6), width: cm && cm.w ? cm.w * 96 / 72 : 150, height: cm && cm.h ? cm.h * 96 / 72 : 80 };
+      L.bus.emit('excelx-comment-editor');
+      return;
+    }
     const box = h('div', { class: 'cmt-edit' });
     const ta = h('textarea', { 'aria-label': 'Comment', spellcheck: 'true' });
     const initialText = cm ? L.threads.editText(cm) || '' : author + ':\n';
@@ -1100,6 +1243,18 @@
   };
   D.autoCorrect = function () {
     const AC = L.autocorrect, o = A().opts;
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const keys = ['acTwoCaps', 'acSentence', 'acDays', 'acCapsLock', 'acReplace'];
+      const defaults = [true, false, true, true, true];
+      reactAutoCorrect = { options: Object.fromEntries(keys.map((key, i) => [key, o[key] !== undefined ? o[key] !== false : defaults[i]])), entries: Array.from(AC.list().entries()).sort((a, b) => a[0].localeCompare(b[0])) };
+      reactAutoCorrectAction = (action, from, to, options) => {
+        if (action === 'add' && from) AC.setEntry(from, to);
+        else if (action === 'delete' && from) AC.setEntry(from, null);
+        else if (action === 'save') { Object.assign(o, options); A().saveOpts(); }
+      };
+      L.bus.emit('excelx-auto-correct-dialog');
+      return;
+    }
     const ck = (label, key, def) => ui.check(label, o[key] !== undefined ? o[key] !== false : def, (x) => { o[key] = x; });
     const from = h('input', { type: 'text', style: 'width:120px' }), to = h('input', { type: 'text', style: 'width:220px' });
     const box = h('div');
@@ -1149,6 +1304,18 @@
   });
   D.protectSheet = async function () {
     const s = sh(), w = wb();
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      if (s.protection) {
+        const attrs = s.protection.attrs || {};
+        if (!attrs.password && !attrs.hashValue) { tryRun(() => O.setProtection(s, null)); return; }
+        reactProtection = { mode: 'unprotect', passwordRequired: true };
+      } else {
+        const allow = { selectLockedCells: true, selectUnlockedCells: true, formatCells: false, formatColumns: false, formatRows: false, insertColumns: false, insertRows: false, insertHyperlinks: false, deleteColumns: false, deleteRows: false, sort: false, autoFilter: false, pivotTables: false, objects: false, scenarios: false };
+        reactProtection = { mode: 'protect', allow };
+      }
+      L.bus.emit('excelx-protection-dialog');
+      return;
+    }
     if (s.protection) {
       const a = s.protection.attrs || {};
       if (a.password || a.hashValue) {
@@ -1183,6 +1350,18 @@
   };
   D.protectWorkbook = async function () {
     const w = wb();
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      if (w.protection) {
+        const a = w.protection.attrs || {};
+        if (!a.workbookPassword && !a.workbookHashValue) {
+          const old = w.protection;
+          O.tx(w, 'Unprotect Workbook', () => { w.protection = null; w.undo.op(() => { w.protection = old; }, () => { w.protection = null; }); }); ui.refresh(); return;
+        }
+        reactWorkbookProtection = { mode: 'unprotect' };
+      } else reactWorkbookProtection = { mode: 'protect', structure: true, windows: false };
+      L.bus.emit('excelx-workbook-protection-dialog');
+      return;
+    }
     if (w.protection) {
       const a = w.protection.attrs || {};
       const legacy = a.workbookPassword ? { password: a.workbookPassword } : a.workbookHashValue ? { hashValue: a.workbookHashValue, saltValue: a.workbookSaltValue, spinCount: a.workbookSpinCount, algorithmName: a.workbookAlgorithmName } : null;
@@ -1203,6 +1382,17 @@
     const s = sh(), w = wb(), sel = G().sel();
     if (G().guardProtect('insertHyperlinks')) return;
     const cur = s.links.find((l) => M.rangeContains(l.ref, sel.r, sel.c));
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const kind = cur && cur.location ? 'place' : cur && /^mailto:/i.test(cur.target || '') ? 'mail' : 'web';
+      const loc = cur && cur.location ? String(cur.location).split('!') : [];
+      const selectedSheet = loc.length > 1 ? loc[0].replace(/^'|'$/g, '').replace(/''/g, "'") : s.name;
+      reactHyperlink = { sheet: s, workbook: w, row: sel.r, column: sel.c, link: cur || null, catalog: {
+        editing: !!cur, kind, text: cur && cur.display != null ? cur.display : L.csv.cellText(s, sel.r, sel.c), address: cur && cur.target && !/^mailto:/i.test(cur.target) ? cur.target : '',
+        cell: cur && cur.location ? loc.slice(1).join('!') : 'A1', sheet: selectedSheet, email: cur && /^mailto:/i.test(cur.target || '') ? cur.target.replace(/^mailto:/i, '').split('?')[0] : '',
+        subject: '', tooltip: cur && cur.tooltip || '', sheets: w.sheets.map((item) => ({ value: item.name, label: item.name })).concat(w.names.filter((item) => !item.hidden && !/^_xlnm/.test(item.name)).map((item) => ({ value: 'name:' + item.name, label: L.t('{0} (defined name)', item.name) }))),
+      } };
+      L.bus.emit('excelx-hyperlink-dialog'); return;
+    }
     const text = h('input', { type: 'text', value: cur && cur.display != null ? cur.display : L.csv.cellText(s, sel.r, sel.c), style: 'width:100%' });
     const addr = h('input', { type: 'text', value: cur && cur.target ? cur.target : '', style: 'width:100%', placeholder: 'https://', translate: 'no' });
     const cellRef = h('input', { type: 'text', value: cur && cur.location ? String(cur.location).split('!').pop() : 'A1', style: 'width:100%' });
@@ -1245,6 +1435,11 @@
   /* ================================================================ misc */
   D.links = function () {
     const w = wb();
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const decode = (value) => { try { return decodeURIComponent(value); } catch (_) { return value; } };
+      reactLinks = { workbook: w, items: (w.externalLinks || []).map((item) => ({ source: decode(String(item.relTarget || '').split(/[\\/]/).pop()), type: 'Worksheet', update: 'A', status: L.t('Values cached in this workbook') })) };
+      L.bus.emit('excelx-links-dialog'); return;
+    }
     const rows = (w.externalLinks || []).map((e, i) => h('tr', null, h('td', { translate: 'no', text: decodeURIComponent(String(e.relTarget || '').split(/[\\/]/).pop()) }), h('td', { text: 'Worksheet' }), h('td', { text: 'A' }), h('td', { text: 'Values cached in this workbook' })));
     ui.dialog({ title: 'Edit Links', width: 520, body: h('div', { class: 'col' }, h('table', { class: 'fr-table' }, h('tr', null, h('th', { text: 'Source' }), h('th', { text: 'Type' }), h('th', { text: 'Update' }), h('th', { text: 'Status' })), ...rows), h('div', { class: 'hint', text: 'Formulas that refer to other workbooks use the values Excel saved with this file. Break Link replaces those formulas with their values.' })),
       buttons: [{ label: '&Break Link', onClick: () => { tryRun(() => { O.tx(w, 'Break Links', () => { for (const s of w.sheets) s.rows.forEach((row, r) => { if (row) row.cells.forEach((cl, c) => { if (cl && cl.f != null && /\[\d+\]/.test(cl.f)) O.setValue(s, r, c, cl.v, true); }); }); }); w.externalLinks = []; }); } }, { label: 'Close', primary: true }] });

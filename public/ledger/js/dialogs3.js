@@ -7,6 +7,14 @@
   const { h } = L;
   const ui = L.ui;
   const D = (L.dlg = L.dlg || {});
+  let reactCustomHF = null, reactCustomHFDone = null;
+  D.reactCustomHFCatalog = () => reactCustomHF;
+  D.reactCustomHFApply = (sections) => {
+    if (!reactCustomHF || !reactCustomHFDone || !sections) return false;
+    const code = ['l', 'c', 'r'].map((key) => sections[key] ? '&' + key.toUpperCase() + sections[key] : '').join('');
+    const done = reactCustomHFDone; reactCustomHF = reactCustomHFDone = null; L.bus.emit('excelx-custom-hf-dialog'); done(code); return true;
+  };
+  D.reactCustomHFClose = () => { reactCustomHF = reactCustomHFDone = null; L.bus.emit('excelx-custom-hf-dialog'); };
   const G = () => L.grid;
   const A = () => L.app;
   const E = () => L.editor;
@@ -153,6 +161,43 @@
   D.defineName = function () {
     const w = wb(), s = sh();
     let names = w.names.map((n) => Object.assign({}, n));
+    const sel = G().sel();
+    const left = s.val(sel.r, sel.c - 1), above = s.val(sel.r - 1, sel.c);
+    const proposal = typeof left === 'string' ? left : typeof above === 'string' ? above : '';
+    const proposedName = proposal.trim().replace(/\s+/g, '_').replace(/[^\w.]/g, '');
+    const initialRef = '=' + F.quoteSheet(s.name) + '!' + F.absRangeName(G().range());
+    const direct = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected;
+    if (direct) {
+      let fields = { name: proposedName, ref: initialRef, comment: '' }, error = '';
+      const snapshot = () => ({ names: names.filter((n) => !n.hidden && !/^_xlnm\./i.test(n.name)).map((n) => ({ key: qualified(w, n), name: qualified(w, n), ref: '=' + String(n.ref).replace(/^=/, ''), comment: n.comment || '' })), ...fields, error });
+      D.reactDefinedNamesCatalog = () => direct && fields ? snapshot() : null;
+      D.reactDefinedNamesAction = (action, value) => {
+        if (!fields) return false;
+        if (action === 'change') { fields = Object.assign({}, fields, value); error = ''; }
+        else if (action === 'select') { const item = names.find((n) => qualified(w, n) === value); if (!item) return false; fields = { name: qualified(w, item), ref: '=' + String(item.ref).replace(/^=/, ''), comment: item.comment || '' }; error = ''; }
+        else if (action === 'add' || action === 'commit') {
+          let nm = fields.name.trim(), scope = null;
+          if (nm) {
+            const m = /^(?:'((?:[^']|'')+)'|([^!]+))!(.+)$/.exec(nm);
+            if (m) { const sheetName = (m[1] || m[2]).replace(/''/g, "'"); scope = w.sheets.findIndex((item) => item.name.toLowerCase() === sheetName.toLowerCase()); if (scope < 0) error = 'Reference is not valid.'; else nm = m[3]; }
+            if (!error) error = D.validName(nm) || '';
+            const refText = fields.ref.trim().replace(/^=/, '');
+            if (!error) { try { F.parse(refText); } catch (_) { error = 'The formula you typed contains an error.'; } }
+            if (!error) {
+              const exists = names.some((item) => qualified(w, item) === fields.name.trim());
+              if (action === 'add' || !exists) names = names.filter((item) => !(item.name.toLowerCase() === nm.toLowerCase() && (item.scope == null ? null : item.scope) === scope)).concat([{ name: nm, ref: F.toStore(refText), scope, comment: fields.comment || undefined }]);
+            }
+          } else if (action === 'add') error = 'The name that you entered is not valid.';
+          if (error) { L.bus.emit('excelx-defined-names'); return false; }
+          if (action === 'commit') { O.tx(w, 'Define Name', () => O.setNames(w, names)); fields = null; }
+          else fields = { name: '', ref: initialRef, comment: '' };
+        } else if (action === 'delete') { const key = fields.name.trim(); names = names.filter((item) => qualified(w, item) !== key && !(item.scope == null && item.name === key)); fields = Object.assign({}, fields, { name: '' }); error = ''; }
+        else if (action === 'close') { fields = null; }
+        else return false;
+        L.bus.emit('excelx-defined-names'); return true;
+      };
+      L.bus.emit('excelx-defined-names'); return;
+    }
     const nameIn = h('input', { type: 'text', style: 'width:100%' });
     const refIn = D.refBox(F.quoteSheet(s.name) + '!' + F.absRangeName(G().range()), 300);
     const comment = h('input', { type: 'text', style: 'width:100%' });
@@ -160,10 +205,7 @@
     const draw = () => { box.textContent = ''; const lb = D.list(names.filter((n) => !n.hidden && !/^_xlnm\./i.test(n.name)).map((n) => [qualified(w, n), qualified(w, n)]), null, (q) => { const n = names.find((x) => qualified(w, x) === q); nameIn.value = q; refIn.input.value = '=' + String(n.ref).replace(/^=/, ''); comment.value = n.comment || ''; }, { class: 'lbox short', translate: 'no' }); box.appendChild(lb); };
     draw();
     /* a name for the active cell's label, as Excel proposes */
-    const sel = G().sel();
-    const left = s.val(sel.r, sel.c - 1), above = s.val(sel.r - 1, sel.c);
-    const proposal = typeof left === 'string' ? left : typeof above === 'string' ? above : '';
-    nameIn.value = proposal.trim().replace(/\s+/g, '_').replace(/[^\w.]/g, '');
+    nameIn.value = proposedName;
     const add = () => {
       let nm = nameIn.value.trim();
       if (!nm) return false;
@@ -189,6 +231,24 @@
     const names = visibleNames(w);
     if (!names.length) { ui.msg('There are no names defined in this workbook.', { icon: 'info' }); return; }
     let pick = qualified(w, names[0]);
+    const direct = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected;
+    if (direct) {
+      let state = { names: names.map((n) => ({ key: qualified(w, n), name: qualified(w, n) })), pick };
+      D.reactPasteNameCatalog = () => state;
+      D.reactPasteNameAction = (action, value) => {
+        if (!state) return false;
+        if (action === 'select') { if (!state.names.some((n) => n.key === value)) return false; state = Object.assign({}, state, { pick: value }); }
+        else if (action === 'insert') { const ed = E(); if (ed.active) ed.insertText(state.pick); else ed.begin('enter', '=' + state.pick); state = null; }
+        else if (action === 'paste-list') {
+          const s = sh(), sel = G().sel();
+          tryRun(() => O.tx(w, 'Paste List', () => names.forEach((n, i) => { O.put(s, sel.r + i, sel.c, { v: qualified(w, n) }); O.put(s, sel.r + i, sel.c + 1, { v: '=' + F.display(String(n.ref).replace(/^=/, '')) }); })));
+          state = null;
+        } else if (action === 'close') state = null;
+        else return false;
+        L.bus.emit('excelx-paste-name'); return true;
+      };
+      L.bus.emit('excelx-paste-name'); return;
+    }
     const lb = D.list(names.map((n) => [qualified(w, n), qualified(w, n)]), pick, (v) => { pick = v; }, { translate: 'no' });
     const insert = () => { const ed = E(); if (ed.active) ed.insertText(pick); else { ed.begin('enter', '=' + pick); } };
     const d = ui.dialog({ title: 'Paste Name', width: 300, body: h('div', { class: 'col' }, h('label', { text: 'Paste &name' }), lb),
@@ -199,6 +259,28 @@
     const s = sh(), w = wb();
     const rg = O.clip(s, G().range());
     const st = { top: typeof s.val(rg.r1, rg.c1 + (rg.c2 > rg.c1 ? 1 : 0)) === 'string', left: typeof s.val(rg.r1 + (rg.r2 > rg.r1 ? 1 : 0), rg.c1) === 'string', bottom: false, right: false };
+    const direct = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected;
+    if (direct) {
+      let state = Object.assign({}, st);
+      D.reactCreateNamesCatalog = () => state;
+      D.reactCreateNamesAction = (action, value) => {
+        if (!state) return false;
+        if (action === 'change') state = Object.assign({}, state, value);
+        else if (action === 'commit') {
+          let names = w.names.slice();
+          const mk = (label, ref) => { let nm = String(label == null ? '' : label).trim().replace(/\s+/g, '_').replace(/[^\w.\\]/g, ''); if (!nm) return; if (/^\d/.test(nm) || D.validName(nm)) nm = '_' + nm; names = names.filter((x) => !(x.name.toLowerCase() === nm.toLowerCase() && x.scope == null)); names.push({ name: nm, ref: F.quoteSheet(s.name) + '!' + F.absRangeName(ref), scope: null }); };
+          const r1 = rg.r1 + (state.top ? 1 : 0), r2 = rg.r2 - (state.bottom ? 1 : 0), c1 = rg.c1 + (state.left ? 1 : 0), c2 = rg.c2 - (state.right ? 1 : 0);
+          if (state.top) for (let c = c1; c <= c2; c++) mk(s.val(rg.r1, c), { r1, c1: c, r2, c2: c });
+          if (state.bottom) for (let c = c1; c <= c2; c++) mk(s.val(rg.r2, c), { r1, c1: c, r2, c2: c });
+          if (state.left) for (let r = r1; r <= r2; r++) mk(s.val(r, rg.c1), { r1: r, c1, r2: r, c2 });
+          if (state.right) for (let r = r1; r <= r2; r++) mk(s.val(r, rg.c2), { r1: r, c1, r2: r, c2 });
+          O.tx(w, 'Create Names', () => O.setNames(w, names)); state = null;
+        } else if (action === 'close') state = null;
+        else return false;
+        L.bus.emit('excelx-create-names'); return true;
+      };
+      L.bus.emit('excelx-create-names'); return;
+    }
     ui.dialog({ title: 'Create Names', width: 260, body: ui.group('Create names in', ui.check('&Top row', st.top, (v) => { st.top = v; }), ui.check('&Left column', st.left, (v) => { st.left = v; }), ui.check('&Bottom row', false, (v) => { st.bottom = v; }), ui.check('&Right column', false, (v) => { st.right = v; })),
       buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => {
         let names = w.names.slice();
@@ -215,6 +297,39 @@
     const s = sh(), w = wb();
     const names = visibleNames(w).filter((n) => { try { const a = F.parse(String(n.ref)); return a.t === 'ref' || a.t === 'area'; } catch (e) { return false; } });
     if (!names.length) { ui.msg('There are no names that refer to cells.', { icon: 'info' }); return; }
+    const direct = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected;
+    if (direct) {
+      let state = { names: names.map((n) => n.name), selected: names.map((n) => n.name) };
+      D.reactApplyNamesCatalog = () => state;
+      D.reactApplyNamesAction = (action, name) => {
+        if (!state) return false;
+        if (action === 'toggle') state = Object.assign({}, state, { selected: state.selected.includes(name) ? state.selected.filter((item) => item !== name) : state.selected.concat(name) });
+        else if (action === 'close') state = null;
+        else if (action === 'commit') {
+          const targets = names.filter((n) => state.selected.includes(n.name)).map((n) => { const a = F.parse(String(n.ref)); return { name: n.name, a, sheet: (a.sheet || s.name).toLowerCase() }; });
+          let rg = O.clip(s, G().range());
+          if (rg.r1 === rg.r2 && rg.c1 === rg.c2) rg = { r1: 0, c1: 0, r2: s.maxR, c2: s.maxC };
+          O.tx(w, 'Apply Names', () => {
+            s.each(rg.r1, rg.c1, rg.r2, rg.c2, (cl, r, c) => {
+              if (cl.f == null) return;
+              let changed = false;
+              const ast = F.map(F.parse(cl.f), (n) => {
+                if (n.t !== 'ref' && n.t !== 'area') return null;
+                const sheet = (n.sheet || s.name).toLowerCase();
+                const hit = targets.find((t) => t.sheet === sheet && t.a.t === n.t && (n.t === 'ref' ? t.a.r === n.r && t.a.c === n.c : t.a.r1 === n.r1 && t.a.c1 === n.c1 && t.a.r2 === n.r2 && t.a.c2 === n.c2));
+                if (!hit) return null;
+                changed = true;
+                return { t: 'name', name: hit.name };
+              });
+              if (changed) O.setFormula(s, r, c, F.toText(ast, { store: true }));
+            });
+          });
+          state = null;
+        } else return false;
+        L.bus.emit('excelx-apply-names'); return true;
+      };
+      L.bus.emit('excelx-apply-names'); return;
+    }
     const picked = new Set(names.map((n) => n.name));
     const box = h('div', { class: 'lbox checks', translate: 'no' }, ...names.map((n) => ui.check(n.name, true, (v) => { if (v) picked.add(n.name); else picked.delete(n.name); })));
     ui.dialog({ title: 'Apply Names', width: 300, body: h('div', { class: 'col' }, h('label', { text: 'Apply &names:' }), box), buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => {
@@ -269,7 +384,16 @@
       return null;
     };
     const text = h('div', { class: 'ev-text', translate: 'no' });
+    const direct = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected;
+    let reactEvaluation = null, reactEvaluationAction = null;
+    D.reactEvaluateCatalog = () => reactEvaluation;
+    D.reactEvaluateAction = (action) => reactEvaluationAction ? reactEvaluationAction(action) : false;
     const render = (mark) => {
+      if (direct) {
+        const full = F.toText(ast), part = mark ? F.toText(mark) : '', index = mark ? full.indexOf(part) : -1;
+        reactEvaluation = { reference: F.quoteSheet(s.name) + '!' + F.cellName(sel.r, sel.c, true, true), expression: '=' + full, start: index >= 0 ? index + 1 : -1, end: index >= 0 ? index + 1 + part.length : -1, complete: !mark };
+        L.bus.emit('excelx-evaluate-formula-dialog'); return;
+      }
       text.textContent = '';
       const full = F.toText(ast);
       if (!mark) { text.textContent = '=' + full; return; }
@@ -278,6 +402,21 @@
       text.append(document.createTextNode('=' + full.slice(0, Math.max(0, i))), h('u', { translate: 'no', text: part }), document.createTextNode(i >= 0 ? full.slice(i + part.length) : ''));
     };
     let cur = next(ast);
+    if (direct) {
+      reactEvaluationAction = (action) => {
+        if (action === 'close') { reactEvaluation = reactEvaluationAction = null; L.bus.emit('excelx-evaluate-formula-dialog'); return true; }
+        if (action !== 'evaluate' && action !== 'restart') return false;
+        if (!cur) { ast = F.parse(cell.f); cur = next(ast); render(cur); return true; }
+        let value;
+        try { value = C.ev(cur, ctx); } catch (_) { value = M.ERR.VALUE; }
+        if (value instanceof C.Ref && value.single) value = C.cellValue(value.sheet, value.r1, value.c1);
+        const replacement = lit(value) || { t: 'str', v: show(value) }, target = cur;
+        ast = target === ast ? replacement : F.map(ast, (node) => node === target ? replacement : null);
+        cur = isLit(ast) ? null : next(ast);
+        render(cur); return true;
+      };
+      render(cur); return;
+    }
     render(cur);
     const evalBtn = { label: '&Evaluate', primary: true, onClick: () => {
       if (!cur) { ast = F.parse(cell.f); cur = next(ast); render(cur); return false; }
@@ -298,10 +437,37 @@
 
   /* ================================================================ Watch Window */
   let watchDlg = null;
+  let reactWatch = null;
+  const watchSnapshot = () => {
+    if (!reactWatch) return null;
+    const { workbook } = reactWatch, book = A().books.find((item) => item.wb === workbook);
+    const items = (workbook._watches || []).map((watch, index) => {
+      if (!workbook.sheets.includes(watch.sh)) return null;
+      const cell = watch.sh.get(watch.r, watch.c);
+      return { index, book: book ? book.name : workbook.name, sheet: watch.sh.name, name: '', cell: F.cellName(watch.r, watch.c, true, true), value: L.csv.cellText(watch.sh, watch.r, watch.c), formula: cell && cell.f != null ? '=' + F.display(cell.f) : '' };
+    }).filter(Boolean);
+    return { items, selected: reactWatch.selected };
+  };
+  D.reactWatchCatalog = () => watchSnapshot();
+  D.reactWatchAction = (action, index) => {
+    if (!reactWatch) return false;
+    if (action === 'close') { reactWatch = null; L.bus.emit('excelx-watch-window'); return true; }
+    if (action === 'add') { D.watchWindow(true); return true; }
+    const watches = reactWatch.workbook._watches || [];
+    if (action === 'delete') { if (!Number.isInteger(index) || index < 0 || index >= watches.length) return false; watches.splice(index, 1); reactWatch.selected = -1; }
+    else if (action === 'select') { if (!Number.isInteger(index) || index < 0 || index >= watches.length) return false; reactWatch.selected = index; }
+    else if (action === 'activate') { const watch = watches[index]; if (!watch || !reactWatch.workbook.sheets.includes(watch.sh)) return false; const sheetIndex = reactWatch.workbook.sheets.indexOf(watch.sh); if (sheetIndex !== reactWatch.workbook.active) A().activateSheet(sheetIndex); G().select(watch.r, watch.c); return true; }
+    else return false;
+    L.bus.emit('excelx-watch-window'); return true;
+  };
   D.watchWindow = function (addCurrent) {
     const w = wb();
     if (!w._watches) w._watches = [];
     if (addCurrent) { const s = sh(); for (const rg of G().ranges()) { const r = O.clip(s, rg); for (let rr = r.r1; rr <= Math.min(r.r2, r.r1 + 50); rr++) for (let cc = r.c1; cc <= Math.min(r.c2, r.c1 + 20); cc++) if (!w._watches.some((x) => x.sh === s && x.r === rr && x.c === cc)) w._watches.push({ sh: s, r: rr, c: cc }); } }
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      if (!reactWatch || reactWatch.workbook !== w) reactWatch = { workbook: w, selected: -1 };
+      L.bus.emit('excelx-watch-window'); return;
+    }
     if (watchDlg && document.contains(watchDlg.el)) { watchDlg.draw(); return; }
     const tbl = h('table', { class: 'fr-table' });
     let sel = -1;
@@ -327,6 +493,29 @@
   /* ================================================================ Error Checking */
   const ERRDESC = { '#DIV/0!': 'Divide by Zero Error', '#N/A': 'Value Not Available Error', '#NAME?': 'Invalid Name Error', '#NULL!': 'Null Error', '#NUM!': 'Number Error', '#REF!': 'Invalid Cell Reference Error', '#VALUE!': 'Error in Value', '#SPILL!': 'Spill Range Isn\'t Blank', '#CALC!': 'Calculation Error' };
   const ERRHELP = { '#DIV/0!': 'The formula or function used is dividing by zero or empty cells.', '#N/A': 'A value is not available to the formula or function.', '#NAME?': 'The formula contains unrecognized text.', '#NULL!': 'The intersection of two areas is empty.', '#NUM!': 'A formula or function contains invalid numeric values.', '#REF!': 'A cell reference is not valid.', '#VALUE!': 'A value used in the formula is of the wrong data type.' };
+  let reactErrorCheck = null;
+  const errorSnapshot = () => {
+    if (!reactErrorCheck) return null;
+    const { sheet, list, index } = reactErrorCheck, issue = list[index], cell = sheet.get(issue.r, issue.c);
+    return { reference: F.cellName(issue.r, issue.c), formula: cell && cell.f != null ? '=' + F.display(cell.f) : String(cell ? cell.v : ''), title: issue.kind === 'numtext' ? L.t('Number Stored as Text') : L.t(ERRDESC[issue.kind] || L.N('Error')), description: issue.kind === 'numtext' ? L.t('The number in this cell is formatted as text or preceded by an apostrophe.') : L.t(ERRHELP[issue.kind] || ''), action: issue.kind === 'numtext' ? L.t('Convert to Number') : L.t('Show Calculation Steps...'), index, count: list.length, canConvert: issue.kind === 'numtext' };
+  };
+  D.reactErrorCheckCatalog = () => errorSnapshot();
+  D.reactErrorCheckAction = (action) => {
+    if (!reactErrorCheck) return false;
+    const state = reactErrorCheck, issue = state.list[state.index], { sheet, workbook, list } = state;
+    const finish = () => { reactErrorCheck = null; L.bus.emit('excelx-error-checking-dialog'); };
+    if (action === 'close') { finish(); return true; }
+    if (action === 'previous' || action === 'next') { state.index = (state.index + (action === 'next' ? 1 : list.length - 1)) % list.length; G().select(list[state.index].r, list[state.index].c); L.bus.emit('excelx-error-checking-dialog'); return true; }
+    if (action === 'help') { L.panes.helpQuery = 'formulas'; finish(); L.panes.task.show('help'); return true; }
+    if (action === 'edit') { finish(); E().begin('edit'); return true; }
+    if (action === 'fix' && issue.kind !== 'numtext') { D.evaluateFormula(); return true; }
+    if (action !== 'fix' && action !== 'ignore') return false;
+    if (action === 'ignore') (workbook._ignoredErr || (workbook._ignoredErr = new Set())).add(sheet.id + ':' + issue.r + ':' + issue.c);
+    else tryRun(() => O.tx(workbook, 'Convert to Number', () => O.enter(sheet, issue.r, issue.c, String(sheet.val(issue.r, issue.c)).trim())));
+    list.splice(state.index, 1);
+    if (!list.length) { finish(); ui.msg('The error check of the entire sheet is complete.', { icon: 'info' }); return true; }
+    state.index = Math.min(state.index, list.length - 1); G().select(list[state.index].r, list[state.index].c); L.bus.emit('excelx-error-checking-dialog'); return true;
+  };
   D.errorChecking = function () {
     const s = sh(), w = wb();
     const ignored = (w._ignoredErr || (w._ignoredErr = new Set()));
@@ -342,6 +531,10 @@
     const sel = G().sel();
     let i = Math.max(0, list.findIndex((x) => x.r > sel.r || (x.r === sel.r && x.c >= sel.c)));
     if (!list.length) { ui.msg('The error check of the entire sheet is complete.', { icon: 'info' }); return; }
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactErrorCheck = { sheet: s, workbook: w, list, index: i };
+      G().select(list[i].r, list[i].c); L.bus.emit('excelx-error-checking-dialog'); return;
+    }
     const head = h('b'), formula = h('div', { class: 'ev-text', translate: 'no' }), title = h('div', { style: 'font-weight:bold' }), desc = h('div');
     const showI = () => {
       const x = list[i];
@@ -377,6 +570,44 @@
     const getName = (key) => { const n = w.names.find((x) => x.name.toLowerCase() === key && x.scope === idx); return n ? String(n.ref).replace(/^=/, '').replace(new RegExp('(?:' + F.quoteSheet(s.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')!', 'g'), '') : ''; };
     let area = getName('_xlnm.print_area');
     const titles = L.print.titles(s);
+    const direct = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected;
+    if (direct) {
+      let state = { p, area, rows: titles.rows ? '$' + (titles.rows.r1 + 1) + ':$' + (titles.rows.r2 + 1) : '', cols: titles.cols ? '$' + F.colName(titles.cols.c1) + ':$' + F.colName(titles.cols.c2) : '', first: p.firstPage != null ? String(p.firstPage) : L.t('Auto'), tab: Math.max(0, ['Page', 'Margins', 'Header/Footer', 'Sheet'].indexOf(tab)), error: '', resolve: null };
+      const snapshot = () => state && ({ p: Object.assign({}, state.p, { margins: Object.assign({}, state.p.margins) }), area: state.area, rows: state.rows, cols: state.cols, first: state.first, tab: state.tab, error: state.error, headers: { header: hfLabel(state.p.header, s), footer: hfLabel(state.p.footer, s) }, headerOptions: HF_PRESETS.map((code) => ({ code, label: hfLabel(code, s) })), papers: Object.keys(L.print.PAPERS).map((key) => ({ key: +key, label: L.t('{0} ({1} x {2} in)', L.t(L.print.PAPERS[key][0]), L.print.PAPERS[key][1], L.print.PAPERS[key][2]) })) });
+      D.reactPageSetupCatalog = () => snapshot();
+      D.reactPageSetupAction = (action, key, value) => {
+        if (!state) return false;
+        if (action === 'change') {
+          if (key === 'area' || key === 'rows' || key === 'cols' || key === 'first') state[key] = value;
+          else if (key === 'tab') state.tab = Number(value);
+          else if (key.startsWith('margin.')) state.p.margins[key.slice(7)] = Number(value) || 0;
+          else if (key.startsWith('print.')) state.p[key.slice(6)] = value;
+          else state.p[key] = value;
+          state.error = '';
+        } else if (action === 'custom') {
+          const headerKey = key === 'header' ? 'header' : 'footer';
+          D.customHF(state.p[headerKey] || '', headerKey === 'header' ? L.N('Header') : L.N('Footer'), (code) => { if (!state) return; state.p[headerKey] = code; L.bus.emit('excelx-page-setup'); });
+          return true;
+        } else if (action === 'close') { const resolve = state.resolve; state = null; if (resolve) resolve(0); }
+        else if (action === 'apply' || action === 'print' || action === 'preview') {
+          state.p.firstPage = /^\d+$/.test(String(state.first).trim()) ? +String(state.first).trim() : null;
+          const names = w.names.filter((n) => !(n.scope === idx && /^_xlnm\.(print_area|print_titles)$/i.test(n.name)));
+          const q = F.quoteSheet(s.name), a = state.area.trim().replace(/^=/, '');
+          if (a) { const parts = a.split(',').map((x) => x.trim()).filter(Boolean).map((x) => (/!/.test(x) ? x : q + '!' + x)); names.push({ name: '_xlnm.Print_Area', ref: parts.join(','), scope: idx }); }
+          const tparts = [], rr = state.rows.trim().replace(/^=/, ''), cc = state.cols.trim().replace(/^=/, '');
+          if (cc) tparts.push(/!/.test(cc) ? cc : q + '!' + cc);
+          if (rr) tparts.push(/!/.test(rr) ? rr : q + '!' + rr);
+          if (tparts.length) names.push({ name: '_xlnm.Print_Titles', ref: tparts.join(','), scope: idx });
+          try { for (const n of names) if (/^_xlnm/.test(n.name)) F.parse(n.ref); } catch (_) { state.error = L.t('Reference is not valid.'); L.bus.emit('excelx-page-setup'); return false; }
+          tryRun(() => O.tx(w, 'Page Setup', () => { O.setPrint(s, state.p); O.setNames(w, names); }));
+          L.print.computeBreaks(s);
+          if (action !== 'apply') setTimeout(() => action === 'print' ? D.print() : L.print.preview(), 0);
+          const resolve = state.resolve; state = null; if (resolve) resolve(1);
+        } else return false;
+        L.bus.emit('excelx-page-setup'); return true;
+      };
+      return new Promise((resolve) => { state.resolve = resolve; L.bus.emit('excelx-page-setup'); });
+    }
     /* page */
     const adj = ui.spin({ value: p.scale || 100, min: 10, max: 400, step: 5, dec: 0, fmt: (v) => L.t('{0}% normal size', Math.round(v)), onChange: (v) => { p.scale = Math.round(v); } });
     const fitW = ui.spin({ value: p.fitW == null ? 1 : p.fitW, min: 0, max: 32767, step: 1, dec: 0, onChange: (v) => { p.fitW = Math.round(v) || null; } });
@@ -433,6 +664,12 @@
     /* split the code into its &L / &C / &R parts, keeping the codes */
     let cur = 'c';
     String(code).split(/(&[LCR])/).forEach((part) => { if (/^&[LCR]$/.test(part)) cur = part[1].toLowerCase(); else secs[cur] += part; });
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactCustomHF = { kind, sections: secs };
+      reactCustomHFDone = done;
+      L.bus.emit('excelx-custom-hf-dialog');
+      return;
+    }
     const areas = { l: h('textarea', { rows: '5' }), c: h('textarea', { rows: '5' }), r: h('textarea', { rows: '5' }) };
     for (const k in areas) areas[k].value = secs[k];
     let last = areas.c;

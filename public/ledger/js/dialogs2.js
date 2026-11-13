@@ -30,11 +30,25 @@
   let reactStyle = null, reactStyleUpdate = null, reactStyleAction = null;
   let reactCFFormat = null, reactCFFormatDone = null;
   let reactConditional = null, reactConditionalSubmit = null;
+  let reactScenarios = null, reactScenarioActions = null;
+  D.reactScenarioCatalog = () => reactScenarios;
+  D.reactScenarioAction = (action, ...args) => { if (!reactScenarioActions || !reactScenarioActions[action]) return false; return reactScenarioActions[action](...args); };
+  D.reactScenarioClose = () => { reactScenarios = reactScenarioActions = null; L.bus.emit('excelx-scenarios-dialog'); };
   D.reactConditionalCatalog = () => reactConditional;
   D.reactConditionalFormat = (index, state) => {
     if (!reactConditional || !Number.isInteger(index) || !state || !Array.isArray(state.conditions) || !state.conditions[index]) return false;
     reactConditional = state;
-    D.cfFormat(state.conditions[index].dxf || {}, (dxf) => { if (!reactConditional?.conditions[index]) return; reactConditional = { ...reactConditional, conditions: reactConditional.conditions.map((item, i) => i === index ? { ...item, dxf } : item) }; L.bus.emit('excelx-conditional-format-dialog'); });
+    D.cfFormat(state.conditions[index].dxf || {}, (dxf) => {
+      if (!reactConditional?.conditions[index]) return;
+      const f = dxf.font || {}, css = [];
+      if (f.b) css.push('font-weight:bold'); if (f.i) css.push('font-style:italic');
+      if (f.u || f.strike) css.push('text-decoration:' + (f.u ? 'underline ' : '') + (f.strike ? 'line-through' : ''));
+      if (f.color) css.push('color:' + M.colorHex(wb(), f.color));
+      if (dxf.fill && (dxf.fill.fg || dxf.fill.bg)) css.push('background:' + M.colorHex(wb(), dxf.fill.fg || dxf.fill.bg));
+      if (dxf.border) css.push('outline:1px solid #000;outline-offset:-3px');
+      reactConditional = { ...reactConditional, conditions: reactConditional.conditions.map((item, i) => i === index ? { ...item, dxf, preview: css.join(';') } : item) };
+      L.bus.emit('excelx-conditional-format-dialog');
+    });
     return true;
   };
   D.reactConditionalApply = (state) => {
@@ -1170,6 +1184,40 @@
         A().renderTabs();
       });
     };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const snapshot = (stage = 'manager', extra = {}) => ({ stage, selected: cur, scenarios: s.scenarios.map((scenario) => ({ name: scenario.name, comment: scenario.comment || '', cells: scenario.cells.map((cell) => ({ ...cell, label: F.cellName(cell.r, cell.c, true, true) })) })), ...extra });
+      const refresh = () => { reactScenarios = snapshot(reactScenarios?.stage || 'manager', reactScenarios && reactScenarios.stage !== 'manager' ? { edit: reactScenarios.edit, refs: reactScenarios.refs } : {}); L.bus.emit('excelx-scenarios-dialog'); };
+      reactScenarios = snapshot();
+      reactScenarioActions = {
+        select: (index) => { if (Number.isInteger(index) && index >= 0 && index < s.scenarios.length) cur = index; refresh(); },
+        show: () => { const scenario = s.scenarios[cur]; if (scenario) tryRun(() => O.tx(w, 'Show Scenario', () => { for (const cell of scenario.cells) O.enter(s, cell.r, cell.c, String(cell.v)); })); },
+        begin: (index) => {
+          cur = Number.isInteger(index) ? index : cur;
+          const scenario = Number.isInteger(index) ? s.scenarios[index] : null;
+          const editState = { index: scenario ? index : -1, name: scenario ? scenario.name : '', comment: scenario ? scenario.comment || '' : L.t('Created by {0} on {1}', A().opts.userName || '', new Date().toLocaleDateString()), reference: scenario ? scenario.cells.map((cell) => F.cellName(cell.r, cell.c, true, true)).join(',') : F.absRangeName(G().range()) };
+          reactScenarios = snapshot('edit', { edit: editState, refs: [] }); L.bus.emit('excelx-scenarios-dialog');
+        },
+        prepare: (reference, name, comment) => {
+          const refs = [];
+          for (const part of String(reference).split(',')) { const parsed = parseRef(part); if (!parsed) { ui.msg('Reference is not valid.', { icon: 'warn' }); return false; } for (let r = parsed.r1; r <= parsed.r2; r++) for (let c = parsed.c1; c <= parsed.c2; c++) refs.push({ r, c, label: F.cellName(r, c, true, true) }); }
+          const scenario = reactScenarios?.edit?.index >= 0 ? s.scenarios[reactScenarios.edit.index] : null;
+          const values = refs.map((cell) => { const existing = scenario?.cells.find((item) => item.r === cell.r && item.c === cell.c); return existing ? String(existing.v) : L.editor.cellText(s, cell.r, cell.c); });
+          reactScenarios = snapshot('values', { edit: { ...reactScenarios.edit, reference, name: String(name || ''), comment: String(comment || '') }, refs }); L.bus.emit('excelx-scenarios-dialog'); return values;
+        },
+        back: () => { reactScenarios = snapshot('edit', { edit: reactScenarios?.edit, refs: [] }); L.bus.emit('excelx-scenarios-dialog'); },
+        save: (values) => {
+          const editState = reactScenarios?.edit, refs = reactScenarios?.refs;
+          if (!editState || !refs || !Array.isArray(values) || values.length !== refs.length || !editState.name.trim()) return false;
+          const item = { name: editState.name.trim(), comment: editState.comment, cells: refs.map((cell, index) => { const parsed = NF.parseInput(String(values[index]), {}); return { r: cell.r, c: cell.c, v: parsed && typeof parsed.v === 'number' ? parsed.v : String(values[index]) }; }) };
+          const old = s.scenarios.slice(), list = editState.index >= 0 ? old.map((scenario, index) => index === editState.index ? item : scenario) : old.concat([item]);
+          O.tx(w, L.N('Scenario'), () => { s.scenarios = list; w.undo.op(() => { s.scenarios = old; }, () => { s.scenarios = list; }); }); cur = list.indexOf(item); reactScenarios = snapshot(); L.bus.emit('excelx-scenarios-dialog'); return true;
+        },
+        delete: () => { if (!s.scenarios.length) return; const old = s.scenarios.slice(), list = old.filter((_, index) => index !== cur); O.tx(w, L.N('Scenario'), () => { s.scenarios = list; w.undo.op(() => { s.scenarios = old; }, () => { s.scenarios = list; }); }); cur = Math.min(cur, Math.max(0, list.length - 1)); refresh(); },
+        summary: () => summary(),
+      };
+      L.bus.emit('excelx-scenarios-dialog');
+      return;
+    }
     draw();
     ui.dialog({ title: 'Scenario Manager', width: 420, body: h('div', { class: 'col' }, h('label', { text: 'Sc&enarios:' }), box, info),
       buttons: [{ label: '&Show', onClick: () => { show(); return false; } }, { label: '&Add...', onClick: () => { edit(null); return false; } }, { label: '&Delete', onClick: () => { const old = s.scenarios.slice(); const list = old.filter((_, i) => i !== cur); O.tx(w, L.N('Scenario'), () => { s.scenarios = list; w.undo.op(() => { s.scenarios = old; }, () => { s.scenarios = list; }); }); cur = 0; draw(); return false; } }, { label: '&Edit...', onClick: () => { edit(s.scenarios[cur]); return false; } }, { label: 'S&ummary...', onClick: () => { summary(); } }, { label: 'Close', primary: true }] });
