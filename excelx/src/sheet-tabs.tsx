@@ -57,7 +57,7 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
 
   const finishRename = (tab: SheetTab, save: boolean) => {
     if (save && !runtime()?.app?.renameSheet(tab.index, nameDraft)) {
-      const input = document.querySelector<HTMLInputElement>(`#tabs input[data-sheet-index="${tab.index}"]`);
+      const input = mount?.querySelector<HTMLInputElement>(`input[data-sheet-index="${tab.index}"]`);
       input?.focus(); input?.select();
       return;
     }

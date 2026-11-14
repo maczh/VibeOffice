@@ -46,7 +46,7 @@ export function PptxPrintPreviewLayer({ host }: { host: HTMLElement }) {
   const canPrint = window.self === window.top || !!(window as Window & { VO?: { reactDirectHost?: unknown } }).VO?.reactDirectHost;
   const update = (change: Partial<PrintOptions>) => { Object.assign(options, change); L.panes?.preview?.render(); };
   return createPortal(<>
-    {canPrint && <button className="btn small" type="button" onClick={() => { document.body.classList.add('printing'); window.print(); setTimeout(() => document.body.classList.remove('printing'), 500); }}>{label(L, 'Print...')}</button>}
+    {canPrint && <button className="btn small" type="button" onClick={() => window.print()}>{label(L, 'Print...')}</button>}
     <label htmlFor="react-print-what">{label(L, 'Print What:')}</label>
     <select id="react-print-what" value={options.what} onChange={(event) => update({ what: event.currentTarget.value as PrintOptions['what'] })}>
       <option value="slides">{label(L, 'Slides')}</option><option value="handouts">{label(L, 'Handouts')}</option><option value="notes">{label(L, 'Notes Pages')}</option><option value="outline">{label(L, 'Outline View')}</option>

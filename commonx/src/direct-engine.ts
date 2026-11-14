@@ -3,6 +3,7 @@ export interface DirectEngineDocument {
   signal: AbortSignal;
   fetch?: typeof fetch;
   directHost?: Record<string, unknown>;
+  skipLegacyScripts?: readonly string[];
 }
 
 const loadedScripts = new WeakMap<Window, Map<string, Promise<void>>>();
@@ -117,7 +118,7 @@ function scopedStylesheet(document: Document, source: string, sourceUrl: URL, me
 }
 
 /** Load the existing static editor shell and ordered classic modules into the React-owned host document. */
-export async function mountLegacyEngineDocument(url: string | URL, { host, signal, fetch: fetcher, directHost = {} }: DirectEngineDocument): Promise<() => void> {
+export async function mountLegacyEngineDocument(url: string | URL, { host, signal, fetch: fetcher, directHost = {}, skipLegacyScripts = [] }: DirectEngineDocument): Promise<() => void> {
   const document = host.ownerDocument;
   const view = document.defaultView;
   if (!view) throw new Error('The editor host document has no window');
@@ -188,11 +189,16 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   }
 
   Object.assign(directRuntime, directHost, { root });
+  const loadedScripts = Array.isArray(directRuntime.loadedLegacyScripts) ? directRuntime.loadedLegacyScripts as string[] : [];
+  loadedScripts.length = 0;
+  directRuntime.loadedLegacyScripts = loadedScripts;
   runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ = directRuntime;
   try {
     for (const script of scripts) {
       const scriptUrl = new URL(script.getAttribute('src') || '', source);
       assertSameOrigin(scriptUrl, base);
+      if (skipLegacyScripts.some((path) => scriptUrl.pathname.endsWith(path))) continue;
+      loadedScripts.push(scriptUrl.pathname);
       await loadScript(document, scriptUrl, signal);
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L?.mountDomRoot) restoreDomRoot = runtimeWindow.L.mountDomRoot(root);
     }

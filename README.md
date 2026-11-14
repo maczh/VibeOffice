@@ -12,16 +12,16 @@
 <table>
   <tr>
     <td align="center" width="33%">
-      <a href="https://vibeoffice.work/quire/?template=flyer"><img src="docs/images/quire.png" alt="Quire, the word processor, editing an event flyer"></a><br>
-      <b><a href="https://vibeoffice.work/quire/">Quire</a></b><br>Word processor
+      <a href="https://vibeoffice.work/wordx/?template=flyer"><img src="docs/images/quire.png" alt="Wordx, the word processor, editing an event flyer"></a><br>
+      <b><a href="https://vibeoffice.work/wordx/">Wordx</a></b><br>Word processor
     </td>
     <td align="center" width="33%">
-      <a href="https://vibeoffice.work/ledger/?template=loan"><img src="docs/images/ledger.png" alt="Ledger, the spreadsheet, with a loan amortization schedule"></a><br>
-      <b><a href="https://vibeoffice.work/ledger/">Ledger</a></b><br>Spreadsheet
+      <a href="https://vibeoffice.work/excelx/?template=loan"><img src="docs/images/ledger.png" alt="Excelx, the spreadsheet, with a loan amortization schedule"></a><br>
+      <b><a href="https://vibeoffice.work/excelx/">Excelx</a></b><br>Spreadsheet
     </td>
     <td align="center" width="33%">
-      <a href="https://vibeoffice.work/lectern/"><img src="docs/images/lectern.png" alt="Lectern, the presentation editor, with the sample deck: a drawn title slide, then a chart, a table, a timeline and a funnel diagram"></a><br>
-      <b><a href="https://vibeoffice.work/lectern/">Lectern</a></b><br>Presentations
+      <a href="https://vibeoffice.work/pptx/"><img src="docs/images/lectern.png" alt="PPTX, the presentation editor, with the sample deck: a drawn title slide, then a chart, a table, a timeline and a funnel diagram"></a><br>
+      <b><a href="https://vibeoffice.work/pptx/">PPTX</a></b><br>Presentations
     </td>
   </tr>
 </table>
@@ -51,17 +51,17 @@ The goal: edit a Word, Excel or PowerPoint file here, save it in the same format
 
 | App | | Opens and saves |
 |---|---|---|
-| [Quire](docs/quire.md) | Word processor | .docx, .docm, .dotx, .dotm, .rtf, .htm, .txt, Markdown (.md, or .zip with pictures); PDF |
-| [Ledger](docs/ledger.md) | Spreadsheet | .xlsx, .xlsm, .xltx, .xltm, .csv, XML Spreadsheet 2003, .htm; PDF |
-| [Lectern](docs/lectern.md) | Presentations | .pptx, .pptm, .ppsx, .ppsm, .potx, .potm; PDF, PNG, .htm |
+| [Wordx](docs/quire.md) | Word processor | .docx, .docm, .dotx, .dotm, .rtf, .htm, .txt, Markdown (.md, or .zip with pictures); PDF |
+| [Excelx](docs/ledger.md) | Spreadsheet | .xlsx, .xlsm, .xltx, .xltm, .csv, XML Spreadsheet 2003, .htm; PDF |
+| [PPTX](docs/lectern.md) | Presentations | .pptx, .pptm, .ppsx, .ppsm, .potx, .potm; PDF, PNG, .htm |
 
-Start at vibeoffice.work, the Start Center: open a file, pick one from Recent Files, or create a document, spreadsheet or presentation from a blank page or a template.
+Start at vibeoffice.work, the Start Center: open a file or create a document, spreadsheet or presentation from a blank page or a template.
 
 ## Feedback and contributing
 
 Found a file that doesn't open or save the way it should? Please [open an issue](https://github.com/tcchen2026/VibeOffice/issues).
 
-VibeOffice is plain HTML and JavaScript with no build step. Read [AGENTS.md](AGENTS.md) for the design rules and [docs/testing.md](docs/testing.md) for running it locally and testing.
+VibeOffice's web editors are Vite-built React packages backed by the existing browser document engines. Read [AGENTS.md](AGENTS.md) for the design rules and [docs/testing.md](docs/testing.md) for running it locally and testing.
 
 ## Legal
 

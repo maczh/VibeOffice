@@ -11,6 +11,7 @@ import { createDirectEngineBridge, createIndexedDbDraftStore, openLocalDocument,
 import { IDBFactory } from 'fake-indexeddb';
 import { createRemoteFileCallbacks, createUrlReadProvider, createWebDavProvider, remoteConflict } from '@vibeoffice/core';
 import { reactCsp } from '../../tools/vite/react-csp.mjs';
+import { reactTemplates } from '../../tools/vite/legacy-runtime.mjs';
 
 const editors = [
   { component: WordxEditor, label: 'Wordx editor', id: 'wordx' },
@@ -106,6 +107,19 @@ test('shared native dialog exposes an accessible title and request-close afforda
   assert.match(html, /<dialog[^>]*aria-modal="true"[^>]*aria-labelledby="[^"]+"/);
   assert.match(html, /<h2 id="[^"]+">Credentials<\/h2>/);
   assert.match(html, /Continue/);
+});
+
+test('React template metadata uses only Wordx, Excelx and PPTX product routes', () => {
+  const source = JSON.stringify({
+    quire: [{ id: 'letter', name: 'Letter', img: 'quire/templates/letter.jpg' }],
+    ledger: [{ id: 'budget', name: 'Budget', img: 'ledger/templates/budget.jpg' }],
+    lectern: [{ id: 'meeting', name: 'Meeting', img: 'lectern/templates/meeting.jpg' }],
+  });
+  assert.deepEqual(JSON.parse(reactTemplates(source)), {
+    wordx: [{ id: 'letter', name: 'Letter', img: 'wordx/templates/letter.jpg' }],
+    excelx: [{ id: 'budget', name: 'Budget', img: 'excelx/templates/budget.jpg' }],
+    pptx: [{ id: 'meeting', name: 'Meeting', img: 'pptx/templates/meeting.jpg' }],
+  });
 });
 
 test('local drafts use their own database and support recovery without touching Recent Files', async () => {

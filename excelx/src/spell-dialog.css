@@ -1,0 +1,9 @@
+.excelx-spell-dialog__grid { display: grid; grid-template-columns: minmax(0,1fr) 150px; gap: 14px; }
+.excelx-spell-dialog__grid section:first-child { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.excelx-spell-dialog__grid section:first-child > input, .excelx-spell-dialog__grid section:first-child > select { width: 100%; box-sizing: border-box; }
+.excelx-spell-dialog__context { min-height: 38px; padding: 6px; border: 1px solid var(--border); overflow-wrap: anywhere; }
+.excelx-spell-dialog__context strong { color: #c00; }
+.excelx-spell-dialog__grid section:first-child label:last-child { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.excelx-spell-dialog__grid section:first-child label:last-child select { flex: 1; min-width: 0; }
+.excelx-spell-dialog__buttons { display: flex; flex-direction: column; gap: 5px; }
+.excelx-spell-dialog__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }

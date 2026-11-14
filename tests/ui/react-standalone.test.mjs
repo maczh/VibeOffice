@@ -32,9 +32,10 @@ test('each editor production package runs independently from its standalone dire
       let page;
       try {
         for (let n = 0; n < 40 && !await fetch(base).then((response) => response.ok).catch(() => false); n++) await new Promise((resolve) => setTimeout(resolve, 100));
-        page = await openPage(undefined, { timeout: 15000 });
+        page = await openPage(undefined, { timeout: 15000, bypassServiceWorker: true });
         const mounted = await page.evaluate(`new Promise((resolve) => { const end=Date.now()+10000; const poll=()=>document.querySelector('.vibe-editor__engine #app') && (${editor.ready}) ? resolve(true) : Date.now()>end ? resolve(false) : setTimeout(poll,50); poll(); })`);
-        assert.equal(mounted, true, `${editor.id} standalone loads its React editor and document engine`);
+        const diagnostic = mounted ? null : await page.evaluate("({url:location.href,title:document.title,body:document.body.innerText.slice(0,1000),editor:!!document.querySelector('.vibe-editor__engine #app'),scriptErrors:window.__capturedErrors||[]})");
+        assert.equal(mounted, true, `${editor.id} standalone loads its React editor and document engine: ${JSON.stringify({ diagnostic, errors: page.errors, requests: page.requests })}`);
         assert.equal(await page.evaluate('location.pathname'), '/');
         assert.equal(await page.evaluate("document.querySelectorAll('iframe').length"), 0);
         assert.deepEqual(page.errors, []);

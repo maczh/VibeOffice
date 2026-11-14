@@ -3,6 +3,8 @@ export { AppearanceControls } from './editor-frame.js';
 export type { AppearanceControlsProps, EditorFrameProps, EngineEditorFrameProps, EditorMount, EditorMountContext, EngineRuntimeOptions, EditorKind } from './editor-frame.js';
 export { OfficeDialog } from './dialog.js';
 export type { OfficeDialogProps } from './dialog.js';
+export { ChartEditorDialog } from './chart-editor-dialog.js';
+export { ScoutAssistant } from './scout-assistant.js';
 export { AboutDialog } from './about-dialog.js';
 export type { AboutRequest } from './about-dialog.js';
 export { MessageDialog } from './message-dialog.js';

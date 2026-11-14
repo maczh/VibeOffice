@@ -340,6 +340,13 @@
 
   /** Insert ▸ SmartArt (and Change Layout): categories, pictures of the layouts, a description */
   DG.gallery = (cb, current) => {
+    const directHost = window.VO && window.VO.reactDirectHost;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && directHost && directHost.root?.isConnected) {
+      DG.reactGalleryCallback = cb;
+      DG.reactGalleryCurrent = current || SA.LAYOUTS[0].id;
+      L.bus.emit('pptx-diagram-gallery');
+      return;
+    }
     let pick = current || SA.LAYOUTS[0].id, cat = 'all';
     const cats = h('div', { class: 'sa-cats list-box', role: 'listbox', 'aria-label': 'Categories' });
     const grid = h('div', { class: 'sa-grid', role: 'listbox', 'aria-label': 'Layouts' });
@@ -367,6 +374,27 @@
       body: h('div', { class: 'sa-gallery' }, cats, grid, h('div', { class: 'sa-side' }, big, title, desc)),
       buttons: [{ label: 'OK', primary: true, onClick: () => cb(pick) }, { label: 'Cancel' }] });
     fill();
+  };
+  DG.reactGalleryCatalog = () => {
+    if (!DG.reactGalleryCallback) return null;
+    const used = new Set(SA.LAYOUTS.map((layout) => layout.cat));
+    return {
+      current: DG.reactGalleryCurrent,
+      categories: [['all', L.N('All')]].concat(SA.CATEGORIES.filter(([key]) => used.has(key)).map(([key, name]) => [key, L.N(name)])),
+      layouts: SA.LAYOUTS.map((layout) => ({ id: layout.id, category: layout.cat, name: L.t(layout.name), description: L.t(layout.desc), preview: DG.thumb(layout.id, 74, 58) })),
+    };
+  };
+  DG.reactGalleryPreview = (id) => {
+    const layout = SA.get(id);
+    return layout ? { name: L.t(layout.name), description: L.t(layout.desc), preview: DG.thumb(id, 190, 150) } : null;
+  };
+  DG.reactGalleryAction = (action, id) => {
+    if (!DG.reactGalleryCallback) return;
+    const callback = DG.reactGalleryCallback;
+    DG.reactGalleryCallback = null;
+    DG.reactGalleryCurrent = null;
+    L.bus.emit('pptx-diagram-gallery');
+    if (action === 'apply') callback(id || SA.LAYOUTS[0].id);
   };
 
   /* ---------------------------------------------------------------- editing the items */
@@ -555,6 +583,37 @@
     const want = paneItem && L.$(`.sa-row[data-item="${paneItem}"]`, list);
     if (want && paneFocus) { want.focus(); want.setSelectionRange(want.value.length, want.value.length); }
   }
+  DG.reactTextPaneCatalog = function () {
+    const g = DG.current();
+    if (!g) return { available: false, rows: [], layouts: [], colors: [], styles: [] };
+    const currentLayout = SA.get(g.sa.layout) || SA.LAYOUTS[0];
+    const layouts = SA.LAYOUTS.filter((layout) => layout.cat === currentLayout.cat).map((layout) => ({ id: layout.id, name: L.t(layout.name), preview: DG.thumb(layout.id, 60, 44, { colors: g.sa.colors, style: g.sa.style }), selected: g.sa.layout === layout.id }));
+    const colorChoices = DG.colorChoices(design());
+    if (!colorChoices.some(([id]) => id === g.sa.colors)) colorChoices.unshift([g.sa.colors, DG.colorsLabel(g.sa.colors)]);
+    const colors = colorChoices.map(([id, name]) => ({ id, name: L.t(name), preview: DG.thumb('process', 72, 28, { colors: id, style: g.sa.style, items: three }), selected: g.sa.colors === id }));
+    const styles = DG.STYLE_GROUPS.map(([language, title]) => ({ language, title: L.t(title), choices: DG.STYLES.filter((style) => DG.styleLang(style[0]) === language).map(([id, name]) => ({ id, name: L.t(name), preview: DG.thumb('process', 72, 34, { colors: g.sa.colors, style: id, items: three }), selected: g.sa.style === id })) }));
+    return { available: true, rows: rowsOf(g).map((row) => ({ id: row.item.id, text: row.item.text || '', level: row.level })), focusId: paneItem, layouts, colors, styles };
+  };
+  DG.reactTextFocus = function (id) {
+    const g = DG.current();
+    if (!g || !DG.locate(g, id)) return;
+    paneItem = id;
+    selectItem(g, id);
+    L.hist.breakCoalesce();
+  };
+  DG.reactTextChange = function (id, text) {
+    const g = DG.current();
+    if (g) DG.setText(g, id, text);
+  };
+  DG.reactTextKey = function (event, id, input) {
+    const g = DG.current(), location = g && DG.locate(g, id);
+    if (!g || !location) return;
+    const row = rowsOf(g).find((item) => item.item.id === id);
+    if (row) paneKey(event, g, row, input);
+  };
+  DG.reactTextSet = (key, value) => DG.set(key, value);
+  DG.reactTextReset = () => DG.reset();
+  DG.reactTextConvert = () => DG.toShapes();
   let paneFocus = false;
   function paneKey(e, g, row, inp) {
     e.stopPropagation();
@@ -581,12 +640,16 @@
       const g = DG.current();
       if (g && g.id === paneG) return;
     }
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost?.root?.isConnected) {
+      L.bus.emit('pptx-task-render');
+      return;
+    }
     paneFocus = paneFocus || focused;
     renderPane(b);
     paneFocus = false;
   }
   DG.showPane = (on) => { const TP = L.panes && L.panes.task; if (!TP) return; if (on === false) { if (TP.current === 'diagramText') L.app.toggleTask(false); return; } TP.show('diagramText'); };
-  if (L.panes && L.panes.task) L.panes.task.register({ id: 'diagramText', title: 'IntelliArt', render(b) { renderPane(b); }, refresh(b, reason) { if (reason === 'selection') { const g = DG.current(); if (g && g.id === paneG && b.contains(document.activeElement)) return; } renderPane(b); } });
+  if (L.panes && L.panes.task) L.panes.task.register({ id: 'diagramText', title: 'IntelliArt', render(b) { renderPane(b); }, refresh(b, reason) { if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost?.root?.isConnected) { L.bus.emit('pptx-task-render'); return; } if (reason === 'selection') { const g = DG.current(); if (g && g.id === paneG && b.contains(document.activeElement)) return; } renderPane(b); } });
 
   /* ---------------------------------------------------------------- galleries for the pane, the toolbar and the ribbon */
   /** a grid of pictures, one button per choice; pick(value) on a click */
@@ -614,12 +677,32 @@
     grid(cols, DG.STYLES.filter((st) => DG.styleLang(st[0]) === lang).map(([k, n]) => [k, n, DG.thumb('process', 72, 34, { colors: g && g.sa.colors, style: k, items: three }), !!g && g.sa.style === k]),
       '', (k) => { if (done) done(); DG.set('style', k, g); })]));
 
-  DG.layoutMenu = (r) => {
+  function reactDiagramMenu(kind, r, anchor) {
+    const directHost = window.VO && window.VO.reactDirectHost;
+    if (!window.__VIBE_OFFICE_DIRECT_HOST__ || !directHost || !directHost.root?.isConnected) return false;
+    const g = DG.current();
+    if (!g) return true;
+    let groups;
+    if (kind === 'layout') groups = [{ id: 'layouts', label: '', choices: SA.LAYOUTS.map((layout) => ({ id: layout.id, label: layout.name, preview: DG.thumb(layout.id, 60, 44, { colors: g.sa.colors, style: g.sa.style }), selected: g.sa.layout === layout.id })) }];
+    else if (kind === 'colors') {
+      const shown = DG.colorChoices(design());
+      if (!shown.some(([key]) => key === g.sa.colors)) shown.unshift([g.sa.colors, DG.colorsLabel(g.sa.colors)]);
+      groups = [{ id: 'colors', label: '', choices: shown.map(([key, label]) => ({ id: key, label, preview: DG.thumb('process', 72, 28, { colors: key, style: g.sa.style, items: three }), selected: g.sa.colors === key })) }];
+    } else groups = DG.STYLE_GROUPS.map(([language, title]) => ({ id: language, label: title, choices: DG.STYLES.filter((style) => DG.styleLang(style[0]) === language).map(([key, label]) => ({ id: key, label, preview: DG.thumb('process', 72, 34, { colors: g.sa.colors, style: key, items: three }), selected: g.sa.style === key })) }));
+    directHost.root.dispatchEvent(new CustomEvent('vibeoffice-react-diagram-menu', { detail: {
+      kind, left: r.left, bottom: r.bottom, anchor: anchor instanceof HTMLElement ? anchor : null, groups,
+      choose: (key) => DG.set(kind === 'layout' ? 'layout' : kind === 'colors' ? 'colors' : 'style', key, g),
+      ...(kind === 'layout' ? { moreLabel: L.t('More Layouts...'), more: () => ui.exec('diagramLayout') } : {}),
+    }, bubbles: true }));
+    return true;
+  }
+  DG.layoutMenu = (r, anchor) => {
+    if (reactDiagramMenu('layout', r, anchor)) return;
     const g = DG.current();
     ui.openMenu([{ custom: (close) => h('div', { class: 'sa-menu-grid' }, DG.layoutGrid(g, null, 5, close)) }, '-', 'diagramLayout'], r);
   };
-  DG.colorsMenu = (r) => { const g = DG.current(); ui.openMenu([{ custom: (close) => h('div', { class: 'sa-menu-grid' }, DG.colorsGrid(g, 4, close)) }], r); };
-  DG.styleMenu = (r) => { const g = DG.current(); ui.openMenu([{ custom: (close) => h('div', { class: 'sa-menu-grid' }, DG.stylesGrid(g, 4, close)) }], r); };
+  DG.colorsMenu = (r, anchor) => { if (reactDiagramMenu('colors', r, anchor)) return; const g = DG.current(); ui.openMenu([{ custom: (close) => h('div', { class: 'sa-menu-grid' }, DG.colorsGrid(g, 4, close)) }], r); };
+  DG.styleMenu = (r, anchor) => { if (reactDiagramMenu('style', r, anchor)) return; const g = DG.current(); ui.openMenu([{ custom: (close) => h('div', { class: 'sa-menu-grid' }, DG.stylesGrid(g, 4, close)) }], r); };
 
   /* ---------------------------------------------------------------- commands */
   const C = (id, def) => ui.cmd(id, def);

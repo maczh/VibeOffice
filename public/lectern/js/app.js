@@ -62,7 +62,7 @@
   function buildMenus() {
     const autoShapeSub = (group) => ({ custom: (close) => shapeGrid(L.geom.MENU[group], close) });
     const menus = [
-      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', 'printPreview', 'print', '-', 'properties', ...(L.file.native() ? ['versions'] : []), ...((r) => (r.length ? ['-', ...r] : []))(window.VO ? VO.recentMenuItems(4) : []), '-', 'exitApp'] },
+      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', 'printPreview', 'print', '-', 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
       { label: '&Edit', items: ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', '-', 'clear', 'selectAll', 'duplicate', 'deleteSlide', '-', 'find', 'replace'] },
       {
         label: '&View', items: () => ['viewNormal', 'viewSorter', 'showFromStart', 'viewNotes', '-',
@@ -91,12 +91,37 @@
     row.appendChild(ui.searchBox());
   }
 
-  function shapeGrid(list, close) {
+  let reactShapeMenu = null;
+  A.reactShapeMenuCatalog = () => reactShapeMenu && reactShapeMenu.root.isConnected ? reactShapeMenu.choices : null;
+  A.reactShapeMenuAction = (kind) => {
+    const current = reactShapeMenu;
+    const choice = current && current.choices.find((item) => item.kind === kind);
+    if (!choice) return false;
+    reactShapeMenu = null;
+    current.close();
+    current.choose(kind);
+    return true;
+  };
+  A.reactShapeMenuCancel = (slot) => {
+    if (reactShapeMenu && reactShapeMenu.root === slot) reactShapeMenu = null;
+  };
+  function shapeGrid(list, close, choose) {
+    choose = choose || ((kind) => {
+      const p = L.geom.get(kind);
+      E.setTool(p.isLine ? { kind: 'line', geom: kind } : { kind: 'shape', geom: kind });
+    });
+    const directHost = window.VO && window.VO.reactDirectHost;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && directHost && directHost.root && directHost.root.isConnected) {
+      const slot = h('div', { id: 'react-pptx-shape-grid-root' });
+      const choices = list.map((kind) => { const shape = L.geom.get(kind); return { kind, label: shape.label || kind, svg: L.geom.preview(kind, 20) }; });
+      reactShapeMenu = { root: slot, choices, close, choose };
+      return slot;
+    }
     const g = h('div', { class: 'shape-grid' });
     for (const k of list) {
       const p = L.geom.get(k);
       const b = h('button', { type: 'button', 'data-tip': p.label, 'aria-label': p.label, html: L.geom.preview(k, 20) });
-      b.addEventListener('click', () => { close(); E.setTool(p.isLine ? { kind: 'line', geom: k } : { kind: 'shape', geom: k }); });
+      b.addEventListener('click', () => { close(); choose(k); });
       g.appendChild(b);
     }
     return g;
@@ -124,21 +149,64 @@
     return el;
   }
   const lineSVG = (w, dash, extra) => `<svg width="90" height="14" viewBox="0 0 90 14"><path d="M2 7h86" stroke="#000" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} fill="none"/>${extra || ''}</svg>`;
-  function lineStyleMenu(r) {
+  function reactLineStyleMenu(kind, r, choices, choose, anchor) {
+    const directHost = window.VO && window.VO.reactDirectHost;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && directHost && directHost.root && directHost.root.isConnected) {
+      directHost.root.dispatchEvent(new CustomEvent('vibeoffice-react-line-menu', { detail: { kind, left: r.left, bottom: r.bottom, anchor: anchor instanceof HTMLElement ? anchor : null, choices, choose }, bubbles: true }));
+      return;
+    }
+    ui.openMenu([{ custom: (close) => listPanel(choices.map((choice) => ({ html: choice.svg, label: kind === 'arrow' ? '' : choice.label, run: () => choose(choice.value) })), close) }], r);
+  }
+  function lineStyleMenu(r, anchor) {
+    const choices = WEIGHTS.map((w, index) => ({ id: `weight-${index}`, value: w, label: L.t('{0} pt', w), svg: lineSVG(Math.max(0.5, w * 1.33)) }));
+    choices.push({ id: 'more', value: 'more', label: L.t('More Lines...'), svg: '' });
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO && window.VO.reactDirectHost) return reactLineStyleMenu('weight', r, choices, (value) => value === 'more' ? ui.exec('formatObject', 'Colors and Lines') : A.setLineProp({ w: value }), anchor);
     ui.openMenu([{ custom: (close) => listPanel(WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => A.setLineProp({ w }) })).concat([{ label: 'More Lines...', run: () => ui.exec('formatObject', 'Colors and Lines') }]), close) }], r);
   }
-  function dashMenu(r) {
+  function dashMenu(r, anchor) {
+    const choices = L.dlg.DASHES.map(([k, n], index) => ({ id: `dash-${index}`, value: k, label: n, svg: lineSVG(2, (L.render.dashArray(k, 2) || '').replace(/,/g, ' ')) }));
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO && window.VO.reactDirectHost) return reactLineStyleMenu('dash', r, choices, (value) => A.setLineProp({ dash: value }), anchor);
     ui.openMenu([{ custom: (close) => listPanel(L.dlg.DASHES.map(([k, n]) => ({ html: lineSVG(2, (L.render.dashArray(k, 2) || '').replace(/,/g, ' ')), label: n, run: () => A.setLineProp({ dash: k }) })), close) }], r);
   }
   const ARROW_PRESETS = [
     [null, null], [null, 'triangle'], ['triangle', null], ['triangle', 'triangle'], [null, 'arrow'], [null, 'stealth'], [null, 'oval'], [null, 'diamond'], ['oval', 'triangle'], ['oval', 'oval'], ['diamond', 'diamond'],
   ];
-  function arrowMenu(r) {
+  function arrowMenu(r, anchor) {
     const head = (t, x, dir) => !t ? '' : t === 'oval' ? `<circle cx="${x}" cy="7" r="3"/>` : t === 'diamond' ? `<path d="M${x - 4} 7l4-4 4 4-4 4z"/>` : t === 'arrow' ? `<path d="M${x - dir * 6} 2l${dir * 6} 5-${dir * 6} 5" fill="none" stroke="#000" stroke-width="1.5"/>` : `<path d="M${x} 7l${-dir * 8} -4v8z"/>`;
+    const labels = ['No Arrowheads', 'Triangle at End', 'Triangle at Start', 'Triangles at Both Ends', 'Arrow at End', 'Stealth at End', 'Oval at End', 'Diamond at End', 'Oval at Start, Triangle at End', 'Ovals at Both Ends', 'Diamonds at Both Ends'];
+    const choices = ARROW_PRESETS.map(([a, b], index) => ({ id: `arrow-${index}`, label: L.t(labels[index]), value: { head: a, tail: b }, svg: `<svg width="90" height="14" viewBox="0 0 90 14" fill="#000"><path d="M6 7h78" stroke="#000" stroke-width="1.5"/>${head(a, 4, -1)}${head(b, 86, 1)}</svg>` }));
+    choices.push({ id: 'more', label: L.t('More Arrows...'), value: 'more', svg: '' });
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO && window.VO.reactDirectHost) return reactLineStyleMenu('arrow', r, choices, (value) => value === 'more' ? ui.exec('formatObject', 'Colors and Lines') : A.setLineProp(value), anchor);
     ui.openMenu([{ custom: (close) => listPanel(ARROW_PRESETS.map(([a, b]) => ({ html: `<svg width="90" height="14" viewBox="0 0 90 14" fill="#000"><path d="M6 7h78" stroke="#000" stroke-width="1.5"/>${head(a, 4, -1)}${head(b, 86, 1)}</svg>`, run: () => A.setLineProp({ head: a, tail: b }) })).concat([{ label: 'More Arrows...', run: () => ui.exec('formatObject', 'Colors and Lines') }]), close) }], r);
   }
+  const TABLE_BORDER_CHOICES = [['all', 'bordersAll', 'All Borders'], ['out', 'bordersOut', 'Outside Borders'], ['in', 'bordersIn', 'Inside Borders'], ['none', 'bordersNone', 'No Border'], ['t', 'bordersTop', 'Top Border'], ['b', 'bordersBottom', 'Bottom Border'], ['l', 'bordersLeft', 'Left Border'], ['r', 'bordersRight', 'Right Border']];
+  function tableBordersMenu(r, anchor) {
+    const choices = TABLE_BORDER_CHOICES.map(([kind, icon, label]) => ({ id: `table-${kind}`, value: kind, label: L.t(label), svg: L.icons.get(icon) }));
+    const directHost = window.VO && window.VO.reactDirectHost;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && directHost && directHost.root?.isConnected) { directHost.root.dispatchEvent(new CustomEvent('vibeoffice-react-line-menu', { detail: { kind: 'table-borders', left: r.left, bottom: r.bottom, anchor: anchor instanceof HTMLElement ? anchor : null, choices, choose: (value) => A.tableBorders(value) }, bubbles: true })); return; }
+    ui.openMenu([{ custom: (close) => { const g = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(4,24px)' }); for (const [kind, icon, label] of TABLE_BORDER_CHOICES) { const button = h('button', { type: 'button', 'data-tip': label, 'aria-label': label, html: L.icons.get(icon) }); button.addEventListener('click', () => { close(); A.tableBorders(kind); }); g.appendChild(button); } return g; } }], r);
+  }
+  function tableDashMenu(r, anchor) {
+    const choices = L.dlg.DASHES.map(([kind, label], index) => ({ id: `table-dash-${index}`, value: kind, label, svg: lineSVG(2, (L.render.dashArray(kind, 2) || '').replace(/,/g, ' ')) }));
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) return reactLineStyleMenu('table-dash', r, choices, (value) => { A.tblBorder.dash = value; }, anchor);
+    return ui.openMenu([{ custom: (close) => listPanel(choices.map((choice) => ({ html: choice.svg, label: choice.label, run: () => { A.tblBorder.dash = choice.value; } })), close) }], r);
+  }
+  function tableWeightMenu(r, anchor) {
+    const choices = WEIGHTS.map((weight, index) => ({ id: `table-weight-${index}`, value: weight, label: L.t('{0} pt', weight), svg: lineSVG(Math.max(0.5, weight * 1.33)) }));
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) return reactLineStyleMenu('table-weight', r, choices, (value) => { A.tblBorder.w = value; }, anchor);
+    return ui.openMenu([{ custom: (close) => listPanel(choices.map((choice) => ({ html: choice.svg, label: choice.label, run: () => { A.tblBorder.w = choice.value; } })), close) }], r);
+  }
   const SHADOWS = [null, [3, 3], [-3, 3], [3, -3], [-3, -3], [0, 4], [4, 0], [6, 6], [-6, 6], [2, 2, 4], [0, 6, 6], [5, 5, 3]];
-  function shadowMenu(r) {
+  function shadowMenu(r, anchor) {
+    const directHost = window.VO && window.VO.reactDirectHost;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && directHost && directHost.root && directHost.root.isConnected) {
+      const choices = SHADOWS.map((shadow, index) => ({ id: `shadow-${index}`, label: L.t(shadow ? 'Shadow Style' : 'No Shadow'), value: shadow ? { dx: shadow[0], dy: shadow[1], blur: shadow[2] || 0 } : null }));
+      directHost.root.dispatchEvent(new CustomEvent('vibeoffice-react-shadow-menu', { detail: {
+        left: r.left, bottom: r.bottom, anchor: anchor instanceof HTMLElement ? anchor : null, choices,
+        choose: (value) => A.setShadow(value ? { c: '#000000', a: 0.5, dx: value.dx, dy: value.dy, blur: value.blur || 0 } : null),
+      }, bubbles: true }));
+      return;
+    }
     ui.openMenu([{
       custom: (close) => {
         const g = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(4,30px)' });
@@ -158,7 +226,7 @@
       { label: 'Nud&ge', sub: ['nudgeUp', 'nudgeDown', 'nudgeLeft', 'nudgeRight'] },
       { label: '&Align or Distribute', sub: ['alignL', 'alignC', 'alignR', 'alignT', 'alignM', 'alignB', '-', 'distH', 'distV', '-', 'alignToSlide'] },
       { label: 'Rotate or Fl&ip', sub: ['freeRotate', 'rotateLeft', 'rotateRight', '-', 'flipH', 'flipV'] }, '-',
-      { label: 'C&hange AutoShape', enabled: () => E.selected().some((s) => s.type === 'shape' || s.type === 'text'), sub: ['Basic Shapes', 'Block Arrows', L.N('Flowchart'), 'Stars and Banners', L.N('Callouts'), 'Action Buttons'].map((g) => ({ label: g, sub: [{ custom: (close) => { const el = shapeGrid(L.geom.MENU[g], close); L.$$('button', el).forEach((b, i) => { const nb = b.cloneNode(true); nb.addEventListener('click', () => { close(); A.changeAutoShape(L.geom.MENU[g][i]); }); b.replaceWith(nb); }); return el; } }] })) },
+      { label: 'C&hange AutoShape', enabled: () => E.selected().some((s) => s.type === 'shape' || s.type === 'text'), sub: ['Basic Shapes', 'Block Arrows', L.N('Flowchart'), 'Stars and Banners', L.N('Callouts'), 'Action Buttons'].map((g) => ({ label: g, sub: [{ custom: (close) => shapeGrid(L.geom.MENU[g], close, (kind) => A.changeAutoShape(kind)) }] })) },
       'setDefaults',
     ], r);
   }
@@ -185,9 +253,9 @@
     zoom: (o) => ui.combo(Object.assign({ id: 'tb-zoom', width: 64, tip: 'Zoom', options: () => [L.t('Fit'), '400%', '200%', '150%', '100%', '75%', '66%', '50%', '33%', '25%'], value: () => (E.zoom === 'fit' ? L.t('Fit') : E.zoomPct() + '%'), onChange: (v) => { if (/fit/i.test(v) || v === L.t('Fit')) E.setZoom('fit'); else { const n = parseFloat(v); if (n > 0) E.setZoom(n / 100); } } }, o)),
   };
   A.menus = {
-    color: (kind) => colorDD(kind), autoShapes: (r) => openAutoShapes(r), draw: (r) => drawMenu(r), lineStyle: (r) => lineStyleMenu(r), dash: (r) => dashMenu(r), arrow: (r) => arrowMenu(r), shadow: (r) => shadowMenu(r),
+    color: (kind) => colorDD(kind), autoShapes: (r) => openAutoShapes(r), draw: (r) => drawMenu(r), lineStyle: (r, anchor) => lineStyleMenu(r, anchor), dash: (r, anchor) => dashMenu(r, anchor), arrow: (r, anchor) => arrowMenu(r, anchor), shadow: (r, anchor) => shadowMenu(r, anchor),
     picColor: (r) => ui.openMenu([{ label: '&Automatic', run: () => A.picMode('') }, { label: '&Grayscale', run: () => A.picMode('gray') }, { label: '&Black & White', run: () => A.picMode('bw') }, { label: '&Washout', run: () => A.picMode('wash') }], r),
-    tableBorders: (r) => ui.openMenu([{ custom: (close) => { const g = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(4,24px)' }); for (const [k, ic, n] of [['all', 'bordersAll', 'All Borders'], ['out', 'bordersOut', 'Outside Borders'], ['in', 'bordersIn', 'Inside Borders'], ['none', 'bordersNone', 'No Border'], ['t', 'bordersTop', 'Top Border'], ['b', 'bordersBottom', 'Bottom Border'], ['l', 'bordersLeft', 'Left Border'], ['r', 'bordersRight', 'Right Border']]) { const bt = h('button', { type: 'button', 'data-tip': n, 'aria-label': n, html: L.icons.get(ic) }); bt.addEventListener('click', () => { close(); A.tableBorders(k); }); g.appendChild(bt); } return g; } }], r),
+    tableBorders: tableBordersMenu, tableDash: tableDashMenu, tableWeight: tableWeightMenu,
     tableFill: (r, b) => ui.colorMenu(b, { mode: 'fill', effects: true }, async (v) => { if (v && v.none) A.tableFill({ t: 'none' }); else if (v && v.effects) { const f = await L.dlg.fillEffects({ t: 'solid', c: 'accent1' }); if (f) A.tableFill(f); } else if (typeof v === 'string') A.tableFill({ t: 'solid', c: v, a: 1 }); }),
     waShape: (r) => ui.openMenu(L.render.WARPS.map(([k, n]) => ({ label: n, run: () => A.waSet({ warp: k }), checked: () => { const s = E.primary(); return !!(s && s.wa && (s.wa.warp || 'textPlain') === k); } })), r),
   };
@@ -199,8 +267,8 @@
       formatting: ui.toolbar('formatting', 'Formatting', [fontCombo, sizeCombo, 'bold', 'italic', 'underline', 'shadowText', '|', 'alignLeft', 'alignCenter', 'alignRight', '|', 'numbering', 'bullets', '|', 'growFont', 'shrinkFont', '|', 'promote', 'demote', '|', ui.tbSplit('fontColor', colorDD('font')), '|', ui.tbButton('slideDesign', { label: 'Design' }), ui.tbButton('newSlide', { label: 'New Slide' })]),
       outlining: ui.toolbar('outlining', 'Outlining', ['promote', 'demote', 'moveParaUp', 'moveParaDown', '|', 'summarySlide', 'showFormatting']),
       picture: ui.toolbar('picture', 'Picture', ['insertPicture', ui.tbDrop('', 'colorPic', A.menus.picColor, 'Color'), 'picMoreContrast', 'picLessContrast', 'picMoreBright', 'picLessBright', '|', 'picCrop', 'rotateLeft', ui.tbDrop('', 'lineStyle', lineStyleMenu, 'Line Style'), '|', ui.tbButton('formatObject', { icon: 'formatPicture' }), 'picTransparent', 'picReset']),
-      tables: ui.toolbar('tables', 'Tables and Borders', [ui.tbDrop('', 'dashStyle', (r) => ui.openMenu([{ custom: (close) => listPanel(L.dlg.DASHES.map(([k, n]) => ({ html: lineSVG(2, (L.render.dashArray(k, 2) || '').replace(/,/g, ' ')), label: n, run: () => { A.tblBorder.dash = k; } })), close) }], r), 'Border Style'),
-        ui.tbDrop('', 'lineStyle', (r) => ui.openMenu([{ custom: (close) => listPanel(WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => { A.tblBorder.w = w; } })), close) }], r), 'Border Width'),
+      tables: ui.toolbar('tables', 'Tables and Borders', [ui.tbDrop('', 'dashStyle', A.menus.tableDash, 'Border Style'),
+        ui.tbDrop('', 'lineStyle', A.menus.tableWeight, 'Border Width'),
         ui.tbDrop('', 'lineColor', (r, b) => ui.colorMenu(b, { mode: 'plain', grid: true }, (v) => { if (typeof v === 'string') A.tblBorder.c = v; }), 'Border Color'),
         ui.tbDrop('', 'bordersAll', A.menus.tableBorders, 'Borders'),
         ui.tbDrop('', 'fillColor', A.menus.tableFill, 'Fill Color'),
@@ -219,7 +287,7 @@
     /* SmartArt (js/diagram.js): the Diagram toolbar of a selected diagram */
     const DGM = () => L.diagram;
     A.toolbarsEl.diagram = ui.toolbar('diagram', 'Diagram', [ui.tbSplit('diagramAddShape', (r) => ui.openMenu(['diagramAddAfter', 'diagramAddBefore', 'diagramAddAbove', 'diagramAddBelow'], r)), 'diagramPromote', 'diagramDemote', 'diagramMoveUp', 'diagramMoveDown', '|',
-      ui.tbDrop('&Layout', 'layout', (r) => DGM().layoutMenu(r), 'Change Layout'), ui.tbDrop('', 'colorPic', (r) => DGM().colorsMenu(r), 'Change Colors'), ui.tbDrop('', 'themes', (r) => DGM().styleMenu(r), 'IntelliArt Styles'), '|', 'diagramTextPane', 'diagramReset', 'diagramToShapes']);
+      ui.tbDrop('&Layout', 'layout', (r, b) => DGM().layoutMenu(r, b), 'Change Layout'), ui.tbDrop('', 'colorPic', (r, b) => DGM().colorsMenu(r, b), 'Change Colors'), ui.tbDrop('', 'themes', (r, b) => DGM().styleMenu(r, b), 'IntelliArt Styles'), '|', 'diagramTextPane', 'diagramReset', 'diagramToShapes']);
     const row3 = h('div', { class: 'tb-row' }, A.toolbarsEl.picture, A.toolbarsEl.tables, A.toolbarsEl.wordart, A.toolbarsEl.diagram, A.toolbarsEl.master, A.toolbarsEl.sorter);
     host.append(row1, row2, row3);
     A.tbRows = [row1, row2, row3];
@@ -235,6 +303,51 @@
     vb.append(ui.tbButton('viewNormal'), ui.tbButton('viewSorter'), ui.tbButton('showFromCurrent'));
   }
   A.tblBorder = { c: 'tx1', w: 1, dash: 'solid' };
+  let reactTableFormatOpen = false;
+  A.reactTableFormatCatalog = () => {
+    if (!reactTableFormatOpen || !tableCtx()) return null;
+    return {
+      color: A.tblBorder.c,
+      colorHex: M.resolveColor(A.tblBorder.c, E.design()),
+      dash: A.tblBorder.dash,
+      dashes: L.dlg.DASHES.map(([value, label]) => ({ value, label: L.t(label) })),
+      width: A.tblBorder.w,
+      widths: WEIGHTS.slice(),
+      borderChoices: TABLE_BORDER_CHOICES.map(([kind, icon, label]) => ({ kind, icon, label: L.t(label) })),
+    };
+  };
+  A.reactTableFormatOpen = () => { if (!tableCtx()) return; reactTableFormatOpen = true; L.bus.emit('pptx-table-format-dialog'); };
+  A.reactTableFormatClose = () => { if (!reactTableFormatOpen) return; reactTableFormatOpen = false; L.bus.emit('pptx-table-format-dialog'); };
+  A.reactTableFormatSet = (key, value) => {
+    if (!reactTableFormatOpen) return false;
+    if (key === 'color' && typeof value === 'string' && value.length <= 64) A.tblBorder.c = value;
+    else if (key === 'dash' && L.dlg.DASHES.some(([dash]) => dash === value)) A.tblBorder.dash = value;
+    else if (key === 'width' && WEIGHTS.includes(value)) A.tblBorder.w = value;
+    else if (key === 'anchor' && ['t', 'ctr', 'b'].includes(value)) A.tableCmd('anchor', value);
+    else return false;
+    L.bus.emit('pptx-table-format-dialog');
+    return true;
+  };
+  A.reactTableFormatBorder = (kind) => {
+    if (!reactTableFormatOpen || !TABLE_BORDER_CHOICES.some(([choice]) => choice === kind)) return false;
+    A.tableBorders(kind);
+    return true;
+  };
+  A.reactTableFormatColorMenu = (kind, anchor) => {
+    if (!reactTableFormatOpen || !(anchor instanceof HTMLElement) || !['border', 'fill'].includes(kind)) return false;
+    if (kind === 'border') {
+      ui.colorMenu(anchor, { mode: 'plain', grid: true }, (value) => {
+        if (typeof value === 'string') A.reactTableFormatSet('color', value);
+      });
+      return true;
+    }
+    ui.colorMenu(anchor, { mode: 'fill', effects: true }, async (value) => {
+      if (value && value.none) A.tableFill({ t: 'none' });
+      else if (value && value.effects) { const fill = await L.dlg.fillEffects({ t: 'solid', c: 'accent1' }); if (fill) A.tableFill(fill); }
+      else if (typeof value === 'string') A.tableFill({ t: 'solid', c: value, a: 1 });
+    });
+    return true;
+  };
   let tsCache = null, tsTick = 0;
   function textState() {
     const now = performance.now();
@@ -275,6 +388,11 @@
   let statusTimer = 0;
   function buildStatus() {
     const sb = L.$('#statusbar');
+    if (window.__VIBE_OFFICE_DIRECT_HOST__) {
+      A.sbSlide = A.sbMsg = A.sbDesign = A.sbLang = A.sbZoom = null;
+      L.bus.on('zoom', () => { L.bus.emit('pptx-status-refresh'); ui.refresh(); });
+      return;
+    }
     A.sbSlide = h('div', { class: 'sb-cell fit', 'aria-live': 'polite' });
     A.sbMsg = h('div', { class: 'sb-cell grow', 'data-react-status': window.VO && VO.reactDirectHost ? '' : null });
     A.sbDesign = h('div', { class: 'sb-cell fit' });
@@ -285,8 +403,9 @@
     sb.append(A.sbSlide, A.sbDesign, A.sbMsg, A.sbLang, A.sbZoom);
     L.bus.on('zoom', () => { A.sbZoom.firstChild.textContent = E.zoomPct() + '%'; zr.value = E.zoomPct(); ui.refresh(); });
   }
-  A.status = (msg) => { if (!A.sbMsg) return; const text = L.t(msg); if (ui.reactStatus(text, 3000)) return; A.sbMsg.textContent = text; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sbMsg.textContent = ''; }, 3000); };
+  A.status = (msg) => { const text = L.t(msg); if (ui.reactStatus(text, 3000)) return; if (!A.sbMsg) return; A.sbMsg.textContent = text; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sbMsg.textContent = ''; }, 3000); };
   A.updateStatus = function () {
+    if (window.__VIBE_OFFICE_DIRECT_HOST__) { L.bus.emit('pptx-status-refresh'); return; }
     if (!A.sbSlide) return;
     const n = L.pres.slides.length;
     if (A.view === 'master') A.sbSlide.textContent = E.masterKind === 'title' ? L.t('Title Master') : L.t('Slide Master');
@@ -453,7 +572,7 @@
     return A.exportAs(A.fileType || 'pptx', A.fileName, L.file.native() ? 'save' : undefined);
   };
   A.saveAs = function () {
-    if (window.VO && VO.reactHost) return A.exportAs('pptx', A.fileName, 'react-save-as');
+    if (window.VO && VO.reactHost) return L.dlg.saveAs((name, type) => A.exportAs(type, name, 'react-save-as'));
     /* the desktop app: the system's Save dialog picks the name and type, then the presentation is written there */
     if (L.file.native()) return (async () => {
       const c = await L.file.choose('saveAs', PRES_TYPE.test(A.fileType) ? A.fileType : 'pptx', A.fileName);
@@ -736,11 +855,33 @@ addEventListener('resize',fit);fit();show(0);`;
   A.editColorScheme = function () {
     const d = E.design();
     const cs = L.clone(d.colors);
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) {
+      A.reactColorSchemeState = { design: d, colors: cs };
+      L.bus.emit('pptx-edit-color-scheme');
+      return;
+    }
     const rows = M.SCHEME_SLOTS.map(([k, label]) => {
       const p = L.dlg.colorPick(cs[k], (c) => { cs[k] = c[0] === '#' ? c : M.resolveColor(c, d); });
       return ui.field(label, p, { cls: 'wide' });   /* named as in Office's list of scheme colours, without a colon */
     });
     ui.dialog({ title: 'Edit Color Scheme', body: h('div', { class: 'col' }, ...rows), width: 360, buttons: [{ label: '&Apply', primary: true, onClick: () => A.applyColorScheme(cs, true) }, { label: 'Cancel' }] });
+  };
+  A.reactColorSchemeCatalog = () => {
+    const state = A.reactColorSchemeState;
+    return state ? {
+      slots: M.SCHEME_SLOTS.map(([key, label]) => ({ key, label: L.t(label), color: state.colors[key], hex: M.resolveColor(state.colors[key], state.design) })),
+      theme: M.schemeRow(state.design).map((item) => ({ value: item.ref, label: item.tip || item.ref, hex: item.hex })),
+      standard: L.color.STANDARD.map((hex) => ({ value: hex, label: ui.colorName(hex), hex })),
+    } : null;
+  };
+  A.reactColorSchemeAction = (action, key, value) => {
+    const state = A.reactColorSchemeState;
+    if (!state) return;
+    if (action === 'color' && key && typeof value === 'string') { state.colors[key] = value; L.bus.emit('pptx-edit-color-scheme'); return; }
+    if (action !== 'apply' && action !== 'close') return;
+    A.reactColorSchemeState = null;
+    L.bus.emit('pptx-edit-color-scheme');
+    if (action === 'apply') A.applyColorScheme(state.colors, true);
   };
   A.browseDesign = async function () {
     const files = await L.pickFiles('.pptx,.potx,.ppsx');
@@ -1495,6 +1636,7 @@ addEventListener('resize',fit);fit();show(0);`;
   A.tableBordersDlg = function () {
     const c = tableCtx();
     if (!c) return;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) { A.reactTableFormatOpen(); return; }
     const bc = L.dlg.colorPick(A.tblBorder.c, (v) => { A.tblBorder.c = v; });
     const bw = ui.select(L.dlg.LINE_WEIGHTS.map((w) => [w, L.t('{0} pt', w)]), A.tblBorder.w, (v) => { A.tblBorder.w = +v; });
     const bs = ui.select(L.dlg.DASHES, A.tblBorder.dash, (v) => { A.tblBorder.dash = v; });
@@ -1719,9 +1861,30 @@ addEventListener('resize',fit);fit();show(0);`;
   A.pasteSpecial = function () {
     const c = A.clip;
     if (!c) return;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) {
+      A.reactPasteSpecialState = { label: c.label.slice(0, 60), kind: c.kind, clip: c };
+      L.bus.emit('pptx-paste-special-dialog');
+      return;
+    }
     let mode = 'native';
     const body = h('div', { class: 'col' }, h('div', { text: L.t('Source: {0}', c.label.slice(0, 60)), translate: 'no' }), ui.radio('ps', c.kind === 'slides' ? '&Paste as slides' : '&Paste as PPTX objects', true, () => { mode = 'native'; }), ui.radio('ps', 'Paste as &Unformatted Text', false, () => { mode = 'text'; }));
     ui.dialog({ title: 'Paste Special', body, width: 360, buttons: [{ label: 'OK', primary: true, onClick: () => (mode === 'text' ? (TE.active() ? (L.hist.push(L.N('Paste')), TE.insertText(c.text || '')) : A.pasteText(c.text || '')) : A.pasteItem(c)) }, { label: 'Cancel' }] });
+  };
+  A.reactPasteSpecialCatalog = () => {
+    const state = A.reactPasteSpecialState;
+    return state ? { label: state.label, kind: state.kind } : null;
+  };
+  A.reactPasteSpecialAction = (action) => {
+    const state = A.reactPasteSpecialState;
+    if (!state) return;
+    A.reactPasteSpecialState = null;
+    L.bus.emit('pptx-paste-special-dialog');
+    if (action === 'close') return;
+    const c = state.clip;
+    if (action === 'text') {
+      if (TE.active()) { L.hist.push(L.N('Paste')); TE.insertText(c.text || ''); }
+      else A.pasteText(c.text || '');
+    } else A.pasteItem(c);
   };
   let pendingClip = null;
   function inNativeText(t) { return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
@@ -1904,6 +2067,17 @@ addEventListener('resize',fit);fit();show(0);`;
   function setupDrop() {
     let hint = null, depth = 0;
     const app = L.$('#app');
+    const openDroppedFiles = (input) => {
+      const files = Array.from(input || []);
+      if (!files.length) return;
+      const deck = files.find((f) => /\.(pptx|ppsx|potx|pptm|ppt)$/i.test(f.name));
+      if (deck) { A.openFile(deck); return; }
+      const imgs = files.filter((f) => /^image\//.test(f.type));
+      if (imgs.length) A.insertPictureFiles(imgs);
+      const txt = files.find((f) => /\.txt$/i.test(f.name));
+      if (txt) L.readAsText(txt).then((t) => A.outlineToSlides(t, E.idx + 1));
+    };
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) { A.reactDropFiles = openDroppedFiles; return; }
     app.addEventListener('dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; depth++; if (!hint) { hint = h('div', { class: 'drop-hint', text: 'Drop a .pptx to open it, or pictures to insert them' }); L.domHost().appendChild(hint); } });
     app.addEventListener('dragleave', () => { depth--; if (depth <= 0 && hint) { hint.remove(); hint = null; depth = 0; } });
     app.addEventListener('dragover', (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); });
@@ -1912,12 +2086,7 @@ addEventListener('resize',fit);fit();show(0);`;
       const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
       if (!files.length) return;
       e.preventDefault();
-      const deck = files.find((f) => /\.(pptx|ppsx|potx|pptm|ppt)$/i.test(f.name));
-      if (deck) { A.openFile(deck); return; }
-      const imgs = files.filter((f) => /^image\//.test(f.type));
-      if (imgs.length) A.insertPictureFiles(imgs);
-      const txt = files.find((f) => /\.txt$/i.test(f.name));
-      if (txt) L.readAsText(txt).then((t) => A.outlineToSlides(t, E.idx + 1));
+      openDroppedFiles(files);
     });
   }
 
@@ -2187,10 +2356,16 @@ addEventListener('resize',fit);fit();show(0);`;
     buildToolbars();
     L.ribbonUI.init();
     buildStatus();
-    L.addMountListener(L.domHost(), 'copy', (e) => onClipEvent(e, 'copy'));
-    L.addMountListener(L.domHost(), 'cut', (e) => onClipEvent(e, 'cut'));
-    L.addMountListener(L.domHost(), 'paste', handlePaste);
-    L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
+    const reactHost = window.VO && window.VO.reactDirectHost;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && reactHost) A.reactAppEvents = {
+      keydown: handleAppKeydown, copy: (event) => onClipEvent(event, 'copy'), cut: (event) => onClipEvent(event, 'cut'), paste: handlePaste,
+    };
+    else {
+      L.addMountListener(L.domHost(), 'copy', (e) => onClipEvent(e, 'copy'));
+      L.addMountListener(L.domHost(), 'cut', (e) => onClipEvent(e, 'cut'));
+      L.addMountListener(L.domHost(), 'paste', handlePaste);
+      L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
+    }
     /* opened from the Start Center: a template, or blank (a new presentation, or to open a file into); else the sample */
     const launch = window.VO && VO.launch;
     const blank = !!launch;

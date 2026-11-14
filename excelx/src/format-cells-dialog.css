@@ -4,6 +4,50 @@
 .excelx-format-cells-dialog__protection { display: grid; gap: 8px; }
 .excelx-format-cells-dialog__protection > label { display: flex; align-items: center; gap: 6px; }
 .excelx-format-cells-dialog__protection > p { line-height: 1.4; }
+.excelx-format-cells-dialog__number-category { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.excelx-format-cells-dialog__category-list { height: 250px; overflow-y: auto; background: var(--surface); border: 1px solid var(--field-border); }
+.excelx-format-cells-dialog__number-format-list { height: 120px; overflow-y: auto; background: var(--surface); border: 1px solid var(--field-border); }
+.excelx-format-cells-dialog__custom-format-list { height: 120px; overflow-y: auto; background: var(--surface); border: 1px solid var(--field-border); }
+.excelx-format-cells-dialog__alignment { display: grid; grid-template-columns: minmax(0, 1fr) minmax(145px, 0.8fr); gap: 8px; }
+.excelx-format-cells-dialog__alignment fieldset { display: grid; align-content: start; gap: 7px; min-width: 0; border: 1px solid var(--ctl-line); padding: 8px; }
+.excelx-format-cells-dialog__alignment legend { padding: 0 4px; }
+.excelx-format-cells-dialog__alignment label { display: flex; align-items: center; gap: 6px; }
+.excelx-format-cells-dialog__alignment label select,
+.excelx-format-cells-dialog__alignment label input[type=number] { min-width: 0; width: 100%; }
+.excelx-format-cells-dialog__alignment fieldset:last-child { grid-column: 1 / -1; }
+.excelx-format-cells-dialog__font { display: flex; flex-direction: column; gap: 8px; }
+.excelx-format-cells-dialog__font .fc-f3 { grid-template-columns: minmax(0, 1fr) 110px 60px; gap: 8px; }
+.excelx-format-cells-dialog__font .fc-f3 .lbox { height: 100px; }
+.excelx-format-cells-dialog__font .fc-f3 input { width: 100%; }
+.excelx-format-cells-dialog__font-row { display: flex; align-items: flex-end; gap: 12px; }
+.excelx-format-cells-dialog__font-row > label { display: flex; align-items: center; gap: 5px; }
+.excelx-format-cells-dialog__font-row fieldset { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; border: 1px solid var(--ctl-line); padding: 8px; }
+.excelx-format-cells-dialog__font-preview { min-width: 200px; height: 44px; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; background: var(--surface); border: 1px solid var(--preview-line); }
+.excelx-format-cells-dialog__patterns { display: flex; flex-direction: column; gap: 8px; }
+.excelx-format-cells-dialog__patterns fieldset { display: flex; flex-direction: column; gap: 6px; min-width: 0; border: 1px solid var(--ctl-line); padding: 8px; }
+.excelx-format-cells-dialog__pattern-picker { position: relative; display: flex; align-items: center; gap: 8px; }
+.excelx-format-cells-dialog__pattern-picker > button { width: 180px; justify-content: space-between; }
+.excelx-format-cells-dialog__pattern-menu { display: grid; gap: 6px; padding: 8px; background: var(--surface); border: 1px solid var(--ink); box-shadow: 2px 2px 3px var(--shadow-c); }
+.excelx-format-cells-dialog__pattern-menu .pat-grid button { width: 18px; height: 18px; padding: 0; border: 1px solid transparent; }
+.excelx-format-cells-dialog__pattern-menu .pat-grid button[aria-pressed=true] { border-color: var(--ink); outline: 1px solid var(--sel); }
+.excelx-format-cells-dialog__patterns .fc-psample { width: 100%; max-width: 280px; height: 64px; background-color: #fff; border: 1px solid var(--preview-line); }
+.excelx-format-cells-dialog__border { display: flex; gap: 12px; align-items: flex-start; }
+.excelx-format-cells-dialog__border fieldset { min-width: 0; border: 1px solid var(--ctl-line); padding: 8px; }
+.excelx-format-cells-dialog__border-main { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.excelx-format-cells-dialog__border-presets { display: flex; gap: 8px; }
+.excelx-format-cells-dialog__border-tools { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.excelx-format-cells-dialog__border-buttons { width: 100%; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; }
+.excelx-format-cells-dialog__border-buttons button { min-height: 26px; }
+.excelx-format-cells-dialog__border-preview { width: 150px; height: 110px; max-width: 100%; background: var(--surface); border: 1px solid var(--preview-line); cursor: crosshair; }
+.excelx-format-cells-dialog__border-preview text { font: 11px Tahoma, sans-serif; fill: var(--ink-3); }
+.excelx-format-cells-dialog__border-line { display: grid; gap: 6px; }
+.excelx-format-cells-dialog__border-line .fc-lines { grid-template-columns: repeat(2,56px); }
+.excelx-format-cells-dialog__border-line label { display: flex; align-items: center; gap: 6px; }
+.excelx-format-cells-dialog__border-line .swatch-btn { min-width: 100px; }
 @media (max-width: 560px) {
   .excelx-format-cells-dialog__content { max-height: min(65vh, 520px); overflow: auto; }
+  .excelx-format-cells-dialog__alignment { grid-template-columns: 1fr; }
+  .excelx-format-cells-dialog__font .fc-f3 { grid-template-columns: minmax(0, 1fr) 92px 56px; }
+  .excelx-format-cells-dialog__font-row { align-items: stretch; flex-wrap: wrap; }
+  .excelx-format-cells-dialog__border { flex-direction: column; }
 }

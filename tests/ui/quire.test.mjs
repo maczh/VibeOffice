@@ -66,6 +66,14 @@ const runs = (u, b, prop) => u.evaluate(`L.D.doc.main.blocks[${b}].runs.map((r) 
 const objectState = (u) => u.evaluate(`({ handles: document.querySelectorAll('.obj-handles').length, outlined: document.querySelectorAll('.sel-obj').length, selected: !!L.ed.objSel })`);
 const TEXT = ['Source plain target words follow here', 'Second paragraph of ordinary text for clicking', 'Third paragraph with more words to paint'];
 
+test('Wordx Getting Started offers open/create actions without Recent Files', async () => {
+  const u = await open('quire');
+  try {
+    const result = await u.evaluate(`(() => { L.panes.task.show('getting-started'); const body=document.querySelector('#taskpane > .tp-body'), menu=L.ui.menus.find((item)=>String(item.label).includes('File')), items=typeof menu.items==='function'?menu.items():menu.items; return {visible:!document.querySelector('#taskpane').hidden, text:body.textContent, recentLinks:body.querySelectorAll('a[href*="recent"], .recent-file, [data-recent-file]').length, fileMenuHasRecent:items.some((item)=>/recent/i.test(typeof item==='string'?item:item.label||''))}; })()`);
+    assert.ok(result.visible && result.text.includes('Open') && result.text.includes('Create a new document') && !/Recent Files/i.test(result.text) && result.recentLinks === 0 && !result.fileMenuHasRecent, `Wordx Getting Started and File menu omit Recent Files: ${JSON.stringify(result)}`);
+  } finally { await u.close(); }
+});
+
 test('the standalone Wordx shell uses Wordx product metadata', async () => {
   const u = await open('quire');
   try {

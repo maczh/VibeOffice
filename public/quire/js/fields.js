@@ -473,7 +473,8 @@
     if (!(app() && app().opts.updateFieldsOnPrint)) return;
   };
   /* dynamic fields in headers refresh after layout */
-  L.bus.on('layout-done', () => { if (LY.refreshDynamic) LY.refreshDynamic(); });
+  F.reactLayoutDone = () => { if (LY.refreshDynamic) LY.refreshDynamic(); };
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('layout-done', F.reactLayoutDone);
 
   /* ================= tables of contents, figures, index ================= */
   /** text width of the main section for right-aligned tab stops */

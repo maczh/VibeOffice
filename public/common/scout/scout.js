@@ -2193,31 +2193,38 @@
       this._talking = false; this._hidden = mode === 'desktop';
       this._activeAt = 0; this._restAt = 0; this._idleR = Math.random(); this._recent = []; this._nx = null; this._props = {}; this._move = null;
 
-      const el = this.el = document.createElement('div');
+      const el = this.el = this.o.element || document.createElement('div');
       el.className = 'scout-agent ' + (mode === 'desktop' ? 'is-desktop' : 'is-inline');
       el.style.setProperty('--scout-w', this.o.size + 'px');
       this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       this.svg.setAttribute('viewBox', '-30 -30 260 235');
       this.svg.setAttribute('aria-hidden', 'true');
       this.svg.innerHTML = dogMarkup(this.uid);
-      el.appendChild(this.svg);
+      (this.o.avatarElement || el).appendChild(this.svg);
       this.P = {};
       this.svg.querySelectorAll('[data-p]').forEach(n => { this.P[n.getAttribute('data-p')] = n; });
       if (this.o.balloon && mode !== 'still') {
-        const b = this.balloon = document.createElement('div');
+        const b = this.balloon = this.o.balloonElement || document.createElement('div');
         b.className = 'scout-balloon';
         b.setAttribute('role', 'status');
-        b.innerHTML = '<div class="scout-text"></div><div class="scout-choices" role="group" hidden></div>';
-        this._bText = b.firstChild; this._bChoices = b.lastChild;
-        b.addEventListener('click', e => {
-          const bt = e.target.closest('.scout-choices button');
-          if (bt) { if (this._bPick) this._bPick(+bt.dataset.i); return; }
-          if (!this._bPick) this._closeBalloon();
-        });
-        b.addEventListener('keydown', e => { if (e.key === 'Escape') this._closeBalloon(); });
-        el.appendChild(b);
+        if (this.o.balloonElement) {
+          this._bText = this.o.textElement || b.querySelector('.scout-text');
+          this._bChoices = this.o.choicesElement || b.querySelector('.scout-choices');
+        } else {
+          b.innerHTML = '<div class="scout-text"></div><div class="scout-choices" role="group" hidden></div>';
+          this._bText = b.firstChild; this._bChoices = b.lastChild;
+          el.appendChild(b);
+        }
+        if (!this.o.reactOwned) {
+          b.addEventListener('click', e => {
+            const bt = e.target.closest('.scout-choices button');
+            if (bt) { if (this._bPick) this._bPick(+bt.dataset.i); return; }
+            if (!this._bPick) this._closeBalloon();
+          });
+          b.addEventListener('keydown', e => { if (e.key === 'Escape') this._closeBalloon(); });
+        }
       }
-      (this.o.parent || document.body).appendChild(el);
+      if (!this.o.element) (this.o.parent || document.body).appendChild(el);
 
       if (mode === 'desktop') {
         el.tabIndex = 0;
@@ -2302,6 +2309,8 @@
     }
     /** Close the speech balloon now. */
     closeBalloon() { this._closeBalloon(); return this; }
+    /** Resolve an assistant choice rendered by the React host. */
+    choose(index) { if (this._bPick) this._bPick(index); return this; }
     /** Turn looping on or off for the action that is playing. */
     setLoop(on) { if (this._cur) this._cur.loop = !!on; return this; }
     /** Finish only the current action early. */
@@ -2342,7 +2351,7 @@
     destroy() {
       this.stop(); live.delete(this);
       if (this._onResize) removeEventListener('resize', this._onResize);
-      this.el.remove();
+      if (this.o.element) this.svg.remove(); else this.el.remove();
     }
 
     /* ---------- internals: queue ---------- */
@@ -2878,11 +2887,16 @@
       const b = this.balloon, tx = this._bText, ch = this._bChoices;
       clearTimeout(this._bTimer); clearInterval(this._bType);
       const choices = (opts.choices || []).map(c => typeof c === 'string' ? { label: c, value: c } : { label: String(c.label), value: c.value !== undefined ? c.value : c.label });
-      ch.innerHTML = '';
-      choices.forEach((c, i) => { const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = c.label; bt.dataset.i = i; ch.appendChild(bt); });
+      if (!this.o.reactOwned) {
+        ch.innerHTML = '';
+        choices.forEach((c, i) => { const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = c.label; bt.dataset.i = i; ch.appendChild(bt); });
+      }
+      if (this.o.onChoices) this.o.onChoices(choices.map(c => c.label), false);
       b.classList.toggle('has-choices', choices.length > 0);
+      if (this.o.onText) this.o.onText(text); else tx.textContent = text;
       this._placeBalloon(text, choices.length > 0);
-      tx.textContent = ''; ch.hidden = true;
+      if (this.o.onText) this.o.onText(''); else tx.textContent = '';
+      if (!this.o.onChoices) ch.hidden = true;
       this._kick();
       b.classList.add('is-on'); this._bOpen = true; this._bT0 = this._clock;
       const words = text.split(/(\s+)/);
@@ -2892,18 +2906,21 @@
         this._bDone = val => {
           clearTimeout(this._bTimer); clearInterval(this._bType);
           this._talking = false; this._bOpen = false; this._bDone = null; this._bPick = null; this._drawnSteady = false; this._kick();
+          if (this.o.onChoices) this.o.onChoices([], false);
           b.classList.remove('is-on'); res(val);
         };
         this._bPick = choices.length ? (n => { if (this._bDone) this._bDone(choices[n].value); }) : null;
+        this._bTyped = '';
         const finish = () => {
-          clearInterval(this._bType); this._talking = false; tx.textContent = text;
-          if (choices.length) { ch.hidden = false; return; }
+          clearInterval(this._bType); this._talking = false; if (this.o.onText) this.o.onText(text); else tx.textContent = text;
+          if (choices.length) { if (this.o.onChoices) this.o.onChoices(choices.map(c => c.label), true); else ch.hidden = false; return; }
           if (opts.hold) return;
           this._bTimer = setTimeout(() => this._bDone && this._bDone(true), opts.timeout || 1800 + text.length * 38);
         };
         if (reduceMotion()) { finish(); return; }
         this._bType = setInterval(() => {
-          tx.textContent += words[i++] || '';
+          const word = words[i++] || '';
+          if (this.o.onText) { this._bTyped += word; this.o.onText(this._bTyped); } else tx.textContent += word;
           if (i >= words.length) finish();
         }, 70);
       });
@@ -2913,7 +2930,7 @@
       const b = this.balloon, W = this.el.offsetWidth || this.o.size, H = this.el.offsetHeight || W * 235 / 260, sc = W / 260;
       const V = VIEW;
       const headX = (130 + V.head) * sc, headTop = 64 * sc;
-      this._bText.textContent = text; this._bChoices.hidden = !withChoices;
+      if (!this.o.reactOwned) { this._bText.textContent = text; this._bChoices.hidden = !withChoices; }
       b.style.width = ''; b.style.left = '0px'; b.style.top = '0px'; b.style.bottom = 'auto'; b.classList.remove('is-below');
       const bw = Math.ceil(b.getBoundingClientRect().width), bh = b.offsetHeight;
       b.style.width = bw + 'px';

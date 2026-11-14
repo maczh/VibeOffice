@@ -1,0 +1,6 @@
+.excelx-save-as-dialog__body { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.excelx-save-as-dialog__body > label { display: flex; flex-direction: column; gap: 4px; }
+.excelx-save-as-dialog__body input, .excelx-save-as-dialog__body select { min-width: 0; }
+.excelx-save-as-dialog__body .hint { margin: 0; }
+.excelx-save-as-dialog__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+.excelx-save-as-dialog__error { color: #b00020; margin: 0; }

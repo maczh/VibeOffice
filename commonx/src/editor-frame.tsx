@@ -24,6 +24,8 @@ import { EditorTabsLayer } from './tabs.js';
 import { EditorButtonLayer } from './button.js';
 import { EditorUiContentLayer } from './ui-content.js';
 import { OfficeDialog } from './dialog.js';
+import { ChartEditorDialog } from './chart-editor-dialog.js';
+import { ScoutAssistant } from './scout-assistant.js';
 import './editor.css';
 
 export type EditorKind = 'wordx' | 'excelx' | 'pptx';
@@ -120,7 +122,7 @@ export function EngineEditorFrame({ mount, onMountError, appLayers, children, ..
     };
   }, [mount, onMountError, props.editor]);
 
-  return <EditorFrame {...props}><EditorChrome appName={props.appName} /><div className="vibe-editor__engine" ref={bindHost}>{children}</div>{engineHost && <><EditorTooltip host={engineHost} /><MenuLayer host={engineHost} /><EditorRibbon host={engineHost} /><EditorToolbarLayer host={engineHost} /><EditorStatusMessage host={engineHost} /><EditorComboLayer host={engineHost} /><EditorSelectLayer host={engineHost} /><EditorSpinLayer host={engineHost} /><EditorChoiceLayer host={engineHost} /><EditorTabsLayer host={engineHost} /><EditorButtonLayer host={engineHost} /><EditorUiContentLayer host={engineHost} />{appLayers?.(engineHost)}</>}</EditorFrame>;
+  return <EditorFrame {...props}><EditorChrome appName={props.appName} /><div className="vibe-editor__engine" ref={bindHost}>{children}</div>{engineHost && <><EditorTooltip host={engineHost} /><MenuLayer host={engineHost} /><EditorRibbon host={engineHost} /><EditorToolbarLayer host={engineHost} /><EditorStatusMessage host={engineHost} /><EditorComboLayer host={engineHost} /><EditorSelectLayer host={engineHost} /><EditorSpinLayer host={engineHost} /><EditorChoiceLayer host={engineHost} /><EditorTabsLayer host={engineHost} /><EditorButtonLayer host={engineHost} /><EditorUiContentLayer host={engineHost} /><ChartEditorDialog /><ScoutAssistant host={engineHost} />{appLayers?.(engineHost)}</>}</EditorFrame>;
 }
 
 function EditorChrome({ appName }: { appName: string }) {

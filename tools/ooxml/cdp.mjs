@@ -24,7 +24,7 @@ export async function openPage(app, options = {}) {
   const base = process.env.BASE || 'http://127.0.0.1:8760';
   const target = await (await fetch(cdp + '/json/new?about:blank', { method: 'PUT' })).json();
   // errors: exceptions, console errors and CSP refusals; windows: pages it opened; navigations: to other sites
-  const ws = new WebSocket(target.webSocketDebuggerUrl), pending = new Map(), errors = [], requests = [], windows = [], navigations = [];
+  const ws = new WebSocket(target.webSocketDebuggerUrl), pending = new Map(), errors = [], requests = [], windows = [], navigations = [], topLevelNavigations = new Set(), navigationWaiters = new Map();
   let seq = 0, closed = false;
   await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
   ws.onmessage = event => {
@@ -34,7 +34,12 @@ export async function openPage(app, options = {}) {
     if (m.method === 'Runtime.consoleAPICalled' && p.type === 'error') errors.push(p.args.map(a => a.value ?? a.description).join(' '));
     if (m.method === 'Network.requestWillBeSent' && !/^(http:\/\/127\.0\.0\.1(?=[:/])|data:|blob:|about:)/.test(p.request.url)) requests.push(p.request.url);
     if (m.method === 'Page.windowOpen') windows.push(p.url);
-    if (m.method === 'Page.frameNavigated' && !p.frame.parentId && leaves(p.frame.url, base)) navigations.push(p.frame.url);
+    if (m.method === 'Page.frameNavigated' && !p.frame.parentId) {
+      topLevelNavigations.add(p.frame.url);
+      for (const resolve of navigationWaiters.get(p.frame.url) || []) resolve();
+      navigationWaiters.delete(p.frame.url);
+      if (leaves(p.frame.url, base)) navigations.push(p.frame.url);
+    }
   };
   const send = (method, params = {}) => new Promise((resolve, reject) => {
     const id = ++seq;
@@ -46,6 +51,22 @@ export async function openPage(app, options = {}) {
     const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true, userGesture: true });
     if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
     return r.result?.value;
+  };
+  const waitForNavigation = (url, timeout = 10000) => {
+    const href = new URL(url).href;
+    if (topLevelNavigations.has(href)) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const waiting = navigationWaiters.get(href) || new Set();
+      let timer;
+      const done = () => { clearTimeout(timer); waiting.delete(done); resolve(); };
+      waiting.add(done);
+      navigationWaiters.set(href, waiting);
+      timer = setTimeout(() => {
+        waiting.delete(done);
+        if (!waiting.size) navigationWaiters.delete(href);
+        reject(new Error(`Timed out waiting for top-level navigation to ${href}`));
+      }, timeout);
+    });
   };
   const close = async () => {
     if (closed) return;
@@ -80,7 +101,7 @@ export async function openPage(app, options = {}) {
     await send('Page.navigate', { url: app ? base + '/' + app + '/?' + query : base + '/?' + query });
     const ready = app ? '!!window.__corpusHooks' : "document.readyState === 'complete' && !!window.VO";
     for (let i = 0; i < 200; i++) {
-      if (await evaluate(ready).catch(() => false)) return { evaluate, close, errors, requests, windows, navigations, send };
+      if (await evaluate(ready).catch(() => false)) return { evaluate, close, errors, requests, windows, navigations, send, waitForNavigation };
       await pause(100);
     }
     throw new Error((app || 'the Start Center') + ' did not attach to the suite');

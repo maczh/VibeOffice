@@ -4,12 +4,12 @@ import { createPortal } from 'react-dom';
 interface SlideLike { id?: string; hidden?: boolean; trans?: { type?: string; after?: number }; anims?: unknown[] }
 interface PptxPaneRuntime {
   pres?: { slides: SlideLike[]; firstNum?: number };
-  ed?: { idx: number; view: string };
-  app?: { slideSel: Set<number>; reactMounted?: boolean; opts?: { outlinePlain?: boolean; spell?: boolean }; contextThumb(event: MouseEvent): void; setView(view: string): void; toggleLeft(show: boolean): void; toggleTask(show: boolean): void };
+  ed?: { idx: number; view: string; masterKind?: string };
+  app?: { slideSel: Set<number>; focusArea?: string | null; reactMounted?: boolean; opts?: { outlinePlain?: boolean; spell?: boolean }; contextThumb(event: MouseEvent): void; setView(view: string): void; toggleLeft(show: boolean): void; toggleTask(show: boolean): void };
   render?: { thumb(presentation: NonNullable<PptxPaneRuntime['pres']>, slide: SlideLike, width: number, options: { index: number }): HTMLElement };
   panes?: {
-    left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; outline?: HTMLElement | null; setTab(tab: string): void; reactOutlineRows?(): Array<{ kind: string; slideId?: string; level: number; text: string }>; onOutlineInput?(): void; onOutlinePaste?(event: ClipboardEvent): void; onOutlineKey?(event: KeyboardEvent): void; syncOutlineSlide?(): void; styleOutline?(): void; commitOutline?(keepFocus?: boolean): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
-    sorter?: { el?: HTMLElement; reactMounted?: boolean; onDown?(event: PointerEvent, index: number, item: HTMLElement): void; mark(): void };
+    left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; outline?: HTMLElement | null; setTab(tab: string): void; render?(): void; reactOutlineRows?(): Array<{ kind: string; slideId?: string; level: number; text: string }>; reactMasterCatalog?(): Array<{ kind: string; label: string; preview: string; selected: boolean }> | null; reactSelectMaster?(kind: string): void; onOutlineInput?(): void; onOutlinePaste?(event: ClipboardEvent): void; onOutlineKey?(event: KeyboardEvent): void; syncOutlineSlide?(): void; styleOutline?(): void; commitOutline?(keepFocus?: boolean): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
+    sorter?: { el?: HTMLElement; reactMounted?: boolean; attachReactSurface?(root: HTMLElement): () => void; onDown?(event: PointerEvent, index: number, item: HTMLElement): void; mark(): void };
     task?: { stack: string[]; pos: number; current?: string; registry: Record<string, { id: string; title: string; hidden?: boolean }>; show(id: string): void; go(position: number): void };
   };
   ui?: { openMenu(items: Array<{ label: string; run(): void; checked(): boolean }>, position: { left: number; bottom: number }): void };
@@ -34,20 +34,32 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     let slot: HTMLElement | null = null;
     let tabsSlot: HTMLElement | null = null;
     let taskSlot: HTMLElement | null = null;
+    let leftBody: HTMLElement | null = null;
     let sorterSlot: HTMLElement | null = null;
+    let sorterSurfaceCleanup: (() => void) | undefined;
     let offRender: (() => void) | undefined;
     let offMark: (() => void) | undefined;
     let offTask: (() => void) | undefined;
     let offSorterRender: (() => void) | undefined;
     let offSorterMark: (() => void) | undefined;
     let subscribed = false;
+    const onLeftFocus = () => { const app = runtime()?.app; if (app) app.focusArea = 'slides'; };
+    const onLeftBlur = () => { const app = runtime()?.app; if (app) app.focusArea = null; };
     const attach = () => {
       const target = host.querySelector<HTMLElement>('#react-slides-root');
       const tabsTarget = host.querySelector<HTMLElement>('#react-slides-tabs-root');
       const taskTarget = host.querySelector<HTMLElement>('#react-task-head-root');
       const sorterTarget = host.querySelector<HTMLElement>('.sorter');
+      const leftBodyTarget = host.querySelector<HTMLElement>('#leftpane > .lp-body');
       const engine = runtime();
       if (!engine) return;
+      if (leftBodyTarget && leftBodyTarget !== leftBody) {
+        leftBody?.removeEventListener('focus', onLeftFocus, true);
+        leftBody?.removeEventListener('blur', onLeftBlur, true);
+        leftBody = leftBodyTarget;
+        leftBody.addEventListener('focus', onLeftFocus, true);
+        leftBody.addEventListener('blur', onLeftBlur, true);
+      }
       if (!subscribed && engine.bus) {
         const refresh = () => { if (!outlineMutated.current) setRevision((value) => value + 1); };
         offRender = engine.bus.on('pptx-slides-render', refresh);
@@ -62,6 +74,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
         target.classList.add('vibeoffice-react-owned');
         if (engine.app) engine.app.reactMounted = true;
         setMount(target);
+        engine.panes?.left?.render?.();
         engine.bus?.emit('pptx-slides-render');
       }
       if (tabsTarget && tabsTarget !== tabsSlot) {
@@ -77,11 +90,13 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
         setTaskMount(taskTarget);
       }
       if (sorterTarget && sorterTarget !== sorterSlot) {
+        sorterSurfaceCleanup?.();
         sorterSlot?.classList.remove('vibeoffice-react-owned');
         sorterSlot = sorterTarget;
         sorterTarget.classList.add('vibeoffice-react-owned');
         const sorter = engine.panes?.sorter;
         if (sorter) sorter.reactMounted = true;
+        sorterSurfaceCleanup = sorter?.attachReactSurface?.(sorterTarget);
         setSorterMount(sorterTarget);
         engine.bus?.emit('pptx-sorter-render');
       }
@@ -91,6 +106,11 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     attach();
     return () => {
       observer.disconnect(); offRender?.(); offMark?.(); offTask?.(); offSorterRender?.(); offSorterMark?.();
+      sorterSurfaceCleanup?.();
+      sorterSurfaceCleanup = undefined;
+      leftBody?.removeEventListener('focus', onLeftFocus, true);
+      leftBody?.removeEventListener('blur', onLeftBlur, true);
+      leftBody = null;
       slot?.classList.remove('vibeoffice-react-owned');
       tabsSlot?.classList.remove('vibeoffice-react-owned');
       host.querySelector<HTMLElement>('#leftpane > .lp-tabs')?.classList.remove('react-pane-adapter');
@@ -148,6 +168,14 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       return <div className={`ol-row ${title ? 'title' : 'body'}`} data-slide={title ? row.slideId : undefined} data-lvl={title ? undefined : row.level} data-num={title ? titleNumber : undefined} style={style} key={`${row.slideId || 'slide'}-${row.kind}-${index}`}>{row.text || <br />}</div>;
     })}
   </div>, mount);
+  const masterChoices = L.ed?.view === 'master' ? pane.reactMasterCatalog?.() : null;
+  const masterView = mount && masterChoices && createPortal(<div className="thumbs" role="listbox" aria-label={L.t?.('Slide Masters') || 'Slide Masters'}>
+    {masterChoices.map((choice, index) => <div className={`th${choice.selected ? ' cur' : ''}`} key={choice.kind} data-master-kind={choice.kind} role="option" aria-selected={choice.selected}>
+      <div className="th-meta"><span className="th-num">{String(index + 1)}</span></div>
+      <button className="th-frame" type="button" aria-label={choice.label} data-tip={choice.label} onClick={() => pane.reactSelectMaster?.(choice.kind)} dangerouslySetInnerHTML={{ __html: choice.preview }} />
+    </div>)}
+  </div>, mount);
+  if (mount && L.ed?.view === 'master') return <>{taskHeader}{tabs}{masterView}{sorterView}</>;
   if (pane.tab === 'outline' && L.ed?.view !== 'master') return <>{taskHeader}{tabs}{outlineView}{sorterView}</>;
   if (!mount || !presentation || !slides || pane.tab !== 'slides' || L.ed?.view === 'master') return <>{taskHeader}{tabs}{sorterView}</>;
   const body = pane.body;

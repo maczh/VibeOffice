@@ -1,0 +1,15 @@
+.excelx-chart-wizard__content { display: grid; grid-template-columns: minmax(300px, 1fr) 300px; gap: 16px; min-height: 250px; }
+.excelx-chart-wizard__form { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.excelx-chart-wizard__form label { display: flex; align-items: center; gap: 7px; }
+.excelx-chart-wizard__form label:has(input:not([type=radio]):not([type=checkbox])) { flex-direction: column; align-items: stretch; }
+.excelx-chart-wizard__form input:not([type=radio]):not([type=checkbox]), .excelx-chart-wizard__form select { min-width: 0; }
+.excelx-chart-wizard__types { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 4px; }
+.excelx-chart-wizard__types button, .excelx-chart-wizard__subtypes button { min-height: 32px; display: flex; align-items: center; gap: 7px; }
+.excelx-chart-wizard__types button.selected, .excelx-chart-wizard__subtypes button.selected { outline: 1px solid var(--sel); background: var(--sel); color: var(--sel-ink); }
+.excelx-chart-wizard__types svg { width: 22px; height: 22px; }
+.excelx-chart-wizard__subtypes { display: flex; flex-wrap: wrap; gap: 4px; }
+.excelx-chart-wizard__subtypes svg { width: 42px; height: 42px; }
+.excelx-chart-wizard__preview { min-height: 200px; display: grid; place-items: center; border: 1px solid var(--border); overflow: hidden; }
+.excelx-chart-wizard__preview svg { max-width: 100%; max-height: 220px; }
+.excelx-chart-wizard__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
+@media (max-width: 620px) { .excelx-chart-wizard__content { grid-template-columns: 1fr; } .excelx-chart-wizard__preview { min-height: 120px; } }

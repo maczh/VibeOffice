@@ -32,17 +32,29 @@ const pages = new Map();
 const server = http.createServer((q, s) => { s.writeHead(pages.has(q.url) ? 200 : 404, { 'Content-Type': 'text/html; charset=utf-8' }); s.end(pages.get(q.url) || ''); });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const stop = await ensureServer();
-after(() => { server.close(); stop(); });
+after(async () => {
+  const closed = new Promise((resolve) => server.close(resolve));
+  server.closeAllConnections();
+  stop();
+  await closed;
+});
 /** opens `html` in the test's tab: the title it ends with, and `probe` evaluated there */
-async function visit(page, name, html, probe = 'null') {
+async function visit(page, name, html, probe = 'null', readyText = '') {
   pages.set('/' + name, html);
-  await page.send('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/${name}` });
-  await pause(800);
-  return JSON.parse(await page.evaluate(`JSON.stringify({ title: document.title, probe: ${probe} })`));
+  const url = `http://127.0.0.1:${server.address().port}/${name}`;
+  const committed = page.waitForNavigation(url, 10000);
+  await page.send('Page.navigate', { url });
+  await committed;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (await page.evaluate(`location.href === ${JSON.stringify(url)} && document.body?.textContent.includes(${JSON.stringify(readyText)})`)) return JSON.parse(await page.evaluate(`JSON.stringify({ title: document.title, probe: ${probe} })`));
+    await pause(50);
+  }
+  const state = await page.evaluate('({url:location.href,title:document.title,readyState:document.readyState,text:document.body?.innerText.slice(0,160)})');
+  throw new Error(`The exported HTML page did not load its document content at ${url}: ${JSON.stringify(state)}`);
 }
 
 test('Quire: Save as Web Page and copied HTML keep font names, colours and links as text', async () => {
-  const page = await openPage('quire', { persistence: false, automated: true });
+  const page = await openPage('quire', { persistence: false, automated: true, bypassServiceWorker: true });
   try {
     await page.evaluate(`L.app.openFile(new File(['Some [Web](https://example.com/) and [Bad](https://example.com/bad) text\\n'], 'hostile.md'))`);
     await pause(800);
@@ -53,12 +65,12 @@ test('Quire: Save as Web Page and copied HTML keep font names, colours and links
     const clean = { handlers: [], pictures: 0, scripts: 0, scriptLinks: 0, fontAsText: true, text: 'Some Web and Bad text' };
     assert.deepEqual(await inspect(page, html), { ...clean, policy: "script-src 'none'" }, 'the web page');
     assert.deepEqual(await inspect(page, clip), { ...clean, policy: null }, 'the clipboard');
-    assert.equal((await visit(page, 'quire.htm', html)).title, 'hostile', 'opened, nothing of the document ran');
+    assert.equal((await visit(page, 'quire.htm', html, 'null', 'Some Web and Bad text')).title, 'hostile', 'opened, nothing of the document ran');
   } finally { await page.close(); }
 });
 
 test('Ledger: Save as Web Page and copied HTML keep font names and link addresses as text', async () => {
-  const page = await openPage('ledger', { persistence: false, automated: true });
+  const page = await openPage('ledger', { persistence: false, automated: true, bypassServiceWorker: true });
   try {
     const x = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
     const xml = `<?xml version="1.0"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
@@ -73,19 +85,19 @@ test('Ledger: Save as Web Page and copied HTML keep font names and link addresse
     assert.deepEqual(await inspect(page, clip), { ...clean, policy: null }, 'the clipboard');
     assert.equal(await page.evaluate(`new DOMParser().parseFromString(${JSON.stringify(html)}, 'text/html').querySelector('a').getAttribute('href')`), LINK,
       'the address is the link\'s, whole');
-    assert.equal((await visit(page, 'ledger.htm', html)).title, 'hostile', 'opened, nothing of the document ran');
+    assert.equal((await visit(page, 'ledger.htm', html, 'null', 'Linked')).title, 'hostile', 'opened, nothing of the document ran');
   } finally { await page.close(); }
 });
 
 test('Lectern: Save as Web Page keeps notes as data, and its own script still runs under its policy', async () => {
-  const page = await openPage('lectern', { persistence: false, automated: true });
+  const page = await openPage('lectern', { persistence: false, automated: true, bypassServiceWorker: true });
   try {
     await page.evaluate(`(() => { L.pres.slides[0].notes = ${JSON.stringify(NOTE)}; L.pres.props.title = 'hostile'; })()`);
     const html = await page.evaluate(`L.app.buildWebPage().then((b) => b.text())`);
     const found = await inspect(page, html);
     assert.deepEqual({ handlers: found.handlers, scripts: found.scripts, hashed: /^script-src 'sha256-[\w+/]+=*'$/.test(found.policy) },
       { handlers: [], scripts: 1, hashed: true }, 'one script, ours, allowed by its hash');
-    assert.deepEqual(await visit(page, 'lectern.htm', html, `[typeof N === 'undefined' ? null : N[0], document.getElementById('num').textContent]`),
+    assert.deepEqual(await visit(page, 'lectern.htm', html, `[typeof N === 'undefined' ? null : N[0], document.getElementById('num').textContent]`, '1 / 1'),
       { title: 'hostile', probe: [NOTE, '1 / 1'] }, 'the note is the script\'s data; the page shows its slide');
   } finally { await page.close(); }
 });

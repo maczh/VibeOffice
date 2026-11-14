@@ -5,7 +5,7 @@ type HelpEntry = [string, string];
 interface ClipArtItem { id: string; name: string; svg: string }
 interface ClipboardItem { index: number; text: string; table: boolean }
 interface WordxRuntime {
-  spell?: { reactSpellCatalog?(): { kind: string; label: string; before: string; word: string; after: string; suggestions: string[]; language: string; grammar: boolean; showExplain: boolean; canChangeAll: boolean; canAuto: boolean } | null; reactSpellChoose?(value: string): void; reactSpellAction?(action: string, value?: unknown): void };
+  spell?: { reactSpellCatalog?(): { kind: string; label: string; before: string; word: string; after: string; suggestions: string[]; language: string; grammar: boolean; showExplain: boolean; canChangeAll: boolean; canAuto: boolean } | null; reactSpellChoose?(value: string): void; reactSpellAction?(action: string, value?: unknown): void; reactLayoutChanged?(): void; reactDocumentLoaded?(): void; reactScroll?(): void; reactAttachRoot?(root: HTMLElement | null | undefined): void };
   preserve?: { reactControlCatalog?(): { name: string; type: string; value: string; choices: Array<{ value: string; text: string }> } | null; reactControlSetValue?(value: string): void };
   mailmerge?: {
     reactRecipientsCatalog?(): { name: string; fields: string[]; rows: Array<{ index: number; values: string[]; included: boolean }> } | null;
@@ -24,6 +24,7 @@ interface WordxRuntime {
     reactSearchCatalog?(query: string): Array<{ before: string; match: string; after: string }>;
     reactOpenSearchHit?(index: number): void;
     searchQuery?: string;
+    clipQuery?: string;
     insertClip?(item: ClipArtItem): void;
     reactNewCatalog?(): Array<{ id: string; name: string }>;
     reactNewAction?(action: string): void;
@@ -66,7 +67,9 @@ interface WordxRuntime {
   dlg?: { reactTablePropsCatalog?(): TablePropertiesState; reactTablePropsAction?(action: string, value?: Partial<TablePropertiesState>): TablePropertiesState | void; reactBordersCatalog?(): BordersDialogState; reactBordersAction?(action: string, value?: any): BordersDialogState | void; reactParagraphCatalog?(): ParagraphDialogState; reactParagraphAction?(action: string, value?: unknown): ParagraphDialogState | void; reactCaptionNumberingCatalog?(): CaptionNumbering; reactCaptionNumberingAction?(value: Partial<CaptionNumbering>): void; reactCaptionCatalog?(): CaptionDialogState; reactCaptionAction?(action: string, value?: Partial<CaptionDialogState>): Promise<void> | void; reactPageSetupCatalog?(): PageSetupState; reactPageSetupAction?(action: string, value?: Partial<PageSetupState>): void; reactColumnsCatalog?(): ColumnsDialogState; reactColumnsAction?(action: string, value?: Partial<ColumnsDialogState> | { n: number; eq: boolean; fractions?: number[] }): void; reactLineNumbersCatalog?(): { enabled: boolean; start: number; distance: string; countBy: number; restart: string; restarts: Array<[string, string]> }; reactLineNumbersAction?(action: string, value?: Record<string, unknown>): void; reactDropCapCatalog?(): { position: string; positions: Array<[string, string]>; fonts: string[]; font: string; lines: number; distanceText: string }; reactDropCapAction?(action: string, value?: string): void; reactLanguageCatalog?(): { languages: Array<{ value: string; label: string }>; language: string; noProof: boolean; detect: boolean }; reactLanguageAction?(action: string, value?: string): void; reactBookmarkCatalog?(): { name: string; sort: string; hidden: boolean; names: string[] }; reactBookmarkAction?(action: string, value?: string): boolean | void; reactObjectCatalog?(): Array<{ value: string; label: string }>; reactObjectAction?(action: string, value?: string): void; reactEquationAction?(action: string, value?: string): void; reactBreakCatalog?(): Array<{ value: string; label: string }>; reactBreakAction?(value: string): void; reactDateTimeCatalog?(): Array<{ value: string; label: string }>; reactDateTimeState?(): { format: string; autoUpdate: boolean }; reactPageNumberAction?(position: string, alignment: string, showFirst: boolean): void; reactPageNumberFormatState?(): { fmt: string; chapter: boolean; mode: string; start: number }; reactPageNumberFormatCatalog?(): Array<{ value: string; label: string }>; reactPageNumberFormatAction?(format: string, chapter: boolean, mode: string, start: number): void; reactCellDialogCatalog?(kind?: string): Array<[string, string]>; reactCellDialogKind?: string; reactInsertTableState?(): { columns: number; rows: number }; reactInsertTableAction?(action: string, options?: { columns: number; rows: number; fit: string; width: string; remember: boolean }): void; reactSplitCellsState?(): { columns: number; rows: number; merge: boolean }; reactTextToTableState?(): { initialSeparator: string; columns: number; paragraphs: Array<{ text: string; tabs: number }> }; reactTextToTableAction?(options: { sep: string; cols: number; autofit: string }): void; reactFormulaCatalog?(): { guess: string; functions: string[]; bookmarks: string[]; formats: string[] }; reactFormulaAction?(formula: string, format: string): void; reactCrossRefCatalog?(type?: string): { types: Array<{ value: string; label: string }>; references: Array<{ value: string; label: string }>; items: Array<{ value: string; label: string }> }; reactCrossRefAction?(type: string, index: number, reference: string, hyperlink: boolean, aboveBelow: boolean): void; reactMarkEntryState?(): { main: string; sub: string; option: string; xref: string; bold: boolean; italic: boolean }; reactMarkEntryAction?(all: boolean, values: { main: string; sub: string; option: string; xref: string; bold: boolean; italic: boolean }): void };
   rulers?: { draw?(): void; reactTabState?(): { kind: string; label: string }; reactTabNext?(): { kind: string; label: string }; reactMarkers?(): Array<{ className: string; tip: string; left: number; top?: number; width?: number; kind?: string; pos?: number; cid?: string; html: string }>; reactVerticalMarkers?(): Array<{ kind: string; top: number; left: number; width: number }>; reactMarkerDown?(event: PointerEvent): void; reactVerticalMarginDown?(event: PointerEvent, which: string): void; reactRulerDown?(event: PointerEvent): void; reactRulerDoubleClick?(event: MouseEvent): void; reactVerticalDoubleClick?(): void };
   app?: { fileName?: string; view?: string; prevView?: string; toggleDocMap?(): void; toggleThumbs?(): void; setView?(view: string): void; reactMapSplitterDown?(event: PointerEvent): void; reactSplitDown?(event: PointerEvent): void; reactSplitPageClick?(index: number): void; reactResize?(): void; reactScroll?(): void; reactBeforeUnload?(event: globalThis.BeforeUnloadEvent): void; reactAppKeydown?(event: globalThis.KeyboardEvent): void; reactModifierKey?(event: globalThis.KeyboardEvent): void; reactDropHintActive?: boolean; reactDropEvent?(kind: string, event: globalThis.DragEvent): void; painter?: { release(): boolean; start(sticky?: boolean, value?: unknown): boolean; on(): boolean }; highlighter?: { release(): boolean; start(sticky?: boolean, value?: unknown): boolean; on(): boolean; stop(): void }; reactStatusState?(): Array<{ id: string; text: string; className: string; tip: string; html: string }>; reactStatusAction?(action: string): void; reactShapeMenuCatalog?(): Array<{ kind: string; label: string; line: boolean; svg: string }>; reactShapeMenuAction?(kind: string): void; reactShadowMenuCatalog?(): Array<{ index: number; label: string; svg: string }>; reactShadowMenuAction?(index: number): void };
-  ed?: { reactEvent?(type: string, event: Event): void };
+  ed?: { reactEvent?(type: string, event: Event): void; reactInlineHandleDown?(event: PointerEvent): void; pressing?(): boolean };
+  templates?: { reactSelectPlaceholder?(): void };
+  fields?: { reactLayoutDone?(): void };
   drawtool?: { start(options: { geom: string; line: boolean }): void; reactPointerDown?(event: PointerEvent): void; reactKeydown?(event: globalThis.KeyboardEvent): void };
   drawing?: { reactHandleDown?(event: PointerEvent): void };
   review?: { togglePane(on: boolean): void; reactPaneCatalog?(): Array<{ index: number; kind: string; head: string; body: string; color: string }>; reactPaneSelect?(index: number, edit?: boolean): void; reactReviewersCatalog?(): Array<{ author: string; color: string }>; reactCommentCatalog?(): { text: string } | null; reactCommentSetText?(text: string): void; reactBalloonDown?(id: string): void };
@@ -80,6 +83,40 @@ function runtime(): WordxRuntime | undefined { return (window as Window & { L?: 
 function tr(L: WordxRuntime, text: string): string { return L.t?.(text) || text; }
 
 function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
+  const host = (window as Window & { VO?: { reactDirectHost?: { root?: HTMLElement | null } } }).VO?.reactDirectHost?.root || document.body;
+  const spellStatus = () => (L.app as (typeof L.app & { reactSpellStatusUpdate?(): void }) | undefined)?.reactSpellStatusUpdate?.();
+  useEffect(() => {
+    const offs = [
+      L.bus?.on('layout-done', () => L.spell?.reactLayoutChanged?.()),
+      L.bus?.on('layout-done', () => L.fields?.reactLayoutDone?.()),
+      L.bus?.on('doc-loaded', () => L.spell?.reactDocumentLoaded?.()),
+      L.bus?.on('proof-state', spellStatus),
+      L.bus?.on('doc-loaded', spellStatus),
+    ];
+    const onScroll = () => L.spell?.reactScroll?.();
+    let scroller: HTMLElement | null = null;
+    const attach = () => {
+      const next = L.layout?.scroller || null;
+      if (next !== scroller) {
+        scroller?.removeEventListener('scroll', onScroll);
+        scroller = next;
+        scroller?.addEventListener('scroll', onScroll, { passive: true });
+      }
+      L.spell?.reactAttachRoot?.(L.layout?.root);
+    };
+    const offReady = L.bus?.on('app-ready', attach);
+    const observer = new MutationObserver(attach);
+    observer.observe(host, { childList: true, subtree: true });
+    attach();
+    return () => { offs.forEach((off) => off?.()); offReady?.(); observer.disconnect(); scroller?.removeEventListener('scroll', onScroll); };
+  }, [host, L]);
+  useEffect(() => {
+    const select = () => { if (!L.ed?.pressing?.()) L.templates?.reactSelectPlaceholder?.(); };
+    const selectDone = () => L.templates?.reactSelectPlaceholder?.();
+    const offSelect = L.bus?.on('sel', select);
+    const offSelectDone = L.bus?.on('sel-done', selectDone);
+    return () => { offSelect?.(); offSelectDone?.(); };
+  }, [L]);
   useEffect(() => {
     const pointerDown = (event: PointerEvent) => {
       const target = event.target as Element | null;
@@ -87,12 +124,13 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       const balloon = target?.closest<HTMLElement>('.balloon[data-cid]');
       if (balloon) L.review?.reactBalloonDown?.(balloon.dataset.cid || '');
       if (target?.closest('.obj-handles .oh')) L.drawing?.reactHandleDown?.(event);
+      if (target?.closest('.obj-handles:not(.float) .oh[data-h]')) L.ed?.reactInlineHandleDown?.(event);
     };
     const click = (event: MouseEvent) => { const page = (event.target as Element | null)?.closest<HTMLElement>('#split2 .pg'); if (page) L.app?.reactSplitPageClick?.(Number(page.dataset.pg)); };
-    document.addEventListener('pointerdown', pointerDown);
-    document.addEventListener('click', click);
-    return () => { document.removeEventListener('pointerdown', pointerDown); document.removeEventListener('click', click); };
-  }, [L]);
+    host.addEventListener('pointerdown', pointerDown);
+    host.addEventListener('click', click);
+    return () => { host.removeEventListener('pointerdown', pointerDown); host.removeEventListener('click', click); };
+  }, [host, L]);
   useEffect(() => {
     const root = L.layout?.root;
     const pointerDown = L.outline?.reactPointerDown;
@@ -129,7 +167,7 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     let app: HTMLElement | null = null;
     let observer: MutationObserver | null = null;
     const attach = () => {
-      const next = document.querySelector<HTMLElement>('#app');
+      const next = host.querySelector<HTMLElement>('#app');
       if (next === app) { if (next) observer?.disconnect(); return; }
       if (app) types.forEach((type) => app?.removeEventListener(type, handlers[type]));
       app = next;
@@ -140,16 +178,16 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       if (app) observer?.disconnect();
     };
     observer = new MutationObserver(attach);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); if (app) { types.forEach((type) => app?.removeEventListener(type, handlers[type])); app.removeEventListener('pointerdown', drawPointerDown, true); } };
-  }, [L]);
+  }, [host, L]);
   useEffect(() => {
     const pointerDown = (event: PointerEvent) => L.app?.reactMapSplitterDown?.(event);
     let splitter: HTMLElement | null = null;
     let observer: MutationObserver | null = null;
     const attach = () => {
-      const next = document.querySelector<HTMLElement>('#split-map');
+      const next = host.querySelector<HTMLElement>('#split-map');
       if (next === splitter) { if (next) observer?.disconnect(); return; }
       splitter?.removeEventListener('pointerdown', pointerDown);
       splitter = next;
@@ -157,10 +195,10 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       if (splitter) observer?.disconnect();
     };
     observer = new MutationObserver(attach);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); splitter?.removeEventListener('pointerdown', pointerDown); };
-  }, [L]);
+  }, [host, L]);
   useEffect(() => {
     const resize = () => L.app?.reactResize?.();
     window.addEventListener('resize', resize);
@@ -176,7 +214,7 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     let scroller: HTMLElement | null = null;
     let observer: MutationObserver | null = null;
     const attach = () => {
-      const next = document.querySelector<HTMLElement>('#scroller');
+      const next = host.querySelector<HTMLElement>('#scroller');
       if (next === scroller) { if (next) observer?.disconnect(); return; }
       scroller?.removeEventListener('scroll', scroll);
       scroller = next;
@@ -184,10 +222,10 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       if (scroller) observer?.disconnect();
     };
     observer = new MutationObserver(attach);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); scroller?.removeEventListener('scroll', scroll); };
-  }, [L]);
+  }, [host, L]);
   useEffect(() => {
     const keydown = (event: globalThis.KeyboardEvent) => { L.app?.reactModifierKey?.(event); L.app?.reactAppKeydown?.(event); L.drawtool?.reactKeydown?.(event); };
     const keyup = (event: globalThis.KeyboardEvent) => L.app?.reactModifierKey?.(event);
@@ -247,13 +285,13 @@ function SearchPane({ L }: { L: WordxRuntime }) {
 }
 
 function ClipArtPane({ L }: { L: WordxRuntime }) {
-  const [draft, setDraft] = useState('');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(L.panes?.clipQuery || '');
+  const updateQuery = (value: string) => { setQuery(value); if (L.panes) L.panes.clipQuery = value; };
   const clips = L.clipart?.search(query) || [];
   return <div className="tp-body">
     <section className="tp-sec"><div className="tp-h">{tr(L, 'Search for:')}</div><div className="tp-row">
-      <input id="react-wordx-clipart-search" type="text" value={draft} style={{ flex: 1, minWidth: 0 }} onChange={(event) => setDraft(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') setQuery(draft); event.stopPropagation(); }} />
-      <button className="btn small" type="button" onClick={() => setQuery(draft)}>{tr(L, 'Go')}</button>
+      <input id="react-wordx-clipart-search" type="text" value={query} style={{ flex: 1, minWidth: 0 }} onChange={(event) => updateQuery(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') updateQuery(event.currentTarget.value); event.stopPropagation(); }} />
+      <button className="btn small" type="button" onClick={() => setQuery(query)}>{tr(L, 'Go')}</button>
     </div></section>
     <div className="clip-grid">{clips.map((clip) => <button className="clip-it" key={clip.id} type="button" data-tip={clip.name} aria-label={clip.name} onClick={() => L.panes?.insertClip?.(clip)}><img src={L.clipart?.url(clip)} alt="" /><span>{tr(L, clip.name)}</span></button>)}{!clips.length && <div className="tp-note">{tr(L, 'No clips match. Try "people", "chart", "nature" or "office".')}</div>}</div>
     <div className="tp-note">{tr(L, 'Click a clip to insert it at the insertion point.')}</div>
@@ -377,17 +415,17 @@ function ResearchPane({ L }: { L: WordxRuntime }) {
   </div>;
 }
 
-function DocumentMap({ L }: { L: WordxRuntime }) {
+function DocumentMap({ L, host }: { L: WordxRuntime; host: HTMLElement }) {
   const [, refresh] = useState(0);
   const [activePage, setActivePage] = useState(-1);
   useEffect(() => {
     const events = ['wordx-docmap-render', 'sel', 'doc-changed', 'doc-loaded'];
     const offs = events.map((event) => L.bus?.on(event, () => refresh((value) => value + 1))).filter(Boolean) as Array<() => void>;
-    const target = document.querySelector('#docmap');
+    const target = host.querySelector('#docmap');
     const observer = target && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => refresh((value) => value + 1)) : null;
     if (target && observer) observer.observe(target);
     return () => { offs.forEach((off) => off()); observer?.disconnect(); };
-  }, [L]);
+  }, [host, L]);
   const catalog = L.panes?.reactDocMapCatalog?.();
   if (catalog?.thumbs) {
     const pages = catalog.pages || [];
@@ -1228,10 +1266,10 @@ function ObjectShadowMenu({ L }: { L: WordxRuntime }) {
 }
 
 type LettersArtTextState = { text: string; font: string; sz: number; b: boolean; i: boolean; fonts: string[]; sizes: number[] };
-function LettersArtTextDialogBody({ L }: { L: WordxRuntime }) {
+function LettersArtTextDialogBody({ L, host }: { L: WordxRuntime; host: HTMLElement }) {
   const adapter = L.dlg as (typeof L.dlg & { reactLettersArtTextCatalog?(): LettersArtTextState; reactLettersArtTextAction?(action: string, value?: Partial<LettersArtTextState>): LettersArtTextState }) | undefined;
   const [state, setState] = useState<LettersArtTextState>(adapter?.reactLettersArtTextCatalog?.() || { text: '', font: 'Arial Black', sz: 36, b: false, i: false, fonts: [], sizes: [] });
-  useLayoutEffect(() => { const timer = window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('#react-wordx-lettersart-text-body textarea')?.focus(), 50); return () => window.clearTimeout(timer); }, []);
+  useLayoutEffect(() => { const timer = window.setTimeout(() => host.querySelector<HTMLTextAreaElement>('#react-wordx-lettersart-text-body textarea')?.focus(), 50); return () => window.clearTimeout(timer); }, [host]);
   const update = (value: Partial<LettersArtTextState>) => { const next = adapter?.reactLettersArtTextAction?.('change', value); if (next) setState(next); };
   return <div className="col" id="react-wordx-lettersart-text-body">
     <div className="row">
@@ -2614,7 +2652,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   }, [host, current]);
   if (!L) return null;
   const dropHint = dropHintActive ? createPortal(<div className="drop-hint" data-react-owned="wordx-drop-hint">{tr(L, 'Drop a document to open it, or pictures to insert them')}</div>, host) : null;
-  const docMap = <>{mapMount ? createPortal(<DocumentMap key="wordx-document-map" L={L} />, mapMount) : null}{mailMergeRecipientsMount ? createPortal(<MailMergeRecipientsDialogBody key="wordx-mail-merge-recipients-dialog" L={L} />, mailMergeRecipientsMount) : null}{newAddressListMount ? createPortal(<NewAddressListDialogBody key="wordx-new-address-list-dialog" L={L} />, newAddressListMount) : null}{mergeFieldMount ? createPortal(<InsertMergeFieldDialogBody key="wordx-mail-merge-field-dialog" L={L} />, mergeFieldMount) : null}{reviewersMount ? createPortal(<ReviewersDialogBody key="wordx-reviewers-dialog" L={L} />, reviewersMount) : null}{commentEditMount ? createPortal(<CommentEditDialogBody key="wordx-comment-edit-dialog" L={L} />, commentEditMount) : null}{contentControlMount ? createPortal(<ContentControlDialogBody key="wordx-content-control-dialog" L={L} />, contentControlMount) : null}{spellCheckMount ? createPortal(<SpellCheckDialogBody key="wordx-spell-check-dialog" L={L} />, spellCheckMount) : null}</>;
+  const docMap = <>{mapMount ? createPortal(<DocumentMap key="wordx-document-map" L={L} host={host} />, mapMount) : null}{mailMergeRecipientsMount ? createPortal(<MailMergeRecipientsDialogBody key="wordx-mail-merge-recipients-dialog" L={L} />, mailMergeRecipientsMount) : null}{newAddressListMount ? createPortal(<NewAddressListDialogBody key="wordx-new-address-list-dialog" L={L} />, newAddressListMount) : null}{mergeFieldMount ? createPortal(<InsertMergeFieldDialogBody key="wordx-mail-merge-field-dialog" L={L} />, mergeFieldMount) : null}{reviewersMount ? createPortal(<ReviewersDialogBody key="wordx-reviewers-dialog" L={L} />, reviewersMount) : null}{commentEditMount ? createPortal(<CommentEditDialogBody key="wordx-comment-edit-dialog" L={L} />, commentEditMount) : null}{contentControlMount ? createPortal(<ContentControlDialogBody key="wordx-content-control-dialog" L={L} />, contentControlMount) : null}{spellCheckMount ? createPortal(<SpellCheckDialogBody key="wordx-spell-check-dialog" L={L} />, spellCheckMount) : null}</>;
   const review = reviewMount ? createPortal(<ReviewingPane key="wordx-reviewing-pane" L={L} />, reviewMount) : null;
   const reading = readingMount ? createPortal(<ReadingToolbar key="wordx-reading-toolbar" L={L} />, readingMount) : null;
   const preview = readingMount ? createPortal(<PrintPreviewToolbar key="wordx-print-preview-toolbar" L={L} />, readingMount) : null;
@@ -2657,7 +2695,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   const hyperlinkDialog = hyperlinkMount ? createPortal(<HyperlinkDialogBody key="wordx-hyperlink-dialog" L={L} />, hyperlinkMount) : null;
   const symbolDialog = symbolMount ? createPortal(<SymbolDialogBody key="wordx-symbol-dialog" L={L} />, symbolMount) : null;
   const bulletsDialog = <>{bulletsMount ? createPortal(<BulletsDialogBody key="wordx-bullets-dialog" L={L} />, bulletsMount) : null}{customizeListMount ? createPortal(<CustomizeListDialogBody key="wordx-customize-list-dialog" L={L} />, customizeListMount) : null}</>;
-  const wordartDialog = <>{shapeMenuMount ? createPortal(<AutoShapeMenu key="wordx-shape-menu" L={L} />, shapeMenuMount) : null}{shadowMenuMount ? createPortal(<ObjectShadowMenu key="wordx-shadow-menu" L={L} />, shadowMenuMount) : null}{wordartMount ? createPortal(<WordartDialogBody key="wordx-wordart-dialog" L={L} />, wordartMount) : null}{lettersArtTextMount ? createPortal(<LettersArtTextDialogBody key="wordx-lettersart-text-dialog" L={L} />, lettersArtTextMount) : null}</>;
+  const wordartDialog = <>{shapeMenuMount ? createPortal(<AutoShapeMenu key="wordx-shape-menu" L={L} />, shapeMenuMount) : null}{shadowMenuMount ? createPortal(<ObjectShadowMenu key="wordx-shadow-menu" L={L} />, shadowMenuMount) : null}{wordartMount ? createPortal(<WordartDialogBody key="wordx-wordart-dialog" L={L} />, wordartMount) : null}{lettersArtTextMount ? createPortal(<LettersArtTextDialogBody key="wordx-lettersart-text-dialog" L={L} host={host} />, lettersArtTextMount) : null}</>;
   const wordCountDialog = wordCountMount ? createPortal(<WordCountDialogBody key="wordx-word-count-dialog" L={L} />, wordCountMount) : null;
   const summarizeDialog = summarizeMount ? createPortal(<AutoSummarizeDialogBody key="wordx-auto-summarize-dialog" L={L} />, summarizeMount) : null;
   const zoomDialog = zoomMount ? createPortal(<ZoomDialogBody key="wordx-zoom-dialog" L={L} />, zoomMount) : null;

@@ -32,6 +32,26 @@ function reactManifest(source) {
   return JSON.stringify(manifest, null, 2);
 }
 
+/** Rebrand generated template metadata and preview URLs for the React package routes. */
+export function reactTemplates(source) {
+  const templates = JSON.parse(source);
+  const products = [
+    { legacy: 'quire', id: 'wordx' },
+    { legacy: 'ledger', id: 'excelx' },
+    { legacy: 'lectern', id: 'pptx' },
+  ];
+  const output = {};
+  for (const product of products) {
+    const entries = templates[product.legacy];
+    if (!Array.isArray(entries)) continue;
+    output[product.id] = entries.map((entry) => ({
+      ...entry,
+      ...(typeof entry.img === 'string' ? { img: entry.img.replace(new RegExp(`^${product.legacy}/`), `${product.id}/`) } : {}),
+    }));
+  }
+  return JSON.stringify(output, null, 2);
+}
+
 export function legacyRuntime(app) {
   const apps = Array.isArray(app) ? app : [app];
   const legacyFolders = { wordx: 'quire', excelx: 'ledger', pptx: 'lectern' };
@@ -59,7 +79,8 @@ export function legacyRuntime(app) {
             response.statusCode = 200;
             response.setHeader('Content-Type', MIME.get(path.extname(target).toLowerCase()) || 'application/octet-stream');
             response.setHeader('Cache-Control', 'no-store');
-            response.end(prefix === '/manifest.webmanifest' ? reactManifest(contents.toString('utf8')) : contents);
+            const text = contents.toString('utf8');
+            response.end(prefix === '/manifest.webmanifest' ? reactManifest(text) : pathname === '/common/templates.json' ? reactTemplates(text) : contents);
           }).catch(next);
       });
     },
@@ -69,6 +90,7 @@ export function legacyRuntime(app) {
       for (const folder of [...apps.map((name) => [legacyFolders[name], name]), ['common', 'common'], ['fonts', 'fonts'], ['icons', 'icons']]) {
         await cp(path.join(publicRoot, folder[0]), path.join(output, folder[1]), { recursive: true });
       }
+      await writeFile(path.join(output, 'common', 'templates.json'), reactTemplates(await readFile(path.join(publicRoot, 'common', 'templates.json'), 'utf8')));
       const manifest = reactManifest(await readFile(path.join(publicRoot, 'manifest.webmanifest'), 'utf8'));
       await writeFile(path.join(output, 'manifest.webmanifest'), manifest);
       await cp(path.join(publicRoot, 'sw.js'), path.join(output, 'sw.js'));

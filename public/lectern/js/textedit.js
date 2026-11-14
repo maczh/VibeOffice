@@ -7,7 +7,7 @@
   const L = window.L;
   const T = L.txt;
   const E = L.ed;
-  const TE = (L.te = { state: null, lastSel: null, pending: null });
+  const TE = (L.te = { state: null, lastSel: null, pending: null, reactMounted: false });
   const ZW = /​/g;
 
   /* ---------- model text operations ---------- */
@@ -501,6 +501,7 @@
 
   /* ---------- listeners ---------- */
   function attach(root) {
+    if (TE.reactMounted) return;
     root.addEventListener('beforeinput', onBeforeInput);
     root.addEventListener('input', onInput);
     root.addEventListener('paste', onPaste);
@@ -508,6 +509,7 @@
     if (TE.state && TE.state.cell) L.$$('td .txi', TE.state.el).forEach((x) => { if (x !== root) { x.addEventListener('beforeinput', onBeforeInput); x.addEventListener('input', onInput); x.addEventListener('paste', onPaste); x.addEventListener('focusin', onFocusIn, true); } });
   }
   function detachListeners(root) {
+    if (TE.reactMounted) return;
     const all = TE.state && TE.state.cell ? L.$$('td .txi', TE.state.el) : [root];
     for (const x of all) { x.removeEventListener('beforeinput', onBeforeInput); x.removeEventListener('input', onInput); x.removeEventListener('paste', onPaste); x.removeEventListener('focusin', onFocusIn, true); }
   }
@@ -586,6 +588,14 @@
     L.hist.push(L.N('Paste'));
     TE.insertText(text.replace(/\r\n?/g, '\n').replace(/\t/g, '\t'));
   }
+  TE.reactEvents = { beforeinput: onBeforeInput, input: onInput, paste: onPaste, focusin: onFocusIn };
+  TE.setReactEventOwnership = function (owned) {
+    const next = !!owned;
+    if (TE.reactMounted === next) return;
+    if (next && TE.state) detachListeners(TE.state.root);
+    TE.reactMounted = next;
+    if (!next && TE.state) attach(TE.state.root);
+  };
 
   /* ---------- AutoCorrect ---------- */
   const AC = {

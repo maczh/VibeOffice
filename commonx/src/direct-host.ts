@@ -16,6 +16,8 @@ export interface DirectHostOptions {
   onSaveFile?: (name: string, blob: Blob, current?: LocalDocument, signal?: AbortSignal, operation?: SaveFileOperation) => Promise<LocalDocument | void | null>;
   onEngineReady?: (restore: (draft: LocalDraft<Blob>) => void) => void;
   onDraftsAvailable?: (drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => void;
+  configureRuntime?: (runtime: Window) => void;
+  skipLegacyScripts?: readonly string[];
 }
 
 /** Context passed to host save callbacks so Save As never silently becomes an in-place remote overwrite. */
@@ -109,10 +111,11 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
         }).catch((error: unknown) => { if (live()) console.warn(`${options.editor} draft list:`, error); });
       },
     };
-    const cleanupDocument = await mountLegacyEngineDocument(source, { host, signal, directHost: runtime });
+    const cleanupDocument = await mountLegacyEngineDocument(source, { host, signal, directHost: runtime, ...(options.skipLegacyScripts ? { skipLegacyScripts: options.skipLegacyScripts } : {}) });
     const root = host.querySelector<HTMLElement>('[data-vibeoffice-engine-root]');
     const runtimeWindow = view as Window & { L?: { app?: { mount?: (element: HTMLElement) => void | (() => void) | Promise<void | (() => void)>; newDocument?: () => void; newWorkbook?: () => void; newPresentation?: () => void }; ui?: { exec?(id: string): unknown; searchResults?(query: string, layout: string): unknown[] } } };
     if (!root || !runtimeWindow.L?.app?.mount) { cleanupDocument(); throw new Error(`The ${options.editor} runtime does not expose a direct mount API`); }
+    options.configureRuntime?.(runtimeWindow);
     const onCommand = (event: Event) => {
       const command = (event as CustomEvent<{ command?: unknown }>).detail?.command;
       const app = runtimeWindow.L?.app;

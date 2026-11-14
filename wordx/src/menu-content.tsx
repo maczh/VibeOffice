@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 
 interface WordxMenuRuntime {
   app?: {
+    reactHistoryMenuCatalog?(): { kind: 'undo' | 'redo'; items: Array<{ label: string; count: number }>; initialStatus: string };
+    reactHistoryMenuAction?(count: number): void;
     reactTableGridAction?(rows: number, columns: number): void;
     reactColumnsPickerAction?(columns: number): void;
     reactHighlightMenuCatalog?(): Array<{ kind: string; name: string; color: string }>;
@@ -76,6 +78,22 @@ function ColumnsPicker({ L }: { L: WordxMenuRuntime }) {
       })}
     </div>
     <div className="tgp-label" aria-live="polite">{columns ? L.t?.(columns === 1 ? '{0} Column' : '{0} Columns', columns) : L.t?.('Cancel') || 'Cancel'}</div>
+  </div>;
+}
+
+function HistoryMenu({ L }: { L: WordxMenuRuntime }) {
+  const catalog = L.app?.reactHistoryMenuCatalog?.();
+  const [hovered, setHovered] = useState<number | null>(null);
+  useEffect(() => () => {
+    if (L.app) { delete L.app.reactHistoryMenuCatalog; delete L.app.reactHistoryMenuAction; }
+  }, [L]);
+  if (!catalog) return null;
+  const kindLabel = catalog.kind === 'undo' ? 'Undo' : 'Redo';
+  const status = (count: number) => L.t?.(count === 1 ? `${kindLabel} {0} Action` : `${kindLabel} {0} Actions`, count) || `${kindLabel} ${count} ${count === 1 ? 'Action' : 'Actions'}`;
+  return <div className="style-list" id="react-wordx-history-menu" style={{ maxHeight: 260, overflow: 'auto', minWidth: 180 }} role="group" aria-label={kindLabel}>
+    {catalog.items.map(({ label, count }) => <button key={`${count}:${label}`} type="button" style={hovered !== null && count <= hovered ? { background: '#316ac5', color: '#fff' } : undefined}
+      onPointerEnter={() => setHovered(count)} onFocus={() => setHovered(count)} onClick={() => L.app?.reactHistoryMenuAction?.(count)}>{label}</button>)}
+    <div className="tgp-label" aria-live="polite">{hovered === null ? catalog.initialStatus : status(hovered)}</div>
   </div>;
 }
 
@@ -180,9 +198,10 @@ function FindSpecialMenu({ L }: { L: WordxMenuRuntime }) {
 
 /** React owns the contents of Wordx's legacy menu slots; the editor retains only commit operations. */
 export function WordxMenuContentLayer({ host }: { host: HTMLElement }) {
-  const [targets, setTargets] = useState<{ table: HTMLElement | null; columns: HTMLElement | null; highlight: HTMLElement | null; borders: HTMLElement | null; borderStyle: HTMLElement | null; borderWeight: HTMLElement | null; objectWeight: HTMLElement | null; objectDash: HTMLElement | null; objectArrow: HTMLElement | null; background: HTMLElement | null; multipage: HTMLElement | null; findFormat: HTMLElement | null; findSpecial: HTMLElement | null }>({ table: null, columns: null, highlight: null, borders: null, borderStyle: null, borderWeight: null, objectWeight: null, objectDash: null, objectArrow: null, background: null, multipage: null, findFormat: null, findSpecial: null });
+  const [targets, setTargets] = useState<{ history: HTMLElement | null; table: HTMLElement | null; columns: HTMLElement | null; highlight: HTMLElement | null; borders: HTMLElement | null; borderStyle: HTMLElement | null; borderWeight: HTMLElement | null; objectWeight: HTMLElement | null; objectDash: HTMLElement | null; objectArrow: HTMLElement | null; background: HTMLElement | null; multipage: HTMLElement | null; findFormat: HTMLElement | null; findSpecial: HTMLElement | null }>({ history: null, table: null, columns: null, highlight: null, borders: null, borderStyle: null, borderWeight: null, objectWeight: null, objectDash: null, objectArrow: null, background: null, multipage: null, findFormat: null, findSpecial: null });
   useEffect(() => {
     const scan = () => setTargets({
+      history: host.querySelector<HTMLElement>('#react-wordx-history-menu-root'),
       table: host.querySelector<HTMLElement>('#react-wordx-table-grid-menu-root'),
       columns: host.querySelector<HTMLElement>('#react-wordx-columns-picker-menu-root'),
       highlight: host.querySelector<HTMLElement>('#react-wordx-highlight-menu-root'),
@@ -205,6 +224,7 @@ export function WordxMenuContentLayer({ host }: { host: HTMLElement }) {
   const L = runtime();
   if (!L) return null;
   return <>
+    {targets.history ? createPortal(<HistoryMenu L={L} />, targets.history) : null}
     {targets.table ? createPortal(<TableGrid L={L} />, targets.table) : null}
     {targets.columns ? createPortal(<ColumnsPicker L={L} />, targets.columns) : null}
     {targets.highlight ? createPortal(<HighlightPalette L={L} />, targets.highlight) : null}

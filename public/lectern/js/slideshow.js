@@ -336,6 +336,7 @@
   /* ================= slide show controller ================= */
   const S = (L.show = { active: false });
   S.reactMounted = false;
+  S.reactEvents = { pointerdown: onPointerDown, pointermove: onPointerMove, pointerup: onPointerUp, pointercancel: pressLost, contextmenu: onContext, wheel: onWheel, blur: pressLost, resize: layout, keydown: onKey };
   let root, stage, layer, inkCanvas, ink, popbar, raf = 0;
   let st = null; /* runtime state */
   let removeMountCleanup = () => {};
@@ -352,25 +353,36 @@
   }
 
   /** Start the slide show. opts: {from: slideIndex, rehearse, preview(slideIndex for single-slide preview)} */
-  S.start = function (opts) {
+  S.start = function (opts, reactElements) {
     opts = opts || {};
     if (S.active) return;
     const pres = L.pres;
     if (!pres.slides.length) { L.ui.msg('There are no slides to show.', { icon: 'info' }); return; }
+    if (S.reactMounted && !reactElements) {
+      const directHost = window.VO && window.VO.reactDirectHost;
+      const host = directHost && directHost.root;
+      if (!host || !host.isConnected) return;
+      const fullscreenHost = host.closest('.vibe-editor') || host;
+      if (opts.preview == null && fullscreenHost.requestFullscreen) fullscreenHost.requestFullscreen().catch(() => { /* fullscreen is optional */ });
+      host.dispatchEvent(new CustomEvent('vibeoffice-react-show-start', { detail: opts, bubbles: true }));
+      return;
+    }
     if (L.te && L.te.active()) L.te.end();
     S.active = true;
     L.ui.closeMenus();
-    root = h('div', { class: 'show', tabindex: '0', role: 'application', 'aria-label': 'Slide Show' });
-    stage = h('div', { class: 'stage' });
-    inkCanvas = h('canvas', { class: 'ink' });
-    popbar = h('div', { class: 'popbar' });
+    root = reactElements ? reactElements.root : h('div', { class: 'show', tabindex: '0', role: 'application', 'aria-label': 'Slide Show' });
+    stage = reactElements ? reactElements.stage : h('div', { class: 'stage' });
+    inkCanvas = reactElements ? reactElements.inkCanvas : h('canvas', { class: 'ink' });
+    popbar = reactElements ? reactElements.popbar : h('div', { class: 'popbar' });
     if (!S.reactMounted) popbar.append(
       h('button', { type: 'button', 'aria-label': 'Previous', html: L.icons.get('showPrev'), onclick: (e) => { e.stopPropagation(); S.prev(); } }),
       h('button', { type: 'button', 'aria-label': 'Pointer options', html: L.icons.get('showPen'), onclick: (e) => { e.stopPropagation(); S.openPointerMenu(e.currentTarget); } }),
       h('button', { type: 'button', 'aria-label': 'Slide show menu', html: L.icons.get('showMenu'), onclick: (e) => { e.stopPropagation(); S.openShowMenu(e.currentTarget); } }),
       h('button', { type: 'button', 'aria-label': 'Next', html: L.icons.get('showNext'), onclick: (e) => { e.stopPropagation(); S.next(); } }));
-    root.append(stage, inkCanvas, popbar);
-    L.domHost().appendChild(root);
+    if (!reactElements) {
+      root.append(stage, inkCanvas, popbar);
+      L.domHost().appendChild(root);
+    }
     const sh = pres.show || {};
     st = {
       order: opts.preview != null ? [opts.preview] : slideOrder(),
@@ -384,21 +396,24 @@
     if (opts.from == null) while (startIdx < st.order.length - 1 && pres.slides[st.order[startIdx]].hidden) startIdx++;
     if (st.rehearse) buildRehearse();
     layout();
-    window.addEventListener('resize', layout);
-    root.addEventListener('pointerdown', onPointerDown);
-    root.addEventListener('pointermove', onPointerMove);
-    root.addEventListener('pointerup', onPointerUp);
-    root.addEventListener('pointercancel', pressLost);
-    window.addEventListener('blur', pressLost);
-    root.addEventListener('contextmenu', onContext);
-    root.addEventListener('wheel', onWheel, { passive: true });
-    document.addEventListener('keydown', onKey, true);
-    if (!st.preview && root.requestFullscreen) root.requestFullscreen().catch(() => { /* fullscreen is optional */ });
+    if (!S.reactMounted) {
+      window.addEventListener('resize', layout);
+      root.addEventListener('pointerdown', onPointerDown);
+      root.addEventListener('pointermove', onPointerMove);
+      root.addEventListener('pointerup', onPointerUp);
+      root.addEventListener('pointercancel', pressLost);
+      window.addEventListener('blur', pressLost);
+      root.addEventListener('contextmenu', onContext);
+      root.addEventListener('wheel', onWheel, { passive: true });
+      document.addEventListener('keydown', onKey, true);
+    }
+    if (!S.reactMounted && !st.preview && root.requestFullscreen) root.requestFullscreen().catch(() => { /* fullscreen is optional */ });
     try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then((l) => { st.wake = l; }).catch(() => {}); } catch (e) { /* ignore */ }
     root.focus();
     showSlide(startIdx, { transition: true });
     idleCursor();
   };
+  S.startReact = (opts, elements) => S.start(opts, elements);
 
   function layout() {
     if (!root) return;
@@ -698,9 +713,8 @@
     if (st.blank) { setBlank(null); return; }
     if (st.ended) {
       st.ended = false;
-      const es = root.querySelector(S.reactMounted ? '#react-show-overlay-root' : '.endscreen');
-      if (es) es.remove();
       if (S.reactMounted) L.bus.emit('pptx-show-overlay');
+      else { const es = root.querySelector('.endscreen'); if (es) es.remove(); }
       return;
     }
     if (st.running) { st.running.finishNow(); }
@@ -722,8 +736,6 @@
     st.ended = true;
     clearTimeout(st.timer);
     if (S.reactMounted) {
-      let overlay = root.querySelector('#react-show-overlay-root');
-      if (!overlay) { overlay = h('div', { id: 'react-show-overlay-root' }); root.appendChild(overlay); }
       L.bus.emit('pptx-show-overlay');
       return;
     }
@@ -731,16 +743,14 @@
     root.appendChild(es);
   }
   function setBlank(color) {
-    const b = root.querySelector(S.reactMounted ? '#react-show-overlay-root' : '.blank');
-    if (b) b.remove();
     st.blank = color;
     if (S.reactMounted) {
-      if (color || st.ended) {
-        const overlay = h('div', { id: 'react-show-overlay-root' });
-        root.appendChild(overlay);
-      }
       L.bus.emit('pptx-show-overlay');
-    } else if (color) root.appendChild(h('div', { class: 'blank', style: `background:${color}` }));
+    } else {
+      const blank = root.querySelector('.blank');
+      if (blank) blank.remove();
+      if (color) root.appendChild(h('div', { class: 'blank', style: `background:${color}` }));
+    }
   }
   S.overlayCatalog = () => st ? { blank: st.blank, ended: !!st.ended } : null;
 
@@ -752,9 +762,11 @@
     clearInterval(st.rTimer);
     clearTimeout(st.timer);
     if (st.rehearse && !st.ended) recordTime(st.pos);
-    document.removeEventListener('keydown', onKey, true);
-    window.removeEventListener('resize', layout);
-    window.removeEventListener('blur', pressLost);
+    if (!S.reactMounted) {
+      document.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', layout);
+      window.removeEventListener('blur', pressLost);
+    }
     try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) { /* ignore */ }
     try { if (st.wake) st.wake.release(); } catch (e) { /* ignore */ }
     const inkData = st.ink;
@@ -762,7 +774,13 @@
     const lastIdx = st.order[st.pos];
     removeMountCleanup();
     removeMountCleanup = () => {};
-    root.remove();
+    let reactUnmountRequested = false;
+    if (S.reactMounted) {
+      const directHost = window.VO && window.VO.reactDirectHost;
+      const host = directHost && directHost.root;
+      if (host && host.isConnected) { host.dispatchEvent(new CustomEvent('vibeoffice-react-show-end', { detail: root, bubbles: true })); reactUnmountRequested = true; }
+    }
+    if (!reactUnmountRequested) root.remove();
     root = null; layer = null;
     S.active = false;
     const state = st;
@@ -987,8 +1005,6 @@
   }
   function showGoto() {
     if (S.reactMounted) {
-      let reactBox = root.querySelector('#react-goto-root');
-      if (!reactBox) { reactBox = h('div', { class: 'gotobox', id: 'react-goto-root' }); root.appendChild(reactBox); }
       L.bus.emit('pptx-show-goto');
       return;
     }
@@ -996,20 +1012,24 @@
     if (!g) { g = h('div', { class: 'gotobox' }); root.appendChild(g); }
     g.textContent = L.t('Go to slide {0}', st.gotoBuf);
   }
-  function hideGoto() { const g = root && root.querySelector(S.reactMounted ? '#react-goto-root' : '.gotobox'); if (g) { g.remove(); if (S.reactMounted) L.bus.emit('pptx-show-goto'); } }
+  function hideGoto() {
+    if (S.reactMounted) { L.bus.emit('pptx-show-goto'); return; }
+    const g = root && root.querySelector('.gotobox');
+    if (g) g.remove();
+  }
   S.gotoCatalog = () => st && st.gotoBuf ? st.gotoBuf : null;
 
   /* ---- rehearsal ---- */
   function buildRehearse() {
-    const bar = h('div', { class: 'rehearse', role: 'toolbar', 'aria-label': 'Rehearsal' });
-    if (S.reactMounted) bar.id = 'react-rehearse-root';
-    else bar.append(
+    const bar = S.reactMounted ? root.querySelector('#react-rehearse-root') : h('div', { class: 'rehearse', role: 'toolbar', 'aria-label': 'Rehearsal' });
+    if (!bar) return;
+    if (!S.reactMounted) bar.append(
       h('button', { type: 'button', class: 'tb-btn', 'aria-label': 'Next', html: L.icons.get('forward'), onclick: (e) => { e.stopPropagation(); S.next(); } }),
       h('button', { type: 'button', class: 'tb-btn', 'aria-label': 'Pause', text: '❚❚', onclick: (e) => { e.stopPropagation(); S.toggleRehearsePause(); } }),
       h('span', { class: 'rt', text: '0:00:00' }),
       h('button', { type: 'button', class: 'tb-btn', 'aria-label': 'Repeat', html: L.icons.get('undo'), onclick: (e) => { e.stopPropagation(); S.repeatRehearse(); } }),
       h('span', { class: 'tot', text: '0:00:00' }));
-    root.appendChild(bar);
+    if (!S.reactMounted) root.appendChild(bar);
     st.rTimer = setInterval(updateRehearse, 250);
   }
   function updateRehearse() {

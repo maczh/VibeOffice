@@ -8,6 +8,9 @@
   const { h } = L;
   const ui = L.ui;
   const SP = L.spell;   // the engine: common/spell.js
+  let reactSpell = null;
+  SP.reactSpellCatalog = () => reactSpell && reactSpell.catalog();
+  SP.reactSpellAction = (action, patch) => reactSpell ? reactSpell.action(action, patch || {}) : false;
   const opt = (k, def) => { const o = L.app && L.app.opts; return o && o[k] !== undefined ? o[k] !== false : def !== false; };
 
   const LEX = L.lex;
@@ -123,10 +126,45 @@
       sugg.selectedIndex = 0;
       sugg.disabled = !s.length;
     };
-    const advance = () => { hi++; if (!next()) { d.close(null); ui.msg('The spelling check is complete for the entire sheet.', { icon: 'info' }); G.paint(); return; } show(); };
+    let d = null, reactValue = '', reactSuggestion = '';
+    const complete = () => { if (d) d.close(null); if (reactSpell) { reactSpell = null; L.bus.emit('excelx-spell-dialog'); } ui.msg('The spelling check is complete for the entire sheet.', { icon: 'info' }); G.paint(); };
+    const advance = () => { hi++; if (!next()) { complete(); return; } show(); if (reactSpell) L.bus.emit('excelx-spell-dialog'); };
     const pick = () => (word.value !== cur.word ? word.value : sugg.disabled ? null : sugg.value);
     const LANGS = [['en_US', 'English (U.S.)'], ['en_GB', 'English (U.K.)']];
     const langName = (k) => (LANGS.find((x) => x[0] === k) || LANGS[0])[1];
+    function reactCatalog() {
+      const v = sh.val(cur.r, cur.c), start = Math.max(0, cur.index - 40), end = cur.index + cur.word.length + 40;
+      return { title: L.t('Spelling: {0}', L.t(langName(list))), word: cur.word, before: v.slice(start, cur.index), after: v.slice(cur.index + cur.word.length, end), suggestions: SP.suggest(cur.word, list, 8), language: list, languages: LANGS.map(([value, label]) => ({ value, label })), replacement: reactValue || cur.word };
+    }
+    async function changeLanguage(value) {
+      ui.busy(true, 'Loading the dictionary...');
+      try { await LEX.load(value); } catch (e) { ui.busy(false); ui.msg(L.t('The spelling dictionary could not be loaded ({0}).', e.message || e), { icon: 'warn' }); return; }
+      ui.busy(false); list = value;
+      if (A.opts) { A.opts.dictLang = value; if (A.saveOpts) A.saveOpts(); }
+      hits = findErrors(sh.val(cur.r, cur.c), list).map((x) => Object.assign(x, { r: cur.r, c: cur.c })); hi = 0;
+      if (!hits.length) { hi = 1; advance(); } else show();
+      if (reactSpell) L.bus.emit('excelx-spell-dialog');
+    }
+    reactSpell = {
+      catalog: reactCatalog,
+      action: (action, patch) => {
+        if (action === 'unmount') { reactSpell = null; return true; }
+        if (action === 'value') { reactValue = String(patch.value == null ? '' : patch.value); return true; }
+        if (action === 'suggestion') { reactSuggestion = String(patch.value || ''); return true; }
+        if (action === 'language') { changeLanguage(String(patch.value)); return true; }
+        if (action === 'options') { reactSpell = null; L.bus.emit('excelx-spell-dialog'); L.dlg.options('Spelling'); return true; }
+        if (action === 'ignore') { advance(); return true; }
+        if (action === 'ignoreAll') { SP.ignoreAll(cur.word); hits = hits.filter((x, k) => k <= hi || x.word.toLowerCase() !== cur.word.toLowerCase()); advance(); return true; }
+        if (action === 'add') { SP.addWord(cur.word); advance(); return true; }
+        const picked = reactValue !== cur.word ? reactValue : reactSuggestion || null;
+        if (action === 'change' && picked != null) { replaceIn(cur, picked); hits = findErrors(sh.val(cur.r, cur.c), list).map((x) => Object.assign(x, { r: cur.r, c: cur.c })).filter((x) => x.index > cur.index + picked.length - cur.word.length - 1); hi = -1; advance(); return true; }
+        if (action === 'changeAll' && picked != null) { changeAll.set(cur.word, picked); replaceIn(cur, picked); advance(); return true; }
+        if (action === 'autoCorrect' && picked != null) { L.autocorrect.setEntry(cur.word, picked); replaceIn(cur, picked); advance(); return true; }
+        if (action === 'cancel') { reactSpell = null; L.bus.emit('excelx-spell-dialog'); G.paint(); return true; }
+        return false;
+      },
+    };
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) { show(); L.bus.emit('excelx-spell-dialog'); return; }
     const langSel = ui.select(LANGS, list, async (v) => {
       /* switch dictionaries: load the list, remember the choice, re-check the current cell */
       ui.busy(true, 'Loading the dictionary...');
@@ -139,7 +177,7 @@
       hi = 0;
       if (!hits.length) { hi = 1; advance(); } else show();
     });
-    const d = ui.dialog({
+    d = ui.dialog({
       title: L.t('Spelling: {0}', L.t(langName(list))), width: 520,
       body: h('div', { class: 'sp-grid' },
         h('div', { class: 'col' }, h('label', { text: 'Not in Dictionary:' }), ctx, word, h('label', { text: 'Suggestions:' }), sugg, ui.field('Dictionary &language:', langSel)),

@@ -1,13 +1,9 @@
-/* The Start Center (public/index.html): Open File, Recent Files, Create File, the apps, Settings, About, the update
+/* The Start Center (public/index.html): Open File, Create File, the apps, Settings, About, the update
    check. A file of its own, not inline in the page (the pages' Content-Security-Policy). */
 /* once the UI's dictionary is here (common/i18n.js) */
 VO.i18n.whenReady(function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  /* Safari's Lockdown Mode takes IndexedDB away (the name is undefined), which Recent Files, unsaved
-     versions and opening files from here need */
-  const noStorage = VO.host.kind === 'web' && typeof indexedDB === 'undefined';   // (the desktop app keeps them itself)
-  if (noStorage) alert(VO.t('VibeOffice.work keeps Recent Files and unsaved changes in this browser, and Safari\'s Lockdown Mode turns that off.\n\nTo allow it for this site only: tap aA in the address bar, tap Website Settings, and turn off Lockdown Mode. Safari reloads the page.'));
   /* text and the attributes the user reads are shown in the UI's language (common/i18n.js), as L.h does in the apps */
   const T = (s) => (typeof s === 'string' ? VO.t(s) : s);
   /* translate="no": data (a file's name), shown as it is */
@@ -17,8 +13,6 @@ VO.i18n.whenReady(function () {
     el.append(...kids.filter((k) => k != null).map(tr));
     return el;
   };
-  const COLOR = { quire: 'var(--quire)', ledger: 'var(--ledger)', lectern: 'var(--lectern)' };
-
   /* app pictures: a page with lines, a grid, a slide; small for Create, large when a file has no thumbnail */
   function picture(app, ext) {
     const c = { quire: '#2a64c8', ledger: '#1f8a4c', lectern: '#e0682d' }[app];
@@ -32,9 +26,6 @@ VO.i18n.whenReady(function () {
   for (const el of document.querySelectorAll('[data-icon]')) el.innerHTML = picture(el.dataset.icon);
 
   const status = (text) => { $('status').textContent = VO.t(text || ''); };
-  /* the desktop app keeps Recent Files itself, not a browser */
-  if (VO.host.kind === 'desktop') document.querySelector('.note').firstChild.textContent = VO.t('Your files stay on this computer.') + ' ';
-
   /* links to apps open in a new window when installed, so this start page stays */
   document.addEventListener('click', (e) => {
     const a = e.target.closest('a[data-go]');
@@ -66,66 +57,6 @@ VO.i18n.whenReady(function () {
   document.addEventListener('drop', (e) => { if (!hasFiles(e)) return; e.preventDefault(); depth = 0; $('drop').hidden = true; openFile(e.dataTransfer.files[0]); });
   VO.host.onFiles((files) => openFile(files[0]));   // Open with, a double-click on a file
 
-  /* ---------- Recent Files */
-  const day = (t) => new Date(t).toDateString();
-  const when = (t) => {
-    const time = new Date(t).toLocaleTimeString(VO.i18n.dates, { hour: '2-digit', minute: '2-digit' });
-    if (day(t) === day(Date.now())) return VO.t('Today, {0}', time);
-    if (day(t) === day(Date.now() - 86400000)) return VO.t('Yesterday, {0}', time);
-    return new Date(t).toLocaleDateString(VO.i18n.dates, { year: 'numeric', month: 'short', day: 'numeric' });
-  };
-  let urls = [];
-  async function render() {
-    let list = [];
-    if (!noStorage) try { list = await VO.recent.list(); } catch (e) { status(VO.t('Recent Files are not available in this browser ({0}).', e.message)); }
-    if (view !== 'recent') return;   // switched to Create File meanwhile
-    for (const u of urls) URL.revokeObjectURL(u);
-    urls = [];
-    const grid = $('grid');
-    grid.replaceChildren(...list.map((e) => {
-      const thumb = h('div', { class: 'thumb' });
-      thumb.innerHTML = picture(e.app, VO.ext(e.name));
-      VO.recent.preview(e).then((blob) => {
-        if (!blob) return;
-        const u = URL.createObjectURL(blob);
-        urls.push(u);
-        thumb.replaceChildren(h('img', { src: u, alt: '' }));
-      }, () => {});
-      /* a document with unsaved changes opens at its unsaved version; × then discards those changes */
-      const rm = h('button', { class: 'rm', type: 'button', title: e.draft ? 'Discard the unsaved changes' : 'Remove from list' }, '×');
-      rm.setAttribute('aria-label', e.draft ? VO.t('Discard the unsaved changes to {0}', e.name) : VO.t('Remove from the list: {0}', e.name));
-      rm.addEventListener('click', async () => {
-        try {
-          if (e.draft) { if (confirm(e.saved ? VO.t('Discard the unsaved changes to “{0}”? The saved version stays in the list.', e.name) : VO.t('Discard the unsaved changes to “{0}”?', e.name))) await VO.recent.discardDraft(e.key); }
-          else await VO.recent.remove(e.key);
-        } catch (err) { status(String(err)); }
-        render();
-      });
-      const app = VO.APPS[e.app] || { name: e.app };
-      const dot = h('i'); dot.style.background = COLOR[e.app] || '#888';
-      const card = h('div', { class: 'doc' },
-        thumb,
-        h('a', { class: 'name', href: VO.url(e.app, e.draft ? { recent: e.key, draft: true } : { recent: e.key }), 'data-go': '', translate: 'no' }, e.name),
-        h('div', { class: 'meta', translate: 'no' }, dot, app.name + ' · ' + when(e.time)),
-        e.draft ? h('span', { class: 'unsaved' }, e.saved ? 'Unsaved changes' : 'Never saved') : null,
-        e.draft && e.saved ? h('a', { class: 'alt', href: VO.url(e.app, { recent: e.key }), 'data-go': '', title: 'Open the version saved before the changes' }, 'Saved version') : null,
-        rm);
-      card.title = `${e.name}\n${app.name}` + (e.folder ? ' · ' + e.folder : '') + (e.saved ? ' · ' + VO.t('{0} KB', (e.size / 1024).toFixed(0)) : '') + ` · ${new Date(e.time).toLocaleString(VO.i18n.dates)}` + (e.draft ? '\n' + VO.t('Unsaved changes') : '');
-      return card;
-    }));
-    grid.hidden = !list.length;
-    $('empty').hidden = !!list.length;
-    $('clear').hidden = !list.length;
-  }
-  const clearRecent = async () => {
-    if (!confirm('Remove all files from the Recent Files list? The files on your computer are not touched.')) return false;
-    await VO.recent.clear(); render();
-    return true;
-  };
-  $('clear').addEventListener('click', clearRecent);
-  VO.onRecentChange(() => { if (view === 'recent') render(); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && view === 'recent') render(); });
-
   /* ---------- Create File: Blank and the templates of each app (common/templates.json, made by tools/templates.mjs) */
   const KIND = { quire: VO.N('Documents'), ledger: VO.N('Spreadsheets'), lectern: VO.N('Presentations') };
   const NEW = { quire: [VO.N('New blank document'), VO.N('New document from “{0}”')], ledger: [VO.N('New blank spreadsheet'), VO.N('New spreadsheet from “{0}”')], lectern: [VO.N('New blank presentation'), VO.N('New presentation from “{0}”')] };
@@ -148,23 +79,17 @@ VO.i18n.whenReady(function () {
     for (const el of gallery.querySelectorAll('[data-icon]')) el.innerHTML = picture(el.dataset.icon);
   }
 
-  /* ---------- the two views: Recent Files (default) and Create File (#create), so Back goes between them */
-  let view = '';
+  /* ---------- Create File is the Start Center's only view */
   function show() {
-    view = location.hash === '#create' ? 'create' : 'recent';
-    $('viewtitle').textContent = view === 'create' ? VO.t('Create File') : VO.t('Recent Files');
-    $('recentbtn').classList.toggle('on', view === 'recent'); $('recentbtn').setAttribute('aria-pressed', view === 'recent');
-    $('createbtn').classList.toggle('on', view === 'create'); $('createbtn').setAttribute('aria-pressed', view === 'create');
+    $('viewtitle').textContent = VO.t('Create File');
+    $('createbtn').classList.add('on'); $('createbtn').setAttribute('aria-pressed', 'true');
     status('');
-    if (view === 'create') { $('grid').hidden = $('empty').hidden = $('clear').hidden = true; $('gallery').hidden = false; renderGallery(); }
-    else { $('gallery').hidden = true; render(); }
+    $('gallery').hidden = false;
+    renderGallery();
   }
-  $('recentbtn').addEventListener('click', () => { if (location.hash) history.pushState(null, '', location.pathname + location.search); show(); });
   $('createbtn').addEventListener('click', () => { if (location.hash !== '#create') location.hash = 'create'; else show(); });
   window.addEventListener('hashchange', show);
   window.addEventListener('popstate', show);
-  /* the desktop app: an app window's Recent Files brings this window forward on them (host_show_recent) */
-  window.addEventListener('vo-show-recent', () => $('recentbtn').click());
   /* the Mac's menu bar: File ▸ Open… with the Start Center in front (desktop/src/main.rs, mac_menu_event) */
   window.addEventListener('vo-menu', (e) => { if (e.detail === 'open' && !VO.busyDialog()) $('open').click(); });
   show();
@@ -263,20 +188,6 @@ VO.i18n.whenReady(function () {
       : VO.localFonts.supported() ? VO.t('The Font boxes list the frequently used Office fonts and the document\'s own. They can also list the fonts installed on this computer, once you allow it.')
         : VO.t('The Font boxes list the frequently used Office fonts and the document\'s own.');
   };
-  const recentInfo = async () => {
-    let list = [];
-    if (!noStorage) try { list = await VO.recent.list(); } catch (e) { /* shown as none */ }
-    const drafts = list.filter((e) => e.draft).length;
-    let mb = '';
-    const desk = VO.host.kind === 'desktop';   // its Recent Files aren't the browser's storage
-    if (!desk) try { const est = navigator.storage && await navigator.storage.estimate(); if (est && est.usage) mb = (est.usage / 1048576).toFixed(1); } catch (e) { /* no estimate */ }
-    /* how many files (and with unsaved changes), then how much room they take and where */
-    const files = list.length === 1 ? (drafts ? VO.t('1 file, with unsaved changes') : VO.t('1 file')) : drafts ? VO.t('{0} files, {1} with unsaved changes', list.length, drafts) : VO.t('{0} files', list.length);
-    const kept = mb ? (desk ? VO.t('About {0} MB, kept by VibeOffice on this computer.', mb) : VO.t('About {0} MB, kept in this browser.', mb)) : desk ? VO.t('Kept by VibeOffice on this computer.') : VO.t('Kept in this browser.');
-    $('recentinfo').textContent = noStorage ? VO.t('Recent Files are not available here.')
-      : !list.length ? VO.t('The list is empty.') : VO.t('{0}. {1}', files, kept);
-    $('recentclear').hidden = !list.length;
-  };
   $('settings').addEventListener('click', async () => {
     const scale = await VO.host.uiScale().catch(() => null);
     $('scalerow').hidden = scale === null;
@@ -285,7 +196,6 @@ VO.i18n.whenReady(function () {
     $('uilang').replaceChildren(...VO.lang.list().map((l) => (l.id === 'auto' ? h('option', { value: l.id }, 'Auto (as the browser)') : h('option', { value: l.id, translate: 'no' }, l.name))));
     $('uilang').value = VO.lang.get();
     fontInfo();
-    await recentInfo();
     $('settingsdlg').showModal();
   });
   /* the Start Center shows the new language at once; the apps' windows when they next open */
@@ -296,6 +206,5 @@ VO.i18n.whenReady(function () {
     fontInfo();
   });
   $('fontforget').addEventListener('click', () => { VO.localFonts.forget(); fontInfo(); });
-  $('recentclear').addEventListener('click', async () => { if (await clearRecent()) recentInfo(); });
   window.addEventListener('vo-look', drawLooks);
 });

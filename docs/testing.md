@@ -66,7 +66,7 @@ Tests open the apps in English (`lang=en`), whatever the browser's language (doc
 
 Two sizes. After each change, `node tools/quick.mjs` (the uncommitted changes, or the last commit; `node tools/quick.mjs
 <rev>` for everything since a commit; `--dry` lists the plan): it maps the files changed to the tests that cover them
-and runs those, the Node tests first. The smoke test, `tests/ui/smoke.test.mjs` (about 20 s), runs whenever the apps
+and runs those, the Node tests first and one file at a time because CDP-backed Node tests share Chromium. The smoke test, `tests/ui/smoke.test.mjs` (about 20 s), runs whenever the apps
 changed: the Start Center and each app load with no errors and nothing from outside; in each app a click puts the
 keyboard in the document and typing lands there, the File menu and a dialog from its shortcut open and close with Esc
 and give the keyboard back, a drop-down inside a dialog opens above it (Ledger's Format Cells), and Undo takes the

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 interface ExcelxRuntime {
   grid?: { reactMountInteractions?(): () => void; reactInteractionMounted?: boolean };
+  app?: { reactDrawTrace?(): void };
   bus?: { on(event: string, listener: () => void): () => void };
 }
 
@@ -12,6 +13,7 @@ function runtime(): ExcelxRuntime | undefined {
 /** Own the canvas grid's interaction listeners for the lifetime of the React editor mount. */
 export function ExcelxGridInteractionLayer({ host }: { host: HTMLElement }) {
   useEffect(() => {
+    const offTrace = runtime()?.bus?.on('grid-paint', () => runtime()?.app?.reactDrawTrace?.());
     let target: HTMLElement | null = null;
     let dispose: (() => void) | null = null;
     const attach = () => {
@@ -28,6 +30,7 @@ export function ExcelxGridInteractionLayer({ host }: { host: HTMLElement }) {
     return () => {
       observer.disconnect();
       off?.();
+      offTrace?.();
       dispose?.();
       dispose = null;
       target = null;

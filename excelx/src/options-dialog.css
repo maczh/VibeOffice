@@ -1,0 +1,19 @@
+.excelx-options-dialog__tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--ui-border, #9b9b9b); }
+.excelx-options-dialog__tabs [role=tab] { padding: 5px 8px; }
+.excelx-options-dialog__tabs [aria-selected=true] { border-bottom: 2px solid var(--ui-accent, #316ac5); font-weight: 600; }
+.excelx-options-dialog__panel { min-height: 280px; max-height: min(58vh, 480px); overflow: auto; padding: 10px 2px; }
+.excelx-options-dialog__panel fieldset { display: flex; flex-direction: column; gap: 5px; margin: 0 0 10px; min-width: 0; }
+.excelx-options-dialog__panel label { display: flex; align-items: center; gap: 5px; }
+.excelx-options-dialog__panel label > input:not([type=checkbox]):not([type=radio]), .excelx-options-dialog__panel select, .excelx-options-dialog__panel textarea { min-width: 0; }
+.excelx-options-dialog__columns { display: grid; grid-template-columns: 1fr 1.15fr; gap: 10px; }
+.excelx-options-dialog__column { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.excelx-options-dialog__window { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; }
+.excelx-options-dialog__field { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+.excelx-options-dialog__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.excelx-options-dialog__row .excelx-options-dialog__field { flex: 1; }
+.excelx-options-dialog__custom { display: grid; grid-template-columns: 1fr 1fr auto; align-items: start; gap: 10px; }
+.excelx-options-dialog__custom > label { align-items: stretch; flex-direction: column; }
+.excelx-options-dialog__custom select, .excelx-options-dialog__custom textarea { width: 100%; }
+.excelx-options-dialog__custom > div { display: flex; flex-direction: column; gap: 6px; }
+.excelx-options-dialog__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+@media (max-width: 600px) { .excelx-options-dialog__columns, .excelx-options-dialog__custom { grid-template-columns: 1fr; } }

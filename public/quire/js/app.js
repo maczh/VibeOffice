@@ -23,7 +23,7 @@
     toolbars: { standard: true, formatting: true, drawing: true, tables: false, reviewing: 'auto', picture: 'auto', outlining: 'auto', headerFooter: 'auto', mailMerge: false, wordart: 'auto' },
     showMarks: false, marks: { tabs: false, spaces: false, para: false, hidden: false, all: false }, textBoundaries: true, fieldShading: 'selected', bookmarks: false,
     smartQuotes: true, autocorrect: true, autoFormat: true, capSentence: true, autoBullets: true, autoNumbers: true, autoBorders: true, autoHeadings: false, autoUrl: true, ordinals: true, fractions: true, dashes: true,
-    spell: true, unit: (L.locale && L.locale.get().unit) || 'in', recent: [], zoom: 1, view: 'print', balloons: true, pasteOptions: true, dragDrop: true, smartCut: true, typingReplaces: true,
+    spell: true, unit: (L.locale && L.locale.get().unit) || 'in', zoom: 1, view: 'print', balloons: true, pasteOptions: true, dragDrop: true, smartCut: true, typingReplaces: true,
     userName: 'Wordx User', userInitials: 'WX', markupMode: 'markup',
   };
   const A = (L.app = Object.assign(L.app || {}, {
@@ -54,9 +54,8 @@
 
   /* ================= menus ================= */
   function buildMenus() {
-    const recentItems = () => (window.VO ? VO.recentMenuItems(4) : []);
     const menus = [
-      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', 'fileSearch', '-', 'webPreview', '-', 'pageSetup', 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['sendMail', 'exportPDF'] }, 'properties', ...(L.file.native() ? ['versions'] : []), ...((recentItemsList) => (recentItemsList.length ? ['-', ...recentItemsList] : []))(recentItems()), '-', 'exitApp'] },
+      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', 'fileSearch', '-', 'webPreview', '-', 'pageSetup', 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['sendMail', 'exportPDF'] }, 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
       {
         label: '&Edit', items: () => ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', 'pasteHyperlink', '-',
           { label: 'Cle&ar', sub: ['clearFormats', 'clearContents'] }, 'selectAll', '-', 'find', 'replace', 'goTo', '-', 'links', 'editObject'],
@@ -435,6 +434,12 @@
     const list = kind === 'undo' ? D.undoList() : D.redoList();
     if (!list.length) return;
     ui.openMenu([{ custom: (close) => {
+      if (window.VO && VO.reactDirectHost) {
+        const actions = (n) => kind === 'undo' ? (n === 1 ? L.t('Undo {0} Action', n) : L.t('Undo {0} Actions', n)) : n === 1 ? L.t('Redo {0} Action', n) : L.t('Redo {0} Actions', n);
+        A.reactHistoryMenuCatalog = () => ({ kind, items: list.slice(0, 40).map((label, index) => ({ label, count: index + 1 })), initialStatus: actions(1) });
+        A.reactHistoryMenuAction = (count) => { close(); for (let i = 0; i < count; i++) ui.exec(kind); };
+        return h('div', { id: 'react-wordx-history-menu-root' });
+      }
       const el = h('div', { class: 'style-list', style: 'max-height:260px;overflow:auto;min-width:180px' });
       const actions = (n) => (kind === 'undo' ? (n === 1 ? L.t('Undo {0} Action', n) : L.t('Undo {0} Actions', n)) : n === 1 ? L.t('Redo {0} Action', n) : L.t('Redo {0} Actions', n));
       const lbl = h('div', { class: 'tgp-label', text: actions(1) });
@@ -575,8 +580,11 @@
       A.sb.spell.dataset.tip = on ? L.t('Spelling and grammar are checked as you type. Click to stop.') : L.t('Spelling and grammar are not checked as you type. Click to check this document.');
       if (window.VO && VO.reactDirectHost) L.bus.emit('wordx-status-render');
     };
-    L.bus.on('proof-state', spellIcon);
-    L.bus.on('doc-loaded', spellIcon);
+    A.reactSpellStatusUpdate = spellIcon;
+    if (!window.__VIBE_OFFICE_DIRECT_HOST__) {
+      L.bus.on('proof-state', spellIcon);
+      L.bus.on('doc-loaded', spellIcon);
+    }
     spellIcon();
     sb.append(A.sb.page, A.sb.sec, A.sb.pages, A.sb.at, A.sb.ln, A.sb.col, A.sb.rec, A.sb.trk, A.sb.ext, A.sb.ovr, A.sb.lang, A.sb.spell, A.sb.msg);
   }

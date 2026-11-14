@@ -7,6 +7,29 @@
   const { h } = L;
   const ui = L.ui;
   const DR = (L.drawing = {});
+  let reactFormat = null;
+  DR.reactFormatAction = (action, patch) => {
+    if (!reactFormat) return false;
+    const current = reactFormat;
+    const close = () => { reactFormat = null; root.document.dispatchEvent(new root.CustomEvent('excelx-drawing-format', { detail: null })); };
+    if (action === 'cancel') { close(); return true; }
+    if (action === 'apply') { close(); current.apply(); return true; }
+    if (action === 'chartOptions') { close(); L.chartWizard.open({ edit: current.drawing }); return true; }
+    if (action === 'chartType') { close(); L.chartWizard.typeMenu(patch); return true; }
+    if (action === 'color') {
+      const key = patch.key, mode = key === 'line' ? 'line' : 'fill';
+      ui.colorMenu(patch.anchor, { mode, grid: true }, (color) => { if (color.none) current.state[key] = null; else if (color.auto) current.state[key] = mode === 'line' ? '#000000' : '#FFFFFF'; else if (typeof color === 'string') current.state[key] = color; current.publish(); });
+      return true;
+    }
+    if (action === 'update') {
+      const state = current.state, values = patch || {};
+      if (values.width != null && state.aspect) { const ratio = state.h / (state.w || 1); state.w = Math.max(0.72, Math.min(3600, +values.width || 0.72)); state.h = state.w * ratio; }
+      else if (values.height != null && state.aspect) { const ratio = state.w / (state.h || 1); state.h = Math.max(0.72, Math.min(3600, +values.height || 0.72)); state.w = state.h * ratio; }
+      Object.keys(values).forEach((key) => { if (key === 'width') state.w = Math.max(0.72, Math.min(3600, +values.width || 0.72)); else if (key === 'height') state.h = Math.max(0.72, Math.min(3600, +values.height || 0.72)); else if (key === 'aspect') state.aspect = !!values.aspect; else if (key === 'alt') state.alt = String(values.alt || ''); else if (key === 'lineW') state.lineW = Math.max(0.25, Math.min(20, +values.lineW || 0.25)); else if (key === 'editAs') state.editAs = values.editAs; else if (key === 'locked' || key === 'print') state[key] = !!values[key]; });
+      current.publish(); return true;
+    }
+    return false;
+  };
   const G = () => L.grid;
   const wb = () => G().wb;
   const sh = () => G().sheet();
@@ -435,7 +458,27 @@
     const el = Array.from(L.$('#glayer').children).find((x) => x._d === d);
     const z = (s.view.zoom || 100) / 100;
     const curW = el ? el.offsetWidth / z * 0.75 : 72, curH = el ? el.offsetHeight / z * 0.75 : 72;
-    const st = { fill: p ? p.fill : d.kind === 'chart' && d.chart && d.chart.bg ? d.chart.bg.color : null, line: p ? p.line : null, lineW: p ? p.lineW : 0.75, w: curW, h: curH, editAs: (d.anchor && d.anchor.editAs) || 'twoCell', alt: d.descr || '', locked: !d.unlocked, print: !d.noPrint };
+    const st = { fill: p ? p.fill : d.kind === 'chart' && d.chart && d.chart.bg ? d.chart.bg.color : null, line: p ? p.line : null, lineW: p ? p.lineW : 0.75, w: curW, h: curH, editAs: (d.anchor && d.anchor.editAs) || 'twoCell', alt: d.descr || '', locked: !d.unlocked, print: !d.noPrint, aspect: d.kind === 'image' };
+    const title = d.kind === 'image' ? 'Format Picture' : d.kind === 'chart' ? 'Format Chart Area' : d.txBox ? 'Format Text Box' : 'Format AutoShape';
+    function applyFormat() {
+      const patch = { descr: st.alt || undefined, unlocked: st.locked ? undefined : true, noPrint: st.print ? undefined : true };
+      if (d.kind === 'shape') Object.assign(patch, { fill: st.fill, line: st.line, lineW: st.lineW, geom: p.geom, text: d.text != null ? d.text : p.text, dirty: true, font: d.font || { name: 'Arial', sz: 10 } });
+      if (d.kind === 'chart' && d.chart && st.fill !== (d.chart.bg && d.chart.bg.color)) patch.chart = Object.assign({}, d.chart, { bg: st.fill ? { t: 'solid', color: st.fill } : { t: 'none' }, dirty: true });
+      const a = JSON.parse(JSON.stringify(d.anchor));
+      if (Math.abs(st.w - curW) > 0.5 || Math.abs(st.h - curH) > 0.5) {
+        if (a.type === 'two' && el) { const nw = st.w / 0.75 * z, nh = st.h / 0.75 * z; Object.assign(a, anchorFor(d, el.offsetLeft, el.offsetTop, nw, nh)); }
+        else { a.w = st.w; a.h = st.h; }
+      }
+      if (a.type === 'two') a.editAs = st.editAs;
+      patch.anchor = a;
+      replace(d, patch, title);
+    }
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const publish = () => root.document.dispatchEvent(new root.CustomEvent('excelx-drawing-format', { detail: catalog() }));
+      const catalog = () => ({ title, kind: d.kind, fill: st.fill, line: st.line, lineW: st.lineW, width: st.w, height: st.h, editAs: st.editAs, alt: st.alt, locked: st.locked, print: st.print, aspect: st.aspect, hasLine: d.kind !== 'image', hasPosition: !!(d.anchor && d.anchor.type !== 'abs'), hasChart: d.kind === 'chart' && !!d.chart });
+      reactFormat = { drawing: d, state: st, publish, apply: applyFormat };
+      publish(); return;
+    }
     const tabs = [];
     const swatch = (key, mode) => {
       const b = h('button', { type: 'button', class: 'swatch-btn', style: `background:${st[key] || 'transparent'}` }, h('span', { class: 'dd-arrow' }));
@@ -460,20 +503,7 @@
     alt.value = st.alt;
     tabs.push({ label: 'Web', body: h('div', { class: 'col' }, h('label', { text: 'Alternative text:' }), alt) });
     if (d.kind === 'chart' && d.chart) tabs.unshift({ label: 'Chart', body: h('div', { class: 'col' }, ui.button('Chart &Options...', () => { dlg.close(null); L.chartWizard.open({ edit: d }); }), ui.button('Chart &Type...', (e) => { dlg.close(null); L.chartWizard.typeMenu({ x: e.clientX, y: e.clientY }); })) });
-    const title = d.kind === 'image' ? 'Format Picture' : d.kind === 'chart' ? 'Format Chart Area' : d.txBox ? 'Format Text Box' : 'Format AutoShape';
-    const dlg = ui.dialog({ title, body: ui.tabs(tabs), width: 420, buttons: [{ label: 'OK', primary: true, onClick: () => {
-      const patch = { descr: alt.value || undefined, unlocked: st.locked ? undefined : true, noPrint: st.print ? undefined : true };
-      if (d.kind === 'shape') Object.assign(patch, { fill: st.fill, line: st.line, lineW: st.lineW, geom: p.geom, text: d.text != null ? d.text : p.text, dirty: true, font: d.font || { name: 'Arial', sz: 10 } });
-      if (d.kind === 'chart' && d.chart && st.fill !== (d.chart.bg && d.chart.bg.color)) patch.chart = Object.assign({}, d.chart, { bg: st.fill ? { t: 'solid', color: st.fill } : { t: 'none' }, dirty: true });
-      const a = JSON.parse(JSON.stringify(d.anchor));
-      if (Math.abs(st.w - curW) > 0.5 || Math.abs(st.h - curH) > 0.5) {
-        if (a.type === 'two' && el) { const nw = st.w / 0.75 * z, nh = st.h / 0.75 * z; Object.assign(a, anchorFor(d, el.offsetLeft, el.offsetTop, nw, nh)); }
-        else { a.w = st.w; a.h = st.h; }
-      }
-      if (a.type === 'two') a.editAs = st.editAs;
-      patch.anchor = a;
-      replace(d, patch, title.replace('Format ', 'Format '));
-    } }, { label: 'Cancel' }] });
+    const dlg = ui.dialog({ title, body: ui.tabs(tabs), width: 420, buttons: [{ label: 'OK', primary: true, onClick: () => { st.alt = alt.value; applyFormat(); } }, { label: 'Cancel' }] });
   };
 
   /* ------------------------------------------------------------ drawing tools */

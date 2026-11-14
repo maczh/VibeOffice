@@ -10,19 +10,41 @@
   E.active = false;
   E.mode = 'ready'; /* ready | enter | edit | point */
   let fbar, fbwrap, cell, surface = null, orig = '', point = null, acList = null, tipEl = null;
+  let formulaBarListeners = null, defaultFormulaBar = null, preferredReactFormulaBar = null;
+
+  function bindFormulaBar(element, reactOwned) {
+    if (!element || (fbar === element && !!E.reactOwned === !!reactOwned)) return;
+    if (formulaBarListeners && fbar) {
+      for (const [type, listener] of formulaBarListeners) fbar.removeEventListener(type, listener);
+    }
+    fbar = element;
+    E.formulaBar = element;
+    E.reactOwned = !!reactOwned;
+    formulaBarListeners = E.reactOwned ? [] : [
+      ['focus', () => E.reactBarFocus()],
+      ['keydown', (e) => E.reactBarKeyDown(e)],
+      ['input', () => E.reactBarInput()],
+      ['pointerdown', () => E.reactBarPointerDown()],
+      ['dblclick', () => E.reactBarDoubleClick()],
+    ];
+    for (const [type, listener] of formulaBarListeners) element.addEventListener(type, listener);
+  }
+
+  E.reactBarFocus = function () {
+    if (!E.active) { if (G().guardProtect(null, true)) { fbar.blur(); G().focus(); return; } E.begin('edit', null, { surface: 'bar' }); }
+    surface = fbar;
+  };
+  E.reactBarKeyDown = function (event) { if (L.ui.menuKey(event) || L.ui.dialogKey(event)) { event.preventDefault(); return; } if (E.active) E.key(event); };
+  E.reactBarInput = function () { if (E.active) E.onInput(); };
+  E.reactBarPointerDown = function () { if (E.active && surface !== fbar) surface = fbar; };
+  E.reactBarDoubleClick = function () { fbar.classList.toggle('multi'); };
 
   E.init = function () {
-    fbar = L.$('#fbinput');
+    defaultFormulaBar = L.$('#fbinput');
+    const preferred = preferredReactFormulaBar?.isConnected;
+    bindFormulaBar(preferred ? preferredReactFormulaBar : defaultFormulaBar, !!preferred);
     fbwrap = L.$('#fbar');
     cell = G().input;
-    fbar.addEventListener('focus', () => {
-      if (!E.active) { if (G().guardProtect(null, true)) { fbar.blur(); G().focus(); return; } E.begin('edit', null, { surface: 'bar' }); }
-      surface = fbar;
-    });
-    fbar.addEventListener('keydown', (e) => { if (L.ui.menuKey(e) || L.ui.dialogKey(e)) { e.preventDefault(); return; } if (E.active) E.key(e); });
-    fbar.addEventListener('input', () => { if (E.active) E.onInput(); });
-    fbar.addEventListener('pointerdown', () => { if (E.active && surface !== fbar) { surface = fbar; } });
-    fbar.addEventListener('dblclick', () => { fbar.classList.toggle('multi'); });
     L.$('#fb-cancel').addEventListener('pointerdown', (e) => { e.preventDefault(); E.cancel(); });
     L.$('#fb-enter').addEventListener('pointerdown', (e) => { e.preventDefault(); E.commit({ stay: true }); });
     L.$('#fb-cancel').innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13"><path d="M2 2l9 9M11 2l-9 9" stroke="#c0281a" stroke-width="2.2"/></svg>';
@@ -37,6 +59,32 @@
     });
     L.bus.on('selection', () => { if (!E.active) E.show(); });
     L.bus.on('changed', () => { if (!E.active) E.show(); });
+    E.initialized = true;
+  };
+
+  /** Replace the classic formula-bar input with the mounted React control. */
+  E.attachReactFormulaBar = function (element) {
+    if (!element || !element.isConnected) return () => {};
+    preferredReactFormulaBar = element;
+    const previous = fbar;
+    if (E.initialized) {
+      if (surface === previous) surface = element;
+      if (previous) element.value = previous.value;
+      bindFormulaBar(element, true);
+    }
+    let attached = true;
+    return function detachReactFormulaBar() {
+      if (!attached) return;
+      attached = false;
+      if (preferredReactFormulaBar === element) preferredReactFormulaBar = null;
+      if (fbar !== element) return;
+      const fallback = defaultFormulaBar?.isConnected ? defaultFormulaBar : previous;
+      if (!fallback?.isConnected) return;
+      if (E.active && surface === element) surface = fallback;
+      fallback.value = element.value;
+      bindFormulaBar(fallback, false);
+      E.show();
+    };
   };
 
   /* ------------------------------------------------------------ display in the formula bar */

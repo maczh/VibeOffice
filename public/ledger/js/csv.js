@@ -4,6 +4,17 @@
   const L = root.L;
   const M = L.model, NF = L.numfmt, F = L.formula;
   const CSV = (L.csv = {});
+  let reactImport = null, reactImportResolve = null;
+  CSV.reactImportCatalog = () => reactImport && reactImport.catalog();
+  CSV.reactImportAction = (action, patch) => {
+    if (action === 'unmount') { if (reactImportResolve) { const resolve = reactImportResolve; reactImportResolve = null; reactImport = null; resolve(null); } return true; }
+    if (!reactImport || !reactImportResolve) return false;
+    if (action === 'cancel') { const resolve = reactImportResolve; reactImportResolve = null; reactImport = null; L.bus.emit('excelx-text-import'); resolve(null); return true; }
+    if (action === 'finish') { const resolve = reactImportResolve; const result = reactImport.finish(); reactImportResolve = null; reactImport = null; L.bus.emit('excelx-text-import'); resolve(result); return true; }
+    reactImport.action(action, patch || {});
+    L.bus.emit('excelx-text-import');
+    return true;
+  };
 
   /* ------------------------------------------------------------ decoding */
   /** bytes → {text, encoding}; honours BOMs, tries strict UTF-8, falls back to Windows-1252 */
@@ -353,7 +364,31 @@
       sync3();
       renderPreview();
     }
+    function reactCatalog() {
+      const rows = st.step === 1 ? [] : parsedRows(st.start - 1 + 15).slice(st.start - 1);
+      if (st.fixed && st.step === 2 && !st.breaks) st.breaks = CSV.guessBreaks(decoded.text);
+      return { step: st.step, title: L.t('Text Import Wizard - Step {0} of {1}', st.step, 3), fileName: name, fixed: st.fixed, start: st.start, encoding: enc, detected: decoded.encoding, lineCount: Math.max(1, lines().length), lines: lines().slice(st.start - 1, st.start + 14), encodings: [['auto', L.t('Detect automatically ({0})', decoded.encoding)], ['utf-8','Unicode (UTF-8)'], ['windows-1252','Windows (ANSI)'], ['utf-16le','Unicode (UTF-16 LE)'], ['utf-16be','Unicode (UTF-16 BE)'], ['iso-8859-1','Western European (ISO)'], ['shift_jis','Japanese (Shift-JIS)'], ['gb18030','Chinese Simplified (GB18030)'], ['big5','Chinese Traditional (Big5)'], ['euc-kr','Korean (EUC-KR)'], ['windows-1251','Cyrillic (Windows)'], ['ibm866','MS-DOS (OEM 866)']].map(([value,label]) => ({ value, label })), delimiters: Object.assign({}, st.delims), merge: st.merge, quote: st.quote, quotes: [['"','"'],["'","'"],['','{none}']].map(([value,label]) => ({value,label})), rows, breaks: st.breaks || [], width: Math.max(40, ...lines().slice(st.start - 1, st.start + 14).map((line) => line.length)), formats: st.formats, selectedColumn: selCol };
+    }
+    function reactAction(action, patch) {
+      if (action === 'next') st.step = Math.min(3, st.step + 1);
+      else if (action === 'back') st.step = Math.max(1, st.step - 1);
+      else if (action === 'column') selCol = Math.max(0, Math.round(+patch.column || 0));
+      else if (action === 'break') { const position = Math.max(1, Math.round(+patch.position || 1)); st.breaks = st.breaks || CSV.guessBreaks(decoded.text); const index = st.breaks.indexOf(position); if (index >= 0) st.breaks.splice(index, 1); else st.breaks.push(position); st.breaks.sort((a, b) => a - b); }
+      else if (action === 'update') {
+        if (Object.prototype.hasOwnProperty.call(patch, 'encoding')) { enc = patch.encoding; decoded = CSV.decode(bytes, enc === 'auto' ? null : enc); st.breaks = null; }
+        if (patch.delimiter) Object.assign(st.delims, patch.delimiter);
+        if (Object.prototype.hasOwnProperty.call(patch, 'format')) { const format = patch.format; if (format === 'date') st.formats[selCol] = /^[MDY]{3}$/.test(st.formats[selCol] || '') ? st.formats[selCol] : 'MDY'; else st.formats[selCol] = format; }
+        ['fixed','start','otherCh','merge','quote'].forEach((key) => { if (Object.prototype.hasOwnProperty.call(patch, key)) st[key] = patch[key]; });
+        if (Object.prototype.hasOwnProperty.call(patch, 'start')) st.start = Math.max(1, Math.min(lines().length, Math.round(+st.start) || 1));
+        if (Object.prototype.hasOwnProperty.call(patch, 'otherCh')) st.delims.other = !!patch.otherCh;
+        if (st.fixed && !st.breaks) st.breaks = CSV.guessBreaks(decoded.text);
+      }
+    }
+    function finishImport() { const wb = CSV.toWorkbook(parsedRows(), { name, startRow: st.start - 1, colFormats: st.formats }); wb.textImport = { encoding: decoded.encoding }; return { wb }; }
     const steps = [step1, step2, step3];
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      return new Promise((resolve) => { reactImportResolve = resolve; reactImport = { catalog: reactCatalog, action: reactAction, finish: finishImport }; L.bus.emit('excelx-text-import'); });
+    }
     return new Promise((resolve) => {
       let result = null;
       const d = ui.dialog({

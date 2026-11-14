@@ -33,7 +33,7 @@
   /* in when the app starts: not on a day the user hid him; otherwise once they have shown him, or by default
      (but not on a phone or tablet, nor in an automated browser: UI checks) */
   const wanted = () => get(HIDDEN) !== today() && (load().on === true || (!L.isMobile && !navigator.webdriver));
-  let scout = null, on = wanted(), away = false, awayTimer = 0;   // away: the window is in the background
+  let scout = null, on = wanted(), away = false, awayTimer = 0, reactHostFactory = null;   // away: the window is in the background
 
   const searchInput = () => ui.searchInput && ui.searchInput();
   const can = (id) => !!ui.cmds[id] && ui.enabled(id);
@@ -62,8 +62,10 @@
     scout.placeAt(innerWidth - SIZE - (st.r != null ? st.r : 24), innerHeight - H - (st.b != null ? st.b : 56));
   }
   function make() {
+    const reactMount = reactHostFactory && reactHostFactory();
     scout = new L.Scout({
       size: SIZE, label: L.t('Scout, the assistant. Click him for help; right-click for more.'),
+      ...(reactMount ? Object.assign({ reactOwned: true }, reactMount) : {}),
       onclick: () => { if (scout.hidden) return; if (balloonOpen()) scout.stop(); else ask('What would you like to do?'); },
       onmenu: (x, y) => ui.openMenu([
         { label: '&Animate!', run: () => { scout.stop(); scout.animate(); } },
@@ -202,5 +204,17 @@
   /* in when the app has started */
   if (on) addEventListener('load', () => setTimeout(() => { if (on && !scout) show(false); }, 400));
 
-  L.assistant = { show, hide, shown: () => on, scout: () => scout };
+  L.assistant = {
+    show, hide, shown: () => on, scout: () => scout,
+    attachReactHost(factory) {
+      reactHostFactory = factory;
+      if (scout) { scout.destroy(); scout = null; }
+      if (on && !navigator.webdriver) show(false);
+      return () => {
+        if (reactHostFactory !== factory) return;
+        reactHostFactory = null;
+        if (scout) { scout.destroy(); scout = null; }
+      };
+    },
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

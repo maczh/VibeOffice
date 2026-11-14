@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+interface ShowStartOptions { from?: number; rehearse?: boolean; preview?: number }
+interface ShowElements { root: HTMLElement; stage: HTMLElement; inkCanvas: HTMLCanvasElement; popbar: HTMLElement }
 interface ShowRuntime {
-  show?: { reactMounted?: boolean; prev(): void; next(): void; openPointerMenu(anchor: HTMLElement): void; openShowMenu(anchor: HTMLElement): void; gotoCatalog?(): string | null; overlayCatalog?(): { blank: string | null; ended: boolean } | null; rehearseCatalog?(): { current: string; total: string; paused: boolean } | null; toggleRehearsePause?(): void; repeatRehearse?(): void };
+  show?: { reactMounted?: boolean; reactEvents?: { pointerdown(event: PointerEvent): void; pointermove(event: PointerEvent): void; pointerup(event: PointerEvent): void; pointercancel(event: PointerEvent): void; contextmenu(event: MouseEvent): void; wheel(event: WheelEvent): void; blur(): void; resize(): void; keydown(event: KeyboardEvent): void }; startReact?(options: ShowStartOptions, elements: ShowElements): void; prev(): void; next(): void; openPointerMenu(anchor: HTMLElement): void; openShowMenu(anchor: HTMLElement): void; gotoCatalog?(): string | null; overlayCatalog?(): { blank: string | null; ended: boolean } | null; rehearseCatalog?(): { current: string; total: string; paused: boolean } | null; toggleRehearsePause?(): void; repeatRehearse?(): void };
   icons?: { get(name: string): string };
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string, ...args: unknown[]): string;
@@ -11,11 +13,30 @@ function runtime(): ShowRuntime | undefined { return (window as Window & { L?: S
 
 /** React-owned navigation controls for the engine-owned full-screen slide show. */
 export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
+  const L = runtime();
+  const show = L?.show;
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [rehearseMount, setRehearseMount] = useState<HTMLElement | null>(null);
   const [gotoMount, setGotoMount] = useState<HTMLElement | null>(null);
   const [overlayMount, setOverlayMount] = useState<HTMLElement | null>(null);
+  const [showRoot, setShowRoot] = useState<HTMLElement | null>(null);
+  const [showRequest, setShowRequest] = useState<{ id: number; options: ShowStartOptions } | null>(null);
+  const showRootRef = useRef<HTMLElement | null>(null);
+  const startRequestId = useRef(0);
   const [revision, setRevision] = useState(0);
+  const bindShowRoot = useCallback((element: HTMLElement | null) => {
+    showRootRef.current = element;
+    setShowRoot(element);
+    const ownedSlot = (selector: string) => {
+      const slot = element?.querySelector<HTMLElement>(selector) || null;
+      slot?.classList.add('vibeoffice-react-owned');
+      return slot;
+    };
+    setMount(ownedSlot('.popbar'));
+    setOverlayMount(ownedSlot('#react-show-overlay-root'));
+    setGotoMount(ownedSlot('#react-goto-root'));
+    setRehearseMount(ownedSlot('#react-rehearse-root'));
+  }, []);
   useEffect(() => {
     let slot: HTMLElement | null = null;
     let timerSlot: HTMLElement | null = null;
@@ -24,40 +45,53 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
     let offRehearse: (() => void) | undefined;
     let offGoto: (() => void) | undefined;
     let offOverlay: (() => void) | undefined;
+    const findShowSlot = (selector: string) => showRootRef.current?.querySelector<HTMLElement>(selector) || host.querySelector<HTMLElement>(selector);
+    const onShowStart = (event: Event) => {
+      const options = (event as CustomEvent<ShowStartOptions>).detail || {};
+      setShowRequest({ id: ++startRequestId.current, options });
+    };
+    const onShowEnd = (event: Event) => {
+      if (showRootRef.current !== (event as CustomEvent<HTMLElement>).detail) return;
+      showRootRef.current = null;
+      setShowRoot(null);
+      setShowRequest(null);
+    };
+    host.addEventListener('vibeoffice-react-show-start', onShowStart);
+    host.addEventListener('vibeoffice-react-show-end', onShowEnd);
     const attach = () => {
       const engine = runtime();
       if (engine?.show) engine.show.reactMounted = true;
       if (!offRehearse && engine?.bus) offRehearse = engine.bus.on('pptx-show-rehearse', () => setRevision((value) => value + 1));
       if (!offGoto && engine?.bus) offGoto = engine.bus.on('pptx-show-goto', () => {
-        setGotoMount(host.querySelector<HTMLElement>('#react-goto-root'));
+        setGotoMount(findShowSlot('#react-goto-root'));
         setRevision((value) => value + 1);
       });
       if (!offOverlay && engine?.bus) offOverlay = engine.bus.on('pptx-show-overlay', () => {
-        setOverlayMount(host.querySelector<HTMLElement>('#react-show-overlay-root'));
+        setOverlayMount(findShowSlot('#react-show-overlay-root'));
         setRevision((value) => value + 1);
       });
-      const target = host.querySelector<HTMLElement>('.show .popbar');
+      const target = findShowSlot('.popbar');
       if (target !== slot) {
         slot?.classList.remove('vibeoffice-react-owned');
         slot = target;
         slot?.classList.add('vibeoffice-react-owned');
         setMount(slot);
       }
-      const timer = host.querySelector<HTMLElement>('#react-rehearse-root');
+      const timer = findShowSlot('#react-rehearse-root');
       if (timer !== timerSlot) {
         timerSlot?.classList.remove('vibeoffice-react-owned');
         timerSlot = timer;
         timerSlot?.classList.add('vibeoffice-react-owned');
         setRehearseMount(timerSlot);
       }
-      const goto = host.querySelector<HTMLElement>('#react-goto-root');
+      const goto = findShowSlot('#react-goto-root');
       if (goto !== gotoSlot) {
         gotoSlot?.classList.remove('vibeoffice-react-owned');
         gotoSlot = goto;
         gotoSlot?.classList.add('vibeoffice-react-owned');
         setGotoMount(gotoSlot);
       }
-      const overlay = host.querySelector<HTMLElement>('#react-show-overlay-root');
+      const overlay = findShowSlot('#react-show-overlay-root');
       if (overlay !== overlaySlot) {
         overlaySlot?.classList.remove('vibeoffice-react-owned');
         overlaySlot = overlay;
@@ -73,6 +107,8 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
       offRehearse?.();
       offGoto?.();
       offOverlay?.();
+      host.removeEventListener('vibeoffice-react-show-start', onShowStart);
+      host.removeEventListener('vibeoffice-react-show-end', onShowEnd);
       slot?.classList.remove('vibeoffice-react-owned');
       timerSlot?.classList.remove('vibeoffice-react-owned');
       gotoSlot?.classList.remove('vibeoffice-react-owned');
@@ -81,8 +117,38 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
       if (show) show.reactMounted = false;
     };
   }, [host]);
-  const L = runtime();
-  const show = L?.show;
+  useEffect(() => {
+    const events = show?.reactEvents;
+    if (!showRoot || !events) return;
+    showRoot.addEventListener('pointerdown', events.pointerdown);
+    showRoot.addEventListener('pointermove', events.pointermove);
+    showRoot.addEventListener('pointerup', events.pointerup);
+    showRoot.addEventListener('pointercancel', events.pointercancel);
+    showRoot.addEventListener('contextmenu', events.contextmenu);
+    showRoot.addEventListener('wheel', events.wheel, { passive: true });
+    document.addEventListener('keydown', events.keydown, true);
+    window.addEventListener('blur', events.blur);
+    window.addEventListener('resize', events.resize);
+    return () => {
+      showRoot.removeEventListener('pointerdown', events.pointerdown);
+      showRoot.removeEventListener('pointermove', events.pointermove);
+      showRoot.removeEventListener('pointerup', events.pointerup);
+      showRoot.removeEventListener('pointercancel', events.pointercancel);
+      showRoot.removeEventListener('contextmenu', events.contextmenu);
+      showRoot.removeEventListener('wheel', events.wheel);
+      document.removeEventListener('keydown', events.keydown, true);
+      window.removeEventListener('blur', events.blur);
+      window.removeEventListener('resize', events.resize);
+    };
+  }, [show, showRoot]);
+  useEffect(() => {
+    if (!showRequest || !showRoot || !show?.startReact) return;
+    const stage = showRoot.querySelector<HTMLElement>('.stage');
+    const inkCanvas = showRoot.querySelector<HTMLCanvasElement>('canvas.ink');
+    const popbar = showRoot.querySelector<HTMLElement>('.popbar');
+    if (!stage || !inkCanvas || !popbar) return;
+    show.startReact(showRequest.options, { root: showRoot, stage, inkCanvas, popbar });
+  }, [show, showRoot, showRequest]);
   const rehearsal = show?.rehearseCatalog?.();
   const gotoBuffer = show?.gotoCatalog?.();
   const overlay = show?.overlayCatalog?.();
@@ -90,6 +156,14 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
   if (!show) return null;
   const control = (name: string, icon: string, action: (button: HTMLButtonElement) => void) => <button type="button" aria-label={name} dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} onClick={(event) => { event.stopPropagation(); action(event.currentTarget); }} />;
   return <>
+    {showRequest && <div className="show" data-react-show-shell="true" tabIndex={0} role="application" aria-label={L.t?.('Slide Show') || 'Slide Show'} ref={bindShowRoot}>
+      <div className="stage" />
+      <canvas className="ink" />
+      <div className="popbar" />
+      <div id="react-show-overlay-root" />
+      <div className="gotobox" id="react-goto-root" />
+      <div className="rehearse" id="react-rehearse-root" role="toolbar" aria-label={L.t?.('Rehearsal') || 'Rehearsal'} />
+    </div>}
     {mount && createPortal(<>
       {control('Previous', 'showPrev', () => show.prev())}
       {control('Pointer options', 'showPen', (button) => show.openPointerMenu(button))}

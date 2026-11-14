@@ -1,0 +1,6 @@
+.excelx-customize-dialog__tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--ui-border, #999); }
+.excelx-customize-dialog__tabs [role=tab] { padding: 5px 10px; }
+.excelx-customize-dialog__tabs [aria-selected=true] { border-bottom: 2px solid var(--ui-accent, #316ac5); font-weight: 600; }
+.excelx-customize-dialog__toolbars, .excelx-customize-dialog__options { display: flex; flex-direction: column; gap: 7px; min-height: 170px; padding: 12px 4px; }
+.excelx-customize-dialog__toolbars label, .excelx-customize-dialog__options label { display: flex; align-items: center; gap: 6px; }
+.excelx-customize-dialog__actions { display: flex; justify-content: flex-end; margin-top: 8px; }

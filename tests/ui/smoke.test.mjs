@@ -29,10 +29,13 @@ async function menuAndDialog(t, shortcut) {
   assert.equal(await dialogs(t), 0, 'Esc closes the dialog');
 }
 
-test('Start Center loads clean', async () => {
+test('Start Center opens on Create File without Recent Files', async () => {
   const t = await open('', { look: 'classic' });
   try {
-    assert.ok(await centre(t, 'button, a', 'Quire') || await t.evaluate(`/Quire/.test(document.body.textContent)`), 'the apps are offered');
+    assert.equal(await t.evaluate("document.querySelector('#viewtitle')?.textContent"), 'Create File');
+    assert.equal(await t.evaluate("/Recent Files|Clear Recent Documents/.test(document.body.textContent)"), false, 'Recent Files is absent from Start Center UI');
+    assert.equal(await t.evaluate("!!document.querySelector('#recentbtn,#recentinfo,#recentclear')"), false, 'Recent Files controls are absent from the page');
+    assert.ok(await centre(t, 'a[data-go] b', 'Wordx') || await t.evaluate(`/Wordx/.test(document.body.textContent)`), 'the rebranded apps are offered');
     t.clean();
   } finally { await t.close(); }
 });

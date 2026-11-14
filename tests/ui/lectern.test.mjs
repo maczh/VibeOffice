@@ -14,6 +14,14 @@ async function lectern(fn) {
   try { await fn(u); } finally { await u.close(); }
 }
 
+test('PPTX Getting Started offers open/create actions without Recent Files', () => lectern(async (u) => {
+  const result = await u.evaluate(`(() => { L.panes.task.show('getting-started'); const body=document.querySelector('#taskpane > .tp-body'), menu=L.ui.menus.find((item)=>String(item.label).includes('File')), items=typeof menu.items==='function'?menu.items():menu.items; return {visible:!document.querySelector('#taskpane').hidden, text:body.textContent, recentLinks:body.querySelectorAll('a[href*="recent"], .recent-file, [data-recent-file]').length, fileMenuHasRecent:items.some((item)=>/recent/i.test(typeof item==='string'?item:item.label||''))}; })()`);
+  assert.ok(result.visible && result.text.includes('Open') && result.text.includes('Create a new presentation') && !/Recent Files/i.test(result.text) && result.recentLinks === 0 && !result.fileMenuHasRecent, `PPTX Getting Started and File menu omit Recent Files: ${JSON.stringify(result)}`);
+  const options = await u.evaluate(`(() => { L.dlg.options(); return document.querySelector('.dlg')?.textContent || ''; })()`);
+  assert.doesNotMatch(options, /recently used file|recent files/i, 'PPTX Options no longer exposes a Recent Files preference');
+  await u.esc();
+}));
+
 /** a deck of `slides` slides (notes S1, S2, … name them) whose first slide holds `shapes`, JS using
     box(id, x, y, text, bold), rect(id, x, y, w, h, text) and table(id, x, y) (3×3, cells "r0c0"…); slide 1 shown */
 const setup = (u, shapes, slides = 1) => u.evaluate(`(async () => {

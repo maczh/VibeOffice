@@ -1142,7 +1142,7 @@
       const hd = document.createElement('div');
       hd.className = 'oh oh-' + hname;
       hd.dataset.h = hname;
-      hd.addEventListener('pointerdown', (ev) => startResize(ev, hname, target, box));
+      if (!(window.VO && VO.reactDirectHost)) hd.addEventListener('pointerdown', (ev) => startResize(ev, hname, target, box));
       box.appendChild(hd);
     }
     sc.appendChild(box);
@@ -1195,5 +1195,10 @@
       capture: LY.scroller,   /* the handles are drawn again with the selection */
     });
   }
+  E.reactInlineHandleDown = (event) => {
+    const handle = event.target && event.target.closest && event.target.closest('.obj-handles:not(.float) .oh[data-h]');
+    if (!handle || !handles || !handles.contains(handle)) return;
+    startResize(event, handle.dataset.h, E.objSel && E.objSel.el, handles);
+  };
   E.selectInlineObject = selectInlineObject;
 })();

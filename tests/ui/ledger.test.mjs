@@ -36,6 +36,14 @@ const shape = (u) => u.evaluate(`(() => { const e = document.querySelector('#gla
   return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), l: Math.round(r.left), t: Math.round(r.top), selected: e.classList.contains('sel'), text: t ? t.textContent : '' }; })()`);
 /** draw a rectangle from one cell to another with the AutoShapes tool; it comes out selected */
 const drawRect = async (u, from, to) => { await u.evaluate(`L.ui.exec('insertShape')`); await u.drag(await pt(u, from), await pt(u, to), 6); };
+
+test('Excelx Getting Started offers open/create actions without Recent Files', async () => {
+  const u = await ledger();
+  try {
+    const result = await u.evaluate(`(() => { L.panes.task.show('getting-started'); const body=document.querySelector('#taskpane > .tp-body'), menu=L.ui.menus.find((item)=>String(item.label).includes('File')), items=typeof menu.items==='function'?menu.items():menu.items; return {visible:!document.querySelector('#taskpane').hidden, text:body.textContent, recentLinks:body.querySelectorAll('a[href*="recent"], .recent-file, [data-recent-file]').length, fileMenuHasRecent:items.some((item)=>/recent/i.test(typeof item==='string'?item:item.label||''))}; })()`);
+    assert.ok(result.visible && result.text.includes('Open') && result.text.includes('Create a new workbook') && !/Recent Files/i.test(result.text) && result.recentLinks === 0 && !result.fileMenuHasRecent, `Excelx Getting Started and File menu omit Recent Files: ${JSON.stringify(result)}`);
+  } finally { await u.close(); }
+});
 /** the fill handle of the selected cell */
 const fillHandle = async (u, ref) => { const p = await pt(u, ref); return { x: Math.round(p.r - 1), y: Math.round(p.b - 1) }; };
 /** a point on a container that is not on any control in it (the container itself is hit there) */

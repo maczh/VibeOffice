@@ -262,8 +262,24 @@
     if (blanks) items.push(L.N('(Blanks)'), L.N('(NonBlanks)'));
     const shownAs = items.map((t, i) => (i < 5 || (blanks && i >= items.length - 2) ? L.t(t) : t));
     const r = btn.getBoundingClientRect();
-    const box = h('div', { class: 'af-list', role: 'listbox', tabindex: '-1' });
     const q = G().cellRect(ref.r1, c);
+    function applyChoice(t) {
+      const dataRef = { r1: ref.r1, c1: ref.c1, r2: Math.min(ref.r2, Math.max(s.maxR, ref.r1)), c2: ref.c2 };
+      if (t === '(Sort Ascending)' || t === '(Sort Descending)') { try { O.sort(s, dataRef, [{ index: col, desc: t === '(Sort Descending)' }], { header: true }); } catch (e) { L.app.error(e); } G().paint(); return; }
+      if (t === '(All)') { FL.setCriterion(x, col, null); return; }
+      if (t === '(Top 10...)') { FL.top10Dialog().then((o) => { if (o) FL.setCriterion(x, col, { top10: o }); }); return; }
+      if (t === '(Custom...)') { FL.customDialog(s, x, c, fc).then((o) => { if (o) FL.setCriterion(x, col, { custom: o }); }); return; }
+      if (t === '(Blanks)') { FL.setCriterion(x, col, { blank: true, values: [] }); return; }
+      if (t === '(NonBlanks)') { FL.setCriterion(x, col, { custom: { and: false, list: [{ op: 'notEqual', val: ' ' }] } }); return; }
+      if (t === '…') return;
+      FL.setCriterion(x, col, { values: [t] });
+    }
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const minWidth = Math.max(q.w + 2, 120), left = Math.max(2, Math.min(r.right - minWidth, window.innerWidth - minWidth - 2));
+      reactDialog = { kind: 'list', title: '', items: items.map((value, index) => ({ value, label: shownAs[index] })), current: cur, left, top: r.bottom, minWidth };
+      return new Promise((resolve) => { reactDialogResolve = resolve; L.bus.emit('excelx-auto-filter-dialog'); }).then((value) => { if (value != null) applyChoice(value); });
+    }
+    const box = h('div', { class: 'af-list', role: 'listbox', tabindex: '-1' });
     box.style.minWidth = Math.max(q.w + 2, 120) + 'px';
     let act = -1;
     const rows = items.map((t, i) => {
@@ -286,15 +302,7 @@
     }
     function choose(t) {
       close();
-      const dataRef = { r1: ref.r1, c1: ref.c1, r2: Math.min(ref.r2, Math.max(s.maxR, ref.r1)), c2: ref.c2 };
-      if (t === '(Sort Ascending)' || t === '(Sort Descending)') { try { O.sort(s, dataRef, [{ index: col, desc: t === '(Sort Descending)' }], { header: true }); } catch (e) { L.app.error(e); } G().paint(); return; }
-      if (t === '(All)') { FL.setCriterion(x, col, null); return; }
-      if (t === '(Top 10...)') { FL.top10Dialog().then((o) => { if (o) FL.setCriterion(x, col, { top10: o }); }); return; }
-      if (t === '(Custom...)') { FL.customDialog(s, x, c, fc).then((o) => { if (o) FL.setCriterion(x, col, { custom: o }); }); return; }
-      if (t === '(Blanks)') { FL.setCriterion(x, col, { blank: true, values: [] }); return; }
-      if (t === '(NonBlanks)') { FL.setCriterion(x, col, { custom: { and: false, list: [{ op: 'notEqual', val: ' ' }] } }); return; }
-      if (t === '…') return;
-      FL.setCriterion(x, col, { values: [t] });
+      applyChoice(t);
     }
     L.domHost().appendChild(box);
     const bh = box.getBoundingClientRect();
@@ -341,9 +349,34 @@
       }
     }
   }
+  let reactDialog = null, reactDialogResolve = null;
+  FL.reactDialogCatalog = () => reactDialog;
+  FL.reactDialogAction = (action, result) => {
+    if (!reactDialog || !reactDialogResolve) return false;
+    if (action !== 'apply' && action !== 'cancel') return false;
+    let value = null;
+    if (action === 'apply' && reactDialog.kind === 'list' && typeof result === 'string') {
+      value = result;
+    } else if (action === 'apply' && reactDialog.kind === 'custom' && result) {
+      const list = [result.first, result.second].filter((condition) => condition && condition.op).map((condition) => fromDialog(condition.op, condition.value));
+      if (list.length) value = { and: !!result.and, list };
+    } else if (action === 'apply' && reactDialog.kind === 'top10' && result) {
+      value = { top: !!result.top, percent: !!result.percent, val: Math.max(1, Math.min(500, Math.round(+result.val) || 1)) };
+    }
+    const resolve = reactDialogResolve; reactDialog = reactDialogResolve = null;
+    L.bus.emit('excelx-auto-filter-dialog');
+    resolve(value);
+    return true;
+  };
   FL.customDialog = function (s, x, c, fc) {
     const ent = entries(s, x, c).list;
     const conds = fc && fc.custom ? fc.custom.list.map(toDialog) : fc && fc.values && fc.values.length === 1 ? [{ op: 'equal', v: fc.values[0] }] : [];
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      return new Promise((resolve) => {
+        reactDialog = { kind: 'custom', title: 'Custom AutoFilter', header: s.val(x.ref.r1, c) == null ? L.formula.colName(c) : String(s.val(x.ref.r1, c)), operations: OPS, entries: entries(s, x, c).list.slice(0, 500), first: conds[0] || { op: 'equal', v: '' }, second: conds[1] || { op: '', v: '' }, and: !(fc && fc.custom && !fc.custom.and) };
+        reactDialogResolve = resolve; L.bus.emit('excelx-auto-filter-dialog');
+      });
+    }
     const mk = (i) => {
       const cur = conds[i] || { op: i === 0 ? 'equal' : '', v: '' };
       const opSel = ui.select([['', '']].concat(OPS), cur.op, null, { style: 'width:200px' });
@@ -366,6 +399,9 @@
     } }, { label: 'Cancel' }] }).done.then(() => res);
   };
   FL.top10Dialog = function () {
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      return new Promise((resolve) => { reactDialog = { kind: 'top10', title: 'Top 10 AutoFilter' }; reactDialogResolve = resolve; L.bus.emit('excelx-auto-filter-dialog'); });
+    }
     const tb = ui.select([['top', 'Top'], ['bottom', 'Bottom']], 'top');
     const n = ui.spin({ value: 10, min: 1, max: 500, step: 1, dec: 0 });
     const kind = ui.select([['items', 'Items'], ['percent', 'Percent']], 'items');

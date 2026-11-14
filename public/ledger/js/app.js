@@ -25,7 +25,7 @@
   const DEFAULT_OPTS = {
     statusBar: true, formulaBar: true, taskOpen: true, paneFollows: true, moveAfterEnter: true, enterDir: 'down', autoComplete: true, dragDrop: true,
     toolbars: { standard: true, formatting: true, drawing: false, chart: 'auto', auditing: false, reviewing: false, picture: 'auto', borders: false, list: 'auto' },
-    userName: 'Excelx User', recent: [], defaultFont: LOCALE.font || 'Arial', defaultSize: LOCALE.sz || 10, sheetsInNew: 3, r1c1: false, calcMode: 'auto', iterate: false, iterateCount: 100, iterateDelta: 0.001, autoCalcFn: 'SUM',
+    userName: 'Excelx User', defaultFont: LOCALE.font || 'Arial', defaultSize: LOCALE.sz || 10, sheetsInNew: 3, r1c1: false, calcMode: 'auto', iterate: false, iterateCount: 100, iterateDelta: 0.001, autoCalcFn: 'SUM',
   };
   const A = (L.app = Object.assign(L.app || {}, { opts: L.clone(DEFAULT_OPTS), books: [], cur: -1, lastFill: '#FFFF00', lastFontColor: '#FF0000', lastBorder: 'bottom' }));
   const book = () => A.books[A.cur];
@@ -545,9 +545,8 @@
 
   /* ------------------------------------------------------------ menus */
   function buildMenus() {
-    const recent = () => (window.VO ? VO.recentMenuItems(4) : []);
     const menus = [
-      { label: '&File', items: () => ['newBook', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', { label: 'Prin&t Area', sub: ['setPrintArea', 'clearPrintArea'] }, 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['exportPDF', 'exportCSV'] }, 'properties', ...(L.file.native() ? ['versions'] : []), ...((recentList) => (recentList.length ? ['-', ...recentList] : []))(recent()), '-', 'exitApp'] },
+      { label: '&File', items: () => ['newBook', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', { label: 'Prin&t Area', sub: ['setPrintArea', 'clearPrintArea'] }, 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['exportPDF', 'exportCSV'] }, 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
       {
         label: '&Edit', items: () => ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', 'pasteHyperlink', '-',
           { label: 'F&ill', sub: ['fillDown', 'fillRight', 'fillUp', 'fillLeft', 'fillAcross', 'fillSeries', 'fillJustify'] },
@@ -749,7 +748,46 @@
 
   /* ------------------------------------------------------------ name box */
   function buildNameBox() {
-    const nb = L.$('#namebox');
+    let nb = L.$('#namebox');
+    let removeNameBoxListeners = () => {};
+    const nameBoxFocus = (input) => { if (L.editor.active && !L.editor.commit({ keepFocus: true })) { input.blur(); return; } input.select(); };
+    const nameBoxKeyDown = (input, e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') { input.blur(); show(); G().focus(); return; }
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const t = input.value.trim();
+      input.blur();
+      if (!t) { show(); G().focus(); return; }
+      if (!A.goToRef(t)) {
+        /* a new name for the selection */
+        if (/^[A-Za-z_\\][\w.\\]*$/.test(t) && !F.parseCell(t)) {
+          const s = G().sel(), rg = s.ranges[s.active];
+          O.setNames(wb(), wb().names.concat([{ name: t, ref: F.quoteSheet(sh().name) + '!' + F.absRangeName(rg), scope: null }]));
+          O.recalc(wb(), null, true);
+          show();
+        } else ui.msg('Reference is not valid.', { icon: 'warn' });
+      }
+      G().focus();
+    };
+    A.reactNameBoxFocus = (input) => nameBoxFocus(input);
+    A.reactNameBoxKeyDown = (input, event) => nameBoxKeyDown(input, event);
+    A.nameBoxReactOwned = false;
+    const bindNameBox = (input, reactOwned) => {
+      if (!input || (input === nb && A.nameBox === input && !!A.nameBoxReactOwned === !!reactOwned)) return;
+      const previous = nb;
+      removeNameBoxListeners();
+      if (previous && previous !== input) input.value = previous.value;
+      nb = input;
+      A.nameBox = input;
+      A.nameBoxReactOwned = !!reactOwned;
+      if (reactOwned) { removeNameBoxListeners = () => {}; return; }
+      const onFocus = () => nameBoxFocus(input);
+      const onKeyDown = (e) => nameBoxKeyDown(input, e);
+      input.addEventListener('focus', onFocus);
+      input.addEventListener('keydown', onKeyDown);
+      removeNameBoxListeners = () => { input.removeEventListener('focus', onFocus); input.removeEventListener('keydown', onKeyDown); };
+    };
     const show = () => {
       if (document.activeElement === nb) return;
       const s = G().sel(), w = wb();
@@ -764,34 +802,31 @@
     };
     const sameRange = (a, rg) => { if (a.sheet && a.sheet.toLowerCase() !== sh().name.toLowerCase()) return false; if (a.t === 'ref') return rg.r1 === a.r && rg.r2 === a.r && rg.c1 === a.c && rg.c2 === a.c; return rg.r1 === Math.min(a.r1, a.r2) && rg.r2 === Math.max(a.r1, a.r2) && rg.c1 === Math.min(a.c1, a.c2) && rg.c2 === Math.max(a.c1, a.c2); };
     L.bus.on('selection', show); L.bus.on('sheet', show); L.bus.on('book', show); L.bus.on('changed', show);
-    /* the Name Box takes the keyboard: what is being typed in a cell is entered first, as a click elsewhere does */
-    nb.addEventListener('focus', () => { if (L.editor.active && !L.editor.commit({ keepFocus: true })) { nb.blur(); return; } nb.select(); });
-    nb.addEventListener('keydown', (e) => {
-      e.stopPropagation();
-      if (e.key === 'Escape') { nb.blur(); show(); G().focus(); return; }
-      if (e.key !== 'Enter') return;
-      e.preventDefault();
-      const t = nb.value.trim();
-      nb.blur();
-      if (!t) { show(); G().focus(); return; }
-      if (!A.goToRef(t)) {
-        /* a new name for the selection */
-        if (/^[A-Za-z_\\][\w.\\]*$/.test(t) && !F.parseCell(t)) {
-          const s = G().sel(), rg = s.ranges[s.active];
-          O.setNames(wb(), wb().names.concat([{ name: t, ref: F.quoteSheet(sh().name) + '!' + F.absRangeName(rg), scope: null }]));
-          O.recalc(wb(), null, true);
-          show();
-        } else ui.msg('Reference is not valid.', { icon: 'warn' });
-      }
-      G().focus();
-    });
-    L.$('#namebox-dd').addEventListener('pointerdown', (e) => {
-      e.preventDefault();
+    bindNameBox(nb);
+    A.nameBoxInitialized = true;
+    A.attachReactNameBox = (input) => {
+      if (!input?.isConnected) return () => {};
+      const previous = nb;
+      bindNameBox(input, true);
+      let attached = true;
+      return () => {
+        if (!attached) return;
+        attached = false;
+        if (nb !== input) return;
+        if (previous?.isConnected) previous.value = input.value;
+        nb = null;
+        A.nameBox = null;
+        A.nameBoxReactOwned = false;
+        if (previous?.isConnected) { bindNameBox(previous, false); show(); }
+      };
+    };
+    A.reactNameBoxOpenMenu = function () {
       const r = L.$('#namebox-wrap').getBoundingClientRect();
       const names = wb().names.filter((n) => !n.hidden && !/^_xlnm\./.test(n.name) && (n.scope == null || n.scope === wb().active));
       const tables = wb().tables.map((t) => t.name);
       ui.openMenu(names.length || tables.length ? names.map((n) => ({ label: n.name.replace(/&/g, '&&'), raw: true, run: () => A.goToRef(n.name) })).concat(tables.map((t) => ({ label: t.replace(/&/g, '&&'), raw: true, run: () => A.goToRef(t) }))) : [{ label: '(no names)', disabled: true }], { left: r.left, bottom: r.bottom });
-    });
+    };
+    L.$('#namebox-dd').addEventListener('pointerdown', (e) => { e.preventDefault(); A.reactNameBoxOpenMenu(); });
   }
   /** select a reference typed in the Name Box or Go To: A1, A1:B5, Sheet2!C3, a name or a table */
   A.goToRef = function (t) {
@@ -870,7 +905,7 @@
     if ((e.key === 'F10' && !e.shiftKey) || (e.key === 'Alt' && false)) { e.preventDefault(); A.menuBar.openIndex(0); return; }
     if (e.altKey && !e.ctrlKey && !e.shiftKey && e.key.length === 1 && /[a-z]/i.test(e.key)) { if (A.menuBar.openByKey(e.key)) { e.preventDefault(); return; } }
     const t = e.target;
-    if (t === G().input || t === L.$('#fbinput')) return; /* the grid / editor handle their own keys */
+    if (t === G().input || t === L.editor.formulaBar || t === L.$('#fbinput')) return; /* the grid / editor handle their own keys */
     const inInput = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
     if (inInput) { if (e.key === 'Escape') { t.blur(); G().focus(); } return; }
     if (A.shortcut(e)) { e.preventDefault(); return; }
@@ -1419,7 +1454,6 @@
     if (more) ui.msg('This worksheet contains more than 255 invalid cells. Only 255 cells will be marked.', { icon: 'warn' });
     else if (!list.length) ui.toast('No invalid data on this sheet.');
   };
-  L.bus.on('grid-paint', () => drawArrows());
   function drawArrows() {
     const layer = L.$('#glayer');
     let svg = layer.querySelector('svg.trace-svg');
@@ -1452,6 +1486,8 @@
     }
     svg.innerHTML = out;
   }
+  A.reactDrawTrace = drawArrows;
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('grid-paint', A.reactDrawTrace);
 
   /* ------------------------------------------------------------ drag & drop of files */
   function setupDrop() {

@@ -271,6 +271,9 @@
     E.setSel(D.pos(g.begin.p, g.begin.o), D.pos(g.end.p, g.end.o), { noScroll: true });
     T.busy = false;
   };
-  L.bus.on('sel', () => { if (!L.ed.pressing()) selectPlaceholder(); });
-  L.bus.on('sel-done', selectPlaceholder);
+  T.reactSelectPlaceholder = selectPlaceholder;
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) {
+    L.bus.on('sel', () => { if (!L.ed.pressing()) selectPlaceholder(); });
+    L.bus.on('sel-done', selectPlaceholder);
+  }
 })();

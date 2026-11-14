@@ -13,6 +13,8 @@
 
   /* ================= task pane shell ================= */
   const TP = (P.task = { stack: [], pos: -1, registry: {} });
+  const reactOwnedTaskPanes = new Set(['getting-started', 'help', 'search', 'clipart', 'new', 'clipboard', 'styles', 'reveal', 'protect', 'research', 'mailmerge']);
+  const isReactOwnedTaskPane = (id) => !!(window.VO && VO.reactDirectHost && reactOwnedTaskPanes.has(id));
   TP.mount = function (el) {
     TP.el = el;
     TP.back = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Back', 'data-tip': 'Back', html: L.icons.get('back') });
@@ -37,9 +39,9 @@
     L.bus.on('doc-changed', L.debounce(() => TP.refresh('doc'), 300));
     L.bus.on('doc-loaded', () => TP.refresh('load'));
   };
-  TP.register = (p) => { TP.registry[p.id] = p; };
+  TP.register = (p) => { if (p.id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__) return; TP.registry[p.id] = p; };
   TP.show = function (id) {
-    if (!TP.registry[id]) return;
+    if (!TP.registry[id] || (id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__)) return;
     if (L.$('#taskpane').hidden) A().toggleTask(true);
     if (TP.stack[TP.pos] !== id) { TP.stack = TP.stack.slice(0, TP.pos + 1); TP.stack.push(id); TP.pos = TP.stack.length - 1; }
     TP.render();
@@ -53,7 +55,7 @@
     TP.title.firstChild.textContent = L.t(p.title);
     TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
     L.clear(TP.body);
-    if (!(window.VO && VO.reactDirectHost && ['getting-started', 'help', 'search', 'clipart', 'new', 'clipboard', 'styles', 'reveal', 'protect', 'research', 'mailmerge'].includes(id))) p.render(TP.body);
+    if (!isReactOwnedTaskPane(id)) p.render(TP.body);
     L.bus.emit('wordx-task-render');
   };
   const reactTaskPanes = () => Object.values(TP.registry).filter((pane) => !pane.hidden && !(window.VO && VO.reactDirectHost && pane.id === 'recovery'));
@@ -68,9 +70,12 @@
   TP.refresh = function (reason) {
     const p = TP.registry[TP.current];
     if (!p || !TP.el || TP.el.hidden) return;
+    if (isReactOwnedTaskPane(TP.current)) {
+      L.bus.emit(TP.current === 'clipboard' ? 'wordx-task-refresh' : 'wordx-task-render');
+      return;
+    }
     if (p.refresh) p.refresh(TP.body, reason);
-    else if (p.live && reason !== 'sel' && !(window.VO && VO.reactDirectHost && TP.current === 'clipboard')) { L.clear(TP.body); p.render(TP.body); }
-    if (window.VO && VO.reactDirectHost && TP.current === 'clipboard') L.bus.emit('wordx-task-refresh');
+    else if (p.live && reason !== 'sel') { L.clear(TP.body); p.render(TP.body); }
   };
   const sec = (title, ...kids) => h('div', { class: 'tp-sec' }, title ? h('div', { class: 'tp-h' }, title) : null, ...kids);
   const link = (icon, label, fn, o) => h('button', Object.assign({ class: 'tp-link', type: 'button', onclick: fn }, o || {}), icon ? h('span', { html: L.icons.get(icon) }) : null, h('span', { text: label }));
@@ -87,7 +92,7 @@
       b.append(
         h('div', { class: 'tp-row' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: window.VO ? VO.editionName(window.VO.oneDocument ? 'Quire' : 'Wordx') : 'Wordx', translate: 'no', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new document...', () => TP.show('new')), link('sample', 'Open the welcome document', () => A().newDocument({ build: (d) => Object.assign(d, A().buildSample()) }))),
+        sec(L.N('Open'), link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new document...', () => TP.show('new')), link('sample', 'Open the welcome document', () => A().newDocument({ build: (d) => Object.assign(d, A().buildSample()) }))),
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => { P.helpTopic = 'keys'; TP.show('help'); }), link('stylesPane', 'Styles and Formatting', () => TP.show('styles')), link('mailMerge', 'Mail Merge wizard', () => TP.show('mailmerge'))));
     },
   });

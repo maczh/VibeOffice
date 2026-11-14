@@ -7,6 +7,19 @@
   const { h } = L;
   const ui = L.ui;
   const D = (L.dlg = L.dlg || {});
+  let reactPrint = null, reactPrintAction = null, reactPrintResolve = null;
+  D.reactPrintCatalog = () => reactPrint;
+  D.reactPrintAction = (action, options) => {
+    if (!reactPrint || !reactPrintAction) return false;
+    if (action === 'preview') { setTimeout(() => L.print.preview(), 0); return true; }
+    if (action !== 'print' && action !== 'cancel') return false;
+    const run = reactPrintAction, resolve = reactPrintResolve;
+    reactPrint = reactPrintAction = reactPrintResolve = null;
+    L.bus.emit('excelx-print-dialog');
+    if (action === 'print') Promise.resolve(L.print.exportPDF(run(options))).then(resolve, (error) => { A().error(error); resolve(); });
+    else if (resolve) resolve();
+    return true;
+  };
   let reactFunction = null, reactFunctionAction = null, reactFunctionArgs = null, reactFunctionArgsAction = null;
   D.reactFunctionCatalog = () => reactFunction;
   D.reactFunctionAction = (action, value) => reactFunctionAction ? reactFunctionAction(action, value) : false;
@@ -756,8 +769,20 @@
   /* ================================================================ Print */
   D.print = function () {
     const st = { what: 'sheets', range: 'all', from: 1, to: 1, copies: 1 };
-    const from = h('input', { type: 'text', value: '1', style: 'width:40px' }), to = h('input', { type: 'text', value: '1', style: 'width:40px' });
     const items = L.print.allPages(A().selectedSheets(), null);
+    st.to = Math.max(1, items.length);
+    const direct = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected;
+    if (direct) return new Promise((resolve) => {
+      reactPrint = { pageCount: Math.max(1, items.length), options: { ...st } };
+      reactPrintAction = (options) => {
+        const result = { what: options.what };
+        if (options.range === 'pages') { result.from = parseInt(options.from, 10) || 1; result.to = parseInt(options.to, 10) || result.from; }
+        return result;
+      };
+      reactPrintResolve = resolve;
+      L.bus.emit('excelx-print-dialog');
+    });
+    const from = h('input', { type: 'text', value: '1', style: 'width:40px' }), to = h('input', { type: 'text', value: '1', style: 'width:40px' });
     to.value = String(Math.max(1, items.length));
     return new Promise((res) => {
       ui.dialog({ title: 'Print', width: 440, body: h('div', { class: 'col' },

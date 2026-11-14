@@ -7,6 +7,36 @@
   const { h } = L;
   const ui = L.ui;
   const D = (L.dlg = L.dlg || {});
+  let reactOptions = null, reactOptionsAction = null;
+  D.reactOptionsCatalog = () => reactOptions;
+  D.reactOptionsAction = (action, catalog) => reactOptionsAction ? reactOptionsAction(action, catalog) : false;
+  let reactCustomize = null;
+  D.reactCustomizeCatalog = () => reactCustomize;
+  D.reactCustomizeToggle = (id, visible) => {
+    if (!reactCustomize || typeof id !== 'string' || typeof visible !== 'boolean') return false;
+    const toolbar = reactCustomize.toolbars.find((item) => item.id === id);
+    if (!toolbar) return false;
+    A().toggleToolbar(id, visible);
+    toolbar.visible = A().toolbarVisible(id);
+    L.bus.emit('excelx-customize-dialog');
+    return true;
+  };
+  D.reactCustomizeClose = () => { reactCustomize = null; L.bus.emit('excelx-customize-dialog'); };
+  let reactSaveAs = null, reactSaveAsResolve = null;
+  D.reactSaveAsCatalog = () => reactSaveAs;
+  D.reactSaveAsAction = (action, name, type, password) => {
+    if (!reactSaveAs) return false;
+    const finish = (value) => { const resolve = reactSaveAsResolve; reactSaveAs = reactSaveAsResolve = null; L.bus.emit('excelx-save-as-dialog'); if (resolve) resolve(value); };
+    if (action === 'cancel') { finish(false); return true; }
+    if (action !== 'save' || typeof name !== 'string' || !reactSaveAs.types.some(([value]) => value === type)) return false;
+    const base = reactSaveAs.name;
+    const ext = { xmlss: 'xml', html: 'htm' }[type] || type;
+    const filename = (name.trim() || base).replace(/\.(xlsx|xlsm|xltx|xltm|xml|csv|txt|htm|html|pdf)$/i, '') + '.' + ext;
+    const book = A().books[A().cur];
+    book.password = password || undefined;
+    Promise.resolve(A().saveAs(type, filename)).then(finish, (error) => { A().error(error); finish(false); });
+    return true;
+  };
   let reactZoom = null;
   let reactSize = null, reactSizeApply = null, reactShift = null, reactShiftApply = null, reactShiftResolve = null;
   let reactInsertSheet = null, reactInsertSheetApply = null, reactUnhide = null, reactUnhideApply = null;
@@ -33,6 +63,52 @@
     if (!reactFormatCells || typeof locked !== 'boolean' || typeof hidden !== 'boolean') return false;
     reactFormatCells.protection = { locked, hidden };
     if (reactFormatCells.onProtectionChange) reactFormatCells.onProtectionChange(locked, hidden);
+    return true;
+  };
+  D.reactFormatCellsSetAlignment = (patch) => {
+    if (!reactFormatCells || !patch || typeof patch !== 'object' || !reactFormatCells.onAlignmentChange) return false;
+    return reactFormatCells.onAlignmentChange(patch);
+  };
+  D.reactFormatCellsSetNumberCategory = (category) => {
+    if (!reactFormatCells || !reactFormatCells.numberCategories.some((item) => item.value === category)) return false;
+    reactFormatCells.numberOptions = reactFormatCells.onNumberCategoryChange(category);
+    reactFormatCells.numberCategory = category;
+    return reactFormatCells.numberOptions;
+  };
+  D.reactFormatCellsSetNumberOptions = (patch) => {
+    if (!reactFormatCells || !patch || !reactFormatCells.onNumberOptionsChange) return false;
+    const next = reactFormatCells.onNumberOptionsChange(patch);
+    if (next) reactFormatCells.numberOptions = next;
+    return next;
+  };
+  D.reactFormatCellsDeleteNumberFormat = (code) => reactFormatCells && reactFormatCells.onDeleteNumberFormat ? reactFormatCells.onDeleteNumberFormat(code) : false;
+  D.reactFormatCellsSetFill = (patch) => {
+    if (!reactFormatCells || !patch || typeof patch !== 'object' || !reactFormatCells.onFillChange) return false;
+    return reactFormatCells.onFillChange(patch);
+  };
+  D.reactFormatCellsSetBorder = (patch) => {
+    if (!reactFormatCells || !patch || typeof patch !== 'object' || !reactFormatCells.onBorderChange) return false;
+    return reactFormatCells.onBorderChange(patch);
+  };
+  D.reactFormatCellsChooseBorderColor = (anchor) => {
+    if (!reactFormatCells || !anchor) return false;
+    L.ui.colorMenu(anchor, { mode: 'font', grid: true }, (color) => {
+      if (!reactFormatCells || !reactFormatCells.onBorderChange) return;
+      const border = reactFormatCells.onBorderChange({ type: 'color', value: color && color.auto ? null : typeof color === 'string' ? color : null });
+      if (border) L.bus.emit('excelx-format-cells-border-color');
+    });
+    return true;
+  };
+  D.reactFormatCellsSetFont = (patch) => {
+    if (!reactFormatCells || !patch || typeof patch !== 'object' || !reactFormatCells.onFontChange) return false;
+    return reactFormatCells.onFontChange(patch);
+  };
+  D.reactFormatCellsChooseFontColor = (anchor) => {
+    if (!reactFormatCells || !anchor) return false;
+    L.ui.colorMenu(anchor, { mode: 'font', grid: true }, (color) => {
+      const next = reactFormatCells && reactFormatCells.onFontColor ? reactFormatCells.onFontColor(color) : null;
+      if (next && reactFormatCells) { reactFormatCells.fontColor = next; L.bus.emit('excelx-format-cells-font-color'); }
+    });
     return true;
   };
   D.reactFormatCellsApply = () => {
@@ -392,6 +468,7 @@
     const numBody = h('div', { class: 'fc-num' });
     const sample = h('div', { class: 'fc-sample', translate: 'no' });
     const opts = h('div', { class: 'fc-opts' });
+    const reactOptionsHost = h('div', { class: 'fc-react-options' });
     const desc = h('div', { class: 'fc-desc' });
     const showSample = () => { let t = ''; try { t = v == null ? '' : NF.format(out.nf, v, { date1904: w.date1904 }).text; } catch (e) { t = ''; } sample.textContent = t; };
     const setCode = (code) => { out.nf = code; changed.nf = true; showSample(); };
@@ -469,7 +546,56 @@
         if (fromUser && !changed.nf) setCode(out.nf);
       }
     }
-    numBody.append(h('div', { class: 'fc-cats' }, h('label', { text: 'Category:' }), catList), h('div', { class: 'fc-right' }, ui.group('Sample', sample), opts, desc));
+    function numberOptionsModel(category, current = true) {
+      if (category === 'Number') return { kind: 'number', dec: current && an.cat === category ? an.dec : 2, sep: current && an.cat === category ? an.sep : false, neg: current && an.cat === category ? an.neg : 0 };
+      if (category === 'Currency') return { kind: 'currency', dec: current && an.cat === category ? an.dec : 2, sym: current && an.cat === category ? an.sym : '"$"', neg: current && an.cat === category ? an.neg : 3 };
+      if (category === 'Accounting') return { kind: 'accounting', dec: current && an.cat === category ? an.dec : 2, sym: current && an.cat === category ? an.sym : '"$"' };
+      if (category === 'Percentage' || category === 'Scientific') return { kind: category.toLowerCase(), dec: current && an.cat === category ? an.dec : 2 };
+      if (category === 'Text') return { kind: 'description', description: 'Text format cells are treated as text even when a number is in the cell. The cell is displayed exactly as entered.' };
+      if (category === 'Custom') {
+        const used = new Set(w.styles.list.filter((style) => style.nf && style.nf !== 'General').map((style) => style.nf));
+        const formats = ['General', '0', '0.00', '#,##0', '#,##0.00', '#,##0_);(#,##0)', '#,##0_);[Red](#,##0)', '#,##0.00_);(#,##0.00)', '#,##0.00_);[Red](#,##0.00)', '"$"#,##0_);\\("$"#,##0\\)', '"$"#,##0_);[Red]\\("$"#,##0\\)', '"$"#,##0.00_);\\("$"#,##0.00\\)', '"$"#,##0.00_);[Red]\\("$"#,##0.00\\)', '0%', '0.00%', '0.00E+00', '##0.0E+0', '# ?/?', '# ??/??', 'm/d/yyyy', 'd-mmm-yy', 'd-mmm', 'mmm-yy', 'h:mm AM/PM', 'h:mm:ss AM/PM', 'h:mm', 'h:mm:ss', 'm/d/yyyy h:mm', 'mm:ss', 'mm:ss.0', '@', '[h]:mm:ss', NF.BUILTIN[41], NF.BUILTIN[42], NF.BUILTIN[43], NF.BUILTIN[44]];
+        for (const code of used) if (!formats.includes(code)) formats.push(code);
+        return { kind: 'custom', formats: formats.map((code) => ({ value: code, label: code })), selected: out.nf, code: out.nf, canDelete: out.nf !== 'General' && NF.builtinId(out.nf) < 0, description: 'Type the number format code, using one of the existing codes as a starting point.' };
+      }
+      if (['Date', 'Time', 'Fraction', 'Special'].includes(category)) {
+        const value = typeof v === 'number' ? v : 37329.5649;
+        const formats = category === 'Date' || category === 'Time' ? (category === 'Date' ? DATE_TYPES : TIME_TYPES).map((format) => ({ value: format, label: (format === 'm/d/yyyy' || format === 'h:mm:ss AM/PM' ? '* ' : '') + NF.text(format, value, { date1904: w.date1904 }) })) : (category === 'Fraction' ? FRACTIONS : SPECIAL).map(([format, label]) => ({ value: format, label }));
+        const description = category === 'Date' ? 'Date formats display date and time serial numbers as date values. Formats that begin with an asterisk (*) respond to changes in regional date and time settings.' : category === 'Time' ? 'Time formats display date and time serial numbers as time values.' : category === 'Special' ? 'Special formats are useful for tracking list and database values.' : '';
+        return { kind: 'catalog', formats, selected: out.nf, description, locale: category === 'Date' || category === 'Time' || category === 'Special' };
+      }
+      return null;
+    }
+    function updateNumberOptions(patch) {
+      const model = Object.assign({}, reactFormatCells.numberOptions, patch);
+      if (model.kind === 'description') return model;
+      if (model.kind === 'custom') {
+        try { NF.parse(String(model.code || '')); } catch (e) { return false; }
+        model.code = String(model.code || 'General'); setCode(model.code);
+        model.selected = model.formats.some((item) => item.value === model.code) ? model.code : '';
+        model.canDelete = !!model.selected && model.selected !== 'General' && NF.builtinId(model.selected) < 0;
+        return model;
+      }
+      if (model.kind === 'catalog') { if (!model.formats.some((item) => item.value === model.code)) return false; setCode(model.code); model.selected = model.code; return model; }
+      if (model.dec != null) { const value = Number(model.dec); if (!(value >= 0 && value <= 30)) return false; model.dec = Math.round(value); }
+      let code;
+      if (model.kind === 'number') code = numCode(model.dec, model.sep, model.neg);
+      else if (model.kind === 'currency') code = curCode(model.dec, model.sym, model.neg);
+      else if (model.kind === 'accounting') code = accCode(model.dec, model.sym);
+      else if (model.kind === 'percentage') code = '0' + (model.dec ? '.' + '0'.repeat(model.dec) : '') + '%';
+      else if (model.kind === 'scientific') code = '0' + (model.dec ? '.' + '0'.repeat(model.dec) : '') + 'E+00';
+      else return false;
+      setCode(code);
+      return model;
+    }
+    function changeNumberCategory(category) {
+      catState = category;
+      drawOpts(true);
+      const model = numberOptionsModel(category, an.cat === category);
+      if (model) opts.replaceChildren();
+      return model;
+    }
+    numBody.append(h('div', { class: 'fc-cats' }, h('label', { text: 'Category:' }), catList), h('div', { class: 'fc-right' }, ui.group('Sample', sample), opts, reactOptionsHost, desc));
     drawOpts(false);
     showSample();
     /* ---------- Alignment ---------- */
@@ -575,6 +701,11 @@
       h('div', { class: 'row', style: 'gap:4px;margin-left:34px' }, bbtn('diagUp', 'bordersDiagUp', 'Diagonal up'), bbtn('left', 'bordersLeft', L.N('Left')), bbtn('insideV', 'bordersInsideV', 'Inside vertical', multiC), bbtn('right', 'bordersRight', L.N('Right')), bbtn('diagDown', 'bordersDiagDown', 'Diagonal down')),
       h('div', { class: 'hint', text: 'The selected border style can be applied by clicking the presets, preview diagram or the buttons above.' })),
       ui.group('Line', h('label', { text: 'Style:' }), lineBox, ui.field('&Color:', lcol)));
+    function borderSnapshot() {
+      const currentEdges = {};
+      for (const key of Object.keys(edges)) { const value = edges[key]; currentEdges[key] = value ? { style: value.style, color: M.colorHex(w, value.color, '#000000') } : null; }
+      return { edges: currentEdges, style: line ? line.style : 'none', color: lineColor ? M.colorHex(w, lineColor, '#000000') : null, multiR, multiC };
+    }
     /* ---------- Patterns ---------- */
     const fill = out.fill;
     let fillColor = fill && fill.pattern === 'solid' ? M.colorHex(w, fill.fg) : fill && fill.bg ? M.colorHex(w, fill.bg) : null;
@@ -651,7 +782,96 @@
     };
     if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
       protBody.replaceChildren();
-      reactFormatCells = { title: target && target.title ? target.title : 'Format Cells', content: tabs, protection: { locked: pr.locked !== false, hidden: !!pr.hidden }, onProtectionChange: (locked, hidden) => { pr.locked = locked; pr.hidden = hidden || undefined; changed.prot = true; } };
+      alBody.replaceChildren();
+      const categories = CATS.map((item) => Array.isArray(item) ? { value: item[0], label: item[1] } : { value: item, label: item });
+      numBody.querySelector('.fc-cats').replaceChildren();
+      fontBody.replaceChildren();
+      borderBody.replaceChildren();
+      patBody.replaceChildren();
+      const initialNumberOptions = numberOptionsModel(catState);
+      if (initialNumberOptions) opts.replaceChildren();
+      const toFontColor = () => ({ hex: M.colorHex(w, f.color, '#000000'), automatic: !f.color || !!f.color.auto });
+      reactFormatCells = {
+        title: target && target.title ? target.title : 'Format Cells', content: tabs,
+        protection: { locked: pr.locked !== false, hidden: !!pr.hidden }, alignment: Object.assign({}, al), merged,
+        font: Object.assign({}, f), fontName: LY.fontName(w, f), fontColors: toFontColor(),
+        fonts: L.FONT_LIST.slice(), fontSizes: L.SIZE_LIST.slice(),
+        numberCategories: categories, numberCategory: catState, numberOptions: initialNumberOptions, symbols: SYMBOLS.map(([label, value]) => ({ label, value })), onNumberCategoryChange: changeNumberCategory, onNumberOptionsChange: updateNumberOptions,
+        onDeleteNumberFormat: (code) => {
+          if (!code || NF.builtinId(code) >= 0 || code === 'General') return false;
+          O.tx(w, 'Delete Number Format', () => { for (const s2 of w.sheets) s2.rows.forEach((row, r) => { if (row) row.cells.forEach((cl, c) => { if (cl && cl.s && w.styles.get(cl.s).nf === code) { const n = Object.assign({}, cl); n.s = w.styles.derive(cl.s, { nf: 'General' }); O.put(s2, r, c, n); } }); }); });
+          reactFormatCells.numberOptions = numberOptionsModel('Custom');
+          L.bus.emit('excelx-format-cells-number-options');
+          return true;
+        },
+        onProtectionChange: (locked, hidden) => { pr.locked = locked; pr.hidden = hidden || undefined; changed.prot = true; },
+        onFontChange: (patch) => {
+          if (patch.normal) { Object.keys(f).forEach((key) => delete f[key]); Object.assign(f, JSON.parse(JSON.stringify(w.styles.get(0).font))); }
+          if (Object.prototype.hasOwnProperty.call(patch, 'name')) { f.name = String(patch.name || ''); delete f.scheme; }
+          if (Object.prototype.hasOwnProperty.call(patch, 'sz')) { const size = Number(patch.sz); if (!(size >= 1 && size <= 409)) return false; f.sz = size; }
+          for (const key of ['b', 'i', 'strike']) if (Object.prototype.hasOwnProperty.call(patch, key)) f[key] = patch[key] ? true : undefined;
+          if (Object.prototype.hasOwnProperty.call(patch, 'u')) f.u = patch.u === 'none' ? undefined : patch.u;
+          if (Object.prototype.hasOwnProperty.call(patch, 'vert')) f.vert = patch.vert || undefined;
+          changed.font = true;
+          reactFormatCells.font = Object.assign({}, f);
+          reactFormatCells.fontName = LY.fontName(w, f);
+          reactFormatCells.fontColors = toFontColor();
+          return { font: reactFormatCells.font, fontName: reactFormatCells.fontName, fontColors: reactFormatCells.fontColors };
+        },
+        onFontColor: (color) => {
+          if (color && color.auto) f.color = undefined;
+          else if (typeof color === 'string') f.color = M.rgb(color);
+          else return null;
+          changed.font = true;
+          reactFormatCells.font = Object.assign({}, f);
+          reactFormatCells.fontColors = toFontColor();
+          return reactFormatCells.fontColors;
+        },
+        fill: { fillColor, pattern, patColor },
+        fillColors: L.color.STANDARD.map((color) => ({ value: color, label: ui.colorName(color) })),
+        patterns: PATTERNS.map((value) => ({ value, label: PAT_NAMES[value], preview: patternURL(value, '#000000', '#FFFFFF') })),
+        onFillChange: (patch) => {
+          for (const key of Object.keys(patch)) {
+            if (key === 'fillColor' || key === 'patColor') { const value = patch[key]; if (value !== null && (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value))) return false; if (key === 'fillColor') fillColor = value; else patColor = value; }
+            else if (key === 'pattern') { if (patch.pattern !== null && !PATTERNS.includes(patch.pattern)) return false; pattern = patch.pattern; }
+            else return false;
+            changed.fill = true;
+          }
+          reactFormatCells.fill = { fillColor, pattern, patColor };
+          return reactFormatCells.fill;
+        },
+        border: borderSnapshot(),
+        borderLines: ['none'].concat(LINES).map((style) => ({ style, label: LINE_NAMES[style] })),
+        onBorderChange: (patch) => {
+          if (patch.type === 'style') line = patch.style === 'none' ? null : Object.assign({}, line || {}, { style: patch.style });
+          else if (patch.type === 'color') lineColor = patch.value ? M.rgb(patch.value) : null;
+          else if (patch.type === 'toggle' && ['top', 'bottom', 'left', 'right', 'insideH', 'insideV', 'diagUp', 'diagDown'].includes(patch.edge)) {
+            const key = patch.edge, cur = edges[key], next = curLine();
+            edges[key] = cur && next && cur.style === next.style && JSON.stringify(cur.color || null) === JSON.stringify(next.color || null) ? null : next;
+            touched[key] = true;
+          } else if (patch.type === 'preset' && patch.value === 'none') { for (const key in edges) { edges[key] = null; touched[key] = true; } }
+          else if (patch.type === 'preset' && patch.value === 'outline') { for (const key of ['top', 'bottom', 'left', 'right']) { edges[key] = curLine(); touched[key] = true; } }
+          else if (patch.type === 'preset' && patch.value === 'inside') { if (multiR) { edges.insideH = curLine(); touched.insideH = true; } if (multiC) { edges.insideV = curLine(); touched.insideV = true; } }
+          else return false;
+          reactFormatCells.border = borderSnapshot();
+          return reactFormatCells.border;
+        },
+        onAlignmentChange: (patch) => {
+          for (const key of Object.keys(patch)) {
+            if (key === 'merge') { mergeState = !!patch.merge; continue; }
+            if (!['h', 'v', 'wrap', 'indent', 'rot', 'shrink', 'rtl', 'ltr', 'justLast'].includes(key)) return false;
+            if (key === 'h') al.h = patch.h === 'general' ? undefined : patch.h;
+            else if (key === 'v') al.v = patch.v === 'bottom' ? undefined : patch.v;
+            else if (key === 'indent') { const value = Number(patch.indent); if (!(value >= 0 && value <= 15)) return false; al.indent = Math.round(value) || undefined; }
+            else if (key === 'rot') { const value = Number(patch.rot); if (value !== 255 && !(value >= -90 && value <= 90)) return false; al.rot = value === 255 || value === 0 ? (value || undefined) : value < 0 ? 90 - value : value; }
+            else if (key === 'rtl' || key === 'ltr') { al[key] = !!patch[key] || undefined; al[key === 'rtl' ? 'ltr' : 'rtl'] = undefined; }
+            else al[key] = !!patch[key] || undefined;
+            changed.align = true;
+          }
+          if (Object.prototype.hasOwnProperty.call(patch, 'merge')) reactFormatCells.merged = !!patch.merge;
+          return true;
+        },
+      };
       reactFormatCellsApply = apply;
       L.bus.emit('excelx-format-cells-dialog');
       return;
@@ -1111,6 +1331,9 @@
     const base = b.name.replace(/\.[^.]+$/, '');
     const types = L.file.types.map((t) => [t.id, t.label]);
     let type = b.type === 'xlsm' || b.type === 'xltx' || b.type === 'xltm' || b.type === 'csv' || b.type === 'txt' ? b.type : 'xlsx';
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      return new Promise((resolve) => { reactSaveAs = { name: base, type, types, password: b.password || '' }; reactSaveAsResolve = resolve; L.bus.emit('excelx-save-as-dialog'); });
+    }
     if (L.file.native()) {
       const c = await L.file.choose('saveAs', type, base);
       return c ? A().saveAs(c.type, c.file, 'chosen') : false;
@@ -1266,6 +1489,51 @@
   D.options = function (tabName) {
     const o = A().opts, w = wb(), s = sh();
     const v = s.view;
+    const direct = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected;
+    if (direct) {
+      const look = root.VO.look, language = root.VO.lang, book = A().books[A().cur], calc = w.calcPr;
+      const defaults = { taskOpen: true, paneFollows: true, formulaBar: true, statusBar: true, editInCell: true, dragDrop: true, moveAfterEnter: true, autoComplete: true, extendFormats: true, autoPercent: true, bgErrors: true, errNumText: true, errInconsistent: true, ignoreUpper: true, ignoreNum: true, ignoreInternet: true };
+      reactOptions = {
+        tab: ['View', 'Calculation', 'Edit', 'General', 'Custom Lists', 'Error Checking', 'Spelling', 'Security'].includes(tabName) ? tabName : 'View',
+        tabs: ['View', 'Calculation', 'Edit', 'General', 'Custom Lists', 'Error Checking', 'Spelling', 'Security'],
+        options: Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, o[key] !== undefined ? o[key] !== false : value]).concat([
+          ['enterDir', o.enterDir || 'down'], ['dictLang', o.dictLang === 'en_GB' ? 'en_GB' : 'en_US'], ['sheetsInNew', o.sheetsInNew || 3], ['defaultFont', o.defaultFont || 'Arial'], ['defaultSize', o.defaultSize || 10], ['userName', o.userName || ''],
+        ])),
+        view: { pages: !!s._pages, formulas: !!v.formulas, grid: v.grid !== false, headings: v.headings !== false, zeros: v.zeros !== false, outlineSymbols: v.outlineSymbols !== false },
+        comments: w._showComments ? 'comments' : 'indicator',
+        calc: { mode: calc.mode || 'auto', iterate: !!calc.iterate, iterateCount: calc.iterateCount || 100, iterateDelta: calc.iterateDelta || 0.001, fullPrecision: calc.fullPrecision !== false },
+        workbook: { date1904: !!w.date1904, r1c1: !!w.r1c1, hideHScroll: !!w.hideHScroll, hideVScroll: !!w.hideVScroll, hideTabs: !!w.hideTabs, privacy: !!(w.extra && (w.extra.removePersonal || w.extra.filterPrivacy)) },
+        general: { sheetsInNew: o.sheetsInNew || 3, defaultFont: o.defaultFont || 'Arial', defaultSize: o.defaultSize || 10, userName: o.userName || '', password: book && book.password || '' },
+        appearance: { look: look ? look.get() : '', looks: look ? look.list().map((item) => ({ id: item.id, name: item.name })) : [], language: language ? language.get() : '', languages: language ? language.list().map((item) => ({ id: item.id, name: item.id === 'auto' ? L.t('Auto (as the browser)') : item.name })) : [] },
+        fonts: L.FONT_LIST.slice(), sizes: L.SIZE_LIST.slice(), customLists: O.customLists.map((items) => items.slice()),
+      };
+      reactOptionsAction = (action, draft) => {
+        if (action === 'cancel') { reactOptions = reactOptionsAction = null; L.bus.emit('excelx-options-dialog'); return true; }
+        if (action === 'calculate') { A().calculateNow(); return true; }
+        if (action === 'autocorrect') { D.autoCorrect(); return true; }
+        if (action !== 'save' || !draft || !draft.options || !draft.view || !draft.calc || !draft.workbook || !draft.general) return false;
+        Object.assign(o, draft.options);
+        Object.assign(s.view, draft.view);
+        w._showComments = draft.comments === 'comments';
+        Object.assign(calc, draft.calc, { iterateCount: Math.max(1, Math.min(32767, parseInt(draft.calc.iterateCount, 10) || 100)), iterateDelta: num(draft.calc.iterateDelta, 0.001) });
+        w.date1904 = !!draft.workbook.date1904; w.r1c1 = !!draft.workbook.r1c1;
+        w.hideHScroll = !!draft.workbook.hideHScroll; w.hideVScroll = !!draft.workbook.hideVScroll; w.hideTabs = !!draft.workbook.hideTabs;
+        w.extra = w.extra || {}; w.extra.removePersonal = !!draft.workbook.privacy; w.extra.filterPrivacy = !!draft.workbook.privacy;
+        o.sheetsInNew = Math.max(1, Math.min(255, Math.round(+draft.general.sheetsInNew || 3)));
+        o.defaultFont = draft.general.defaultFont || 'Arial'; o.defaultSize = +draft.general.defaultSize || 10; o.userName = draft.general.userName || '';
+        if (book && (draft.general.password || '') !== (book.password || '')) { book.password = draft.general.password || undefined; book.dirty = true; }
+        if (JSON.stringify(O.customLists) !== JSON.stringify(draft.customLists)) { O.customLists.splice(0, O.customLists.length, ...draft.customLists.map((items) => items.slice())); L.store.set('customLists', O.customLists.slice(4)); }
+        if (look && draft.appearance.look && draft.appearance.look !== look.get()) look.set(draft.appearance.look);
+        if (language && draft.appearance.language && draft.appearance.language !== language.get()) { language.set(draft.appearance.language); ui.toast('The new language is used in the windows you open from now on.'); }
+        A().applyOpts();
+        if (draft.view.pages && !s._pages) L.print.computeBreaks(s); else if (!draft.view.pages) s._pages = null;
+        if (calc.mode !== 'manual') A().calculateNow();
+        G().paint(true); G().syncObjects(true); A().renderTabs();
+        reactOptions = reactOptionsAction = null; L.bus.emit('excelx-options-dialog'); return true;
+      };
+      L.bus.emit('excelx-options-dialog');
+      return;
+    }
     const ck = (label, get, set) => ui.check(label, get(), set);
     const viewTab = h('div', { class: 'col' },
       ui.group('Show', ck('&Startup Task Pane', () => o.taskOpen !== false, (x) => { o.taskOpen = x; }), ck('Task pane f&ollows the selected object', () => o.paneFollows !== false, (x) => { o.paneFollows = x; }), ck('&Formula bar', () => o.formulaBar !== false, (x) => { o.formulaBar = x; }), ck('St&atus bar', () => o.statusBar !== false, (x) => { o.statusBar = x; })),
@@ -1288,7 +1556,7 @@
     const nSheets = ui.spin({ value: o.sheetsInNew || 3, min: 1, max: 255, step: 1, dec: 0 });
     const dfont = ui.select(L.FONT_LIST, o.defaultFont || 'Arial', null, { translate: 'no' }), dsize = ui.select(L.SIZE_LIST, o.defaultSize || 10);
     const look = ui.lookField();
-    const genTab = h('div', { class: 'col' }, look && look.el, ck('R1C1 reference st&yle', () => !!w.r1c1, (x) => { w.r1c1 = x; }), ck('&Recently used file list', () => true, () => {}),
+    const genTab = h('div', { class: 'col' }, look && look.el, ck('R1C1 reference st&yle', () => !!w.r1c1, (x) => { w.r1c1 = x; }),
       ui.field('Sheets in new work&book:', nSheets), h('div', { class: 'row', style: 'gap:8px' }, ui.field('Standard fon&t:', dfont), ui.field('Si&ze:', dsize)), ui.field('User &name:', uname));
     const lists = O.customLists;
     const listBox = h('div');
@@ -1526,6 +1794,11 @@
   };
   D.customize = function () {
     const ids = [['standard', L.N('Standard')], ['formatting', L.N('Formatting')], ['borders', L.N('Borders')], ['chart', L.N('Chart')], ['drawing', L.N('Drawing')], ['auditing', 'Formula Auditing'], ['reviewing', L.N('Reviewing')], ['list', L.N('List')]];
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      reactCustomize = { toolbars: ids.map(([id, label]) => ({ id, label, visible: A().toolbarVisible(id) })) };
+      L.bus.emit('excelx-customize-dialog');
+      return;
+    }
     const box = h('div', { class: 'lbox checks' }, ...ids.map(([k, l]) => ui.check(l, A().toolbarVisible(k), (x) => A().toggleToolbar(k, x))));
     const opts = h('div', { class: 'col' }, ui.check('Show Standard and Formatting toolbars on &two rows', true, null), ui.check('Show Screen&Tips on toolbars', true, null), ui.check('Show shortcut &keys in ScreenTips', true, null));
     ui.dialog({ title: 'Customize', width: 380, body: ui.tabs([{ label: 'Toolbars', body: box }, { label: 'Options', body: opts }]), buttons: [{ label: 'Close', primary: true }] });

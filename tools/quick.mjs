@@ -78,7 +78,7 @@ if (!order.length) { console.log('No tests cover these files (docs, plans, tools
 console.log(`Runs, about ${total < 90 ? total + ' s' : Math.round(total / 60) + ' min'}:\n${order.map((t) => '  ' + t).join('\n')}`);
 if (dry) process.exit(0);
 
-/* run: the Node tests together, then the UI tests one file at a time (they share the browser's focus) */
+/* run: the Node tests one file at a time (CDP-backed Node tests share Chromium), then the UI tests one file at a time */
 const results = [];
 const run = (label, files, extra = []) => {
   const started = Date.now();
@@ -91,7 +91,7 @@ const run = (label, files, extra = []) => {
 };
 const expand = (t) => t.includes('*') ? fs.globSync(t, { cwd: root }).sort() : [t];
 const node = order.filter((t) => !isUI(t)), ui = order.filter(isUI);
-if (node.length) run('Node tests', [...new Set(node.flatMap(expand))]);
+if (node.length) run('Node tests', [...new Set(node.flatMap(expand))], ['--test-concurrency=1']);
 for (const t of ui) { const [files, extra] = split(t); run(t, files, ['--test-concurrency=1', ...extra]); }
 const bad = results.filter((r) => !r.ok);
 console.log(bad.length ? `\n${bad.length} of ${results.length} failed.` : `\nAll ${results.length} passed. Before a release: node tools/ui-full.mjs (the whole of tests/ui/).`);

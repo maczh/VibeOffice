@@ -1,0 +1,13 @@
+.excelx-print-dialog__body { display: flex; flex-direction: column; gap: 10px; }
+.excelx-print-dialog__body fieldset { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.excelx-print-dialog__body fieldset > label { display: flex; align-items: center; gap: 6px; }
+.excelx-print-dialog__body .hint { margin: 0; }
+.excelx-print-dialog__choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.excelx-print-dialog__choices fieldset > label { min-height: 24px; }
+.excelx-print-dialog__pages { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.excelx-print-dialog__pages > label { display: flex; align-items: center; gap: 3px; }
+.excelx-print-dialog__pages input, .excelx-print-dialog__copies input { width: 54px; }
+.excelx-print-dialog__copies { display: flex; align-items: center; gap: 6px; }
+.excelx-print-dialog__actions { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.excelx-print-dialog__actions > span { flex: 1; }
+@media (max-width: 520px) { .excelx-print-dialog__choices { grid-template-columns: 1fr; } }

@@ -33,14 +33,11 @@
     E.canvas.append(E.host, E.gridEl, E.overlay);
     E.scroller.append(E.canvas, E.empty);
     container.append(E.rulerH, E.rulerV, E.scroller);
-    E.empty.addEventListener('click', () => L.ui.exec('newSlide'));
-    E.scroller.addEventListener('pointerdown', (e) => {
+    const onPointerDown = (e) => {
       if (e.button === 0) pressStart();
       try { onDown(e); } finally { if (!L.ui.dragging()) pressEnd(true); }
-    });
-    E.scroller.addEventListener('dblclick', onDbl);
-    E.scroller.addEventListener('contextmenu', onContext);
-    E.scroller.addEventListener('wheel', (e) => {
+    };
+    const onWheel = (e) => {
       if (e.ctrlKey) { e.preventDefault(); const z = E.scale / L.PX_PER_PT; E.setZoom(L.clamp(z * (e.deltaY < 0 ? 1.1 : 0.9), 0.1, 4)); return; }
       /* in fit mode, the wheel pages through slides like PowerPoint */
       if (E.zoom === 'fit' && E.view === 'normal' && !E.editing() && Math.abs(e.deltaY) > 20) {
@@ -49,7 +46,23 @@
         E._wheelT = now;
         E.goto(E.idx + (e.deltaY > 0 ? 1 : -1));
       }
-    }, { passive: false });
+    };
+    E.reactEvents = window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost ? {
+      pointerdown: onPointerDown, pointermove: (event) => E._ffMove?.(event), dblclick: onDbl, contextmenu: onContext, wheel: onWheel,
+      emptyClick: () => L.ui.exec('newSlide'),
+      guidePointerDown: (event) => {
+        const guide = event.target && event.target.closest && event.target.closest('.guide');
+        if (guide && E.gridEl.contains(guide)) dragGuide(event, guide.classList.contains('gv') ? 'x' : 'y');
+      },
+    } : null;
+    if (!E.reactEvents) {
+      E.empty.addEventListener('click', () => L.ui.exec('newSlide'));
+      E.scroller.addEventListener('pointerdown', onPointerDown);
+      E.scroller.addEventListener('dblclick', onDbl);
+      E.scroller.addEventListener('contextmenu', onContext);
+      E.scroller.addEventListener('wheel', onWheel, { passive: false });
+    }
+    container.dispatchEvent(new CustomEvent('vibeoffice-pptx-editor-surface-mounted', { bubbles: true }));
     if (window.ResizeObserver) {
       const observer = new ResizeObserver(() => E.layout());
       observer.observe(E.scroller);
@@ -114,8 +127,10 @@
       if (E.grid.gy == null) E.grid.gy = H / 2;
       const gv = h('div', { class: 'guide gv', style: `left:${E.grid.gx * E.scale}px` });
       const gh = h('div', { class: 'guide gh', style: `top:${E.grid.gy * E.scale}px` });
-      gv.addEventListener('pointerdown', (e) => dragGuide(e, 'x'));
-      gh.addEventListener('pointerdown', (e) => dragGuide(e, 'y'));
+      if (!E.reactEvents) {
+        gv.addEventListener('pointerdown', (e) => dragGuide(e, 'x'));
+        gh.addEventListener('pointerdown', (e) => dragGuide(e, 'y'));
+      }
       g.append(gv, gh);
     }
   }
@@ -967,7 +982,7 @@
     });
     if (!E._ffMove) {
       E._ffMove = (ev) => { if (!ff) return; const q = E.toSlide(ev.clientX, ev.clientY); draw([q.x, q.y]); };
-      E.scroller.addEventListener('pointermove', E._ffMove);
+      if (!E.reactEvents) E.scroller.addEventListener('pointermove', E._ffMove);
     }
   }
   function finishFreeform(closed) {

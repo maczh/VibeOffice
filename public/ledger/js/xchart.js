@@ -257,11 +257,36 @@
     return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}"><rect x="0" y="0" width="${s}" height="${s}" fill="#fff"/>${body}</svg>`;
   };
   const CW = (L.chartWizard = {});
+  let reactWizard = null, reactWizardResolve = null;
+  let reactTypeMenu = null;
+  CW.typeMenuCatalog = () => reactTypeMenu;
+  CW.typeMenuAction = (kind) => {
+    if (!reactTypeMenu) return false;
+    const selected = reactTypeMenu.selected;
+    reactTypeMenu = null;
+    L.bus.emit('excelx-chart-type-menu');
+    if (kind && selected && selected.kind === 'chart' && selected.chart) CW.setKind(selected, kind);
+    return true;
+  };
+  CW.reactCatalog = () => reactWizard && reactWizard.catalog();
+  CW.reactAction = (action, value) => {
+    if (action === 'unmount') { if (reactWizardResolve) { const resolve = reactWizardResolve; reactWizardResolve = null; reactWizard = null; resolve(null); } return true; }
+    if (!reactWizard || !reactWizardResolve) return false;
+    if (action === 'cancel') { const resolve = reactWizardResolve; reactWizardResolve = null; reactWizard = null; L.bus.emit('excelx-chart-wizard'); resolve(null); return true; }
+    reactWizard.action(action, value);
+    return true;
+  };
   CW.TYPES = TYPES;
   CW.typeIcon = typeIcon;
   CW.typeMenu = function (at) {
     const d = L.grid.selectedObject();
     const kinds = TYPES.flatMap((t) => t.subs.map((s) => s[0]));
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      const rect = at && at.getBoundingClientRect ? at.getBoundingClientRect() : null;
+      reactTypeMenu = { selected: d, left: Math.max(2, Math.min(rect ? rect.left : at && at.x || 0, window.innerWidth - 310)), top: Math.max(2, Math.min(rect ? rect.bottom : at && at.y || 0, window.innerHeight - 430)), items: kinds.map((kind) => ({ kind, label: subName(kind), icon: typeIcon(kind) })) };
+      L.bus.emit('excelx-chart-type-menu');
+      return;
+    }
     L.ui.openMenu([{ custom: (close) => {
       const g = L.h('div', { class: 'ctype-grid' });
       for (const k of kinds) { const b = L.h('button', { type: 'button', class: 'ctype-b', html: typeIcon(k), 'data-tip': subName(k), 'aria-label': subName(k) }); b.addEventListener('click', () => { close(); if (d && d.kind === 'chart' && d.chart) CW.setKind(d, k); }); g.appendChild(b); }
@@ -323,6 +348,26 @@
       if (!m.series.length) { preview.appendChild(h('div', { class: 'cw-empty', text: 'Select the data range for the chart.' })); return; }
       try { preview.appendChild(XC.render(m, wb, sh, 300, 200, 0.75)); } catch (e) { preview.appendChild(h('div', { text: String(e.message || e) })); }
     }
+    function reactCatalog() {
+      let preview = '';
+      const m = model();
+      if (m.series.length) { try { preview = XC.render(m, wb, sh, 300, 200, 0.75).outerHTML; } catch (_) { preview = ''; } }
+      const groupOf = (kind) => TYPES.find((type) => type.subs.some((sub) => sub[0] === kind)) || TYPES[0];
+      const currentGroup = groupOf(st.kind);
+      return { step: st.step, steps: editing ? 3 : 4, title: L.t('Chart Wizard - Step {0} of {1} - {2}', st.step, editing ? 3 : 4, L.t(['Chart Type', 'Chart Source Data', 'Chart Options', 'Chart Location'][st.step - 1])), types: TYPES.map((type) => ({ kind: type.subs[0][0], label: type.label, icon: typeIcon(type.subs[0][0]), subtypes: type.subs.map((sub) => sub[0]) })), subtypes: currentGroup.subs.map((sub) => ({ kind: sub[0], label: sub[1], icon: typeIcon(sub[0]) })), kind: st.kind, range: st.range || '', byRows: st.byRows, titleText: st.title, axX: st.axX, axY: st.axY, gridY: st.gridY, legend: st.legend, labels: st.labels, where: st.where, sheetName: st.sheetName, preview, editing: !!editing };
+    }
+    function reactAction(action, value) {
+      if (action === 'update' && value && typeof value === 'object') {
+        const patch = value;
+        if (Object.prototype.hasOwnProperty.call(patch, 'range') && patch.range !== st.range) { st.rangeChanged = true; st.byRows = null; }
+        Object.assign(st, patch); drawPreview();
+      } else if (action === 'type' || action === 'kind') { st.kind = String(value); drawPreview(); }
+      else if (action === 'back') st.step = Math.max(1, st.step - 1);
+      else if (action === 'next') st.step = Math.min(editing ? 3 : 4, st.step + 1);
+      else if (action === 'finish' && reactWizardResolve) { const resolve = reactWizardResolve; reactWizardResolve = null; reactWizard = null; L.bus.emit('excelx-chart-wizard'); complete(resolve); return; }
+      else return;
+      L.bus.emit('excelx-chart-wizard');
+    }
     function step1() {
       stepBox.textContent = '';
       const list = h('div', { class: 'cw-types', role: 'listbox' });
@@ -376,6 +421,28 @@
     }
     const steps = editing ? [step1, step2, step3] : [step1, step2, step3, step4];
     const titles = ['Chart Type', 'Chart Source Data', 'Chart Options', 'Chart Location'];
+    function complete(resolve) {
+      const m = model();
+      if (!m.series.length) { ui.msg('The chart has no data. Select a range with numbers first.', { icon: 'warn' }); resolve(null); return; }
+      const chart = Object.assign({}, editing ? editing.chart : {}, m, { dirty: true, imported: editing ? editing.chart.imported : false });
+      delete chart.refs;
+      if (editing) { const nd = Object.assign({}, editing, { chart }); L.ops.tx(wb, 'Chart Options', () => L.ops.setDrawings(sh, sh.drawings.map((x) => (x === editing ? nd : x)))); G.selectObject(nd); G.syncObjects(true); resolve(nd); return; }
+      if (st.where === 'sheet') {
+        let name = (st.sheetName || '').trim() || wb.nextSheetName('Chart');
+        if (wb.sheetByName(name)) name = wb.nextSheetName('Chart');
+        let ns;
+        L.ops.tx(wb, 'Insert Chart', () => { ns = L.ops.addSheet(wb, name, wb.active); ns.kind = 'chartsheet'; ns.view.grid = false; ns.view.headings = false; L.ops.setDrawings(ns, [{ kind: 'chart', name: 'Chart 1', id: 2, chart, anchor: { type: 'abs', x: 0, y: 0, w: 640, h: 440 } }]); });
+        wb.active = wb.sheets.indexOf(ns); L.app.renderTabs(); G.paint(true); G.syncObjects(true); resolve(ns); return;
+      }
+      const g = L.layout.geo(sh), startC = Math.min(rg.c2 + 2, M.MAXC - 8), startR = Math.max(0, rg.r1);
+      const dr = { kind: 'chart', name: 'Chart ' + (sh.drawings.filter((x) => x.kind === 'chart').length + 1), id: Math.max(1, ...sh.drawings.map((x) => x.id || 0)) + 1, chart, anchor: { type: 'two', editAs: 'twoCell', from: { r: startR, c: startC, rOff: 0, cOff: 0 }, to: { r: startR, c: startC, rOff: 0, cOff: 0 } } };
+      const wpx = 480, hpx = 288; let cc = startC, acc = 0; while (acc + g.cols.size(cc) <= wpx && cc < M.MAXC - 1) { acc += g.cols.size(cc); cc++; } dr.anchor.to.c = cc; dr.anchor.to.cOff = (wpx - acc) * 0.75;
+      let rr = startR; acc = 0; while (acc + g.rows.size(rr) <= hpx && rr < M.MAXR - 1) { acc += g.rows.size(rr); rr++; } dr.anchor.to.r = rr; dr.anchor.to.rOff = (hpx - acc) * 0.75;
+      L.ops.tx(wb, 'Insert Chart', () => L.ops.setDrawings(sh, sh.drawings.concat([dr]))); G.selectObject(dr); G.syncObjects(true); L.app.updateToolbars(); resolve(dr);
+    }
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
+      return new Promise((resolve) => { reactWizardResolve = resolve; reactWizard = { catalog: reactCatalog, action: reactAction }; L.bus.emit('excelx-chart-wizard'); });
+    }
     return new Promise((resolve) => {
       let ok = false;
       const d = ui.dialog({
@@ -390,46 +457,7 @@
       function show() { steps[st.step - 1](); d.el.querySelector('.dlg-ttl').textContent = L.t('Chart Wizard - Step {0} of {1} - {2}', st.step, steps.length, L.t(titles[st.step - 1])); d.buttons[1].disabled = st.step === 1; d.buttons[2].disabled = st.step === steps.length; drawPreview(); }
       show();
       d.done.then(() => {
-        if (!ok) { resolve(null); return; }
-        const m = model();
-        if (!m.series.length) { ui.msg('The chart has no data. Select a range with numbers first.', { icon: 'warn' }); resolve(null); return; }
-        const chart = Object.assign({}, editing ? editing.chart : {}, m, { dirty: true, imported: editing ? editing.chart.imported : false });
-        delete chart.refs;
-        if (editing) {
-          const nd = Object.assign({}, editing, { chart });
-          L.ops.tx(wb, 'Chart Options', () => L.ops.setDrawings(sh, sh.drawings.map((x) => (x === editing ? nd : x))));
-          G.selectObject(nd); G.syncObjects(true);
-          resolve(nd); return;
-        }
-        if (st.where === 'sheet') {
-          let name = (st.sheetName || '').trim() || wb.nextSheetName('Chart');
-          if (wb.sheetByName(name)) name = wb.nextSheetName('Chart');
-          let ns;
-          L.ops.tx(wb, 'Insert Chart', () => {
-            ns = L.ops.addSheet(wb, name, wb.active);
-            ns.kind = 'chartsheet';
-            ns.view.grid = false; ns.view.headings = false;
-            L.ops.setDrawings(ns, [{ kind: 'chart', name: 'Chart 1', id: 2, chart, anchor: { type: 'abs', x: 0, y: 0, w: 640, h: 440 } }]);
-          });
-          wb.active = wb.sheets.indexOf(ns);
-          L.app.renderTabs(); G.paint(true); G.syncObjects(true);
-          resolve(ns); return;
-        }
-        const s = G.sel();
-        const g = L.layout.geo(sh);
-        const startC = Math.min(rg.c2 + 2, M.MAXC - 8), startR = Math.max(0, rg.r1);
-        const dr = { kind: 'chart', name: 'Chart ' + (sh.drawings.filter((x) => x.kind === 'chart').length + 1), id: Math.max(1, ...sh.drawings.map((x) => x.id || 0)) + 1, chart, anchor: { type: 'two', editAs: 'twoCell', from: { r: startR, c: startC, rOff: 0, cOff: 0 }, to: { r: startR, c: startC, rOff: 0, cOff: 0 } } };
-        /* about 5 × 3 inches, like Excel's default */
-        const wpx = 480, hpx = 288;
-        let cc = startC, acc = 0; while (acc + g.cols.size(cc) <= wpx && cc < M.MAXC - 1) { acc += g.cols.size(cc); cc++; }
-        dr.anchor.to.c = cc; dr.anchor.to.cOff = (wpx - acc) * 0.75;
-        let rr = startR; acc = 0; while (acc + g.rows.size(rr) <= hpx && rr < M.MAXR - 1) { acc += g.rows.size(rr); rr++; }
-        dr.anchor.to.r = rr; dr.anchor.to.rOff = (hpx - acc) * 0.75;
-        void s;
-        L.ops.tx(wb, 'Insert Chart', () => L.ops.setDrawings(sh, sh.drawings.concat([dr])));
-        G.selectObject(dr); G.syncObjects(true);
-        L.app.updateToolbars();
-        resolve(dr);
+        if (ok) complete(resolve); else resolve(null);
       });
     });
   };

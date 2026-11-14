@@ -1,0 +1,24 @@
+.vibeoffice-chart-editor-dialog { box-sizing: border-box; }
+.vibeoffice-chart-editor { display: grid; grid-template-columns: minmax(260px, 1.15fr) minmax(220px, .85fr); gap: 10px; }
+.vibeoffice-chart-editor__settings { display: grid; align-content: start; gap: 7px; }
+.vibeoffice-chart-editor__settings > label { display: grid; grid-template-columns: 6.2rem minmax(0, 1fr); align-items: center; gap: 6px; }
+.vibeoffice-chart-editor__settings input[type="text"], .vibeoffice-chart-editor__settings select { min-width: 0; box-sizing: border-box; min-height: 25px; padding: 2px 5px; border: 1px solid var(--field-border, #888); color: var(--ink, #202124); background: var(--surface, #fff); font: inherit; }
+.vibeoffice-chart-editor__checks { display: flex; flex-wrap: wrap; gap: 12px; }
+.vibeoffice-chart-editor__checks label { display: flex; align-items: center; gap: 4px; }
+.vibeoffice-chart-editor__preview { min-width: 0; border: 1px solid var(--chrome-line, #888); background: var(--surface, #fff); }
+.vibeoffice-chart-editor__preview > span { display: block; padding: 3px 6px; border-bottom: 1px solid var(--chrome-line, #888); background: linear-gradient(var(--tb-a, #fff), var(--tb-b, #eee)); }
+.vibeoffice-chart-editor__preview > div { display: grid; min-height: 190px; place-items: center; overflow: hidden; }
+.vibeoffice-chart-editor__preview svg { max-width: 100%; max-height: 190px; }
+.vibeoffice-chart-editor__datasheet { grid-column: 1 / -1; min-width: 0; margin: 0; padding: 7px; border: 1px solid var(--chrome-line, #888); }
+.vibeoffice-chart-editor__table-scroll { max-width: 100%; overflow: auto; }
+.vibeoffice-chart-editor__datasheet table { border-collapse: collapse; }
+.vibeoffice-chart-editor__datasheet th, .vibeoffice-chart-editor__datasheet td { min-width: 66px; padding: 2px; border: 1px solid var(--field-border, #aaa); }
+.vibeoffice-chart-editor__datasheet th:first-child { min-width: 120px; }
+.vibeoffice-chart-editor__datasheet input { box-sizing: border-box; width: 100%; min-width: 48px; min-height: 24px; padding: 2px 4px; border: 1px solid transparent; color: var(--ink, #202124); background: var(--surface, #fff); font: inherit; }
+.vibeoffice-chart-editor__datasheet input:focus { border-color: var(--combo-border, #3578c6); outline: none; }
+.vibeoffice-chart-editor__swatch { width: 14px; height: 14px; margin: 0 4px 0 0; border: 1px solid #555; vertical-align: middle; }
+.vibeoffice-chart-editor__tools { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.vibeoffice-chart-editor__tools button, .vibeoffice-chart-editor-dialog .vibeoffice-dialog__actions button { min-height: 25px; padding: 3px 8px; border: 1px solid var(--ctl-border, #888); color: var(--ink, #202124); background: linear-gradient(var(--btn-a, #fff), var(--btn-b, #eee)); font: inherit; }
+.vibeoffice-chart-editor-dialog .vibeoffice-dialog__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+.vibeoffice-chart-editor-dialog .vibeoffice-dialog__actions .primary { font-weight: 600; }
+@media (max-width: 600px) { .vibeoffice-chart-editor { grid-template-columns: 1fr; } .vibeoffice-chart-editor__preview { grid-row: 2; } }

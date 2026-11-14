@@ -66,7 +66,7 @@ export function CommandSearch() {
       setActive(-1);
       return;
     }
-    const input = document.getElementById(id);
+    const input = inputRef.current;
     const engine = input?.closest('.vibe-editor')?.querySelector<HTMLElement>('.vibe-editor__engine');
     engine?.dispatchEvent(new CustomEvent('vibeoffice-react-command', { bubbles: true, detail: { type: 'vibeoffice-react-command', command: result.id } }));
     setOpen(false);

@@ -4,6 +4,7 @@ import type { DraftStore, EditorMount, EngineRuntimeOptions, LocalDocument, Loca
 import { useMemo, type ComponentProps } from 'react';
 import { WordxListBoxLayer } from './list-box.js';
 import { WordxMenuContentLayer } from './menu-content.js';
+import { installWordxRibbonSpec } from './ribbon-spec.js';
 import { WordxTaskContentLayer } from './task-content.js';
 
 export interface WordxEngineControls {
@@ -38,6 +39,8 @@ export function WordxEditor({ services, mountEngine, engine, draftStore, onDraft
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx', '.docm', '.dotx', '.dotm'],
         'text/plain': ['.txt', '.md', '.markdown', '.rtf', '.html', '.htm', '.zip'],
       },
+      configureRuntime: installWordxRibbonSpec,
+      skipLegacyScripts: ['/quire/js/ribbon.js'],
       ...(allowedRemoteOrigins ? { allowedRemoteOrigins } : {}), ...(onOpenUrl ? { onOpenUrl } : {}),
       ...(draftStore ? { draftStore } : {}),
       ...(onDraftSaved ? { onDraftSaved } : {}),

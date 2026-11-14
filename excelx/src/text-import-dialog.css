@@ -1,0 +1,18 @@
+.excelx-text-import__body { display: flex; flex-direction: column; gap: 6px; }
+.excelx-text-import__body section { display: flex; flex-direction: column; gap: 7px; min-height: 165px; }
+.excelx-text-import__body section > label { display: flex; align-items: center; gap: 7px; }
+.excelx-text-import__body fieldset { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.excelx-text-import__body fieldset label { display: flex; align-items: center; gap: 4px; }
+.excelx-text-import__caption { margin-top: 5px; }
+.excelx-text-import__preview { height: 210px; max-height: 32vh; overflow: auto; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: 11px Tahoma, var(--ui-font); }
+.excelx-text-import__preview pre { margin: 4px; white-space: pre; }
+.excelx-text-import__preview table { border-collapse: collapse; }
+.excelx-text-import__preview th, .excelx-text-import__preview td { border: 1px solid var(--border); padding: 2px 5px; white-space: nowrap; }
+.excelx-text-import__preview .selected { background: var(--sel); color: var(--sel-ink); }
+.excelx-text-import__preview .skip { background: var(--disabled); text-decoration: line-through; }
+.excelx-text-import__fixed { position: relative; min-height: 100%; }
+.excelx-text-import__fixed .ruler { position: absolute; top: 0; }
+.excelx-text-import__fixed pre { position: absolute; top: 18px; left: 4px; }
+.excelx-text-import__fixed button:not(.hitarea) { position: absolute; z-index: 2; top: 16px; height: 120px; border: 0; border-left: 1px solid var(--sel); padding: 0; }
+.excelx-text-import__fixed .hitarea { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: crosshair; }
+.excelx-text-import__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }

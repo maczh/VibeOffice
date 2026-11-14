@@ -245,12 +245,18 @@
     }
     for (const list of need) if (!LEX.failed[list]) LEX.load(list).then(() => SP.refreshSoon(0)).catch(() => {});
   };
-  L.bus.on('layout-done', () => SP.refreshSoon());
-  L.bus.on('doc-loaded', () => { SP.ignoredOnce.clear(); SP.refreshSoon(100); });
-  L.bus.on('app-ready', () => {
-    L.addMountListener(LY.scroller, 'scroll', () => SP.refreshSoon(150), { passive: true });
-    if (LY.root) LY.root.spellcheck = false;
-  });
+  SP.reactLayoutChanged = () => SP.refreshSoon();
+  SP.reactDocumentLoaded = () => { SP.ignoredOnce.clear(); SP.refreshSoon(100); };
+  SP.reactScroll = () => SP.refreshSoon(150);
+  SP.reactAttachRoot = (root) => { if (root) root.spellcheck = false; };
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) {
+    L.bus.on('layout-done', SP.reactLayoutChanged);
+    L.bus.on('doc-loaded', SP.reactDocumentLoaded);
+    L.bus.on('app-ready', () => {
+      L.addMountListener(LY.scroller, 'scroll', SP.reactScroll, { passive: true });
+      SP.reactAttachRoot(LY.root);
+    });
+  }
 
   /* ================= right-click suggestions ================= */
   /** the misspelled word or grammar finding under the mouse, as context menu items (or null) */

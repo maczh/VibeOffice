@@ -7,39 +7,57 @@
   const M = L.model;
   const E = () => L.ed;
   const P = (L.panes = {});
+  const reactTaskPaneIds = new Set(['getting-started', 'new', 'help', 'clipart', 'design', 'colors', 'animSchemes', 'layout', 'transition', 'customAnim', 'clipboard', 'diagramText']);
 
   /* ================= Slides / Outline pane ================= */
   const LP = (P.left = { tab: 'slides' });
+  let reactMasters = null;
   LP.mount = function (el) {
     LP.el = el;
-    LP.tabs = h('div', { class: 'lp-tabs', role: 'tablist' });
-    LP.tabOutline = h('div', { class: 'lp-tab', role: 'tab', tabindex: '0', text: 'Outline|pane' });
-    LP.tabSlides = h('div', { class: 'lp-tab', role: 'tab', tabindex: '0', text: 'Slides' });
-    const close = h('button', { class: 'lp-close', type: 'button', 'aria-label': 'Close pane', html: L.icons.get('close', 12) });
-    close.addEventListener('click', () => L.app.toggleLeft(false));
-    LP.tabs.append(LP.tabOutline, LP.tabSlides, close);
+    const directHost = !!window.__VIBE_OFFICE_DIRECT_HOST__;
+    LP.tabs = directHost ? null : h('div', { class: 'lp-tabs', role: 'tablist' });
+    LP.tabOutline = directHost ? null : h('div', { class: 'lp-tab', role: 'tab', tabindex: '0', text: 'Outline|pane' });
+    LP.tabSlides = directHost ? null : h('div', { class: 'lp-tab', role: 'tab', tabindex: '0', text: 'Slides' });
+    if (LP.tabs) {
+      const close = h('button', { class: 'lp-close', type: 'button', 'aria-label': 'Close pane', html: L.icons.get('close', 12) });
+      close.addEventListener('click', () => L.app.toggleLeft(false));
+      LP.tabs.append(LP.tabOutline, LP.tabSlides, close);
+      LP.tabOutline.addEventListener('click', () => LP.setTab('outline'));
+      LP.tabSlides.addEventListener('click', () => LP.setTab('slides'));
+    }
     LP.body = h('div', { class: 'lp-body', tabindex: '-1' });
     LP.reactTabsRoot = h('div', { class: 'slides-react-tabs-root', id: 'react-slides-tabs-root' });
     LP.reactRoot = h('div', { class: 'slides-react-root', id: 'react-slides-root' });
     LP.body.appendChild(LP.reactRoot);
-    el.append(LP.tabs, LP.reactTabsRoot, LP.body);
-    LP.tabOutline.addEventListener('click', () => LP.setTab('outline'));
-    LP.tabSlides.addEventListener('click', () => LP.setTab('slides'));
-    LP.body.addEventListener('focus', () => { if (L.app) L.app.focusArea = 'slides'; }, true);
-    LP.body.addEventListener('blur', () => { if (L.app) L.app.focusArea = null; }, true);
+    if (LP.tabs) el.append(LP.tabs, LP.reactTabsRoot, LP.body);
+    else el.append(LP.reactTabsRoot, LP.body);
+    if (!directHost) {
+      LP.body.addEventListener('focus', () => { if (L.app) L.app.focusArea = 'slides'; }, true);
+      LP.body.addEventListener('blur', () => { if (L.app) L.app.focusArea = null; }, true);
+    }
     LP.setTab('slides');
   };
   LP.setTab = function (t) {
     if (LP.tab === 'outline' && t !== 'outline') LP.commitOutline();
     LP.tab = t;
-    LP.tabOutline.classList.toggle('on', t === 'outline');
-    LP.tabSlides.classList.toggle('on', t === 'slides');
+    LP.tabOutline?.classList.toggle('on', t === 'outline');
+    LP.tabSlides?.classList.toggle('on', t === 'slides');
     LP.render();
     L.ui.refresh();
   };
   LP.render = function () {
     if (!LP.body) return;
-    if (E().view === 'master') { renderMasterThumbs(); L.bus.emit('pptx-slides-render'); return; }
+    if (E().view === 'master') {
+      const reactHost = !!(window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost?.root?.isConnected && LP.reactRoot?.isConnected);
+      if (!reactHost) renderMasterThumbs();
+      else {
+        Array.from(LP.body.children).forEach((child) => { if (child !== LP.reactRoot) child.remove(); });
+        if (LP.reactRoot.parentElement !== LP.body) LP.body.appendChild(LP.reactRoot);
+        reactMasters = buildReactMasterCatalog();
+      }
+      L.bus.emit('pptx-slides-render');
+      return;
+    }
     if (LP.tab === 'outline') { renderOutline(); L.bus.emit('pptx-slides-render'); }
     else renderThumbs();
   };
@@ -167,6 +185,35 @@
     if (LP.reactRoot && L.app.reactMounted) LP.body.appendChild(LP.reactRoot);
     LP.list = null;
   }
+  function buildReactMasterCatalog() {
+    if (E().view !== 'master') return null;
+    const design = E().design(), kinds = [['slide', 'Slide Master']].concat(design.titleDeco ? [['title', 'Title Master']] : []);
+    if (E().masterKind === 'title' && !design.titleDeco) E().masterKind = 'slide';
+    const current = E().masterKind, width = thumbWidth();
+    const choices = [];
+    try {
+      for (const [kind, label] of kinds) {
+        E().masterKind = kind;
+        E().buildMaster();
+        choices.push({ kind, label: L.t(kind === 'title' ? '{0} Title Master' : '{0} Slide Master', M.designName(design)), preview: L.render.thumb(L.pres, E().masterSlide, width, { prompts: false }).outerHTML, selected: current === kind });
+      }
+    } finally {
+      E().masterKind = current;
+      E().buildMaster();
+    }
+    return choices;
+  }
+  LP.reactMasterCatalog = function () { return E().view === 'master' ? reactMasters : null; };
+  LP.reactSelectMaster = function (kind) {
+    const design = E().design();
+    if (kind !== 'slide' && !(kind === 'title' && design.titleDeco)) return;
+    E().masterKind = kind;
+    E().buildMaster();
+    E().sel = [];
+    E().render();
+    reactMasters = buildReactMasterCatalog();
+    L.bus.emit('pptx-slides-render');
+  };
 
   /* --- outline --- */
   let olDirty = false, olHistPushed = false;
@@ -225,9 +272,11 @@
       if (r.classList.contains('title')) { r.dataset.num = n++; r.style.cssText = 'font-weight:bold;margin-top:6px;padding-left:36px;position:relative;min-height:1.35em'; }
       else { const lv = +r.dataset.lvl || 0; r.style.cssText = `padding-left:${48 + lv * 18}px;position:relative;min-height:1.35em;font-weight:${L.app.opts.outlinePlain ? 'normal' : 'normal'}`; }
     }
-    let style = document.getElementById('ol-style');
-    if (!style) { style = h('style', { id: 'ol-style' }); document.head.appendChild(style); }
-    style.textContent = '.outline .ol-row.title::before{content:attr(data-num);position:absolute;left:0;width:16px;text-align:right;font-weight:normal}.outline .ol-row.title::after{content:"";position:absolute;left:20px;top:3px;width:12px;height:9px;border:1px solid #555;background:linear-gradient(#cfdcf3 0 35%,#fff 35%)}.outline .ol-row.body::before{content:"•";position:absolute;margin-left:-12px}';
+    const host = L.domHost();
+    let style = host.querySelector('#ol-style');
+    if (!style) { style = h('style', { id: 'ol-style' }); host.appendChild(style); }
+    const scope = host.classList.contains('vibeoffice-legacy-root') && host.hasAttribute('data-vibeoffice-engine-root') ? '.vibeoffice-legacy-root[data-vibeoffice-engine-root] ' : '';
+    style.textContent = `${scope}.outline .ol-row.title::before{content:attr(data-num);position:absolute;left:0;width:16px;text-align:right;font-weight:normal}${scope}.outline .ol-row.title::after{content:"";position:absolute;left:20px;top:3px;width:12px;height:9px;border:1px solid #555;background:linear-gradient(#cfdcf3 0 35%,#fff 35%)}${scope}.outline .ol-row.body::before{content:"•";position:absolute;margin-left:-12px}`;
   }
   const commitSoon = L.debounce(() => LP.commitOutline(true), 700);
   function rowCaret() {
@@ -323,38 +372,116 @@
 
   /* ================= notes pane ================= */
   const NP = (P.notes = {});
+  let removeNotesEditorListeners = () => {};
+  NP.reactOwned = false;
+  NP.reactInput = function (editor) {
+    const s = E().slide();
+    if (!s || s.isMaster) return;
+    L.hist.push(L.N('Notes'), 'notes:' + s.id);
+    s.notes = editor.innerText.replace(/\n$/, '');
+    if (!editor.textContent) editor.innerHTML = '';
+  };
+  NP.reactPaste = function (event) {
+    event.preventDefault();
+    document.execCommand('insertText', false, (event.clipboardData && event.clipboardData.getData('text/plain')) || '');
+  };
+  NP.reactFocus = function () { if (L.te.active()) L.te.end(); };
+  function bindNotesEditor(editor, reactOwned) {
+    if (!editor || (editor === NP.editor && !!NP.reactOwned === !!reactOwned)) return;
+    removeNotesEditorListeners();
+    NP.editor = editor;
+    NP.reactOwned = !!reactOwned;
+    if (reactOwned) return;
+    const onInput = () => NP.reactInput(editor);
+    const onPaste = (event) => NP.reactPaste(event);
+    const onFocus = () => NP.reactFocus();
+    editor.addEventListener('input', onInput);
+    editor.addEventListener('paste', onPaste);
+    editor.addEventListener('focus', onFocus);
+    removeNotesEditorListeners = () => {
+      editor.removeEventListener('input', onInput);
+      editor.removeEventListener('paste', onPaste);
+      editor.removeEventListener('focus', onFocus);
+    };
+  }
   NP.mount = function (el) {
     NP.el = el;
     NP.ed = h('div', { class: 'notes-in', contenteditable: 'true', spellcheck: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Speaker notes', 'data-ph': L.t('Click to add notes') });
     el.appendChild(NP.ed);
+    bindNotesEditor(NP.ed);
+    NP.initialized = true;
+    NP.attachReactEditor = function (editor) {
+      if (!editor || !editor.isConnected) return () => {};
+      const previous = NP.editor;
+      if (previous !== editor) editor.textContent = previous?.textContent || '';
+      bindNotesEditor(editor, true);
+      let attached = true;
+      return () => {
+        if (!attached) return;
+        attached = false;
+        if (NP.editor !== editor) return;
+        if (previous?.isConnected) previous.textContent = editor.textContent || '';
+        NP.editor = null;
+        NP.reactOwned = false;
+        if (previous?.isConnected) bindNotesEditor(previous, false);
+      };
+    };
     NP.reactRoot = h('div', { class: 'notes-react-root', id: 'react-notes-root' });
     el.appendChild(NP.reactRoot);
-    NP.ed.addEventListener('input', () => {
-      const s = E().slide();
-      if (!s || s.isMaster) return;
-      L.hist.push(L.N('Notes'), 'notes:' + s.id);
-      s.notes = NP.ed.innerText.replace(/\n$/, '');
-      if (!NP.ed.textContent) NP.ed.innerHTML = '';
-    });
-    NP.ed.addEventListener('paste', (e) => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData && e.clipboardData.getData('text/plain')) || ''); });
-    NP.ed.addEventListener('focus', () => { if (L.te.active()) L.te.end(); });
   };
   NP.render = function () {
     if (!NP.ed) return;
     const s = E().slide();
-    NP.ed.contentEditable = s && !s.isMaster ? 'true' : 'false';
+    const editable = s && !s.isMaster ? 'true' : 'false';
+    NP.ed.contentEditable = editable;
     NP.ed.textContent = s && !s.isMaster ? s.notes || '' : '';
+    if (NP.editor && NP.editor !== NP.ed) NP.editor.contentEditable = editable;
     L.bus.emit('pptx-notes-render');
   };
 
   /* ================= Slide Sorter ================= */
   const SO = (P.sorter = { zoom: 0.25, reactMounted: false });
+  SO.surfaceHandlers = null;
+  SO.bindSurface = function (root) {
+    if (!root || !SO.surfaceHandlers) return () => {};
+    const { pointerdown, focus, blur } = SO.surfaceHandlers;
+    root.addEventListener('pointerdown', pointerdown);
+    root.addEventListener('focus', focus);
+    root.addEventListener('blur', blur);
+    return () => {
+      root.removeEventListener('pointerdown', pointerdown);
+      root.removeEventListener('focus', focus);
+      root.removeEventListener('blur', blur);
+    };
+  };
+  SO.attachReactSurface = function (root) {
+    if (!root || root !== SO.el || !SO.surfaceHandlers) return () => {};
+    SO.unbindClassicSurface?.();
+    const { pointerdown, focus, blur } = SO.surfaceHandlers;
+    root.addEventListener('pointerdown', pointerdown);
+    root.addEventListener('focus', focus);
+    root.addEventListener('blur', blur);
+    root.dataset.reactSorterSurface = 'true';
+    let attached = true;
+    return () => {
+      if (!attached) return;
+      attached = false;
+      root.removeEventListener('pointerdown', pointerdown);
+      root.removeEventListener('focus', focus);
+      root.removeEventListener('blur', blur);
+      delete root.dataset.reactSorterSurface;
+      if (SO.el === root && root.isConnected) SO.unbindClassicSurface = SO.bindSurface(root);
+    };
+  };
   SO.mount = function (parent) {
     SO.el = h('div', { class: 'sorter', tabindex: '-1', 'aria-label': 'Slide Sorter' });
     parent.appendChild(SO.el);
-    SO.el.addEventListener('pointerdown', (e) => { if (e.target === SO.el || e.target.classList.contains('sorter-grid')) { L.app.slideSel = new Set([E().idx]); SO.mark(); } });
-    SO.el.addEventListener('focus', () => { L.app.focusArea = 'slides'; });
-    SO.el.addEventListener('blur', () => { L.app.focusArea = null; });
+    SO.surfaceHandlers = {
+      pointerdown(e) { if (e.target === SO.el || e.target?.classList?.contains('sorter-grid')) { L.app.slideSel = new Set([E().idx]); SO.mark(); } },
+      focus() { L.app.focusArea = 'slides'; },
+      blur() { L.app.focusArea = null; },
+    };
+    SO.unbindClassicSurface = SO.bindSurface(SO.el);
   };
   SO.render = function () {
     if (!SO.el) return;
@@ -465,7 +592,7 @@
     } else {
       L.clear(PV.bar);
       const canPrint = window.self === window.top || !!VO.reactDirectHost;
-      if (canPrint) PV.bar.appendChild(ui.button('&Print...', () => { document.body.classList.add('printing'); window.print(); setTimeout(() => document.body.classList.remove('printing'), 500); }));
+      if (canPrint) PV.bar.appendChild(ui.button('&Print...', () => window.print()));
       PV.bar.append(
         h('label', { text: 'Print What:' }),
         ui.select([['slides', 'Slides'], ['handouts', 'Handouts'], ['notes', 'Notes Pages'], ['outline', 'Outline View']], o.what, (v) => { o.what = v; PV.render(); }),
@@ -533,28 +660,31 @@
   const TP = (P.task = { stack: [], pos: -1, registry: {} });
   TP.mount = function (el) {
     TP.el = el;
-    TP.back = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Back', html: L.icons.get('back') });
-    TP.fwd = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Forward', html: L.icons.get('forward') });
-    TP.home = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Home', html: L.icons.get('home') });
-    TP.title = h('div', { class: 'tp-title', role: 'button', tabindex: '0', 'aria-haspopup': 'menu' }, h('span', { text: '' }), h('span', { class: 'dd-arrow' }));
-    const close = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close task pane', html: L.icons.get('close', 12) });
+    const direct = !!window.__VIBE_OFFICE_DIRECT_HOST__;
+    TP.back = direct ? null : h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Back', html: L.icons.get('back') });
+    TP.fwd = direct ? null : h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Forward', html: L.icons.get('forward') });
+    TP.home = direct ? null : h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Home', html: L.icons.get('home') });
+    TP.title = direct ? null : h('div', { class: 'tp-title', role: 'button', tabindex: '0', 'aria-haspopup': 'menu' }, h('span', { text: '' }), h('span', { class: 'dd-arrow' }));
+    const close = direct ? null : h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close task pane', html: L.icons.get('close', 12) });
     TP.body = h('div', { class: 'tp-body' });
-    TP.header = h('div', { class: 'tp-head' }, TP.back, TP.fwd, TP.home, TP.title, close);
+    TP.header = h('div', { class: 'tp-head' }, ...(direct ? [] : [TP.back, TP.fwd, TP.home, TP.title, close]));
     TP.reactRoot = h('div', { class: 'react-task-head-root', id: 'react-task-head-root' });
     el.append(TP.header, TP.reactRoot, TP.body);
-    TP.back.addEventListener('click', () => TP.go(TP.pos - 1));
-    TP.fwd.addEventListener('click', () => TP.go(TP.pos + 1));
-    TP.home.addEventListener('click', () => TP.show('getting-started'));
-    close.addEventListener('click', () => L.app.toggleTask(false));
-    const openList = () => { const r = TP.title.getBoundingClientRect(); ui.openMenu(Object.values(TP.registry).filter((p) => !p.hidden).map((p) => ({ label: p.title, run: () => TP.show(p.id), checked: () => TP.current === p.id })), { left: r.left, bottom: r.bottom }); };
-    TP.title.addEventListener('click', openList);
-    TP.title.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openList(); } });
+    if (!direct) {
+      TP.back.addEventListener('click', () => TP.go(TP.pos - 1));
+      TP.fwd.addEventListener('click', () => TP.go(TP.pos + 1));
+      TP.home.addEventListener('click', () => TP.show('getting-started'));
+      close.addEventListener('click', () => L.app.toggleTask(false));
+      const openList = () => { const r = TP.title.getBoundingClientRect(); ui.openMenu(Object.values(TP.registry).filter((p) => !p.hidden).map((p) => ({ label: p.title, run: () => TP.show(p.id), checked: () => TP.current === p.id })), { left: r.left, bottom: r.bottom }); };
+      TP.title.addEventListener('click', openList);
+      TP.title.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openList(); } });
+    }
     TP.reactBodyRoot = h('div', { class: 'react-task-body-root', id: 'react-task-body-root' });
     el.appendChild(TP.reactBodyRoot);
   };
-  TP.register = (p) => { TP.registry[p.id] = p; };
+  TP.register = (p) => { if (p.id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__) return; TP.registry[p.id] = p; };
   TP.show = function (id) {
-    if (!TP.registry[id]) return;
+    if (!TP.registry[id] || (id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__)) return;
     L.app.toggleTask(true);
     if (TP.stack[TP.pos] !== id) { TP.stack = TP.stack.slice(0, TP.pos + 1); TP.stack.push(id); TP.pos = TP.stack.length - 1; }
     TP.render();
@@ -565,15 +695,17 @@
     TP.current = id;
     const p = TP.registry[id];
     if (!p) return;
-    TP.title.firstChild.textContent = L.t(p.title);
-    TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
+    if (TP.title) TP.title.firstChild.textContent = L.t(p.title);
+    if (TP.back) TP.back.disabled = TP.pos <= 0;
+    if (TP.fwd) TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
     L.clear(TP.body);
-    if (!(L.app.reactMounted && ['getting-started', 'new', 'help'].includes(id))) p.render(TP.body);
+    if (!(L.app.reactMounted && reactTaskPaneIds.has(id))) p.render(TP.body);
     L.bus.emit('pptx-task-render');
   };
   TP.refresh = function (reason) {
     const p = TP.registry[TP.current];
     if (!p || !TP.el || TP.el.hidden) return;
+    if (L.app.reactMounted && reactTaskPaneIds.has(TP.current)) { L.bus.emit('pptx-task-render'); return; }
     if (p.refresh) p.refresh(TP.body, reason);
     else if (p.live) { L.clear(TP.body); p.render(TP.body); }
     L.bus.emit('pptx-task-render');
@@ -592,7 +724,7 @@
       b.append(
         h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: window.VO ? VO.editionName(window.VO.oneDocument ? 'Lectern' : 'PPTX') : 'PPTX', translate: 'no', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', L.N('Open a presentation (.pptx)...'), () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample())),
+        sec(L.N('Open'), link('open', L.N('Open a presentation (.pptx)...'), () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample())),
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => TP.show('help')), link('design', 'Apply a design template', () => TP.show('design')), link('animation', 'Animate your slides', () => TP.show('customAnim'))));
     },
   });

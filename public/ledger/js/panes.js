@@ -11,26 +11,33 @@
 
   /* ================= shell ================= */
   const TP = (P.task = { stack: [], pos: -1, registry: {} });
+  const reactOwnedTaskPanes = new Set(['getting-started', 'new', 'help', 'keys', 'clipboard']);
+  const isReactOwnedTaskPane = (id) => !!window.__VIBE_OFFICE_DIRECT_HOST__ && reactOwnedTaskPanes.has(id);
   TP.mount = function (el) {
     TP.el = el;
-    const nav = (icon, label) => h('button', { class: 'tp-nav', type: 'button', 'aria-label': label, 'data-tip': label, html: L.icons.get(icon) || label[0] });
+    const direct = !!window.__VIBE_OFFICE_DIRECT_HOST__;
+    const nav = (icon, label) => direct ? null : h('button', { class: 'tp-nav', type: 'button', 'aria-label': label, 'data-tip': label, html: L.icons.get(icon) || label[0] });
     TP.back = nav('back', L.N('Back')); TP.fwd = nav('forward', L.N('Forward')); TP.home = nav('home', L.N('Home'));
-    TP.title = h('div', { class: 'tp-title', role: 'button', tabindex: '0', 'aria-haspopup': 'menu' }, h('span', { text: '' }), h('span', { class: 'dd-arrow' }));
-    const close = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close task pane', 'data-tip': 'Close', html: '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="#000" stroke-width="1.6"/></svg>' });
+    TP.title = direct ? null : h('div', { class: 'tp-title', role: 'button', tabindex: '0', 'aria-haspopup': 'menu' }, h('span', { text: '' }), h('span', { class: 'dd-arrow' }));
+    const close = direct ? null : h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close task pane', 'data-tip': 'Close', html: '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="#000" stroke-width="1.6"/></svg>' });
     TP.body = h('div', { class: 'tp-body' });
-    el.append(h('div', { class: 'tp-head' }, TP.back, TP.fwd, TP.home, TP.title, close), TP.body);
-    TP.back.addEventListener('click', () => TP.go(TP.pos - 1));
-    TP.fwd.addEventListener('click', () => TP.go(TP.pos + 1));
-    TP.home.addEventListener('click', () => TP.show('getting-started'));
-    close.addEventListener('click', () => A().toggleTask(false));
-    const openList = () => { const r = TP.title.getBoundingClientRect(); ui.openMenu(Object.values(TP.registry).filter((p) => !p.hidden).map((p) => ({ label: p.title, run: () => TP.show(p.id), checked: () => TP.current === p.id })), { left: r.left, bottom: r.bottom }); };
-    TP.title.addEventListener('click', openList);
-    TP.title.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openList(); } });
+    TP.header = h('div', { class: 'tp-head' });
+    if (!direct) TP.header.append(TP.back, TP.fwd, TP.home, TP.title, close);
+    el.append(TP.header, TP.body);
+    if (!direct) {
+      TP.back.addEventListener('click', () => TP.go(TP.pos - 1));
+      TP.fwd.addEventListener('click', () => TP.go(TP.pos + 1));
+      TP.home.addEventListener('click', () => TP.show('getting-started'));
+      close.addEventListener('click', () => A().toggleTask(false));
+      const openList = () => { const r = TP.title.getBoundingClientRect(); ui.openMenu(Object.values(TP.registry).filter((p) => !p.hidden).map((p) => ({ label: p.title, run: () => TP.show(p.id), checked: () => TP.current === p.id })), { left: r.left, bottom: r.bottom }); };
+      TP.title.addEventListener('click', openList);
+      TP.title.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openList(); } });
+    }
     L.bus.on('clipboard', () => TP.refresh('clip'));
   };
-  TP.register = (p) => { TP.registry[p.id] = p; };
+  TP.register = (p) => { if (p.id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__) return; TP.registry[p.id] = p; };
   TP.show = function (id) {
-    if (!TP.registry[id] || !TP.el) return;
+    if (!TP.registry[id] || !TP.el || (id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__)) return;
     if (TP.el.hidden) A().toggleTask(true);
     if (TP.stack[TP.pos] !== id) { TP.stack = TP.stack.slice(0, TP.pos + 1); TP.stack.push(id); TP.pos = TP.stack.length - 1; }
     TP.render();
@@ -41,15 +48,22 @@
     TP.current = id;
     const p = TP.registry[id];
     if (!p) return;
-    TP.title.firstChild.textContent = L.t(p.title);
-    TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
+    if (TP.title) TP.title.firstChild.textContent = L.t(p.title);
+    if (TP.back) TP.back.disabled = TP.pos <= 0;
+    if (TP.fwd) TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
     TP.body.textContent = '';
-    p.render(TP.body);
+    if (!isReactOwnedTaskPane(id)) p.render(TP.body);
+    L.bus.emit('excelx-task-render', { id, position: TP.pos, length: TP.stack.length });
   };
   TP.refresh = function (reason) {
     const p = TP.registry[TP.current];
     if (!p || !TP.el || TP.el.hidden) return;
+    if (isReactOwnedTaskPane(TP.current)) {
+      L.bus.emit('excelx-task-render', { id: TP.current, position: TP.pos, length: TP.stack.length });
+      return;
+    }
     if (p.live) { TP.body.textContent = ''; p.render(TP.body); }
+    L.bus.emit('excelx-task-render', { id: TP.current, position: TP.pos, length: TP.stack.length });
     void reason;
   };
   const sec = (title, ...kids) => h('div', { class: 'tp-sec' }, title ? h('div', { class: 'tp-h' }, title) : null, ...kids);
@@ -67,7 +81,7 @@
       b.append(
         h('div', { class: 'tp-row tp-brand' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: window.VO ? VO.editionName('Excelx') : 'Excelx', translate: 'no' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new workbook...', () => TP.show('new'))),
+        sec(L.N('Open'), link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new workbook...', () => TP.show('new'))),
         sec(L.N('Learn'), link('help', 'What Excelx can do', () => { P.helpQuery = ''; TP.show('help'); }), link('fx', 'Functions reference', () => L.dlg.insertFunction()), link('help', 'Keyboard shortcuts', () => TP.show('keys'))),
         sec(L.N('Files'), h('div', { class: 'tp-note', text: 'Opens .xlsx, .xlsm, .xltx, .csv, .txt and XML Spreadsheet 2003 files; drop a file anywhere on the window to open it. Saves .xlsx, .xlsm, .xltx, .csv, .txt, .htm, .xml and PDF.' })));
     },
@@ -137,6 +151,7 @@
     [L.N('Alt+Down'), 'Pick from drop-down list'], [L.N('Ctrl+`'), 'Show formulas'], ['F7', L.N('Spelling')], [L.N('Shift+F10'), 'Shortcut menu'], [L.N('Ctrl+F1'), 'Task pane'], ['F1', L.N('Help')], [L.N('Ctrl+Scroll'), L.N('Zoom')],
   ];
   P.KEYS = KEYS;
+  P.reactHelpData = () => ({ topics: HELP, keys: KEYS });
   TP.register({
     id: 'keys', title: 'Keyboard Shortcuts',
     render(b) { b.appendChild(h('table', { class: 'kbd-table' }, ...KEYS.map(([k, d]) => h('tr', null, h('td', { text: k }), h('td', { text: d }))))); },

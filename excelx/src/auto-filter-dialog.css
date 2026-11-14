@@ -1,0 +1,15 @@
+.excelx-auto-filter-dialog__body { display: flex; flex-direction: column; gap: 8px; }
+.excelx-auto-filter-dialog__body strong { font-weight: 600; }
+.excelx-auto-filter-dialog__condition, .excelx-auto-filter-dialog__top10 { display: flex; gap: 8px; align-items: center; }
+.excelx-auto-filter-dialog__condition select { flex: 0 0 48%; }
+.excelx-auto-filter-dialog__condition input { flex: 1; min-width: 0; }
+.excelx-auto-filter-dialog__join { display: flex; gap: 16px; padding-left: 24px; }
+.excelx-auto-filter-dialog__join label { display: flex; align-items: center; gap: 5px; }
+.excelx-auto-filter-dialog__body .hint { white-space: pre-line; margin: 2px 0 0; }
+.excelx-auto-filter-dialog__top10 select:nth-child(1), .excelx-auto-filter-dialog__top10 select:nth-child(3) { flex: 1; min-width: 0; }
+.excelx-auto-filter-dialog__top10 input { width: 64px; }
+.excelx-auto-filter-dialog__actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
+.excelx-auto-filter-list { position: fixed; z-index: 1500; background: var(--surface); color: var(--ink); border: 1px solid var(--ink); box-shadow: 2px 2px 3px var(--shadow-c); max-height: min(260px, calc(100vh - 12px)); overflow: auto; font: 11px Tahoma, var(--ui-font); max-width: min(340px, calc(100vw - 8px)); outline: none; }
+.excelx-auto-filter-list__item { padding: 1px 16px 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+.excelx-auto-filter-list__item.cur { font-weight: bold; }
+.excelx-auto-filter-list__item.act { background: var(--sel); color: var(--sel-ink); }
