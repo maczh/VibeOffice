@@ -1,5 +1,5 @@
 /* PPTX — content templates: ready-made decks for everyday talks, each on one of the design
- * templates (model.js). Used by the Start Center (lectern/?template=<id>); the text on every slide
+ * templates (model.js). Used by the Start Center (pptx/?template=<id>); the text on every slide
  * says what to put there.
  */
 (function () {

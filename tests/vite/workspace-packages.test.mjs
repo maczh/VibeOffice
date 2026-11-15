@@ -11,7 +11,7 @@ import { createDirectEngineBridge, createIndexedDbDraftStore, openLocalDocument,
 import { IDBFactory } from 'fake-indexeddb';
 import { createRemoteFileCallbacks, createUrlReadProvider, createWebDavProvider, remoteConflict } from '@vibeoffice/core';
 import { reactCsp } from '../../tools/vite/react-csp.mjs';
-import { reactTemplates } from '../../tools/vite/legacy-runtime.mjs';
+import { legacyRuntime, reactTemplates } from '../../tools/vite/legacy-runtime.mjs';
 
 const editors = [
   { component: WordxEditor, label: 'Wordx editor', id: 'wordx' },
@@ -67,6 +67,18 @@ test('React packages expose the same-document direct engine mount adapter', () =
   assert.doesNotMatch(frame, /iframe|contentWindow|postMessage/);
   assert.match(runtime, /mountLegacyEngineDocument/);
   assert.doesNotMatch(runtime, /createElement\(['"]iframe/);
+});
+
+test('the Vite host runtime leaves React package source routes to Vite when no legacy asset matches', async () => {
+  let middleware;
+  legacyRuntime(['wordx', 'excelx', 'pptx']).configureServer({ middlewares: { use(handler) { middleware = handler; } } });
+  assert.equal(typeof middleware, 'function');
+  const forwarded = await new Promise((resolve, reject) => middleware(
+    { url: '/wordx/src/index.ts' },
+    { setHeader() {}, end() { reject(new Error('a non-existent legacy asset was served')); } },
+    (error) => error ? reject(error) : resolve(true),
+  ));
+  assert.equal(forwarded, true, 'the React source alias can resolve instead of receiving a legacy-runtime 500');
 });
 
 test('Excelx package stylesheet includes shared and feature-specific React dialog styles', () => {
@@ -301,18 +313,47 @@ test('WebDAV provider limits origin and path, keeps credentials callback-scoped,
 test('remote editor callbacks retain file revision and use conditional save or create', async () => {
   const calls = [];
   const provider = {
-    async read(id) { calls.push(['read', id]); return { file: { id, name: 'a.docx', revision: { value: 'v1', kind: 'etag' } }, blob: new Blob(['opened']) }; },
+    async read(id, signal) { calls.push(['read', id, signal]); return { file: { id, name: 'a.docx', revision: { value: 'v1', kind: 'etag' } }, blob: new Blob(['opened']) }; },
     async save(id, blob, options) { calls.push(['save', id, options]); return { id, name: 'a.docx', revision: { value: 'v2', kind: 'etag' } }; },
-    async create(parentId, name) { calls.push(['create', parentId, name]); return { id: 'created', name }; },
+    async create(parentId, name, _blob, signal) { calls.push(['create', parentId, name, signal]); return { id: 'created', name }; },
   };
-  const callbacks = createRemoteFileCallbacks(provider, async () => ({ id: 'file-1', name: 'a.docx' }), async () => ({ parentId: 'folder', name: 'new.docx' }));
-  const opened = await callbacks.onOpenFile();
+  const abort = new AbortController();
+  const callbacks = createRemoteFileCallbacks(provider,
+    async (signal) => { calls.push(['chooseOpen', signal]); return { id: 'file-1', name: 'a.docx' }; },
+    async (name, signal) => { calls.push(['chooseSave', name, signal]); return { parentId: 'folder', name: 'new.docx' }; });
+  const opened = await callbacks.onOpenFile(abort.signal);
   assert.equal(await opened.file.text(), 'opened');
-  const saved = await callbacks.onSaveFile('a.docx', new Blob(['updated']), opened);
+  const saved = await callbacks.onSaveFile('a.docx', new Blob(['updated']), opened, abort.signal);
   assert.equal(saved.remote.file.revision.value, 'v2');
-  await callbacks.onSaveFile('new.docx', new Blob(['new']));
-  assert.deepEqual(calls.map(([op]) => op), ['read', 'save', 'create']);
-  assert.deepEqual(calls[1][2], { ifRevision: { value: 'v1', kind: 'etag' } });
+  await callbacks.onSaveFile('new.docx', new Blob(['new']), opened, abort.signal, { saveAs: true });
+  assert.deepEqual(calls.map(([op]) => op), ['chooseOpen', 'read', 'save', 'chooseSave', 'create']);
+  assert.equal(calls[0][1], abort.signal);
+  assert.equal(calls[1][2], abort.signal);
+  assert.deepEqual(calls[2][2], { ifRevision: { value: 'v1', kind: 'etag' }, signal: abort.signal });
+  assert.equal(calls[3][1], 'new.docx');
+  assert.equal(calls[3][2], abort.signal);
+  assert.equal(calls[4][3], abort.signal);
+});
+
+test('remote Save As can explicitly update a selected destination revision', async () => {
+  const calls = [];
+  const destinationRevision = { value: 'v9', kind: 'custom' };
+  const provider = {
+    async read(id) { return { file: { id, name: 'source.docx', revision: { value: 'v1', kind: 'etag' } }, blob: new Blob(['source']) }; },
+    async save(id, _blob, options) { calls.push(['save', id, options]); return { id, name: 'existing.docx' }; },
+  };
+  const callbacks = createRemoteFileCallbacks(provider, async () => ({ id: 'source', name: 'source.docx' }), async () => ({ id: 'existing', name: 'existing.docx', revision: destinationRevision }));
+  const opened = await callbacks.onOpenFile();
+  const saved = await callbacks.onSaveFile('copy.docx', new Blob(['copy']), opened, undefined, { saveAs: true });
+  assert.equal(saved.remote.file.id, 'existing');
+  assert.deepEqual(calls, [['save', 'existing', { ifRevision: destinationRevision }]]);
+});
+
+test('remote editor callbacks stop after abort and pass cancellation into pickers and providers', async () => {
+  const abort = new AbortController();
+  const provider = { async read(_id, signal) { abort.abort(); assert.equal(signal, abort.signal); return { file: { id: 'file', name: 'a.docx' }, blob: new Blob(['late']) }; } };
+  const callbacks = createRemoteFileCallbacks(provider, async (signal) => { assert.equal(signal, abort.signal); return { id: 'file', name: 'a.docx' }; });
+  assert.equal(await callbacks.onOpenFile(abort.signal), null);
 });
 
 test('suite CSP only adds explicitly configured remote origins', () => {

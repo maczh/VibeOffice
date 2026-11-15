@@ -57,7 +57,7 @@ async function exercise(o) {
     document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', code: 'KeyC', ctrlKey: true, bubbles: true }));
     const event = new ClipboardEvent('copy', { clipboardData: new DataTransfer(), bubbles: true, cancelable: true });
     document.body.dispatchEvent(event);
-    const text = event.clipboardData.getData('application/x-lectern');
+    const text = event.clipboardData.getData('application/x-pptx');
     if (!text.startsWith('{')) throw new Error('The native copy event did not carry the dependency bundle');
     return { status: 'ok', packet: JSON.parse(text), sourcePart: slide.keep.part, shapeId: shape.keep.identity.ids.find(i => i.kind === 'shape').id };
   }
@@ -87,7 +87,7 @@ async function paste(packet) {
   const L = window.L;
   L.app.loadPres(L.model.newPresentation(), 'Pasted media', { saved: true });
   const event = new ClipboardEvent('paste', { clipboardData: new DataTransfer(), bubbles: true, cancelable: true });
-  event.clipboardData.setData('application/x-lectern', JSON.stringify(packet)); document.body.dispatchEvent(event);
+  event.clipboardData.setData('application/x-pptx', JSON.stringify(packet)); document.body.dispatchEvent(event);
   let count = 0; for (const slide of L.pres.slides) L.model.walk(slide.shapes, shape => { if (shape.keep?.media) count++; return true; });
   if (count !== 1) throw new Error('Paste did not import the media object');
   const bytes = new Uint8Array(await (await L.pptx.write(L.pres)).arrayBuffer()); let data = '';

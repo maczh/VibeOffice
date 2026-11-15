@@ -51,8 +51,25 @@
       pointerdown: onPointerDown, pointermove: (event) => E._ffMove?.(event), dblclick: onDbl, contextmenu: onContext, wheel: onWheel,
       emptyClick: () => L.ui.exec('newSlide'),
       guidePointerDown: (event) => {
+        if (event.button !== 0) return null;
         const guide = event.target && event.target.closest && event.target.closest('.guide');
-        if (guide && E.gridEl.contains(guide)) dragGuide(event, guide.classList.contains('gv') ? 'x' : 'y');
+        if (!guide || !E.gridEl.contains(guide)) return null;
+        event.stopPropagation(); event.preventDefault();
+        const axis = guide.classList.contains('gv') ? 'x' : 'y';
+        const was = axis === 'x' ? E.grid.gx : E.grid.gy;
+        const tip = h('div', { class: 'guide-tip' });
+        const put = (value) => { if (axis === 'x') { E.grid.gx = value; guide.style.left = value * E.scale + 'px'; } else { E.grid.gy = value; guide.style.top = value * E.scale + 'px'; } };
+        return {
+          move(pointer) {
+            const point = E.toSlide(pointer.clientX, pointer.clientY);
+            const value = L.clamp(axis === 'x' ? point.x : point.y, 0, axis === 'x' ? L.pres.W : L.pres.H);
+            if (!tip.isConnected) E.gridEl.appendChild(tip);
+            put(value);
+            if (axis === 'x') { tip.style.cssText = `left:${value * E.scale + 6}px;top:6px`; tip.textContent = L.round(Math.abs(value - L.pres.W / 2) / 72, 2) + '"'; }
+            else { tip.style.cssText = `left:6px;top:${value * E.scale + 6}px`; tip.textContent = L.round(Math.abs(value - L.pres.H / 2) / 72, 2) + '"'; }
+          },
+          finish(cancel) { tip.remove(); if (cancel && was != null) put(was); },
+        };
       },
     } : null;
     if (!E.reactEvents) {
@@ -63,6 +80,7 @@
       E.scroller.addEventListener('wheel', onWheel, { passive: false });
     }
     container.dispatchEvent(new CustomEvent('vibeoffice-pptx-editor-surface-mounted', { bubbles: true }));
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) return;
     if (window.ResizeObserver) {
       const observer = new ResizeObserver(() => E.layout());
       observer.observe(E.scroller);
@@ -101,6 +119,7 @@
     E.drawOverlay();
     L.bus.emit('zoom');
   };
+  E.reactLayout = () => E.layout();
   E.setZoom = function (z) {
     if (z === 'fit') E.zoom = 'fit';
     else E.zoom = L.clamp(z, 0.1, 4);

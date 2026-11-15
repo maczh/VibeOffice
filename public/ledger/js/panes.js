@@ -81,7 +81,7 @@
       b.append(
         h('div', { class: 'tp-row tp-brand' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: window.VO ? VO.editionName('Excelx') : 'Excelx', translate: 'no' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec(L.N('Open'), link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new workbook...', () => TP.show('new'))),
+        sec(L.N('Open'), link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new workbook...', () => TP.show('new')), ...(window.VO?.host.kind === 'desktop' ? [VO.recentLinks(4)] : [])),
         sec(L.N('Learn'), link('help', 'What Excelx can do', () => { P.helpQuery = ''; TP.show('help'); }), link('fx', 'Functions reference', () => L.dlg.insertFunction()), link('help', 'Keyboard shortcuts', () => TP.show('keys'))),
         sec(L.N('Files'), h('div', { class: 'tp-note', text: 'Opens .xlsx, .xlsm, .xltx, .csv, .txt and XML Spreadsheet 2003 files; drop a file anywhere on the window to open it. Saves .xlsx, .xlsm, .xltx, .csv, .txt, .htm, .xml and PDF.' })));
     },
@@ -380,7 +380,7 @@
   P.newFromTemplate = function (k) {
     const t = TPL[k];
     if (!t) return;
-    if (window.VO && VO.oneDocument) return VO.go(VO.url('ledger', { template: k })).catch((e) => A().error(e));   // a window of its own
+    if (window.VO && VO.oneDocument) return VO.go(VO.url(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'excelx' : 'ledger', { template: k })).catch((e) => A().error(e));   // a window of its own
     const wb = build(t.spec());
     if (L.cf && L.cf.reset) L.cf.reset();
     A().prepare(wb);

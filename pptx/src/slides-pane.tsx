@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 
 interface SlideLike { id?: string; hidden?: boolean; trans?: { type?: string; after?: number }; anims?: unknown[] }
 interface PptxPaneRuntime {
   pres?: { slides: SlideLike[]; firstNum?: number };
-  ed?: { idx: number; view: string; masterKind?: string };
-  app?: { slideSel: Set<number>; focusArea?: string | null; reactMounted?: boolean; opts?: { outlinePlain?: boolean; spell?: boolean }; contextThumb(event: MouseEvent): void; setView(view: string): void; toggleLeft(show: boolean): void; toggleTask(show: boolean): void };
+  ed?: { idx: number; view: string; masterKind?: string; editing?(): boolean; goto?(index: number): void };
+  te?: { end?(): void };
+  app?: { slideSel: Set<number>; focusArea?: string | null; reactMounted?: boolean; opts?: { outlinePlain?: boolean; spell?: boolean }; contextThumb(event: MouseEvent): void; moveSlides?(indices: number[], target: number): void; setView(view: string): void; toggleLeft(show: boolean): void; toggleTask(show: boolean): void };
   render?: { thumb(presentation: NonNullable<PptxPaneRuntime['pres']>, slide: SlideLike, width: number, options: { index: number }): HTMLElement };
   panes?: {
-    left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; outline?: HTMLElement | null; setTab(tab: string): void; render?(): void; reactOutlineRows?(): Array<{ kind: string; slideId?: string; level: number; text: string }>; reactMasterCatalog?(): Array<{ kind: string; label: string; preview: string; selected: boolean }> | null; reactSelectMaster?(kind: string): void; onOutlineInput?(): void; onOutlinePaste?(event: ClipboardEvent): void; onOutlineKey?(event: KeyboardEvent): void; syncOutlineSlide?(): void; styleOutline?(): void; commitOutline?(keepFocus?: boolean): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
-    sorter?: { el?: HTMLElement; reactMounted?: boolean; attachReactSurface?(root: HTMLElement): () => void; onDown?(event: PointerEvent, index: number, item: HTMLElement): void; mark(): void };
+    left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; outline?: HTMLElement | null; setTab(tab: string): void; render?(): void; reactOutlineRows?(): Array<{ kind: string; slideId?: string; level: number; text: string }>; reactMasterCatalog?(): Array<{ kind: string; label: string; preview: string; selected: boolean }> | null; reactSelectMaster?(kind: string): void; reactSelectThumb?(event: PointerEvent, index: number): boolean | undefined; onOutlineInput?(): void; onOutlinePaste?(event: ClipboardEvent): void; onOutlineKey?(event: KeyboardEvent): void; syncOutlineSlide?(): void; styleOutline?(): void; commitOutline?(keepFocus?: boolean): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
+    sorter?: { el?: HTMLElement; reactMounted?: boolean; attachReactSurface?(root: HTMLElement): () => void; reactSelectThumb?(event: PointerEvent, index: number): boolean | undefined; onDown?(event: PointerEvent, index: number, item: HTMLElement): void; mark(): void };
     task?: { stack: string[]; pos: number; current?: string; registry: Record<string, { id: string; title: string; hidden?: boolean }>; show(id: string): void; go(position: number): void };
   };
   ui?: { openMenu(items: Array<{ label: string; run(): void; checked(): boolean }>, position: { left: number; bottom: number }): void };
@@ -22,7 +23,7 @@ interface PptxPaneRuntime {
 
 function runtime(): PptxPaneRuntime | undefined { return (window as Window & { L?: PptxPaneRuntime }).L; }
 
-/** React-owned slide thumbnail list. The document engine still supplies rendered slide artwork and editing commands. */
+/** React-owned slide thumbnails and selection/reorder gestures; the document engine supplies artwork and mutation commands. */
 export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [tabsMount, setTabsMount] = useState<HTMLElement | null>(null);
@@ -30,6 +31,8 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const [sorterMount, setSorterMount] = useState<HTMLElement | null>(null);
   const [revision, setRevision] = useState(0);
   const outlineMutated = useRef(false);
+  const slideDrag = useRef<{ pointerId: number; startX: number; startY: number; dragging: boolean; target: number | null; line: HTMLElement | null; body: HTMLElement; list: HTMLElement; indices: number[] } | null>(null);
+  const sorterDrag = useRef<{ pointerId: number; startX: number; startY: number; dragging: boolean; target: number | null; marker: HTMLElement | null; root: HTMLElement; indices: number[] } | null>(null);
   useEffect(() => {
     let slot: HTMLElement | null = null;
     let tabsSlot: HTMLElement | null = null;
@@ -45,6 +48,100 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     let subscribed = false;
     const onLeftFocus = () => { const app = runtime()?.app; if (app) app.focusArea = 'slides'; };
     const onLeftBlur = () => { const app = runtime()?.app; if (app) app.focusArea = null; };
+    const clearSlideDrag = (commit: boolean) => {
+      const drag = slideDrag.current;
+      if (!drag) return;
+      slideDrag.current = null;
+      drag.line?.remove();
+      if (commit && drag.dragging && drag.target != null) runtime()?.app?.moveSlides?.(drag.indices, drag.target);
+    };
+    const clearSorterDrag = (commit: boolean) => {
+      const drag = sorterDrag.current;
+      if (!drag) return;
+      sorterDrag.current = null;
+      drag.marker?.remove();
+      if (commit && drag.dragging && drag.target != null) runtime()?.app?.moveSlides?.(drag.indices, drag.target);
+    };
+    const updateSlideDrag = (event: PointerEvent) => {
+      const drag = slideDrag.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
+      drag.dragging = true;
+      if (!drag.line) {
+        drag.line = document.createElement('div');
+        drag.line.className = 'drop-line';
+        drag.body.appendChild(drag.line);
+      }
+      const bounds = drag.body.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right) {
+        drag.line.style.display = 'none';
+        drag.target = null;
+        return;
+      }
+      drag.line.style.display = '';
+      const items = [...drag.list.querySelectorAll<HTMLElement>('.th')];
+      drag.target = items.length;
+      for (let index = 0; index < items.length; index++) {
+        const item = items[index];
+        if (!item) continue;
+        const rect = item.getBoundingClientRect();
+        if (event.clientY < rect.top + rect.height / 2) { drag.target = index; break; }
+      }
+      const reference = items[drag.target] || items[items.length - 1];
+      if (reference) {
+        const rect = reference.getBoundingClientRect();
+        drag.line.style.top = `${(drag.target < items.length ? rect.top - 5 : rect.bottom + 4) - bounds.top + drag.body.scrollTop}px`;
+      }
+      if (event.clientY < bounds.top + 20) drag.body.scrollTop -= 8;
+      else if (event.clientY > bounds.bottom - 20) drag.body.scrollTop += 8;
+    };
+    const updateSorterDrag = (event: PointerEvent) => {
+      const drag = sorterDrag.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
+      drag.dragging = true;
+      if (!drag.marker) {
+        drag.marker = document.createElement('div');
+        Object.assign(drag.marker.style, { position: 'absolute', width: '3px', background: '#000', pointerEvents: 'none', zIndex: '5' });
+        drag.root.appendChild(drag.marker);
+      }
+      const items = [...drag.root.querySelectorAll<HTMLElement>('.so-it')];
+      drag.target = items.length;
+      let reference: HTMLElement | undefined;
+      let before = true;
+      for (let index = 0; index < items.length; index++) {
+        const item = items[index];
+        if (!item) continue;
+        const rect = item.getBoundingClientRect();
+        if (event.clientY >= rect.top - 12 && event.clientY <= rect.bottom + 12 && event.clientX < rect.left + rect.width / 2) { drag.target = index; reference = item; before = true; break; }
+        if (event.clientY >= rect.top - 12 && event.clientY <= rect.bottom + 12) { reference = item; before = false; drag.target = index + 1; }
+      }
+      if (!reference) return;
+      const bounds = drag.root.getBoundingClientRect();
+      const rect = reference.getBoundingClientRect();
+      drag.marker.style.left = `${(before ? rect.left - 12 : rect.right + 10) - bounds.left + drag.root.scrollLeft}px`;
+      drag.marker.style.top = `${rect.top - bounds.top + drag.root.scrollTop}px`;
+      drag.marker.style.height = `${rect.height}px`;
+    };
+    const onPointerMove = (event: PointerEvent) => { updateSlideDrag(event); updateSorterDrag(event); };
+    const onPointerUp = (event: PointerEvent) => {
+      if (slideDrag.current?.pointerId === event.pointerId) { updateSlideDrag(event); clearSlideDrag(true); }
+      if (sorterDrag.current?.pointerId === event.pointerId) { updateSorterDrag(event); clearSorterDrag(true); }
+    };
+    const onPointerCancel = (event: PointerEvent) => {
+      if (slideDrag.current?.pointerId === event.pointerId) clearSlideDrag(false);
+      if (sorterDrag.current?.pointerId === event.pointerId) clearSorterDrag(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') { clearSlideDrag(false); clearSorterDrag(false); } };
+    const onOtherPointerDown = (event: PointerEvent) => {
+      if (slideDrag.current && event.pointerId !== slideDrag.current.pointerId) clearSlideDrag(false);
+      if (sorterDrag.current && event.pointerId !== sorterDrag.current.pointerId) clearSorterDrag(false);
+    };
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerCancel);
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('pointerdown', onOtherPointerDown);
     const attach = () => {
       const target = host.querySelector<HTMLElement>('#react-slides-root');
       const tabsTarget = host.querySelector<HTMLElement>('#react-slides-tabs-root');
@@ -106,6 +203,13 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     attach();
     return () => {
       observer.disconnect(); offRender?.(); offMark?.(); offTask?.(); offSorterRender?.(); offSorterMark?.();
+      clearSlideDrag(false);
+      clearSorterDrag(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('pointerdown', onOtherPointerDown);
       sorterSurfaceCleanup?.();
       sorterSurfaceCleanup = undefined;
       leftBody?.removeEventListener('focus', onLeftFocus, true);
@@ -131,6 +235,36 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const slides = presentation?.slides;
   void revision;
   if (!L || !pane) return null;
+  const selectFromKeyboard = (index: number, event: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }, inSorter: boolean) => {
+    if (!L.app || !L.ed) return;
+    L.app.focusArea = 'slides';
+    if (event.shiftKey) {
+      const start = Math.min(L.ed.idx, index), end = Math.max(L.ed.idx, index);
+      L.app.slideSel = new Set(Array.from({ length: end - start + 1 }, (_unused, offset) => start + offset));
+    } else if (event.ctrlKey || event.metaKey) {
+      const selected = new Set(L.app.slideSel);
+      if (selected.has(index) && selected.size > 1) selected.delete(index); else selected.add(index);
+      L.app.slideSel = selected;
+    } else {
+      L.app.slideSel = new Set([index]);
+      if (inSorter) L.ed.idx = index;
+      else if (L.ed.idx !== index || L.ed.view !== 'normal') L.ed.goto?.(index);
+    }
+    L.bus?.emit(inSorter ? 'pptx-sorter-mark' : 'pptx-slides-mark');
+  };
+  const selectPaneTab = (tab: 'outline' | 'slides') => {
+    if (tab === 'outline' && pane.tab !== 'outline') outlineMutated.current = false;
+    if (tab === 'slides') outlineMutated.current = false;
+    pane.setTab(tab);
+  };
+  const paneTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, current: 'outline' | 'slides') => {
+    const destination = event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === 'End' ? 'slides'
+      : event.key === 'ArrowLeft' || event.key === 'ArrowUp' || event.key === 'Home' ? 'outline' : null;
+    if (!destination) return;
+    event.preventDefault(); event.stopPropagation();
+    selectPaneTab(destination);
+    requestAnimationFrame(() => tabsMount?.querySelector<HTMLButtonElement>(`[data-pane-tab="${destination}"]`)?.focus());
+  };
   const taskId = task ? task.stack[task.pos] : undefined;
   const taskTitle = taskId ? task?.registry[taskId]?.title : undefined;
   const taskHeader = taskMount && task && createPortal(<div className="tp-head">
@@ -144,8 +278,8 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     <button className="tp-nav" type="button" aria-label={L.t?.('Close task pane') || 'Close task pane'} dangerouslySetInnerHTML={{ __html: L.icons?.get('close', 12) || '' }} onClick={() => L.app?.toggleTask(false)} />
   </div>, taskMount);
   const tabs = tabsMount && createPortal(<div className="lp-tabs" role="tablist" aria-label="Presentation panes">
-    <button className={`lp-tab${pane.tab === 'outline' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'outline'} onClick={() => { if (pane.tab !== 'outline') outlineMutated.current = false; pane.setTab('outline'); }}>{L.t?.('Outline|pane') || 'Outline'}</button>
-    <button className={`lp-tab${pane.tab === 'slides' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'slides'} onClick={() => { outlineMutated.current = false; pane.setTab('slides'); }}>{L.t?.('Slides') || 'Slides'}</button>
+    <button className={`lp-tab${pane.tab === 'outline' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'outline'} tabIndex={pane.tab === 'outline' ? 0 : -1} data-pane-tab="outline" onKeyDown={(event) => paneTabKeyDown(event, 'outline')} onClick={() => selectPaneTab('outline')}>{L.t?.('Outline|pane') || 'Outline'}</button>
+    <button className={`lp-tab${pane.tab === 'slides' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'slides'} tabIndex={pane.tab === 'slides' ? 0 : -1} data-pane-tab="slides" onKeyDown={(event) => paneTabKeyDown(event, 'slides')} onClick={() => selectPaneTab('slides')}>{L.t?.('Slides') || 'Slides'}</button>
     <button className="lp-close" type="button" aria-label={L.t?.('Close pane') || 'Close pane'} dangerouslySetInnerHTML={{ __html: L.icons?.get('close', 12) || '' }} onClick={() => L.app?.toggleLeft(false)} />
   </div>, tabsMount);
   const renderSlide = L.render?.thumb;
@@ -153,8 +287,12 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     {slides.map((slide, index) => {
       const width = Math.max(90, Math.round(sorterMount.clientWidth ? Math.min(260, (sorterMount.clientWidth - 60) / 4) : 180));
       const markup = renderSlide(presentation, slide, width, { index }).outerHTML;
-      return <div className={`so-it${L.app?.slideSel?.has(index) ? ' sel' : ''}${slide.hidden ? ' hiddenslide' : ''}`} data-i={index} key={slide.id || index} role="option" aria-selected={L.app?.slideSel?.has(index) || false} onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => sorter.onDown?.(event.nativeEvent, index, event.currentTarget)} onDoubleClick={() => { if (L.ed) L.ed.idx = index; L.app?.setView('normal'); }} onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => { event.preventDefault(); if (!L.app?.slideSel.has(index)) { if (L.app) L.app.slideSel = new Set([index]); if (L.ed) L.ed.idx = index; sorter.mark(); } L.app?.contextThumb(event.nativeEvent); }}>
-        <button className="so-frame" type="button" aria-label={L.t?.('Slide {0}', index + 1) || `Slide ${index + 1}`} dangerouslySetInnerHTML={{ __html: markup }} />
+      return <div className={`so-it${L.app?.slideSel?.has(index) ? ' sel' : ''}${slide.hidden ? ' hiddenslide' : ''}`} data-i={index} key={slide.id || index} role="option" aria-selected={L.app?.slideSel?.has(index) || false} onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => {
+        const handled = sorter.reactSelectThumb?.(event.nativeEvent, index);
+        if (!handled || !sorterMount || !L.app) return;
+        sorterDrag.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, dragging: false, target: null, marker: null, root: sorterMount, indices: [...L.app.slideSel].sort((a, b) => a - b) };
+      }} onDoubleClick={() => { if (L.ed) L.ed.idx = index; L.app?.setView('normal'); }} onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => { event.preventDefault(); if (!L.app?.slideSel.has(index)) { if (L.app) L.app.slideSel = new Set([index]); if (L.ed) L.ed.idx = index; sorter.mark(); } L.app?.contextThumb(event.nativeEvent); }}>
+        <button className="so-frame" type="button" aria-label={L.t?.('Slide {0}', index + 1) || `Slide ${index + 1}`} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); selectFromKeyboard(index, event, true); } }} onClick={(event) => { if (event.detail === 0) selectFromKeyboard(index, event, true); }} dangerouslySetInnerHTML={{ __html: markup }} />
         <div className="so-foot">{slide.trans?.type && slide.trans.type !== 'none' && <button type="button" className="th-star" title={L.anim?.transName(slide.trans)} aria-label={L.t?.('Preview transition') || 'Preview transition'} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); const frame = event.currentTarget.closest('.so-it')?.querySelector('.so-frame') || null; L.show?.previewTransition(frame, presentation, slide, slides[index - 1]); }}><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .8l1.5 3.2 3.4.4-2.5 2.3.7 3.4L6 8.4 2.9 10.1l.7-3.4L1.1 4.4l3.4-.4z" fill="none" stroke="#333" /></svg></button>}{slide.trans?.after != null && <span>{formatTransitionDelay(slide.trans.after)}</span>}<span className={`so-num${slide.hidden ? ' hid' : ''}`}>{String(index + (presentation.firstNum || 1))}</span></div>
       </div>;
     })}
@@ -187,9 +325,13 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       const selected = L.app?.slideSel?.has(index) || false;
       const current = L.ed?.idx === index;
       const hasAnimation = (slide.trans?.type && slide.trans.type !== 'none') || !!slide.anims?.length;
-      return <div className={`th${current ? ' cur' : ''}${selected ? ' sel' : ''}${slide.hidden ? ' hiddenslide' : ''}`} data-i={index} key={slide.id || index} role="option" aria-selected={current} onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => pane.onThumbDown?.(event.nativeEvent, index)} onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => pane.onThumbContext?.(event.nativeEvent, index)} onDoubleClick={() => pane.onThumbDoubleClick?.()}>
+      return <div className={`th${current ? ' cur' : ''}${selected ? ' sel' : ''}${slide.hidden ? ' hiddenslide' : ''}`} data-i={index} key={slide.id || index} role="option" aria-selected={current} onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => {
+        const handled = pane.reactSelectThumb?.(event.nativeEvent, index);
+        if (!handled || !pane.body || !pane.list || !L.app) return;
+        slideDrag.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, dragging: false, target: null, line: null, body: pane.body, list: pane.list, indices: [...L.app.slideSel].sort((a, b) => a - b) };
+      }} onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => pane.onThumbContext?.(event.nativeEvent, index)} onDoubleClick={() => pane.onThumbDoubleClick?.()}>
         <div className="th-meta"><span className="th-num">{String(index + (presentation.firstNum || 1))}</span>{hasAnimation && <button type="button" className="th-star" data-tip="Play animations" aria-label="Play animations" onClick={(event) => { event.stopPropagation(); const frame = event.currentTarget.closest('.th')?.querySelector('.th-frame') || null; L.show?.previewTransition(frame, presentation, slide, slides[index - 1]); }}><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .8l1.5 3.2 3.4.4-2.5 2.3.7 3.4L6 8.4 2.9 10.1l.7-3.4L1.1 4.4l3.4-.4z" fill="none" stroke="#333" /></svg></button>}</div>
-        <button className="th-frame" type="button" aria-label={L.t?.('Slide {0}', index + 1) || `Slide ${index + 1}`} dangerouslySetInnerHTML={{ __html: markup }} />
+        <button className="th-frame" type="button" aria-label={L.t?.('Slide {0}', index + 1) || `Slide ${index + 1}`} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); selectFromKeyboard(index, event, false); } }} onClick={(event) => { if (event.detail === 0) selectFromKeyboard(index, event, false); }} dangerouslySetInnerHTML={{ __html: markup }} />
       </div>;
     })}
   </div>, mount)}</>;

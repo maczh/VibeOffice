@@ -169,7 +169,7 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .kbd-table { width: 100%; border-collapse: collapse; }
 .kbd-table td { padding: 2px 3px; border-bottom: 1px solid var(--row-line); vertical-align: top; }
 .kbd-table td:first-child { white-space: nowrap; font-weight: bold; color: var(--ink-key); }
-.search-hit { background: var(--surface); border: 1px solid var(--card-line); padding: 4px 6px; margin-bottom: 4px; cursor: pointer; line-height: 1.35; }
+.search-hit { display: block; width: 100%; background: var(--surface); border: 1px solid var(--card-line); padding: 4px 6px; margin-bottom: 4px; color: inherit; font: inherit; text-align: left; cursor: pointer; line-height: 1.35; }
 .search-hit:hover { border-color: var(--hot-border); background: var(--menu-hot); }
 .search-hit b { background: var(--find-hit); font-weight: normal; }
 

@@ -44,22 +44,26 @@
 
   /* ------------------------------------------------------------ apps */
   VO.APPS = {
-    quire: { name: 'Quire', kind: 'Document', ext: ['docx', 'docm', 'dotx', 'dotm', 'doc', 'rtf', 'htm', 'html', 'txt', 'md', 'markdown', 'zip'] },
-    ledger: { name: 'Ledger', kind: 'Spreadsheet', ext: ['xlsx', 'xlsm', 'xltx', 'xltm', 'xls', 'csv', 'tsv', 'prn', 'xml'] },
-    lectern: { name: 'Lectern', kind: 'Presentation', ext: ['pptx', 'pptm', 'ppsx', 'ppsm', 'potx', 'potm', 'ppt'] },
+    quire: { name: 'Wordx', kind: 'Document', ext: ['docx', 'docm', 'dotx', 'dotm', 'doc', 'rtf', 'htm', 'html', 'txt', 'md', 'markdown', 'zip'] },
+    ledger: { name: 'Excelx', kind: 'Spreadsheet', ext: ['xlsx', 'xlsm', 'xltx', 'xltm', 'xls', 'csv', 'tsv', 'prn', 'xml'] },
+    lectern: { name: 'PPTX', kind: 'Presentation', ext: ['pptx', 'pptm', 'ppsx', 'ppsm', 'potx', 'potm', 'ppt'] },
   };
+  const reactAppIds = { quire: 'wordx', ledger: 'excelx', lectern: 'pptx' };
+  for (const [legacy, id] of Object.entries(reactAppIds)) Object.defineProperty(VO.APPS, id, { value: VO.APPS[legacy], enumerable: false });
   VO.ext = (name) => (/\.([^./\\]+)$/.exec(name || '') || ['', ''])[1].toLowerCase();
   /** the app for a file name, or null */
-  VO.appFor = (name) => { const e = VO.ext(name); return Object.keys(VO.APPS).find((a) => VO.APPS[a].ext.includes(e)) || null; };
+  VO.appFor = (name) => { const e = VO.ext(name), app = Object.keys(VO.APPS).find((a) => VO.APPS[a].ext.includes(e)) || null; return reactHost && app ? reactAppIds[app] || app : app; };
   VO.accept = () => Object.values(VO.APPS).flatMap((a) => a.ext.map((e) => '.' + e)).join(',');
-  /** VO.url('quire', { new: true }) -> .../quire/?new */
+  /** React hosts use package routes; classic and desktop pages retain their established paths. */
   VO.url = (app, params) => {
+    if (reactHost) app = reactAppIds[app] || app;
     const qs = Object.keys(params || {}).map((k) => (params[k] === true ? k : k + '=' + encodeURIComponent(params[k]))).join('&');
     return new URL(app + '/', BASE).href + (qs ? '?' + qs : '');
   };
 
   /** the page's icon (browser tab) from an inline <svg> */
   VO.setIcon = (svg) => {
+    if (reactHost) return;   // an embedded editor must not replace its host application's favicon
     if (!/xmlns=/.test(svg)) svg = svg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
     let link = document.querySelector('link[rel="icon"]');
     if (!link) link = document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'icon' }));
@@ -521,6 +525,7 @@
    *  pristine() -> whether the document is an untouched blank (a file opened goes into this window, else into a
    *  new one), close() -> false when the user cancels closing (the "Save changes?" question) */
   VO.attach = async (app, hooks) => {
+    if (reactHost) app = reactAppIds[app] || app;
     current = { app, hooks: hooks || {} };
     if (!native && !reactHost) VO.recent.refresh();
     readWindows();
@@ -635,6 +640,7 @@
   /** File ▸ New… inside an app: Blank and the app's templates with their previews (the Start Center's
    *  Create File gallery, common/templates.json), in the app's own dialog. create(id): id '' is Blank. */
   VO.newDialog = async (app, create) => {
+    if (reactHost) app = reactAppIds[app] || app;
     const ui = window.L && window.L.ui;
     /* the desktop app: a new document in a window of its own */
     const pick = (id) => (native ? VO.go(VO.url(app, id ? { template: id } : { new: true })).catch(say) : create(id));
@@ -642,17 +648,20 @@
     let list = null;
     try { list = (await (await fetch(BASE + 'common/templates.json')).json())[app]; } catch (e) { console.warn('templates:', e); }
     if (!list || !list.length) list = [{ id: '', name: 'Blank', img: null }];
-    if (!document.getElementById('vo-gallery-css')) {
+    const editorRoot = reactHost && directHost && directHost.root && directHost.root.isConnected ? directHost.root : null;
+    const styleHost = editorRoot || document.head;
+    if (!styleHost.querySelector('#vo-gallery-css')) {
       const st = document.createElement('style');
       st.id = 'vo-gallery-css';
-      st.textContent = '.vo-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;max-height:min(62vh,540px);overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--field-border)}'
-        + '.vo-tpl{display:flex;flex-direction:column;gap:4px;padding:5px;border:1px solid transparent;border-radius:2px;background:none;text-align:left;cursor:default;font:inherit;color:var(--ink)}'
-        + '.vo-tpl:hover,.vo-tpl:focus-visible{background:var(--menu-hot);border-color:var(--card-hot-border);outline:none}'
-        + '.vo-tpl span{display:flex;align-items:center;justify-content:center;height:112px;background:var(--card-thumb-bg);border:1px solid var(--card-thumb-line);overflow:hidden}'
-        + '.vo-tpl img{max-width:100%;max-height:100%;box-shadow:0 1px 2px var(--tip-shadow-c)}'
-        + '.vo-tpl b{font-weight:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
-        + '.vo-gal-note{margin:0 0 6px}';
-      document.head.appendChild(st);
+      const scope = editorRoot ? '.vibeoffice-legacy-root[data-vibeoffice-engine-root] ' : '';
+      st.textContent = `${scope}.vo-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;max-height:min(62vh,540px);overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--field-border)}`
+        + `${scope}.vo-tpl{display:flex;flex-direction:column;gap:4px;padding:5px;border:1px solid transparent;border-radius:2px;background:none;text-align:left;cursor:default;font:inherit;color:var(--ink)}`
+        + `${scope}.vo-tpl:hover,${scope}.vo-tpl:focus-visible{background:var(--menu-hot);border-color:var(--card-hot-border);outline:none}`
+        + `${scope}.vo-tpl span{display:flex;align-items:center;justify-content:center;height:112px;background:var(--card-thumb-bg);border:1px solid var(--card-thumb-line);overflow:hidden}`
+        + `${scope}.vo-tpl img{max-width:100%;max-height:100%;box-shadow:0 1px 2px var(--tip-shadow-c)}`
+        + `${scope}.vo-tpl b{font-weight:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}`
+        + `${scope}.vo-gal-note{margin:0 0 6px}`;
+      styleHost.appendChild(st);
     }
     const gal = document.createElement('div');
     gal.className = 'vo-gal';
@@ -673,7 +682,7 @@
     note.className = 'vo-gal-note';
     note.textContent = VO.t('Choose Blank or a template:');
     body.append(note, gal);
-    d = ui.dialog({ title: VO.t({ quire: 'New Document', ledger: 'New Spreadsheet', lectern: 'New Presentation' }[app]), width: 700, body, buttons: [{ label: 'Cancel', cancel: true }], focus: gal.firstChild });
+    d = ui.dialog({ title: VO.t({ quire: 'New Document', ledger: 'New Spreadsheet', lectern: 'New Presentation', wordx: 'New Document', excelx: 'New Spreadsheet', pptx: 'New Presentation' }[app]), width: 700, body, buttons: [{ label: 'Cancel', cancel: true }], focus: gal.firstChild });
   };
   /** the open app's templates: [{ id, name }] */
   VO.templates = () => (current && current.hooks.templates ? current.hooks.templates() : []);

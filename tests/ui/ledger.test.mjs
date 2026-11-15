@@ -44,6 +44,15 @@ test('Excelx Getting Started offers open/create actions without Recent Files', a
     assert.ok(result.visible && result.text.includes('Open') && result.text.includes('Create a new workbook') && !/Recent Files/i.test(result.text) && result.recentLinks === 0 && !result.fileMenuHasRecent, `Excelx Getting Started and File menu omit Recent Files: ${JSON.stringify(result)}`);
   } finally { await u.close(); }
 });
+
+test('Excelx HTML clipboard metadata uses the rebranded protocol', async () => {
+  const u = await ledger();
+  try {
+    const html = await u.evaluate(`(() => { const data={values:{},setData(type,value){this.values[type]=value}}; L.clip.copy({clipboardData:data},false); return data.values['text/html'] || ''; })()`);
+    assert.match(html, /name="excelx-clip"/, 'copied tables carry the Excelx clipboard marker');
+    assert.doesNotMatch(html, /name="ledger-clip"/, 'copied tables no longer emit the retired product identifier');
+  } finally { await u.close(); }
+});
 /** the fill handle of the selected cell */
 const fillHandle = async (u, ref) => { const p = await pt(u, ref); return { x: Math.round(p.r - 1), y: Math.round(p.b - 1) }; };
 /** a point on a container that is not on any control in it (the container itself is hit there) */

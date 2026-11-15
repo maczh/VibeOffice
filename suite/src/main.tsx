@@ -40,26 +40,29 @@ function requestEditorClose(): Promise<boolean> {
   return window.VO?.reactClose ? window.VO.reactClose().catch(() => false) : Promise.resolve(true);
 }
 
-function ActiveEditor({ app, file, document, template, allowedRemoteOrigins, onSaveFile, onDraftsAvailable }: { app: Entry; file?: File; document?: LocalDocument; template?: string; allowedRemoteOrigins: readonly string[]; onSaveFile: (name: string, blob: Blob, current?: LocalDocument, signal?: AbortSignal) => Promise<LocalDocument | void | null>; onDraftsAvailable: (drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => void }) {
+function ActiveEditor({ app, file, document, template, allowedRemoteOrigins, onSaveFile, onDraftsAvailable, onTitleChange }: { app: Entry; file?: File; document?: LocalDocument; template?: string; allowedRemoteOrigins: readonly string[]; onSaveFile: (name: string, blob: Blob, current?: LocalDocument, signal?: AbortSignal) => Promise<LocalDocument | void | null>; onDraftsAvailable: (drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => void; onTitleChange: (title: string) => void }) {
   const query = template ? `template=${encodeURIComponent(template)}` : 'new';
   const key = `${app.id}:${file?.name || template || 'blank'}`;
   const engine = useMemo(() => ({ url: `/${app.folder}/?${query}` }), [app.folder, query]);
   const recovery = { draftStore, onDraftsAvailable };
-  if (app.id === 'wordx') return <WordxEditor key={key} className="suite-frame" engine={engine} allowedRemoteOrigins={allowedRemoteOrigins} onSaveFile={onSaveFile} {...recovery} {...(document ? { initialDocument: document } : file ? { initialFile: file } : {})} />;
-  if (app.id === 'excelx') return <ExcelxEditor key={key} className="suite-frame" engine={engine} allowedRemoteOrigins={allowedRemoteOrigins} onSaveFile={onSaveFile} {...recovery} {...(document ? { initialDocument: document } : file ? { initialFile: file } : {})} />;
-  return <PptxEditor key={key} className="suite-frame" engine={engine} allowedRemoteOrigins={allowedRemoteOrigins} onSaveFile={onSaveFile} {...recovery} {...(document ? { initialDocument: document } : file ? { initialFile: file } : {})} />;
+  if (app.id === 'wordx') return <WordxEditor key={key} className="suite-frame" engine={engine} allowedRemoteOrigins={allowedRemoteOrigins} onSaveFile={onSaveFile} onTitleChange={onTitleChange} {...recovery} {...(document ? { initialDocument: document } : file ? { initialFile: file } : {})} />;
+  if (app.id === 'excelx') return <ExcelxEditor key={key} className="suite-frame" engine={engine} allowedRemoteOrigins={allowedRemoteOrigins} onSaveFile={onSaveFile} onTitleChange={onTitleChange} {...recovery} {...(document ? { initialDocument: document } : file ? { initialFile: file } : {})} />;
+  return <PptxEditor key={key} className="suite-frame" engine={engine} allowedRemoteOrigins={allowedRemoteOrigins} onSaveFile={onSaveFile} onTitleChange={onTitleChange} {...recovery} {...(document ? { initialDocument: document } : file ? { initialFile: file } : {})} />;
 }
 
 function Suite() {
   const office = useVibeOffice();
   const { translate } = office;
   const [active, setActive] = useState<{ app: Entry; file?: File; document?: LocalDocument; template?: string } | null>(null);
+  const initialTitle = useRef(document.title);
   const [recoverable, setRecoverable] = useState<LocalDraft<Blob>[]>([]);
   const restoreDraft = useRef<((draft: LocalDraft<Blob>) => void) | null>(null);
   const onDraftsAvailable = useCallback((drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => {
     restoreDraft.current = restore;
     setRecoverable(drafts);
   }, []);
+  const onTitleChange = useCallback((title: string) => { document.title = title; }, []);
+  useEffect(() => { if (!active) document.title = initialTitle.current; }, [active]);
   const [templates, setTemplates] = useState<Record<string, Template[]>>({});
   const picker = useRef<HTMLInputElement>(null);
   const [credentialAsk, setCredentialAsk] = useState<{ label: string; secret: boolean; finish: (value: string | null) => void } | null>(null);
@@ -253,7 +256,7 @@ function Suite() {
     return <main className="suite-editor">
       <button className="back" type="button" onClick={() => { void requestEditorClose().then((closed) => { if (closed) setActive(null); }); }}>{translate('Create File')}</button>
       {recoverable.length > 0 && <aside className="draft-recovery" aria-label={translate(UI_TEXT.recoverTitle)}><strong>{translate(UI_TEXT.recoverTitle)}</strong>{recoverable.map((draft) => <div key={draft.id}><span>{draft.name} · {translate(UI_TEXT.savedAt, new Date(draft.updatedAt).toLocaleString())}</span><button type="button" onClick={() => restoreDraft.current?.(draft)}>{translate(UI_TEXT.recover)}</button><button type="button" onClick={() => { void draftStore.remove(draft.id).then(() => setRecoverable((items) => items.filter((item) => item.id !== draft.id))); }}>{translate(UI_TEXT.dismiss)}</button></div>)}</aside>}
-      <ActiveEditor app={app} allowedRemoteOrigins={allowedOrigins} onSaveFile={onSaveFile} onDraftsAvailable={onDraftsAvailable} {...(file ? { file } : {})} {...(active.document ? { document: active.document } : {})} {...(template ? { template } : {})} />
+      <ActiveEditor app={app} allowedRemoteOrigins={allowedOrigins} onSaveFile={onSaveFile} onDraftsAvailable={onDraftsAvailable} onTitleChange={onTitleChange} {...(file ? { file } : {})} {...(active.document ? { document: active.document } : {})} {...(template ? { template } : {})} />
       {conflictAsk && <OfficeDialog title={translate(UI_TEXT.changed)} className="credential" onRequestClose={() => conflictAsk.finish(false)}><p>{translate(UI_TEXT.changed)}</p><button type="button" onClick={() => conflictAsk.finish(false)}>{translate(UI_TEXT.cancel)}</button><button type="button" onClick={() => conflictAsk.finish(true)}>{translate(UI_TEXT.replace)}</button></OfficeDialog>}
       {saveAsAsk && <OfficeDialog title={translate(UI_TEXT.saveAs)} className="credential" onRequestClose={() => saveAsAsk.finish(null)}><form onSubmit={(event) => { event.preventDefault(); saveAsAsk.finish(saveAsName); }}><label>{translate(UI_TEXT.fileName)}<input autoFocus required value={saveAsName} onChange={(event) => setSaveAsName(event.currentTarget.value)} /></label><button type="button" onClick={() => openWebDav('saveAs')}>{translate(UI_TEXT.webdav)}</button><button type="button" onClick={() => saveAsAsk.finish(null)}>{translate(UI_TEXT.cancel)}</button><button type="submit">{translate(UI_TEXT.save)}</button></form></OfficeDialog>}
       {webDavDialog}

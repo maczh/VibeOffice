@@ -65,7 +65,7 @@
     const esc = L.esc;
     const clipped = O.clip(sh, rg);
     const g = LY.geo(sh);
-    let html = `<html><head><meta charset="utf-8"><meta name="ledger-clip" content="${id}"></head><body><table style="border-collapse:collapse">`;
+    let html = `<html><head><meta charset="utf-8"><meta name="excelx-clip" content="${id}"></head><body><table style="border-collapse:collapse">`;
     for (let r = rg.r1; r <= clipped.r2; r++) {
       html += `<tr style="height:${g.rows.size(r)}px">`;
       for (let c = rg.c1; c <= clipped.c2; c++) {
@@ -133,7 +133,7 @@
     const dt = e.clipboardData;
     const html = dt ? dt.getData('text/html') : '';
     const text = dt ? dt.getData('text/plain') : '';
-    const m = /<meta name="ledger-clip" content="([^"]+)"/.exec(html || '');
+    const m = /<meta name="excelx-clip" content="([^"]+)"/.exec(html || '');
     if (clip && ((m && m[1] === clip.id) || (!html && text && text.replace(/\r\n/g, '\n') === clip.text.replace(/\r\n/g, '\n')) || (!text && !html))) { CL.pasteInternal({}); return; }
     /* images */
     if (dt) for (const it of dt.items || []) if (it.kind === 'file' && /^image\//.test(it.type)) { const f = it.getAsFile(); if (f && L.app.insertPictureFile) { L.app.insertPictureFile(f); return; } }

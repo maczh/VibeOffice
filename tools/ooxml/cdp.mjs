@@ -98,8 +98,9 @@ export async function openPage(app, options = {}) {
     // the UI in English unless asked otherwise (options.lang: 'ja', 'qps'…; common/i18n.js), whatever the browser's language
     const lang = 'lang=' + (options.lang || 'en');
     const query = new URLSearchParams({ ...(app ? { new: '' } : {}), ...options.query, lang: options.lang || 'en' });
-    await send('Page.navigate', { url: app ? base + '/' + app + '/?' + query : base + '/?' + query });
-    const ready = app ? '!!window.__corpusHooks' : "document.readyState === 'complete' && !!window.VO";
+    const url = options.url ? new URL(options.url, base).href : app ? base + '/' + app + '/?' + query : base + '/?' + query;
+    await send('Page.navigate', { url });
+    const ready = options.ready || (app ? '!!window.__corpusHooks' : "document.readyState === 'complete' && !!window.VO");
     for (let i = 0; i < 200; i++) {
       if (await evaluate(ready).catch(() => false)) return { evaluate, close, errors, requests, windows, navigations, send, waitForNavigation };
       await pause(100);

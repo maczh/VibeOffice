@@ -280,6 +280,7 @@
   }
   function hideTip() { if (tip) tip.hidden = true; tipState = null; }
   AC.hideTip = hideTip;
+  AC.reactSelectionChanged = () => { if (tipState && E.sel && (E.sel.f.p !== tipState.p || E.sel.f.o !== tipState.o)) hideTip(); };
   AC.acceptTip = function () {
     if (!tipState || !E.sel || !E.collapsed()) return false;
     const st = tipState;
@@ -294,7 +295,7 @@
     });
     return true;
   };
-  L.bus.on('sel', () => { if (tipState && E.sel && (E.sel.f.p !== tipState.p || E.sel.f.o !== tipState.o)) hideTip(); });
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('sel', AC.reactSelectionChanged);
 
   /* ---------- AutoText ---------- */
   const userName = () => L.store.get('userName', 'Wordx User');

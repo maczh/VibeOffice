@@ -2,23 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { open } from '../lib/input.mjs';
 
-for (const [app, editor] of [['ledger', 'excelx'], ['lectern', 'pptx']]) {
-  test(`${app} React-host mode routes Open and Save through the parent without Recent Files`, async () => {
-    const t = await open(app, { persistence: true, query: { reactHost: '', new: '' } });
+for (const app of ['ledger', 'lectern']) {
+  test(`${app} standalone ignores the obsolete iframe-host query`, async () => {
+    const page = await open(app, { query: { reactHost: '', new: '' } });
     try {
-      assert.equal(await t.evaluate('VO.reactHost'), true);
-      assert.deepEqual(await t.evaluate('VO.recent.list()'), []);
-      assert.deepEqual(await t.evaluate('VO.recentMenuItems()'), []);
-      const openRequested = await t.evaluate(`new Promise((resolve) => {
-        const listener = (event) => { if (event.data?.type === 'vibeoffice-react-request-open') { removeEventListener('message', listener); resolve(true); } };
-        addEventListener('message', listener); L.app.openDialog(); setTimeout(() => resolve(false), 700);
-      })`);
-      assert.equal(openRequested, true, `${app} Open requests the host to choose a file`);
-      const saveRequested = await t.evaluate(`new Promise((resolve) => {
-        const response = (event) => { if (event.data?.type === 'vibeoffice-react-request-save') { postMessage({ type: 'vibeoffice-react-save-result', requestId: event.data.requestId, result: 'saved' }, location.origin); removeEventListener('message', response); resolve(true); } };
-        addEventListener('message', response); L.app.save(); setTimeout(() => resolve(false), 1500);
-      })`);
-      assert.equal(saveRequested, true, `${app} saves through the host adapter`);
-    } finally { await t.close(); }
+      assert.equal(await page.evaluate('VO.reactHost'), false, 'a query parameter cannot activate a React host bridge');
+      assert.equal(await page.evaluate('VO.reactDirectHost'), null);
+      assert.equal(await page.evaluate("document.querySelectorAll('iframe').length"), 0, 'standalone editor contains no nested browsing context');
+      const expectedId = app === 'ledger' ? 'excelx' : 'pptx', expectedName = app === 'ledger' ? 'Excelx' : 'PPTX';
+      assert.deepEqual(await page.evaluate('({ root: document.documentElement.dataset.app, id: L.APP_ID, name: L.APP_NAME, app: L.APP })'), { root: expectedId, id: expectedId, name: expectedName, app: expectedName }, 'standalone browser identity uses the new web product namespace');
+      assert.equal(await page.evaluate('!!L.app'), true, 'the classic standalone editor still initializes');
+    } finally { await page.close(); }
   });
 }

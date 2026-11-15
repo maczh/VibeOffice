@@ -119,13 +119,14 @@ export function ExcelxFormatCellsDialog() {
     const item = catalog.numberCategories[next];
     if (item) setNumberCategoryValue(item.value);
   };
+  const activeNumberCategoryIndex = Math.max(0, catalog.numberCategories.findIndex((item) => item.value === numberCategory));
   const close = () => runtime()?.dlg?.reactFormatCellsClose?.();
   return <OfficeDialog title={translate(catalog.title)} className="excelx-format-cells-dialog" style={{ width: 'min(96vw, 520px)' }} onRequestClose={close}>
     <div ref={contentHost} className="excelx-format-cells-dialog__content" />
     {numberHost && createPortal(<div className="excelx-format-cells-dialog__number-category">
       <label>{translate('Category:')}</label>
-      <div className="lbox excelx-format-cells-dialog__category-list" role="listbox" aria-label={translate('Category:')} tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); selectNumberCategory(event.key === 'ArrowDown' ? 1 : -1); } }}>
-        {catalog.numberCategories.map((item) => <div key={item.value} className={`lbox-i${numberCategory === item.value ? ' on' : ''}`} role="option" aria-selected={numberCategory === item.value} onClick={() => setNumberCategoryValue(item.value)}>{translate(item.label)}</div>)}
+      <div className="lbox excelx-format-cells-dialog__category-list" role="listbox" aria-label={translate('Category:')} aria-activedescendant={`excelx-format-cells-category-${activeNumberCategoryIndex}`} tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); selectNumberCategory(event.key === 'ArrowDown' ? 1 : -1); } }}>
+        {catalog.numberCategories.map((item, index) => <div id={`excelx-format-cells-category-${index}`} key={item.value} className={`lbox-i${numberCategory === item.value ? ' on' : ''}`} role="option" aria-selected={numberCategory === item.value} onClick={() => setNumberCategoryValue(item.value)}>{translate(item.label)}</div>)}
       </div>
     </div>, numberHost)}
     {numberOptionsHost && createPortal(<div className="excelx-format-cells-dialog__number-options" hidden={!numberOptions}>

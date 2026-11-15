@@ -19,6 +19,7 @@ export type WordxEditorProps = Omit<ComponentProps<typeof EngineEditorFrame>, 'a
   /** Optional isolated draft store; defaults to the React workspace draft database. */
   draftStore?: DraftStore<Blob>;
   onDraftSaved?: (draft: LocalDraft<Blob>) => void;
+  onTitleChange?: (title: string) => void;
   onDraftsAvailable?: (drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => void;
   onEngineReady?: (controls: WordxEngineControls) => void;
   onOpenFile?: (signal: AbortSignal) => Promise<LocalDocument | null>;
@@ -29,7 +30,7 @@ export type WordxEditorProps = Omit<ComponentProps<typeof EngineEditorFrame>, 'a
   onSaveFile?: (name: string, blob: Blob, current?: LocalDocument, signal?: AbortSignal, operation?: SaveFileOperation) => Promise<LocalDocument | void | null>;
 };
 
-export function WordxEditor({ services, mountEngine, engine, draftStore, onDraftSaved, onDraftsAvailable, onEngineReady, onOpenFile, allowedRemoteOrigins, onOpenUrl, onSaveFile, initialFile, initialDocument, ...props }: WordxEditorProps) {
+export function WordxEditor({ services, mountEngine, engine, draftStore, onDraftSaved, onTitleChange, onDraftsAvailable, onEngineReady, onOpenFile, allowedRemoteOrigins, onOpenUrl, onSaveFile, initialFile, initialDocument, ...props }: WordxEditorProps) {
   const mount = useMemo<EditorMount | undefined>(() => {
     if (mountEngine) return mountEngine;
     if (!engine) return undefined;
@@ -44,11 +45,12 @@ export function WordxEditor({ services, mountEngine, engine, draftStore, onDraft
       ...(allowedRemoteOrigins ? { allowedRemoteOrigins } : {}), ...(onOpenUrl ? { onOpenUrl } : {}),
       ...(draftStore ? { draftStore } : {}),
       ...(onDraftSaved ? { onDraftSaved } : {}),
+      ...(onTitleChange ? { onTitleChange } : {}),
       ...(onDraftsAvailable ? { onDraftsAvailable } : {}),
       ...(onEngineReady ? { onEngineReady: (restoreDraft) => onEngineReady({ restoreDraft }) } : {}),
       ...(onOpenFile ? { onOpenFile } : {}), ...(onSaveFile ? { onSaveFile } : {}),
       ...(initialFile ? { initialFile } : {}), ...(initialDocument ? { initialDocument } : {}),
     });
-  }, [mountEngine, engine, draftStore, onDraftSaved, onDraftsAvailable, onEngineReady, onOpenFile, allowedRemoteOrigins, onOpenUrl, onSaveFile, initialFile, initialDocument]);
+  }, [mountEngine, engine, draftStore, onDraftSaved, onTitleChange, onDraftsAvailable, onEngineReady, onOpenFile, allowedRemoteOrigins, onOpenUrl, onSaveFile, initialFile, initialDocument]);
   return <VibeOfficeProvider {...(services ? { services } : {})}><EngineEditorFrame {...props} appName="Wordx" editor="wordx" {...(mount ? { mount } : {})} appLayers={(host) => <><WordxListBoxLayer host={host} /><WordxMenuContentLayer host={host} /><WordxTaskContentLayer host={host} />{props.appLayers?.(host)}</>} /></VibeOfficeProvider>;
 }

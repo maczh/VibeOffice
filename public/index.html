@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://vibeoffice.work/quire/preview.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="720">
-<meta property="og:image:alt" content="Quire, the word processor, with its welcome document">
+<meta property="og:image:alt" content="Wordx, the word processor, with its welcome document">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
@@ -62,7 +62,7 @@
 <link rel="stylesheet" href="common/looks.css">
 <style>
   /* colours come from the look settings (common/looks.css); the app colours are the apps' own */
-  :root { --quire: #2a64c8; --ledger: #1f8a4c; --lectern: #e0682d; }
+  :root { --wordx: #2a64c8; --excelx: #1f8a4c; --pptx: #e0682d; }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; display: flex; flex-direction: column; background: var(--surface); color: var(--ink); font: 12px/1.4 var(--ui-font); }
@@ -182,6 +182,16 @@
   .gallery h2 { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; font-size: 13px; color: var(--pane-ink); }
   .gallery h2 small { font-weight: normal; color: var(--muted); }
   .gallery .grid { padding: 0; overflow: visible; }
+  .desktop-recent { flex: none; padding: 10px 24px 0; }
+  .desktop-recent h2 { margin: 0 0 8px; font-size: 13px; color: var(--pane-ink); }
+  .desktop-recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .desktop-recent .doc { position: relative; display: grid; grid-template-columns: 54px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 74px; padding: 8px; border: 1px solid var(--chrome-line); border-radius: 3px; background: var(--surface); }
+  .desktop-recent-thumb { grid-row: span 2; width: 54px; height: 58px; overflow: hidden; display: grid; place-items: center; }
+  .desktop-recent-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .desktop-recent .name { overflow: hidden; border: 0; padding: 0 16px 0 0; background: none; color: var(--pane-link); text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .desktop-recent .name:hover { text-decoration: underline; }
+  .desktop-recent .rm { position: absolute; top: 3px; right: 4px; border: 0; background: none; color: var(--muted); cursor: pointer; }
+  .desktop-recent .unsaved { color: var(--muted); font-size: 11px; }
   .drop { position: absolute; inset: 10px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--sel); border-radius: 8px;
     background: var(--drop-bg); font-size: 16px; font-weight: bold; color: var(--pane-ink); pointer-events: none; }
 

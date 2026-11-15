@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 
 interface ExcelxRuntime {
-  grid?: { reactMountInteractions?(): () => void; reactInteractionMounted?: boolean };
-  app?: { reactDrawTrace?(): void };
+  grid?: { reactMountInteractions?(): () => void; reactInteractionMounted?: boolean; reactPointerLeave?(): void };
+  app?: { reactDrawTrace?(): void; reactAppKeydown?(event: KeyboardEvent): void; reactBeforeUnload?(event: BeforeUnloadEvent): void };
   bus?: { on(event: string, listener: () => void): () => void };
 }
 
@@ -14,6 +14,12 @@ function runtime(): ExcelxRuntime | undefined {
 export function ExcelxGridInteractionLayer({ host }: { host: HTMLElement }) {
   useEffect(() => {
     const offTrace = runtime()?.bus?.on('grid-paint', () => runtime()?.app?.reactDrawTrace?.());
+    const pointerLeave = () => runtime()?.grid?.reactPointerLeave?.();
+    const keydown = (event: KeyboardEvent) => runtime()?.app?.reactAppKeydown?.(event);
+    const beforeUnload = (event: BeforeUnloadEvent) => runtime()?.app?.reactBeforeUnload?.(event);
+    document.addEventListener('pointerleave', pointerLeave);
+    host.addEventListener('keydown', keydown);
+    window.addEventListener('beforeunload', beforeUnload);
     let target: HTMLElement | null = null;
     let dispose: (() => void) | null = null;
     const attach = () => {
@@ -31,6 +37,9 @@ export function ExcelxGridInteractionLayer({ host }: { host: HTMLElement }) {
       observer.disconnect();
       off?.();
       offTrace?.();
+      document.removeEventListener('pointerleave', pointerLeave);
+      host.removeEventListener('keydown', keydown);
+      window.removeEventListener('beforeunload', beforeUnload);
       dispose?.();
       dispose = null;
       target = null;

@@ -242,7 +242,8 @@
     return n;
   };
   FD.clearHighlight = () => { if (window.CSS && CSS.highlights) CSS.highlights.delete('wordx-find'); FD.hlOpts = null; };
-  L.bus.on('layout-done', () => { if (FD.hlOpts) setTimeout(() => { try { FD.highlightAll(FD.hlOpts); } catch (e) { FD.clearHighlight(); } }, 0); });
+  FD.reactLayoutChanged = () => { if (FD.hlOpts) { try { FD.highlightAll(FD.hlOpts); } catch (e) { FD.clearHighlight(); } } };
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('layout-done', () => setTimeout(FD.reactLayoutChanged, 0));
 
   /* ---------- Go To ---------- */
   /* [kind, name, the box's label] */

@@ -440,6 +440,8 @@
     opts = opts || {};
     const c = ui.cmds[id] || {};
     const label = opts.label != null ? opts.label : c.tbLabel;
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected && !opts.forceDOM) return { __vibeToolbarControl: 'button', id, opts: Object.assign({}, opts) };
     const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : ''), type: 'button', 'data-cmd': id, 'aria-label': stripAmp(c.label || id), 'data-tip': stripAmp(c.tip || c.label || id) + (c.key ? ` (${keyText(c.key)})` : '') });
     b.innerHTML = (c.icon || opts.icon ? L.icons.get(opts.icon || c.icon) : '') + (label ? `<span class="tb-lbl">${ampHTML(label)}</span>` : '');
     b.addEventListener('pointerdown', (e) => e.preventDefault()); /* keep the focus and selection where they are */
@@ -450,8 +452,10 @@
   /** split button: main action + dropdown arrow */
   ui.tbSplit = function (id, menuFn, opts) {
     opts = opts || {};
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected && !opts.forceDOM) return { __vibeToolbarControl: 'split', id, opts: Object.assign({}, opts), menuFn };
     const wrap = h('div', { class: 'tb-split' });
-    const main = ui.tbButton(id, opts);
+    const main = ui.tbButton(id, Object.assign({}, opts, { forceDOM: true }));
     const dd = h('button', { class: 'tb-dd', type: 'button', 'aria-label': 'More options', 'data-tip': (ui.cmds[id] && stripAmp(ui.cmds[id].label)) || '' });
     dd.innerHTML = '<span class="dd-arrow"></span>';
     dd.addEventListener('pointerdown', (e) => e.preventDefault());
@@ -461,7 +465,13 @@
     return wrap;
   };
   /** dropdown button (icon/label + arrow), opens a menu */
-  ui.tbDrop = function (label, icon, menuFn, tip) {
+  ui.tbDrop = function (label, icon, menuFn, tip, forceDOM) {
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected && !forceDOM) {
+      const control = { __vibeToolbarControl: 'drop', label: label || '', icon: icon || '', tip: tip || stripAmp(label || ''), menuFn, dataAs: '' };
+      control.setAttribute = (name, value) => { if (name === 'data-as') control.dataAs = String(value); };
+      return control;
+    }
     const b = h('button', { class: 'tb-btn tb-drop' + (label ? ' with-label' : ''), type: 'button', 'data-tip': tip || stripAmp(label), 'aria-label': tip || stripAmp(label) });
     b.innerHTML = (icon ? L.icons.get(icon) : '') + (label ? `<span class="tb-lbl">${ampHTML(label)}</span>` : '') + '<span class="dd-arrow"></span>';
     b.addEventListener('pointerdown', (e) => e.preventDefault());
@@ -527,7 +537,7 @@
     const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
     if (reactRoot && reactRoot.isConnected) {
       const toolbar = h('div', { class: 'toolbar vibeoffice-react-toolbar', id: 'tb-' + id, role: 'toolbar', 'aria-label': title });
-      reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-toolbar', { detail: { id, title, target: toolbar, items }, bubbles: true }));
+      ui.reactToolbar(id, title, toolbar, items);
       return toolbar;
     }
     const tb = h('div', { class: 'toolbar', id: 'tb-' + id, role: 'toolbar', 'aria-label': title });
@@ -539,6 +549,12 @@
     }
     tb.appendChild(h('span', { class: 'tb-end' }));
     return tb;
+  };
+  ui.reactToolbar = function (id, title, target, items, kind) {
+    const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    if (!reactRoot || !reactRoot.isConnected) return false;
+    reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-toolbar', { detail: { id, title, target, items, kind }, bubbles: true }));
+    return true;
   };
   ui.refresh = L.rafThrottle(() => {
     for (const b of tbButtons) {
@@ -1256,8 +1272,23 @@
     if (swallow.seen.has('mouseup') && swallow.seen.has(swallow.button === 2 ? 'contextmenu' : 'auxclick')) swallow = null;
   }
   const holdCursor = (c) => {
-    if (!cursorStyle) { cursorStyle = document.createElement('style'); document.head.appendChild(cursorStyle); }
-    cursorStyle.textContent = c ? `*, *::before, *::after { cursor: ${c} !important; }` : '';
+    const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
+    const editorRoot = directRoot && directRoot.isConnected ? directRoot : null;
+    const styleHost = editorRoot || document.head;
+    if (!c) {
+      cursorStyle?.remove();
+      cursorStyle = null;
+      return;
+    }
+    if (!cursorStyle || cursorStyle.parentElement !== styleHost) {
+      cursorStyle?.remove();
+      cursorStyle = document.createElement('style');
+      styleHost.appendChild(cursorStyle);
+    }
+    const selector = editorRoot
+      ? '.vibeoffice-legacy-root[data-vibeoffice-engine-root], .vibeoffice-legacy-root[data-vibeoffice-engine-root] *, .vibeoffice-legacy-root[data-vibeoffice-engine-root] *::before, .vibeoffice-legacy-root[data-vibeoffice-engine-root] *::after'
+      : '*, *::before, *::after';
+    cursorStyle.textContent = `${selector} { cursor: ${c} !important; }`;
   };
   ui.drag = function (e, o) {
     if (e.button != null && e.button !== 0) return null;

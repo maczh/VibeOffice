@@ -69,7 +69,7 @@
   let untitled = 0;
   A.newWorkbook = function () {
     /* the desktop app: one workbook per window, a new one in a window of its own */
-    if (window.VO && VO.oneDocument && A.books.length && !pristine()) return VO.go(VO.url('ledger', { new: true })).catch((e) => A.error(e));
+    if (window.VO && VO.oneDocument && A.books.length && !pristine()) return VO.go(VO.url(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'excelx' : 'ledger', { new: true })).catch((e) => A.error(e));
     untitled++;
     A.addBook(A.blankWorkbook(), 'Book' + untitled, { type: 'xlsx', untitled: true });
   };
@@ -130,7 +130,9 @@
   };
   function updateTitle() {
     const b = book();
-    document.title = (b ? L.file.titled(b.name) + ' - ' : '') + (window.VO?.oneDocument ? 'Ledger' : 'Excelx');
+    const title = (b ? L.file.titled(b.name) + ' - ' : '') + 'Excelx';
+    if (window.VO && VO.reactHost) { VO.reactDirectHost?.titleChanged?.(title); return; }
+    document.title = title;
   }
 
   /* ------------------------------------------------------------ open */
@@ -397,6 +399,11 @@
     return w.sheets.map((s, index) => s.state === 'visible' ? { index, name: s.name, color: s.tabColor ? M.colorHex(w, s.tabColor, '#ECE9D8') : null, active: index === w.active, selected: selected.has(index) && index !== w.active } : null).filter(Boolean);
   };
   A.openSheetTabMenu = (e, i) => tabMenu(e, i);
+  A.selectAllSheets = () => {
+    sheetSel = new Set(wb().sheets.map((sheet, index) => sheet.state === 'visible' ? index : -1).filter((index) => index >= 0));
+    renderTabs();
+  };
+  A.ungroupSheets = () => { sheetSel = null; renderTabs(); };
   A.renameSheet = (i, name) => {
     try { O.renameSheet(wb(), wb().sheets[i], name.trim()); }
     catch (err) { A.error(err); return false; }
@@ -449,8 +456,8 @@
       { label: '&Delete', run: () => A.deleteSheets() },
       { label: '&Rename', run: () => A.renameSheetInline(i) },
       { label: '&Move or Copy...', run: () => L.dlg.moveCopySheet() },
-      { label: '&Select All Sheets', run: () => { sheetSel = new Set(wb().sheets.map((s, k) => (s.state === 'visible' ? k : -1)).filter((k) => k >= 0)); renderTabs(); } },
-      ...(sheetSel && sheetSel.size > 1 ? [{ label: '&Ungroup Sheets', run: () => { sheetSel = null; renderTabs(); } }] : []),
+      { label: '&Select All Sheets', run: () => A.selectAllSheets() },
+      ...(sheetSel && sheetSel.size > 1 ? [{ label: '&Ungroup Sheets', run: () => A.ungroupSheets() }] : []),
       { label: '&Tab Color...', run: () => L.dlg.tabColor() },
       '-',
       { label: '&View Code', disabled: true },
@@ -546,7 +553,7 @@
   /* ------------------------------------------------------------ menus */
   function buildMenus() {
     const menus = [
-      { label: '&File', items: () => ['newBook', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', { label: 'Prin&t Area', sub: ['setPrintArea', 'clearPrintArea'] }, 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['exportPDF', 'exportCSV'] }, 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
+      { label: '&File', items: () => ['newBook', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', ...(window.VO?.host.kind === 'desktop' ? VO.recentMenuItems(4) : []), '-', 'pageSetup', { label: 'Prin&t Area', sub: ['setPrintArea', 'clearPrintArea'] }, 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['exportPDF', 'exportCSV'] }, 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
       {
         label: '&Edit', items: () => ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', 'pasteHyperlink', '-',
           { label: 'F&ill', sub: ['fillDown', 'fillRight', 'fillUp', 'fillLeft', 'fillAcross', 'fillSeries', 'fillJustify'] },
@@ -637,6 +644,7 @@
     } }], { left: r.left, bottom: r.bottom }, { cls: 'grid-menu' });
   }
   A.toolbarVisible = (id) => { const v = A.opts.toolbars[id]; if (v === 'auto') return id === 'chart' ? !!(G().selectedObject() && G().selectedObject().kind === 'chart') : id === 'picture' ? !!(G().selectedObject() && G().selectedObject().kind === 'image') : id === 'list' ? !!A.tableAt() : false; return !!v; };
+  A.reactToolbarVisibility = () => Object.fromEntries(Object.keys(TB).map((id) => [id, A.toolbarVisible(id)]));
   /** what is selected, for the ribbon's contextual tabs: 'chart', 'picture', 'shape', 'list' */
   A.inContext = (k) => {
     const o = G().selectedObject();
@@ -645,9 +653,12 @@
   };
   A.toggleToolbar = (id, force) => { const cur = A.toolbarVisible(id); A.opts.toolbars[id] = force != null ? force : !cur; A.updateToolbars(); A.saveOpts(); };
   A.updateToolbars = function () {
-    for (const id in TB) { const v = A.toolbarVisible(id); TB[id].hidden = !v; }
-    const r2 = TB.borders && TB.borders.parentElement;
-    if (r2) r2.hidden = !Array.from(r2.children).some((x) => !x.hidden);
+    const reactHost = window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected;
+    if (!reactHost) {
+      for (const id in TB) { const v = A.toolbarVisible(id); TB[id].hidden = !v; }
+      const r2 = TB.borders && TB.borders.parentElement;
+      if (r2) r2.hidden = !Array.from(r2.children).some((x) => !x.hidden);
+    }
     ui.refresh();
   };
   const curStyle = () => { const s = G().sel(); return LY.styleOf(sh(), s.r, s.c, sh().get(s.r, s.c)); };
@@ -912,6 +923,8 @@
     /* stray typing goes to the grid */
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) G().focus();
   }
+  A.reactAppKeydown = handleAppKeydown;
+  A.reactBeforeUnload = (event) => { if (A.books.some((book) => book.dirty)) { event.preventDefault(); event.returnValue = ''; } };
 
   /* ------------------------------------------------------------ context menus */
   A.contextMenu = function (e, z) {
@@ -1551,7 +1564,7 @@
     buildToolbars();
     L.ribbonUI.init();
     buildStatus();
-    L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(L.domHost(), 'keydown', handleAppKeydown);
     buildTabNav();
     buildNameBox();
     if (L.panes) L.panes.task.mount(L.$('#taskpane'));
@@ -1563,14 +1576,14 @@
     L.bus.on('changed', () => { updateStatus(); ui.refresh(); renderTabsSoon(); });
     L.bus.on('mode', () => updateStatus());
     L.bus.on('zoom', () => ui.refresh());
-    L.addMountListener(window, 'beforeunload', (e) => { if (A.books.some((b) => b.dirty)) { e.preventDefault(); e.returnValue = ''; } });
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'beforeunload', A.reactBeforeUnload);
     const narrow = window.innerWidth < 820;
     if (A.opts.taskOpen && !narrow && L.panes) L.panes.task.show('getting-started');
     A.applyOpts();
     ui.refresh();
     G().focus();
     L.bus.emit('app-ready');
-    if (window.VO) VO.attach('ledger', {
+    if (window.VO) VO.attach(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'excelx' : 'ledger', {
       async open(f, o) {
         await A.openFiles([f]);
         /* an unsaved version: the changes are not saved yet, and a never-saved workbook still needs Save As */

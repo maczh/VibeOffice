@@ -130,18 +130,23 @@
     scrollCur();
     if (LP.reactRoot && LP.reactRoot.isConnected && L.app.reactMounted) L.bus.emit('pptx-slides-mark');
   };
-  function onThumbDown(e, i) {
+  function selectThumb(e, i) {
     if (e.button !== 0) return;
     /* the Slides pane takes the keyboard: text editing on the slide ends, even on the current slide's thumbnail (P3) */
     if (E().editing()) L.te.end();
     LP.body.focus({ preventScroll: true });
     L.app.focusArea = 'slides';
     const sel = L.app.slideSel;
-    if (e.shiftKey) { const a = Math.min(E().idx, i), b = Math.max(E().idx, i); L.app.slideSel = new Set(Array.from({ length: b - a + 1 }, (_, k) => a + k)); LP.markCurrent(); return; }
-    if (e.ctrlKey || e.metaKey) { if (sel.has(i) && sel.size > 1) sel.delete(i); else sel.add(i); LP.markCurrent(); return; }
+    if (e.shiftKey) { const a = Math.min(E().idx, i), b = Math.max(E().idx, i); L.app.slideSel = new Set(Array.from({ length: b - a + 1 }, (_, k) => a + k)); LP.markCurrent(); return false; }
+    if (e.ctrlKey || e.metaKey) { if (sel.has(i) && sel.size > 1) sel.delete(i); else sel.add(i); LP.markCurrent(); return false; }
     if (!sel.has(i)) L.app.slideSel = new Set([i]);
     if (E().idx !== i || L.app.view !== 'normal') E().goto(i);
     LP.markCurrent();
+    return true;
+  }
+  LP.reactSelectThumb = selectThumb;
+  function onThumbDown(e, i) {
+    if (!selectThumb(e, i)) return;
     /* drag to reorder (common/ui.js ui.drag: Esc, a second button or a release the page never saw cancel it) */
     let line = null, target = null;
     const mv = (ev) => {
@@ -510,16 +515,9 @@
   };
   const fmtSecs = (ms) => { const s = Math.round(ms / 1000); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
   SO.mark = function () { L.$$('.so-it', SO.el).forEach((el) => el.classList.toggle('sel', L.app.slideSel.has(+el.dataset.i))); L.app.updateStatus(); L.ui.refresh(); if (SO.reactMounted) L.bus.emit('pptx-sorter-mark'); };
-  SO.onDown = onSorterDown;
+  SO.reactSelectThumb = selectSorterThumb;
   function onSorterDown(e, i, it) {
-    if (e.button !== 0) return;
-    SO.el.focus({ preventScroll: true });
-    const sel = L.app.slideSel;
-    if (e.shiftKey) { const a = Math.min(E().idx, i), b = Math.max(E().idx, i); L.app.slideSel = new Set(Array.from({ length: b - a + 1 }, (_, k) => a + k)); SO.mark(); return; }
-    if (e.ctrlKey || e.metaKey) { if (sel.has(i) && sel.size > 1) sel.delete(i); else sel.add(i); SO.mark(); return; }
-    if (!sel.has(i)) L.app.slideSel = new Set([i]);
-    E().idx = i;
-    SO.mark();
+    if (!selectSorterThumb(e, i)) return;
     /* drag to reorder (common/ui.js ui.drag) */
     let marker = null, target = null;
     const mv = (ev) => {
@@ -545,6 +543,17 @@
       cancel() { if (marker) marker.remove(); },
     });
     void it;
+  }
+  function selectSorterThumb(e, i) {
+    if (e.button !== 0) return;
+    SO.el.focus({ preventScroll: true });
+    const sel = L.app.slideSel;
+    if (e.shiftKey) { const a = Math.min(E().idx, i), b = Math.max(E().idx, i); L.app.slideSel = new Set(Array.from({ length: b - a + 1 }, (_, k) => a + k)); SO.mark(); return false; }
+    if (e.ctrlKey || e.metaKey) { if (sel.has(i) && sel.size > 1) sel.delete(i); else sel.add(i); SO.mark(); return false; }
+    if (!sel.has(i)) L.app.slideSel = new Set([i]);
+    E().idx = i;
+    SO.mark();
+    return true;
   }
 
   /* ================= Notes Page view ================= */
@@ -724,7 +733,7 @@
       b.append(
         h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: window.VO ? VO.editionName(window.VO.oneDocument ? 'Lectern' : 'PPTX') : 'PPTX', translate: 'no', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec(L.N('Open'), link('open', L.N('Open a presentation (.pptx)...'), () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample())),
+        sec(L.N('Open'), link('open', L.N('Open a presentation (.pptx)...'), () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample()), ...(window.VO?.host.kind === 'desktop' ? [VO.recentLinks(4)] : [])),
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => TP.show('help')), link('design', 'Apply a design template', () => TP.show('design')), link('animation', 'Animate your slides', () => TP.show('customAnim'))));
     },
   });

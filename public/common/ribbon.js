@@ -43,9 +43,9 @@
       return { el: node, size: 'row' };
     }
     if (it.make) node = it.make();
-    else if (it.split) node = ui.tbSplit(it.split, it.menu, { label, icon: it.icon });
-    else if (it.drop) node = ui.tbDrop(size === 'small' ? '' : it.label != null ? it.label : it.drop, it.icon, it.menu, it.tip || ui.stripAmp(it.drop));
-    else node = ui.tbButton(it.cmd, { label, icon: it.icon, arg: it.arg });
+    else if (it.split) node = ui.tbSplit(it.split, it.menu, { label, icon: it.icon, forceDOM: true });
+    else if (it.drop) node = ui.tbDrop(size === 'small' ? '' : it.label != null ? it.label : it.drop, it.icon, it.menu, it.tip || ui.stripAmp(it.drop), true);
+    else node = ui.tbButton(it.cmd, { label, icon: it.icon, arg: it.arg, forceDOM: true });
     node.classList.add('rb-' + size);
     if (size === 'large') {
       const icon = it.icon || (ui.cmds[it.cmd || it.split] || {}).icon;

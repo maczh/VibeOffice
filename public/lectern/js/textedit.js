@@ -530,7 +530,8 @@
       L.ui.refresh();
     }
   }
-  TE.mount = function () { L.addMountListener(document, 'selectionchange', onSelectionChange); };
+  TE.reactSelectionChange = onSelectionChange;
+  TE.mount = function () { if (!(window.VO && VO.reactDirectHost)) L.addMountListener(document, 'selectionchange', TE.reactSelectionChange); };
 
   const SMART = { '"': ['“', '”'], "'": ['‘', '’'] };
   function onBeforeInput(e) {

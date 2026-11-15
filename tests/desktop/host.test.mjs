@@ -62,9 +62,9 @@ test('desktop: File > Open asks to save a changed document, then the window relo
   const no = shot('quire/', [{ wait: 1500 }, { js: ask('No'), wait: 2500 }, { js: then }], ...stubbed, '--qs', 'new&pick=Notes.md').r;
   assert.deepEqual(no.old, { asked: true, info: null, bytes: 'refused', calls: ['host_clear_draft', 'host_reopen'] }, 'No gives the changes up; the old page is given nothing');
   assert.match(no.reopened, /^\/quire\/\?doc&t=\w+$/);
-  assert.deepEqual([no.path, no.title, no.newWindow], ['/quire/', 'Notes - Quire', ''], 'the same window, reloaded with the file');
+  assert.deepEqual([no.path, no.title, no.newWindow], ['/quire/', 'Notes - Wordx', ''], 'the same window, reloaded with the file');
   const cancel = shot('quire/', [{ wait: 1500 }, { js: ask('Cancel'), wait: 1500 }, { js: then }], ...stubbed, '--qs', 'new&pick=Notes.md').r;
-  assert.deepEqual([cancel.old.asked, cancel.old.calls, cancel.reopened, cancel.title], [true, ['host_reopen'], '', 'Document1 - Quire'], 'Cancel keeps the document');
+  assert.deepEqual([cancel.old.asked, cancel.old.calls, cancel.reopened, cancel.title], [true, ['host_reopen'], '', 'Document1 - Wordx'], 'Cancel keeps the document');
 });
 
 test('desktop: an app window\'s Recent Files are the Start Center\'s: its lists lead there, and it never reads them', () => {
@@ -81,14 +81,15 @@ test('desktop: an app window\'s Recent Files are the Start Center\'s: its lists 
 test('desktop: a file dropped on a window with a document opens in a new window, with its bytes', () => {
   const { r } = shot('ledger/', [{ wait: 2000 }, { js: `L.app.openFiles([new File(['x,y\\n1,2\\n'], 'Dropped.csv')]); return '1'`, wait: 2500 },
     { js: `return JSON.stringify({ path: location.pathname, title: document.title, newWindow: stubSession.newWindow || '' })` }], ...stubbed, '--qs', 'doc&file=Budget.csv');
-  assert.deepEqual(r, { path: '/ledger/', title: 'Dropped.csv - Ledger', newWindow: 'http://127.0.0.1:8760/ledger/?doc' });
+  assert.deepEqual(r, { path: '/ledger/', title: 'Dropped.csv - Excelx', newWindow: 'http://127.0.0.1:8760/ledger/?doc' });
 });
 
 test('desktop: the Start Center lists Recent Files the native side keeps, and opens an unsaved version', () => {
   const names = `[...document.querySelectorAll('#grid .doc')].map((c) => c.querySelector('.name').textContent + (c.querySelector('.unsaved') ? ' (unsaved)' : '') + (c.querySelector('img') ? ' [preview]' : ''))`;
   const { r } = shot('', [{ wait: 1500 }, { js: `stubSession.cards = JSON.stringify(${names}); document.querySelector('#grid .rm').click(); ${wait(300)}
     stubSession.after = JSON.stringify(${names}); document.querySelector('#grid .doc .name').click(); return '1'`, wait: 2500 },
-  { js: `return JSON.stringify({ cards: JSON.parse(stubSession.cards), after: JSON.parse(stubSession.after), path: location.pathname, recovered: document.body.textContent.includes('Recovered the unsaved changes') })` }],
+  { js: `return JSON.stringify({ cards: JSON.parse(stubSession.cards), after: JSON.parse(stubSession.after), path: location.pathname,
+    recovered: document.body.textContent.includes(VO.t('Recovered the unsaved changes. Save the workbook to keep them.')) })` }],
   ...stubbed, '--qs', 'recent=Other.csv,Budget.csv*');
   assert.deepEqual(r, { cards: ['Other.csv [preview]', 'Budget.csv (unsaved) [preview]'], after: ['Budget.csv (unsaved) [preview]'], path: '/ledger/', recovered: true },
     '× removed Other.csv; Budget.csv opened at its unsaved version');
@@ -153,7 +154,7 @@ test('desktop: the Mac\'s menu bar runs Open… and Help in the window in front 
     L.ui.exec('about'); ${wait(300)} ${menu('open')} const behind = ${asked};
     document.querySelector('.dlg .btn.primary').click(); ${wait(300)} ${menu('open')}
     return JSON.stringify({ help, behind, open: ${asked} })` }], ...stubbed, '--qs', 'new');
-  assert.deepEqual(r, { help: 'Quire Help', behind: false, open: true }, 'Help shows the app\'s Help; Open… waits for About to close');
+  assert.deepEqual(r, { help: 'Wordx Help', behind: false, open: true }, 'Help shows the app\'s Help; Open… waits for About to close');
   assert.equal(shot('', [{ wait: 1500 }, { js: `${menu('open')} return JSON.stringify(${asked})` }], ...stubbed).r, true, 'the Start Center\'s Open File');
 });
 
@@ -252,14 +253,14 @@ test('desktop: Save writes the window\'s own file in place, without asking', () 
   const { r } = shot('quire/', [{ wait: 2500 }, { js: `L.D.doc.dirty = true; const r = await L.app.save();
     return JSON.stringify({ r, saves: ${saves}, chose: stubSession.chose || '', dirty: L.D.doc.dirty, title: document.title })` }], ...stubbed, '--qs', 'doc&file=Notes.md');
   assert.deepEqual(r.saves.map((w) => [w.cmd, w.replace, w.head]), [['host_save', false, '# ']], 'one write, Markdown into Notes.md');
-  assert.deepEqual({ r: r.r, chose: r.chose, dirty: r.dirty, title: r.title }, { r: 'saved', chose: '', dirty: false, title: 'Notes - Quire' });
+  assert.deepEqual({ r: r.r, chose: r.chose, dirty: r.dirty, title: r.title }, { r: 'saved', chose: '', dirty: false, title: 'Notes - Wordx' });
 });
 
 test('desktop: a document without a file asks where, and the file it is saved as becomes its own', () => {
   const { r } = shot('quire/', [{ js: `stubSession.stubSave = 'Letter.docx'; L.D.doc.dirty = true; const first = await L.app.save();
     const title = document.title; L.D.doc.dirty = true; const second = await L.app.save();
     return JSON.stringify({ first, second, title, saves: ${saves}, chose: JSON.parse(stubSession.chose) })` }], ...stubbed, '--qs', 'new');
-  assert.deepEqual([r.first, r.second, r.title], ['saved', 'saved', 'Letter - Quire']);
+  assert.deepEqual([r.first, r.second, r.title], ['saved', 'saved', 'Letter - Wordx']);
   assert.deepEqual(r.saves.map((w) => w.cmd + (w.bound ? ' (bound)' : '')), ['host_write_chosen (bound)', 'host_save'], 'Save As, then Save in place');
   assert.equal(r.chose.purpose, 'saveAs');
   assert.equal(r.chose.type, 'docx');
@@ -293,7 +294,7 @@ test('desktop: Ledger saves the CSV it opened, and is then saved; its recovered 
 test('desktop: a read-only file says so in the title, and Save asks where', () => {
   const { r } = shot('quire/', [{ wait: 2500 }, { js: `const title = document.title; L.D.doc.dirty = true; const r = await L.app.save();
     return JSON.stringify({ title, r, chose: JSON.parse(stubSession.chose || 'null') })` }], ...stubbed, '--qs', 'doc&file=Notes.md&readonly');
-  assert.equal(r.title, 'Notes (Read-Only) - Quire');
+  assert.equal(r.title, 'Notes (Read-Only) - Wordx');
   assert.equal(r.r, 'declined', 'the Save dialog was cancelled');
   assert.equal(r.chose && r.chose.purpose, 'saveAs');
 });
@@ -328,7 +329,7 @@ test('desktop: a PDF export asks where, and leaves the document as it was', () =
     return JSON.stringify({ saves: ${saves}, chose: JSON.parse(stubSession.chose), dirty: L.D.doc.dirty, title: document.title })` }], ...stubbed, '--qs', 'doc&file=Notes.md');
   assert.deepEqual(r.saves.map((w) => [w.cmd, w.type, w.bound]), [['host_write_chosen', 'pdf', false]]);
   assert.deepEqual([r.chose.purpose, r.chose.types.map((t) => t.id)], ['export', ['pdf']]);
-  assert.deepEqual([r.dirty, r.title], [true, 'Notes - Quire'], 'still the Markdown file, with its changes');
+  assert.deepEqual([r.dirty, r.title], [true, 'Notes - Wordx'], 'still the Markdown file, with its changes');
 });
 
 test('Ledger: Cancel in Save As while closing an untitled workbook keeps it open', () => {

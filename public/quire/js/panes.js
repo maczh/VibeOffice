@@ -35,9 +35,14 @@
       TP.title.addEventListener('click', openList);
       TP.title.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openList(); } });
     }
-    L.bus.on('sel', L.debounce(() => TP.refresh('sel'), 150));
-    L.bus.on('doc-changed', L.debounce(() => TP.refresh('doc'), 300));
-    L.bus.on('doc-loaded', () => TP.refresh('load'));
+    TP.reactRefreshSelection = L.debounce(() => TP.refresh('sel'), 150);
+    TP.reactRefreshDocument = L.debounce(() => TP.refresh('doc'), 300);
+    TP.reactRefreshLoaded = () => TP.refresh('load');
+    if (!window.__VIBE_OFFICE_DIRECT_HOST__) {
+      L.bus.on('sel', TP.reactRefreshSelection);
+      L.bus.on('doc-changed', TP.reactRefreshDocument);
+      L.bus.on('doc-loaded', TP.reactRefreshLoaded);
+    }
   };
   TP.register = (p) => { if (p.id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__) return; TP.registry[p.id] = p; };
   TP.show = function (id) {
@@ -90,9 +95,9 @@
       const q = h('input', { type: 'text', id: 'gs-search', placeholder: 'Search help', style: 'flex:1;min-width:0' });
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { P.helpQuery = q.value; TP.show('help'); } e.stopPropagation(); });
       b.append(
-        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: window.VO ? VO.editionName(window.VO.oneDocument ? 'Quire' : 'Wordx') : 'Wordx', translate: 'no', style: 'color:var(--pane-ink)' })),
+        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: window.VO ? VO.editionName('Wordx') : 'Wordx', translate: 'no', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec(L.N('Open'), link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new document...', () => TP.show('new')), link('sample', 'Open the welcome document', () => A().newDocument({ build: (d) => Object.assign(d, A().buildSample()) }))),
+        sec(L.N('Open'), link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new document...', () => TP.show('new')), link('sample', 'Open the welcome document', () => A().newDocument({ build: (d) => Object.assign(d, A().buildSample()) })), ...(window.VO?.host.kind === 'desktop' ? [VO.recentLinks(4)] : [])),
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => { P.helpTopic = 'keys'; TP.show('help'); }), link('stylesPane', 'Styles and Formatting', () => TP.show('styles')), link('mailMerge', 'Mail Merge wizard', () => TP.show('mailmerge'))));
     },
   });
@@ -733,7 +738,13 @@
 
   /* ================= Document Map & thumbnails ================= */
   const DM = (P.docmap = { collapsed: new Set() });
-  DM.mount = function (el) { DM.el = el; L.bus.on('doc-changed', L.debounce(() => { if (!el.hidden) (A().opts.thumbs ? P.thumbs.render() : DM.render()); }, 400)); L.bus.on('sel', L.debounce(() => { if (!el.hidden && !A().opts.thumbs) DM.mark(); }, 120)); L.bus.on('doc-loaded', () => { if (!el.hidden) DM.render(); }); };
+  DM.mount = function (el) {
+    DM.el = el;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__) return;
+    L.bus.on('doc-changed', L.debounce(() => { if (!el.hidden) (A().opts.thumbs ? P.thumbs.render() : DM.render()); }, 400));
+    L.bus.on('sel', L.debounce(() => { if (!el.hidden && !A().opts.thumbs) DM.mark(); }, 120));
+    L.bus.on('doc-loaded', () => { if (!el.hidden) DM.render(); });
+  };
   P.reactDocMapCatalog = () => {
     if (A().opts.thumbs) {
       const width = Math.max(60, (DM.el?.clientWidth || 100) - 40);
@@ -971,5 +982,5 @@
     else if (action === 'pages') { LY.setMultiPage(2); LY.setZoom(LY.zoomFor('twoPages')); }
     else if (action === 'close') A().setView(A().prevView && A().prevView !== 'reading' ? A().prevView : 'print');
   };
-  L.bus.on('view', (v) => { if (v === 'reading') { if (!RL.bar) RL.enter(); } else RL.exit(); });
+  if (!(window.VO && VO.reactDirectHost)) L.bus.on('view', (v) => { if (v === 'reading') { if (!RL.bar) RL.enter(); } else RL.exit(); });
 })();

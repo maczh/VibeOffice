@@ -10,9 +10,14 @@
   const L = root.L || (root.L = {});
   const named = root.document?.documentElement?.dataset || {};
   L.VERSION = root.VO?.VERSION || 'dev';   // one version for the suite: common/suite.js
-  L.APP_ID = L.APP_ID || named.app || 'vibeoffice';
-  L.APP_NAME = L.APP_NAME || named.appName || 'VibeOffice';
-  L.APP = L.APP || L.APP_NAME;
+  /* Keep the native desktop's established settings namespaces while the web product adopts its new app IDs. */
+  const desktopIds = root.__VO_HOST__ && root.__TAURI_INTERNALS__ ? { wordx: 'quire', excelx: 'ledger', pptx: 'lectern' } : null;
+  const directEditor = root.__VIBE_OFFICE_DIRECT_HOST__?.editor;
+  const directNames = { wordx: 'Wordx', excelx: 'Excelx', pptx: 'PPTX' };
+  const directName = directNames[directEditor] || null;
+  L.APP_ID = directEditor || L.APP_ID || (desktopIds && desktopIds[named.app]) || named.app || 'vibeoffice';
+  L.APP_NAME = directName || L.APP_NAME || named.appName || 'VibeOffice';
+  L.APP = directName || L.APP || L.APP_NAME;
 
   /* ---------- DOM ---------- */
   /* the text h() puts in the UI is shown in the UI's language (common/i18n.js): text, these attributes and string
@@ -491,9 +496,20 @@
     }
     const url = URL.createObjectURL(blob);
     const a = L.h('a', { href: url, download: name, style: 'display:none' });
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 5000);
+    const host = L.domHost();
+    let timer = 0, cleaned = false, removeMountCleanup = () => {};
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      if (timer) clearTimeout(timer);
+      a.remove();
+      URL.revokeObjectURL(url);
+      removeMountCleanup();
+    };
+    host.appendChild(a);
+    removeMountCleanup = L.addMountCleanup(cleanup);
+    try { a.click(); } catch (error) { cleanup(); throw error; }
+    if (!cleaned) timer = setTimeout(cleanup, 5000);
     window.dispatchEvent(new CustomEvent('vo-saved', { detail: { name } }));
     return 'saved';
   };
@@ -510,14 +526,32 @@
     return new Promise((resolve) => {
       const inp = L.h('input', { type: 'file', accept: accept || '', style: 'position:fixed;left:-9999px;top:0' });
       if (multiple) inp.multiple = true;
-      document.body.appendChild(inp);
       let done = false;
-      inp.addEventListener('change', () => { done = true; resolve(Array.from(inp.files || [])); inp.remove(); });
-      window.addEventListener('focus', function f() {
-        window.removeEventListener('focus', f);
-        setTimeout(() => { if (!done) { resolve([]); inp.remove(); } }, 1500);
-      });
-      inp.click();
+      let focusTimer = 0, removeMountCleanup = () => {};
+      const cleanup = () => {
+        inp.removeEventListener('change', changed);
+        window.removeEventListener('focus', focused);
+        if (focusTimer) clearTimeout(focusTimer);
+        focusTimer = 0;
+        inp.remove();
+        removeMountCleanup();
+      };
+      const finish = (files) => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(files);
+      };
+      const changed = () => finish(Array.from(inp.files || []));
+      const focused = () => {
+        window.removeEventListener('focus', focused);
+        focusTimer = setTimeout(() => finish([]), 1500);
+      };
+      inp.addEventListener('change', changed);
+      window.addEventListener('focus', focused);
+      removeMountCleanup = L.addMountCleanup(() => finish([]));
+      L.domHost().appendChild(inp);
+      try { inp.click(); } catch { finish([]); }
     });
   };
   L.readAsArrayBuffer = (blob) => blob.arrayBuffer ? blob.arrayBuffer() : new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsArrayBuffer(blob); });

@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en" data-app="ledger" data-app-name="Ledger">
+<html lang="en" data-app="excelx" data-app-name="Excelx">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: https://ipc.localhost; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<title>Ledger</title>
+<title>Excelx</title>
 <meta name="theme-color" content="#2a64c8">
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
@@ -15,9 +15,9 @@
 <link rel="stylesheet" href="../common/ui.css">
 <link rel="stylesheet" href="../common/scout/scout.css">
 <style>
-/* text boxes in a field stretch to the dialog's width (Ledger's and Quire's dialogs; Lectern's set their own widths) */
+/* text boxes in a field stretch to the dialog's width (Excelx's and Wordx's dialogs; PPTX's set their own widths) */
 .field > input[type=text], .field > input:not([type]), .field > textarea { flex: 1 1 140px; min-width: 0; width: auto !important; }
-/* ---------- Ledger: formula bar ---------- */
+/* ---------- Excelx: formula bar ---------- */
 .fbar { flex: none; display: flex; align-items: stretch; gap: 0; min-height: 22px; padding: 2px 3px 2px 2px; background: linear-gradient(var(--dock-a), var(--dock-b)); border-bottom: 1px solid var(--chrome-line); position: relative; z-index: 20; }
 .namebox { flex: none; display: flex; width: 120px; height: 20px; border: 1px solid var(--combo-border); background: var(--surface); }
 .namebox input { flex: 1; min-width: 0; border: 0; padding: 0 4px; outline: none; height: 18px; font: 11px/18px var(--ui-font); }
@@ -85,7 +85,7 @@
 .dv-tip b { display: block; margin-bottom: 2px; }
 .outline-btn { position: absolute; width: 13px; height: 13px; border: 1px solid var(--ink-3); background: var(--surface); padding: 0; font: bold 10px/9px Arial, sans-serif; color: var(--ink); display: flex; align-items: center; justify-content: center; z-index: 3; }
 .trace-svg { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; z-index: 4; }
-/* ---------- scrollbars: the browser's own, as in Quire and Lectern (grid.js sizes the spacer inside) ---------- */
+/* ---------- scrollbars: the browser's own, as in Wordx and PPTX (grid.js sizes the spacer inside) ---------- */
 .sb { position: absolute; background: var(--scroll-bg); }
 .vscroll { right: 0; top: 0; bottom: 0; width: 17px; overflow-x: hidden; overflow-y: scroll; }
 .hscroll { position: relative; flex: 1; min-width: 40px; height: 17px; overflow-x: scroll; overflow-y: hidden; }
@@ -119,7 +119,7 @@
 .ppv-page { position: relative; background: #fff; box-shadow: 0 0 0 1px #3c3c3c, 4px 4px 0 #555; flex: none; overflow: hidden; }
 .ppv-page canvas { position: absolute; left: 0; top: 0; }
 .ppv-status { flex: none; height: 20px; padding: 0 8px; background: linear-gradient(var(--dock-a), var(--dock-b)); border-top: 1px solid var(--chrome-line); line-height: 20px; }
-/* ---------- dialogs specific to Ledger ---------- */
+/* ---------- dialogs specific to Excelx ---------- */
 .nf-wrap { display: flex; gap: 10px; flex-wrap: wrap; }
 .nf-cats { width: 120px; height: 210px; }
 .nf-right { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px; }
@@ -413,7 +413,7 @@
 #react-namebox { flex: 1; min-width: 0; }
 .fb-react-btns [hidden] { display: none !important; }
 </style>
-<div id="app" class="app" aria-label="Ledger spreadsheet">
+<div id="app" class="app" aria-label="Excelx spreadsheet">
   <div class="cmdbars">
     <div class="menurow" id="menurow"></div>
     <div class="toolbars" id="toolbars"></div>

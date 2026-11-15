@@ -57,6 +57,63 @@ VO.i18n.whenReady(function () {
   document.addEventListener('drop', (e) => { if (!hasFiles(e)) return; e.preventDefault(); depth = 0; $('drop').hidden = true; openFile(e.dataTransfer.files[0]); });
   VO.host.onFiles((files) => openFile(files[0]));   // Open with, a double-click on a file
 
+  /* The desktop host owns this list and keeps its entries outside the browser. The new web product
+     deliberately does not read or display Recent Files. */
+  if (VO.host.kind === 'desktop') {
+    const section = document.createElement('section');
+    section.className = 'desktop-recent';
+    section.innerHTML = '<h2></h2><div class="desktop-recent-grid" id="grid"></div>';
+    section.querySelector('h2').textContent = VO.t('Recent Files');
+    $('gallery').before(section);
+    const grid = section.querySelector('#grid');
+    let renderToken = 0;
+    const previewUrls = new Set();
+    const renderRecent = async () => {
+      const token = ++renderToken;
+      for (const url of previewUrls) URL.revokeObjectURL(url);
+      previewUrls.clear();
+      const entries = await VO.recent.list();
+      if (token !== renderToken) return;
+      const cards = await Promise.all(entries.map(async (entry) => {
+        const card = document.createElement('article');
+        card.className = 'doc';
+        const picture = document.createElement('div');
+        picture.className = 'desktop-recent-thumb';
+        const preview = await VO.recent.preview(entry).catch(() => null);
+        if (token !== renderToken) return null;
+        if (preview) {
+          const img = document.createElement('img');
+          img.alt = '';
+          const url = URL.createObjectURL(preview);
+          previewUrls.add(url);
+          img.src = url;
+          picture.append(img);
+        } else picture.innerHTML = pictureSvg(entry.app);
+        const name = document.createElement('button');
+        name.className = 'name';
+        name.type = 'button';
+        name.textContent = entry.name;
+        name.addEventListener('click', () => VO.host.openRecent(entry.key, !!entry.draft).catch((e) => status(String(e))));
+        const remove = document.createElement('button');
+        remove.className = 'rm';
+        remove.type = 'button';
+        remove.textContent = '×';
+        remove.setAttribute('aria-label', VO.t('Remove {0}', entry.name));
+        remove.addEventListener('click', () => VO.recent.remove(entry.key).catch((e) => status(String(e))));
+        card.append(picture, name, remove);
+        if (entry.draft) { const unsaved = document.createElement('span'); unsaved.className = 'unsaved'; unsaved.textContent = VO.t('Unsaved'); card.append(unsaved); }
+        return card;
+      }));
+      if (token === renderToken) grid.replaceChildren(...cards.filter(Boolean));
+    };
+    const pictureSvg = (app) => {
+      const fill = { quire: '#2a64c8', ledger: '#1f8a4c', lectern: '#e0682d' }[app] || '#5b6f8c';
+      return `<svg viewBox="0 0 80 100" width="80" height="100" aria-hidden="true"><path d="M4 2h54l18 18v76H4z" fill="#fff" stroke="#8ea3c4"/><path d="M58 2v18h18" fill="#e3ebf8" stroke="#8ea3c4"/><path d="M18 26h44M18 34h44M18 42h44M18 50h44M18 58h30" stroke="${fill}" stroke-width="3" stroke-linecap="round"/></svg>`;
+    };
+    window.addEventListener('vo-recent', () => renderRecent().catch((e) => status(String(e))));
+    renderRecent().catch((e) => status(String(e)));
+  }
+
   /* ---------- Create File: Blank and the templates of each app (common/templates.json, made by tools/templates.mjs) */
   const KIND = { quire: VO.N('Documents'), ledger: VO.N('Spreadsheets'), lectern: VO.N('Presentations') };
   const NEW = { quire: [VO.N('New blank document'), VO.N('New document from “{0}”')], ledger: [VO.N('New blank spreadsheet'), VO.N('New spreadsheet from “{0}”')], lectern: [VO.N('New blank presentation'), VO.N('New presentation from “{0}”')] };

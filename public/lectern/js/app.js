@@ -9,7 +9,7 @@
   const E = L.ed;
   const TE = L.te;
 
-  /* original application icon, drawn like Quire's and Ledger's: a page with a tile carrying a presentation screen */
+  /* original application icon, drawn like Wordx and Excelx: a page with a tile carrying a presentation screen */
   L.icons.app = function (size) {
     const sz = size || 16;
     return `<svg class="appico" width="${sz}" height="${sz}" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5h8l3 3v10h-11z" fill="#fff" stroke="#a8471a"/><path d="M11.5 1.5v3h3" fill="#fbe3d6" stroke="#a8471a"/><rect x="1.5" y="4.5" width="7" height="8" fill="#d2602a" stroke="#93401a"/><path d="M2.9 6.3h4.2v3.1H2.9z" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M5 9.4v1.4M3.7 11.3l1.3-.9 1.3.9" fill="none" stroke="#fff" stroke-width="1"/><path d="M9.8 6.8h3.6v2.7H9.8z" fill="none" stroke="#c99a7e"/><path d="M10 11.5h3.2" stroke="#c99a7e"/></svg>`;
@@ -62,7 +62,7 @@
   function buildMenus() {
     const autoShapeSub = (group) => ({ custom: (close) => shapeGrid(L.geom.MENU[group], close) });
     const menus = [
-      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', 'printPreview', 'print', '-', 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
+      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', ...(window.VO?.host.kind === 'desktop' ? VO.recentMenuItems(4) : []), '-', 'pageSetup', 'printPreview', 'print', '-', 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
       { label: '&Edit', items: ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', '-', 'clear', 'selectAll', 'duplicate', 'deleteSlide', '-', 'find', 'replace'] },
       {
         label: '&View', items: () => ['viewNormal', 'viewSorter', 'showFromStart', 'viewNotes', '-',
@@ -300,7 +300,11 @@
     L.$('#drawrow').appendChild(A.toolbarsEl.drawing);
     /* view buttons */
     const vb = L.$('#viewbar');
-    vb.append(ui.tbButton('viewNormal'), ui.tbButton('viewSorter'), ui.tbButton('showFromCurrent'));
+    if (window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected) {
+      ui.reactToolbar('viewbar', 'View', vb, ['viewNormal', 'viewSorter', 'showFromCurrent'], 'viewbar');
+      return;
+    }
+    vb.append(ui.tbButton('viewNormal', { forceDOM: true }), ui.tbButton('viewSorter', { forceDOM: true }), ui.tbButton('showFromCurrent', { forceDOM: true }));
   }
   A.tblBorder = { c: 'tx1', w: 1, dash: 'solid' };
   let reactTableFormatOpen = false;
@@ -371,10 +375,17 @@
     if (k === 'shape') { const p = E.primary && E.primary(); return !!(p && !p.wa && ['shape', 'line', 'group', 'text'].includes(p.type) && !(L.diagram && L.diagram.of(p))); }
     return ctxToolbar(k === 'table' ? 'tables' : k);
   };
+  A.reactToolbarVisibility = () => Object.fromEntries(Object.keys(A.toolbarsEl || {}).map((id) => [id,
+    id === 'master' ? A.view === 'master'
+      : id === 'sorter' ? A.view === 'sorter'
+        : id === 'outlining' ? A.opts.toolbars.outlining === true
+          : A.tbShown(id) && A.view !== 'preview' && (id !== 'drawing' || A.view !== 'sorter'),
+  ]));
   A.toggleToolbar = (id) => { const v = A.opts.toolbars[id]; A.opts.toolbars[id] = v === true ? (['picture', 'tables', 'wordart', 'diagram'].includes(id) ? false : false) : true; A.saveOpts(); A.updateToolbars(); };
   A.updateToolbars = function () {
     if (!A.toolbarsEl) return;
     if (E.holdLayout && E.holdLayout(A.updateToolbars)) return;   /* not under a press on the slide (editor.js) */
+    if (window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected) { ui.refresh(); E.layout(); return; }
     for (const id of ['standard', 'formatting', 'drawing', 'outlining', 'picture', 'tables', 'wordart', 'diagram']) A.toolbarsEl[id].hidden = !A.tbShown(id) || (A.view === 'preview');
     A.toolbarsEl.outlining.hidden = !(A.opts.toolbars.outlining === true || (L.panes.left.tab === 'outline' && A.view === 'normal' && A.opts.toolbars.outlining !== false && false));
     A.toolbarsEl.master.hidden = A.view !== 'master';
@@ -413,7 +424,7 @@
     else A.sbSlide.textContent = n ? L.t('Slide {0} of {1}', E.idx + 1, n) : L.t('No slides');
     A.sbDesign.textContent = M.designName(E.design());
   };
-  A.updateTitle = () => { document.title = `${L.file.titled(A.fileName)} - ${window.VO?.oneDocument ? 'Lectern' : 'PPTX'}`; };
+  A.updateTitle = () => { const title = `${L.file.titled(A.fileName)} - PPTX`; if (window.VO && VO.reactHost) { VO.reactDirectHost?.titleChanged?.(title); return; } document.title = title; };
 
   /* ================= views ================= */
   A.setView = function (v) {
@@ -489,7 +500,7 @@
   /** the desktop app keeps one presentation per window: a new one there opens in a window of its own; true then */
   const elsewhere = (start) => {
     if (!(window.VO && VO.oneDocument) || pristine()) return false;
-    VO.go(VO.url('lectern', start)).catch((e) => ui.msg(String(e), { icon: 'error' }));
+    VO.go(VO.url(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'pptx' : 'lectern', start)).catch((e) => ui.msg(String(e), { icon: 'error' }));
     return true;
   };
   A.newPresentation = async function () {
@@ -1083,9 +1094,25 @@ addEventListener('resize',fit);fit();show(0);`;
   A.speakerNotesDlg = function () {
     const s = E.slide();
     if (!s) return;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) {
+      A.reactSpeakerNotesState = { slide: E.idx + 1, target: s };
+      L.bus.emit('pptx-speaker-notes-dialog');
+      return;
+    }
     const ta = h('textarea', { id: 'sn-text', rows: 10, style: 'width:100%' });
     ta.value = s.notes || '';
     ui.dialog({ title: 'Speaker Notes', body: h('div', { class: 'col' }, h('label', { for: 'sn-text', text: L.t('Slide {0}:', E.idx + 1) }), ta), width: 420, buttons: [{ label: 'Close', primary: true, onClick: () => { if (ta.value !== (s.notes || '')) { L.hist.push(L.N('Notes')); s.notes = ta.value; L.panes.notes.render(); } } }] });
+  };
+  A.reactSpeakerNotesCatalog = () => A.reactSpeakerNotesState ? { slide: A.reactSpeakerNotesState.slide, notes: A.reactSpeakerNotesState.target.notes || '' } : null;
+  A.reactSpeakerNotesAction = (action, notes) => {
+    const state = A.reactSpeakerNotesState;
+    if (!state) return;
+    A.reactSpeakerNotesState = null;
+    if (action === 'save' && typeof notes === 'string' && notes !== (state.target.notes || '')) {
+      L.hist.push(L.N('Notes'));
+      state.target.notes = notes;
+      L.panes.notes.render();
+    }
   };
   A.outlineToSlides = function (text, at) {
     const lines = String(text).replace(/\r/g, '').split('\n');
@@ -1473,6 +1500,15 @@ addEventListener('resize',fit);fit();show(0);`;
   A.picMode = (m) => E.commit('Picture Color', () => { for (const s of E.selected()) if (s.type === 'image') { s.img = Object.assign({}, s.img); if (m) s.img.mode = m; else delete s.img.mode; } });
   A.picAdjust = (k, d) => E.commit(k === 'bright' ? L.N('Brightness') : L.N('Contrast'), () => { for (const s of E.selected()) if (s.type === 'image') { s.img = Object.assign({}, s.img); s.img[k] = L.clamp(L.round((s.img[k] || 0) + d, 2), -1, 1); } });
   A.picReset = () => E.commit('Reset Picture', () => { for (const s of E.selected()) if (s.type === 'image') { s.img = {}; s.crop = { l: 0, t: 0, r: 0, b: 0 }; } });
+  let reactTransparentPick = null;
+  A.reactTransparentPointerDown = (event) => {
+    if (!reactTransparentPick) return false;
+    const pick = reactTransparentPick;
+    reactTransparentPick = null;
+    void pick(event);
+    return true;
+  };
+  A.reactTransparentCancel = () => { reactTransparentPick = null; };
   A.picTransparentTool = function () {
     const s = E.primary();
     if (!s || s.type !== 'image') return;
@@ -1500,7 +1536,8 @@ addEventListener('resize',fit);fit();show(0);`;
       if (!view) return;
       E.commit('Set Transparent Color', () => { s.img = Object.assign({}, s.img, { clear: hex, view }); });
     };
-    E.scroller.addEventListener('pointerdown', once, true);
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) reactTransparentPick = once;
+    else E.scroller.addEventListener('pointerdown', once, true);
   };
 
   /* ================= tables ================= */
@@ -1740,7 +1777,40 @@ addEventListener('resize',fit);fit();show(0);`;
     [L.N('Training')]: [['Training', ['Instructor', 'Date']], ['Learning Objectives', ['After this session you will be able to...', '...', '...']], ['Agenda', ['Topic one', 'Topic two', 'Practice', 'Review']], ['Topic One', ['Key concept', 'Example', 'Try it']], ['Topic Two', ['Key concept', 'Example', 'Try it']], ['Review', ['What we covered', 'Where to learn more', 'Questions']]],
     [L.N('Selling a Product or Service')]: [['Product Name', ['Presenter', 'Date']], ['The Problem', ['What customers struggle with today']], ['Our Solution', ['What it does', 'How it is different']], ['Benefits', ['Saves time', 'Saves money', 'Reduces risk']], ['Pricing', ['Plans and options']], ['Getting Started', ['How to buy', 'Who to contact']]],
   };
+  let reactAutoContentOpen = false;
+  A.reactAutoContentCatalog = () => reactAutoContentOpen ? { types: Object.keys(AUTOCONTENT), designs: M.DESIGNS.map(({ key, name }) => ({ key, name })), defaultDesign: 'azure' } : null;
+  A.reactAutoContentAction = async (action, values) => {
+    if (!reactAutoContentOpen) return false;
+    if (action === 'close') { reactAutoContentOpen = false; L.bus.emit('pptx-autocontent-dialog'); return true; }
+    if (action !== 'create' || !values || !Object.hasOwn(AUTOCONTENT, values.type)) return false;
+    if (!(await createAutoContent(values))) return false;
+    reactAutoContentOpen = false;
+    L.bus.emit('pptx-autocontent-dialog');
+    return true;
+  };
+  async function createAutoContent({ type, title, footer, design, number, date }) {
+    if (!(await confirmDiscard())) return false;
+    const spec = AUTOCONTENT[type];
+    if (!spec) return false;
+    const pres = M.newPresentation(Object.assign({ design, empty: true }, A.newSize()));
+    const did = Object.keys(pres.designs)[0];
+    spec.forEach(([slideTitle, bullets], i) => {
+      const slide = M.newSlide(pres, i === 0 ? 'title' : 'text', did);
+      T.setPlain(slide.shapes[0].tx, i === 0 && title ? title : slideTitle);
+      if (i === 0) T.setPlain(slide.shapes[1].tx, bullets.join('\n'));
+      else slide.shapes[1].tx.ps = bullets.map((bullet) => T.para(bullet));
+      M.insertSlides(pres, pres.slides.length, [slide]);
+    });
+    pres.hf = Object.assign(pres.hf, { num: !!number, dt: !!date, ftr: !!footer, ftrText: footer || '', notOnTitle: true });
+    A.loadPres(pres, title || type);
+    return true;
+  }
   A.autoContent = function () {
+    if (window.__VIBE_OFFICE_DIRECT_HOST__ && window.VO?.reactDirectHost) {
+      reactAutoContentOpen = true;
+      L.bus.emit('pptx-autocontent-dialog');
+      return;
+    }
     const types = Object.keys(AUTOCONTENT);
     const list = h('select', { id: 'ac-type', size: types.length, style: 'width:240px' }, ...types.map((t) => h('option', { value: t, text: t })));
     list.selectedIndex = 0;
@@ -1750,21 +1820,7 @@ addEventListener('resize',fit);fit();show(0);`;
     const num = ui.check('Slide &number', true), date = ui.check('&Date last updated', false);
     ui.dialog({
       title: 'AutoContent Wizard', body: h('div', { class: 'row' }, h('div', { class: 'col' }, h('label', { for: 'ac-type', text: 'Presentation type:' }), list), h('div', { class: 'col' }, ui.field('&Title:', title), ui.field('&Footer:', footer), ui.field('D&esign:', dsn), num, date)), width: 560, buttons: [{
-        label: '&Finish', primary: true, onClick: async () => {
-          if (!(await confirmDiscard())) return;
-          const spec = AUTOCONTENT[list.value];
-          const pres = M.newPresentation(Object.assign({ design: dsn.value, empty: true }, A.newSize()));
-          const did = Object.keys(pres.designs)[0];
-          spec.forEach(([t, bullets], i) => {
-            const s = M.newSlide(pres, i === 0 ? 'title' : 'text', did);
-            T.setPlain(s.shapes[0].tx, i === 0 && title.value ? title.value : t);
-            if (i === 0) T.setPlain(s.shapes[1].tx, bullets.join('\n'));
-            else s.shapes[1].tx.ps = bullets.map((b) => T.para(b));
-            M.insertSlides(pres, pres.slides.length, [s]);
-          });
-          pres.hf = Object.assign(pres.hf, { num: num.input.checked, dt: date.input.checked, ftr: !!footer.value, ftrText: footer.value, notOnTitle: true });
-          A.loadPres(pres, title.value || list.value);
-        },
+        label: '&Finish', primary: true, onClick: () => createAutoContent({ type: list.value, title: title.value, footer: footer.value, design: dsn.value, number: num.input.checked, date: date.input.checked }),
       }, { label: 'Cancel' }],
     });
   };
@@ -1896,7 +1952,7 @@ addEventListener('resize',fit);fit();show(0);`;
     if (TE.active()) { const txt = TE.selectedText(); if (txt) pushClip({ kind: 'text', text: txt, label: txt.slice(0, 80) }); return; }
     if (inNativeText(t)) return;
     const c = prepared || (A.focusArea === 'slides' || A.view === 'sorter' ? A.copySlides(op === 'cut') : A.copyShapes(op === 'cut'));
-    if (c) { e.preventDefault(); try { e.clipboardData.setData('text/plain', c.text || ''); e.clipboardData.setData('application/x-lectern', JSON.stringify(L.preserve.clipboard(c))); } catch (er) { e.clipboardData.setData('application/x-lectern', c.id); } }
+    if (c) { e.preventDefault(); try { e.clipboardData.setData('text/plain', c.text || ''); e.clipboardData.setData('application/x-pptx', JSON.stringify(L.preserve.clipboard(c))); } catch (er) { e.clipboardData.setData('application/x-pptx', c.id); } }
   }
   function handlePaste(e) {
     pendingClip = null;
@@ -1906,7 +1962,7 @@ addEventListener('resize',fit);fit();show(0);`;
     const dt = e.clipboardData;
     if (!dt) return;
     e.preventDefault();
-    const marker = dt.getData('application/x-lectern');
+    const marker = dt.getData('application/x-pptx');
     const files = Array.from(dt.files || []).filter((f) => /^image\//.test(f.type));
     const text = dt.getData('text/plain');
     if (marker.startsWith('{')) {
@@ -2094,7 +2150,7 @@ addEventListener('resize',fit);fit();show(0);`;
   function setupSplitters() {
     const sl = L.$('#split-left'), sn = L.$('#split-notes');
     /* splitter drags (common/ui.js ui.drag): they follow the pointer at once; Esc or a lost release puts the pane back */
-    sl.addEventListener('pointerdown', (e) => {
+    const left = (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       const w0 = L.$('#leftpane').offsetWidth, was = A.opts.leftW;
@@ -2105,8 +2161,8 @@ addEventListener('resize',fit);fit();show(0);`;
         up: (ev, d) => { if (!d.moved) return; L.panes.left.render(); E.layout(); A.saveOpts(); },
         cancel: () => { size(w0); A.opts.leftW = was; E.layout(); },
       });
-    });
-    sn.addEventListener('pointerdown', (e) => {
+    };
+    const notes = (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       const h0 = L.$('#notes').offsetHeight, was = A.opts.notesH;
@@ -2117,7 +2173,12 @@ addEventListener('resize',fit);fit();show(0);`;
         up: (ev, d) => { if (!d.moved) return; E.layout(); A.saveOpts(); },
         cancel: () => { size(h0); A.opts.notesH = was; E.layout(); },
       });
-    });
+    };
+    if (!(window.VO && VO.reactDirectHost)) {
+      sl.addEventListener('pointerdown', left);
+      sn.addEventListener('pointerdown', notes);
+    }
+    return { left, notes };
   }
 
   /* ================= sample presentation ================= */
@@ -2342,8 +2403,10 @@ addEventListener('resize',fit);fit();show(0);`;
     L.bus.on('selection', () => { A.updateToolbars(); L.panes.task.refresh('selection'); });
     L.bus.on('edit-start', () => { A.updateToolbars(); ui.refresh(); });
     L.bus.on('edit-end', () => { ui.refresh(); });
-    L.addMountListener(window, 'beforeunload', (e) => { if (L.hist.dirty) { e.preventDefault(); e.returnValue = ''; } });
-    L.addMountListener(window, 'resize', L.debounce(() => { if (A.view === 'sorter') L.panes.sorter.render(); if (A.view === 'notes') L.panes.notesView.render(); if (A.view === 'preview') L.panes.preview.render(); L.panes.left.render(); }, 250));
+    A.reactBeforeUnload = (e) => { if (L.hist.dirty) { e.preventDefault(); e.returnValue = ''; } };
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'beforeunload', A.reactBeforeUnload);
+    A.reactResize = L.debounce(() => { if (A.view === 'sorter') L.panes.sorter.render(); if (A.view === 'notes') L.panes.notesView.render(); if (A.view === 'preview') L.panes.preview.render(); L.panes.left.render(); }, 250);
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'resize', A.reactResize);
     A.outlineDirty = () => {};
   }
 
@@ -2386,7 +2449,8 @@ addEventListener('resize',fit);fit();show(0);`;
     const narrow = window.innerWidth < 820;
     if (narrow) { A.opts.taskOpen = false; if (window.innerWidth < 640) A.opts.leftOpen = false; }
     L.$('#taskpane').hidden = !A.opts.taskOpen;
-    setupSplitters();
+    A.reactSplitterEvents = setupSplitters();
+    if (reactHost && reactHost.root) reactHost.root.dispatchEvent(new CustomEvent('vibeoffice-pptx-splitters-ready', { bubbles: true }));
     setupDrop();
     wire();
     if (launch && launch.n) A.untitled = launch.n;   // the desktop app's number for it
@@ -2397,7 +2461,7 @@ addEventListener('resize',fit);fit();show(0);`;
     A.applyOpts();
     E.layout();
     ui.refresh();
-    if (window.VO) VO.attach('lectern', {
+    if (window.VO) VO.attach(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'pptx' : 'lectern', {
       async open(f, o) {
         await A.openFile(f);
         /* a presentation a page made (desktop app): never saved */

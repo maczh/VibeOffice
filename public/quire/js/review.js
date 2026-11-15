@@ -400,11 +400,12 @@
   }
   RV.renderBalloons = renderBalloons;
   RV.reactBalloonDown = (id) => highlightBalloon(String(id));
-  L.bus.on('layout-done', () => {
+  RV.reactLayoutChanged = () => {
     for (const l of LY.root.querySelectorAll(':scope > .balloon-line')) l.remove();
     renderBalloons();
     if (!L.$('#revpane').hidden) RV.renderPane();
-  });
+  };
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('layout-done', RV.reactLayoutChanged);
 
   /* ================= reviewing pane ================= */
   RV.togglePane = function (on) {

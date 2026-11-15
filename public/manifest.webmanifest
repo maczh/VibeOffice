@@ -42,19 +42,19 @@
     {
       "name": "New document",
       "short_name": "Document",
-      "description": "A blank document in Quire",
+      "description": "A blank document in Wordx",
       "url": "quire/?new"
     },
     {
       "name": "New spreadsheet",
       "short_name": "Spreadsheet",
-      "description": "A blank workbook in Ledger",
+      "description": "A blank workbook in Excelx",
       "url": "ledger/?new"
     },
     {
       "name": "New presentation",
       "short_name": "Presentation",
-      "description": "A blank presentation in Lectern",
+      "description": "A blank presentation in PPTX",
       "url": "lectern/?new"
     }
   ],
@@ -64,21 +64,21 @@
       "sizes": "1280x720",
       "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "Quire, the word processor"
+      "label": "Wordx, the word processor"
     },
     {
       "src": "ledger/preview.jpg",
       "sizes": "1280x720",
       "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "Ledger, the spreadsheet"
+      "label": "Excelx, the spreadsheet"
     },
     {
       "src": "lectern/preview.jpg",
       "sizes": "1280x720",
       "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "Lectern, the presentation editor"
+      "label": "PPTX, the presentation editor"
     }
   ],
   "file_handlers": [

@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 
 interface StatusSnapshot { mode: string; text: string; calculation: string; end: boolean }
 interface ExcelxRuntime {
-  app?: { openAutoCalculateMenu?(event: MouseEvent | PointerEvent): void };
+  app?: { opts?: { autoCalcFn?: string }; saveOpts?(): void; updateStatus?(): void };
+  ui?: { openMenu(items: unknown[], at: { x: number; y: number }): void };
   statusSnapshot?(): StatusSnapshot;
   grid?: { scrollLock?: boolean };
   bus?: { on(event: string, listener: (snapshot?: StatusSnapshot) => void): () => void };
@@ -47,11 +48,18 @@ export function ExcelxStatusBarInteractions({ host }: { host: HTMLElement }) {
   }, [host]);
   if (!mount) return null;
   const label = (value: string) => runtime()?.N?.(value) || value;
-  const open = (event: ReactMouseEvent<HTMLDivElement>) => runtime()?.app?.openAutoCalculateMenu?.(event.nativeEvent);
+  const openMenuAt = (x: number, y: number) => {
+    const L = runtime();
+    const app = L?.app;
+    if (!L?.ui || !app) return;
+    const functions = [['NONE', '&None'], ['AVERAGE', '&Average'], ['COUNTA', '&Count'], ['COUNT', 'C&ount Nums'], ['MAX', '&Max'], ['MIN', 'M&in'], ['SUM', '&Sum']] as const;
+    L.ui.openMenu(functions.map(([key, itemLabel]) => ({ label: itemLabel, radio: true, checked: () => app.opts?.autoCalcFn === key, run: () => { if (app.opts) app.opts.autoCalcFn = key; app.saveOpts?.(); app.updateStatus?.(); } })), { x, y });
+  };
+  const open = (event: ReactMouseEvent<HTMLDivElement>) => openMenuAt(event.clientX, event.clientY - 150);
   return createPortal(<>
     <div className="sb-cell mode">{snapshot.mode}</div>
     <div className="sb-cell grow" data-react-status />
-    <div className="sb-cell calc" data-tip="Right-click to choose the AutoCalculate function" role="button" tabIndex={0} aria-label={label('AutoCalculate')} onClick={open} onContextMenu={(event) => { event.preventDefault(); open(event); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); const rect = event.currentTarget.getBoundingClientRect(); runtime()?.app?.openAutoCalculateMenu?.(new MouseEvent('click', { clientX: rect.right, clientY: rect.bottom })); } }}>{snapshot.calculation}</div>
+    <div className="sb-cell calc" data-tip="Right-click to choose the AutoCalculate function" role="button" tabIndex={0} aria-label={label('AutoCalculate')} onClick={open} onContextMenu={(event) => { event.preventDefault(); open(event); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); const rect = event.currentTarget.getBoundingClientRect(); openMenuAt(rect.right, rect.bottom); } }}>{snapshot.calculation}</div>
     {([['CAPS', locks.caps], ['NUM', locks.num], ['SCRL', locks.scroll], ['END', snapshot.end]] as const).map(([name, active]) => <div key={name} className={`sb-cell ind${active ? '' : ' off'}`}>{label(name)}</div>)}
   </>, mount, 'excelx-status-bar');
 }

@@ -1,27 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface SpinOptions {
   id: string;
-  value: number;
+  value: number | null;
   min?: number;
   max?: number;
   step?: number;
   dec?: number;
   unit?: string;
-  fmt?(value: number): string;
-  onChange?(value: number): void;
+  fmt?(value: number | null): string;
+  parse?(input: HTMLInputElement | null): number | null;
+  onMount?(input: HTMLInputElement): void;
+  onChange?(value: number | null): void;
 }
 interface SpinRequest { target: HTMLSpanElement; options: SpinOptions }
 interface SpinTarget extends HTMLSpanElement { __reactSpinDisabled?: boolean }
 interface SpinRuntime { round(value: number, digits?: number): number; clamp(value: number, min: number, max: number): number }
 function runtime(): SpinRuntime | undefined { return (window as Window & { L?: SpinRuntime }).L; }
-function format(options: SpinOptions, value: number): string {
+function format(options: SpinOptions, value: number | null): string {
   if (options.fmt) return options.fmt(value);
   const digits = options.dec ?? 2;
-  return `${Math.round((value + Number.EPSILON) * 10 ** digits) / 10 ** digits}${options.unit || ''}`;
+  const normalized = value ?? 0;
+  return `${Math.round((normalized + Number.EPSILON) * 10 ** digits) / 10 ** digits}${options.unit || ''}`;
 }
-function parse(options: SpinOptions, input: HTMLInputElement | null): number {
+function parse(options: SpinOptions, input: HTMLInputElement | null): number | null {
+  if (options.parse) return options.parse(input);
   if (!input) return options.value;
   const value = parseFloat(String(input.value).replace(/[^0-9.\-]/g, ''));
   return Number.isNaN(value) ? options.value : value;
@@ -29,13 +33,15 @@ function parse(options: SpinOptions, input: HTMLInputElement | null): number {
 
 function SpinControl({ request }: { request: SpinRequest }) {
   const { options, target } = request;
+  const inputRef = useRef<HTMLInputElement>(null);
   const [disabled, setDisabled] = useState(!!(target as SpinTarget).__reactSpinDisabled);
   const step = options.step || 1;
   const change = (direction: number) => {
     const input = target.querySelector<HTMLInputElement>('input');
     const office = runtime();
-    const next = office?.clamp(office.round(parse(options, input) + direction * step, 4), options.min ?? -1e9, options.max ?? 1e9)
-      ?? Math.min(options.max ?? 1e9, Math.max(options.min ?? -1e9, parse(options, input) + direction * step));
+    const current = parse(options, input) ?? 0;
+    const next = office?.clamp(office.round(current + direction * step, 4), options.min ?? -1e9, options.max ?? 1e9)
+      ?? Math.min(options.max ?? 1e9, Math.max(options.min ?? -1e9, current + direction * step));
     if (input) input.value = format(options, next);
     options.value = next;
     options.onChange?.(next);
@@ -43,10 +49,11 @@ function SpinControl({ request }: { request: SpinRequest }) {
   useEffect(() => {
     const updateDisabled = () => setDisabled(!!(target as SpinTarget).__reactSpinDisabled);
     target.addEventListener('vibeoffice-react-spin-disabled', updateDisabled);
+    if (inputRef.current) options.onMount?.(inputRef.current);
     return () => target.removeEventListener('vibeoffice-react-spin-disabled', updateDisabled);
-  }, [target]);
+  }, [target, options]);
   return createPortal(<>
-    <input type="text" className="spin-in" id={options.id} inputMode="decimal" autoComplete="off" defaultValue={format(options, options.value)} disabled={disabled} onBlur={(event) => { const value = parse(options, event.currentTarget); if (value !== options.value) { options.value = value; options.onChange?.(value); } }} onKeyDown={(event) => {
+    <input ref={inputRef} type="text" className="spin-in" id={options.id} inputMode="decimal" autoComplete="off" defaultValue={format(options, options.value)} disabled={disabled} onBlur={(event) => { const value = parse(options, event.currentTarget); if (value !== options.value) { options.value = value; options.onChange?.(value); } }} onKeyDown={(event) => {
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); change(event.key === 'ArrowUp' ? 1 : -1); }
     }} />
     <span className="spin-bs"><button type="button" className="spin-b up" tabIndex={-1} aria-label="Increase" disabled={disabled} onClick={() => change(1)}><span /></button><button type="button" className="spin-b dn" tabIndex={-1} aria-label="Decrease" disabled={disabled} onClick={() => change(-1)}><span /></button></span>

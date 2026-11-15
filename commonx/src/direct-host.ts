@@ -9,6 +9,7 @@ export interface DirectHostOptions {
   allowedRemoteOrigins?: readonly string[];
   draftStore?: DraftStore<Blob>;
   onDraftSaved?: (draft: LocalDraft<Blob>) => void;
+  onTitleChange?: (title: string) => void;
   onOpenFile?: (signal: AbortSignal) => Promise<LocalDocument | null>;
   onOpenUrl?: (url: string, signal: AbortSignal) => Promise<LocalDocument | null>;
   initialFile?: File;
@@ -64,6 +65,7 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
       return 'saved';
     };
     const runtime = {
+      editor: options.editor,
       launch: options.engine.launch === 'sample' ? null : template ? { template } : { new: true },
       async open() {
         if (!live()) return;
@@ -96,6 +98,9 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
       },
       async removeDraft(id: string) {
         if (live()) await store.remove(id, signal);
+      },
+      titleChanged(title: string) {
+        if (live()) options.onTitleChange?.(title);
       },
       ready(_app: string, mountedHooks: EngineHooks) {
         if (!live()) return;

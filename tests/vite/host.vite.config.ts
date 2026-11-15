@@ -6,7 +6,7 @@ import { legacyRuntime } from '../../tools/vite/legacy-runtime.mjs';
 export default defineConfig({
   publicDir: false,
   plugins: [react({ fastRefresh: false }), legacyRuntime(['wordx', 'excelx', 'pptx'])],
-  server: { fs: { allow: [resolve(__dirname, '../..')] } },
+  server: { fs: { allow: [resolve(__dirname, '../..')] }, watch: { ignored: ['**/node_modules/**', '**/.git/**', '**/tmp/**'] } },
   resolve: {
     alias: {
       '@vibeoffice/core': resolve(__dirname, '../../commonx/src/index.ts'),

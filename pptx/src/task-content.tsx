@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { Children, createElement, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { PptxRibbonSpec, RibbonContext, RibbonItem } from './ribbon-spec.js';
 
@@ -69,7 +69,7 @@ export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
   const link = (icon: string, label: string, run: () => void) => <button className="tp-link" type="button" onClick={run}>
     {icon && <span dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} />}<span>{translate(L, label)}</span>
   </button>;
-  const section = (title: string, ...children: ReactNode[]) => <section className="tp-sec"><div className="tp-h">{translate(L, title)}</div>{children}</section>;
+  const section = (title: string, ...children: ReactNode[]) => createElement('section', { className: 'tp-sec' }, createElement('div', { className: 'tp-h' }, translate(L, title)), ...Children.toArray(children));
   const appIcon = L.icons?.app?.(32) || '';
   const editionName = (window as Window & { VO?: { editionName?(app: string): string } }).VO?.editionName?.('PPTX') || 'PPTX';
   if (toolContext) return <ContextualToolsPane L={L} mount={mount} context={toolContext} />;

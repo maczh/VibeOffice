@@ -22,6 +22,14 @@ test('PPTX Getting Started offers open/create actions without Recent Files', () 
   await u.esc();
 }));
 
+test('classic PPTX AutoContent Wizard still creates the selected presentation', () => lectern(async (u) => {
+  const dialog = await u.evaluate(`(() => { L.hist.dirty=false; L.app.autoContent(); const root=document.querySelector('.dlg'); const type=root.querySelector('#ac-type'); type.value='Status Report'; type.dispatchEvent(new Event('change',{bubbles:true})); const title=root.querySelector('#ac-title'); title.value='Classic Status'; title.dispatchEvent(new Event('input',{bubbles:true})); const footer=root.querySelector('#ac-footer'); footer.value='Internal'; footer.dispatchEvent(new Event('input',{bubbles:true})); root.querySelectorAll('input[type=checkbox]')[1].click(); const finish=[...root.querySelectorAll('.dlg-foot .btn')].find((button)=>/finish/i.test(button.textContent)); const rect=finish.getBoundingClientRect(); return { x:rect.left+rect.width/2, y:rect.top+rect.height/2, title:root.querySelector('.dlg-ttl')?.textContent }; })()`);
+  assert.equal(dialog.title, 'AutoContent Wizard');
+  await u.click(dialog);
+  const result = await u.evaluate(`({name:L.app.fileName,slides:L.pres.slides.length,title:L.txt.plain(L.pres.slides[0].shapes[0].tx),footer:L.pres.hf.ftrText,number:L.pres.hf.num,date:L.pres.hf.dt})`);
+  assert.deepEqual(result, { name: 'Classic Status', slides: 5, title: 'Classic Status', footer: 'Internal', number: true, date: true }, 'the classic fallback retains the AutoContent form values and presentation generator');
+}));
+
 /** a deck of `slides` slides (notes S1, S2, … name them) whose first slide holds `shapes`, JS using
     box(id, x, y, text, bold), rect(id, x, y, w, h, text) and table(id, x, y) (3×3, cells "r0c0"…); slide 1 shown */
 const setup = (u, shapes, slides = 1) => u.evaluate(`(async () => {
@@ -38,6 +46,15 @@ const setup = (u, shapes, slides = 1) => u.evaluate(`(async () => {
   E.sel = []; E.render(); L.panes.left.render();
   await new Promise((r) => setTimeout(r, 400));
 })()`);
+
+test('PPTX clipboard transports Office objects with the rebranded MIME type', () => lectern(async (u) => {
+  await setup(u, ['rect(1, 100, 100, 160, 90, "Copy me")']);
+  const result = await u.evaluate(`(() => { const data=new DataTransfer(),event=new ClipboardEvent('copy',{clipboardData:data,bubbles:true,cancelable:true}); L.ed.sel=[L.pres.slides[0].shapes[0].id]; L.app.focusArea='editor'; L.domHost().dispatchEvent(event); return {prevented:event.defaultPrevented,newType:data.types.includes('application/x-pptx'),oldType:data.types.includes('application/x-lectern'),payload:data.getData('application/x-pptx')}; })()`);
+  assert.equal(result.prevented, true);
+  assert.equal(result.newType, true, 'PPTX copy writes its private OOXML payload using the new MIME type');
+  assert.equal(result.oldType, false, 'PPTX copy does not emit the retired product MIME type');
+  assert.ok(result.payload.startsWith('{'), 'the MIME payload still contains the structured object package');
+}));
 
 /** screen point just inside character n of a shape's text */
 const at = (u, id, n) => u.evaluate(`(() => { const w = document.createTreeWalker(L.ed.elOf('${id}'), NodeFilter.SHOW_TEXT); let k = ${n}, t;

@@ -90,7 +90,7 @@
   };
   VO.i18n.translateTree = translateTree;
   if (doc) {
-    const run = () => VO.i18n.whenReady(() => translateTree(doc.documentElement));
+    const run = () => VO.i18n.whenReady(() => translateTree(directRoot && directRoot.isConnected ? directRoot : doc.documentElement));
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run); else run();
   }
   if (window.L) { window.L.t = t; window.L.N = VO.N; }

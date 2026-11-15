@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 interface LegacyCommand {
@@ -26,6 +26,7 @@ interface LegacyRibbonItem {
 }
 
 interface LegacyRibbonGroup {
+  id?: string;
   label: string;
   icon?: string;
   launcher?: string;
@@ -146,7 +147,7 @@ function RibbonItem({ value, size = 'medium', spec, refresh }: { value: LegacyRi
   >{icon && <span className="tb-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: office.icons.get(icon, actualSize === 'large' ? 32 : undefined) }} />}{label && <span className="tb-lbl">{office.t(label)}</span>}</button>;
 }
 
-function RibbonGroup({ group, spec, refresh }: { group: LegacyRibbonGroup; spec: LegacyRibbonSpec; refresh: number }) {
+function RibbonGroupContents({ group, spec, refresh }: { group: LegacyRibbonGroup; spec: LegacyRibbonSpec; refresh: number }) {
   const office = runtime();
   if (!office) return null;
   const columns: Array<{ kind: 'rows' | 'stack'; items: Array<LegacyRibbonItem | string> }> = [];
@@ -167,15 +168,28 @@ function RibbonGroup({ group, spec, refresh }: { group: LegacyRibbonGroup; spec:
   const firstItem = typeof first === 'string' ? { cmd: first } : first;
   const firstId = firstItem?.cmd || firstItem?.split;
   const icon = group.icon || (firstId ? spec.icons?.[firstId] || office.ui.cmds[firstId]?.icon : undefined);
-  return <div className="rb-group" role="group" aria-label={group.label}>
-    <button type="button" className="tb-btn rb-large rb-fold tb-drop with-label" aria-label={group.label} data-tip={group.label}>
-      {icon && <span className="tb-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: office.icons.get(icon, 32) }} />}<span className="tb-lbl">{office.t(group.label)}</span><span className="dd-arrow" />
-    </button>
+  return <>
     <div className="rb-body">
       {large.map((item, index) => <RibbonItem key={`large:${index}`} value={item} size="large" spec={spec} refresh={refresh} />)}
       {columns.map((column, colIndex) => <div key={`column:${colIndex}`} className="rb-col" data-kind={column.kind}>{column.items.map((item, index) => <RibbonItem key={`${colIndex}:${index}`} value={item} spec={spec} refresh={refresh} />)}</div>)}
     </div>
     <div className="rb-label">{office.t(group.label)}{group.launcher && <button type="button" className="rb-launch" aria-label={office.ui.stripAmp(office.ui.cmds[group.launcher]?.label || group.launcher)} onPointerDown={(event) => event.preventDefault()} onClick={(event) => office.ui.exec(group.launcher!, undefined, event.nativeEvent)}>↗</button>}</div>
+  </>;
+}
+
+function RibbonGroup({ group, spec, refresh, folded, open, onOpen }: { group: LegacyRibbonGroup; spec: LegacyRibbonSpec; refresh: number; folded: boolean; open: boolean; onOpen(key: string, anchor: HTMLButtonElement): void }) {
+  const office = runtime();
+  if (!office) return null;
+  const first = group.items.flatMap((value) => typeof value === 'object' && value.row ? value.row : [value]).find((value) => value !== '|' && !(typeof value === 'object' && value.make));
+  const firstItem = typeof first === 'string' ? { cmd: first } : first;
+  const firstId = firstItem?.cmd || firstItem?.split;
+  const icon = group.icon || (firstId ? spec.icons?.[firstId] || office.ui.cmds[firstId]?.icon : undefined);
+  const key = group.id!;
+  return <div className={`rb-group${folded ? ' folded' : ''}`} role="group" aria-label={group.label} data-ribbon-group={key}>
+    <button type="button" className="tb-btn rb-large rb-fold tb-drop with-label" aria-label={group.label} data-tip={group.label} aria-haspopup="true" aria-expanded={folded && open} onPointerDown={(event) => event.preventDefault()} onClick={(event) => onOpen(key, event.currentTarget)}>
+      {icon && <span className="tb-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: office.icons.get(icon, 32) }} />}<span className="tb-lbl">{office.t(group.label)}</span><span className="dd-arrow" />
+    </button>
+    {!folded && <RibbonGroupContents group={group} spec={spec} refresh={refresh} />}
   </div>;
 }
 
@@ -192,6 +206,10 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
   const [selected, setSelected] = useState('home');
   const [collapsed, setCollapsed] = useState(false);
   const [peek, setPeek] = useState(false);
+  const [foldedGroups, setFoldedGroups] = useState<string[]>([]);
+  const [foldedOpen, setFoldedOpen] = useState<{ key: string; left: number; top: number; anchor: HTMLButtonElement } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const groupsRef = useRef<HTMLDivElement>(null);
   const engineRoot = host.querySelector<HTMLElement>('.vibeoffice-legacy-root[data-vibeoffice-engine-root]');
   const target = engineRoot?.querySelector<HTMLElement>('.cmdbars');
 
@@ -231,12 +249,68 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
   }, [host, peek, select, target, toggleCollapse]);
 
   const activeContexts = useMemo(() => (spec?.contextual || []).filter((context) => { try { return context.when(); } catch { return false; } }), [refresh, spec]);
-  if (!target || !spec) return null;
   const office = runtime();
-  if (!office) return null;
-  const tabList = [...spec.tabs, ...activeContexts.flatMap((context) => context.tabs)];
-  const activeTab = tabList.find((tab) => tab.id === selected) || spec.tabs[0];
-  if (!activeTab) return null;
+  const tabList = spec ? [...spec.tabs, ...activeContexts.flatMap((context) => context.tabs)] : [];
+  const activeTab = tabList.find((tab) => tab.id === selected) || spec?.tabs[0];
+  const groups = activeTab?.groups.map((group, index) => ({ ...group, id: `${activeTab.id}:${index}` })) || [];
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    const container = groupsRef.current;
+    if (!panel || !container || !activeTab || (!peek && collapsed)) return;
+    const fit = () => {
+      const available = panel.clientWidth;
+      if (!available) return;
+      const elements = Array.from(container.querySelectorAll<HTMLElement>(':scope > .rb-group'));
+      const measurements = elements.map((element) => {
+        const wasFolded = element.classList.contains('folded');
+        element.classList.remove('folded');
+        const full = element.getBoundingClientRect().width;
+        element.classList.add('folded');
+        const compact = element.getBoundingClientRect().width;
+        if (!wasFolded) element.classList.remove('folded');
+        return { key: element.dataset.ribbonGroup || '', full, compact };
+      });
+      const next: string[] = [];
+      let width = measurements.reduce((sum, item) => sum + item.full, 0) + 4;
+      for (let index = measurements.length - 1; index > 0 && width > available; index--) {
+        const item = measurements[index]!;
+        next.push(item.key);
+        width -= item.full - item.compact;
+      }
+      next.sort((left, right) => measurements.findIndex((item) => item.key === left) - measurements.findIndex((item) => item.key === right));
+      setFoldedGroups((current) => current.length === next.length && current.every((key, index) => key === next[index]) ? current : next);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [activeTab, collapsed, peek]);
+
+  useEffect(() => {
+    if (!foldedOpen) return;
+    const popup = () => host.querySelector<HTMLElement>('[data-react-ribbon-pop]');
+    const onPointerDown = (event: PointerEvent) => {
+      const node = event.target;
+      if (node instanceof Node && (foldedOpen.anchor.contains(node) || popup()?.contains(node) || (node instanceof Element && node.closest('.menu')))) return;
+      setFoldedOpen(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || document.querySelector('.menu')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setFoldedOpen(null);
+      requestAnimationFrame(() => { if (foldedOpen.anchor.isConnected) foldedOpen.anchor.focus(); });
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => { document.removeEventListener('pointerdown', onPointerDown, true); document.removeEventListener('keydown', onKeyDown, true); };
+  }, [foldedOpen, host]);
+
+  useEffect(() => {
+    if (foldedOpen && !groups.some((group) => group.id === foldedOpen.key)) setFoldedOpen(null);
+  }, [activeTab, foldedGroups, foldedOpen]);
+
+  if (!target || !spec || !office || !activeTab) return null;
   const openFile = (event: React.MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     office.ui.openMenu(spec.file?.() || [], { left: rect.left, bottom: rect.bottom });
@@ -251,6 +325,7 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
       </div>
       <button type="button" className="rb-pin" aria-label={office.t('Collapse the Ribbon (Ctrl+F1)')} data-tip="Collapse the Ribbon (Ctrl+F1)" onClick={() => toggleCollapse()}><svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d={collapsed ? 'M1 1l4 4 4-4' : 'M1 5l4-4 4 4'} fill="none" stroke="currentColor" strokeWidth="1.4" /></svg></button>
     </div>
-    <div className="rb-panelwrap">{collapsed && !peek ? null : <div className="rb-panel" onClick={(event) => { if (peek && (event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) setTimeout(() => setPeek(false), 0); }}><div className="rb-groups" role="tabpanel">{activeTab.groups.map((group, index) => <RibbonGroup key={`${activeTab.id}:${index}`} group={group} spec={spec} refresh={refresh} />)}</div></div>}</div>
+    <div className="rb-panelwrap">{collapsed && !peek ? null : <div className="rb-panel" ref={panelRef} onClick={(event) => { if (peek && (event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) setTimeout(() => setPeek(false), 0); }}><div className="rb-groups" ref={groupsRef} role="tabpanel">{groups.map((group) => <RibbonGroup key={group.id} group={group} spec={spec} refresh={refresh} folded={foldedGroups.includes(group.id)} open={foldedOpen?.key === group.id} onOpen={(key, anchor) => { const rect = anchor.getBoundingClientRect(); setFoldedOpen({ key, left: Math.max(2, Math.min(rect.left, window.innerWidth - 320)), top: rect.bottom, anchor }); }} />)}</div></div>}</div>
+    {foldedOpen && groupsRef.current && groups.find((group) => group.id === foldedOpen.key) && createPortal(<div className="rb-pop rb-group" data-react-ribbon-pop="true" style={{ left: foldedOpen.left, top: foldedOpen.top }} onClick={(event) => { if ((event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) setTimeout(() => setFoldedOpen(null), 0); }}><RibbonGroupContents group={groups.find((group) => group.id === foldedOpen.key)!} spec={spec} refresh={refresh} /></div>, engineRoot || target)}
   </div>, target);
 }

@@ -1270,11 +1270,15 @@
     }
   }
   void tableOf;
+  T.reactPointerMove = onMove;
+  T.reactPointerDown = onDown;
+  T.reactKeydown = (e) => { if (e.key === 'Escape' && T.tool) T.setTool(null); };
   T.mount = function () {
+    if (window.VO && VO.reactDirectHost) return;
     const sc = L.$('#scroller');
     L.addMountListener(sc, 'pointermove', onMove);
     L.addMountListener(sc, 'pointerdown', onDown, true);
-    L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.key === 'Escape' && T.tool) T.setTool(null); });
+    L.addMountListener(L.domHost(), 'keydown', T.reactKeydown);
   };
   L.bus.on('app-ready', () => T.mount());
 })();

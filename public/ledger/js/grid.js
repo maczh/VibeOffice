@@ -193,7 +193,7 @@
   };
 
   /* ------------------------------------------------------------ scrollbars */
-  /** The browser's own scrollbar, as in Quire and Lectern: el scrolls a spacer sized so the thumb shows
+  /** The browser's own scrollbar, as in Wordx and PPTX: el scrolls a spacer sized so the thumb shows
    *  page out of total rows (or columns); the scroll position maps back to the first row or column shown. */
   class Scrollbar {
     constructor(el, orient, onScroll) {
@@ -1136,7 +1136,8 @@
     if (!cm) { if (hoverCm) { hoverCm = null; G.syncObjects(); } return; }
     hoverTimer = setTimeout(() => { hoverCm = cm; G.syncObjects(); }, 250);
   }
+  G.reactPointerLeave = () => { if (hoverCm) { hoverCm = null; G.syncObjects(); } };
   L.bus.on('app-ready', () => {
-    L.addMountListener(document, 'pointerleave', () => { if (hoverCm) { hoverCm = null; G.syncObjects(); } });
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(document, 'pointerleave', G.reactPointerLeave);
   });
 })(typeof window !== 'undefined' ? window : globalThis);

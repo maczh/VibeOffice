@@ -1,4 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
+import type { KeyboardEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
 interface DiagramLayout { id: string; category: string; name: string; description: string; preview: string }
@@ -10,6 +11,27 @@ interface DiagramGalleryRuntime {
   t?(message: string): string;
 }
 function runtime(): DiagramGalleryRuntime | undefined { return (window as Window & { L?: DiagramGalleryRuntime }).L; }
+
+function handleOptionKeys(event: KeyboardEvent<HTMLDivElement>) {
+  const options = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="option"]')];
+  if (!options.length) return;
+  const current = options.indexOf(document.activeElement as HTMLElement);
+  let next = current;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (current + 1 + options.length) % options.length;
+  else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = (current - 1 + options.length) % options.length;
+  else if (event.key === 'Home') next = 0;
+  else if (event.key === 'End') next = options.length - 1;
+  else if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    (document.activeElement as HTMLElement | null)?.click();
+    return;
+  } else return;
+  const target = options[next];
+  if (!target) return;
+  event.preventDefault();
+  target.focus();
+  target.click();
+}
 
 /** Full IntelliArt layout chooser; catalog, preview rendering, and commit are supplied by the presentation engine. */
 export function PptxDiagramGalleryDialog() {
@@ -37,11 +59,11 @@ export function PptxDiagramGalleryDialog() {
   const apply = () => runtime()?.diagram?.reactGalleryAction?.('apply', selected);
   return <OfficeDialog title={t('Change IntelliArt Layout')} className="pptx-diagram-gallery-dialog" style={{ width: 'min(96vw, 720px)' }} onRequestClose={close}>
     <div className="sa-gallery">
-      <div className="sa-cats list-box" role="listbox" aria-label={t('Categories')}>
-        {catalog.categories.map(([id, label]) => <button key={id} type="button" className={`sa-cat${category === id ? ' on' : ''}`} role="option" aria-selected={category === id} onClick={() => setCategory(id)}>{label}</button>)}
+      <div className="sa-cats list-box" role="listbox" aria-label={t('Categories')} aria-orientation="vertical" onKeyDownCapture={handleOptionKeys}>
+        {catalog.categories.map(([id, label]) => <button key={id} type="button" className={`sa-cat${category === id ? ' on' : ''}`} role="option" aria-selected={category === id} tabIndex={category === id ? 0 : -1} onClick={() => setCategory(id)}>{label}</button>)}
       </div>
-      <div className="sa-grid" role="listbox" aria-label={t('Layouts')}>
-        {visible.map((layout) => <button key={layout.id} type="button" className={`sa-cell${selected === layout.id ? ' on' : ''}`} data-layout-id={layout.id} aria-label={layout.name} aria-selected={selected === layout.id} title={layout.name} onClick={() => setSelected(layout.id)} onDoubleClick={apply} dangerouslySetInnerHTML={{ __html: layout.preview }} />)}
+      <div className="sa-grid" role="listbox" aria-label={t('Layouts')} aria-orientation="vertical" onKeyDownCapture={handleOptionKeys}>
+        {visible.map((layout) => <button key={layout.id} type="button" className={`sa-cell${selected === layout.id ? ' on' : ''}`} data-layout-id={layout.id} role="option" aria-label={layout.name} aria-selected={selected === layout.id} tabIndex={selected === layout.id ? 0 : -1} title={layout.name} onClick={() => setSelected(layout.id)} onDoubleClick={apply} dangerouslySetInnerHTML={{ __html: layout.preview }} />)}
       </div>
       <div className="sa-side">
         {detail && <>

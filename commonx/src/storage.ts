@@ -91,31 +91,36 @@ export function createUrlReadProvider(allowedOrigins: readonly string[], fetcher
 
 export function createRemoteFileCallbacks(
   provider: Pick<RemoteStorageProvider, 'read'> & Partial<Pick<RemoteStorageProvider, 'save' | 'create'>>,
-  chooseOpen: () => Promise<RemoteFile | null>,
-  chooseSave?: (suggestedName: string) => Promise<{ id?: string; parentId?: string; name: string } | null>,
+  chooseOpen: (signal?: AbortSignal) => Promise<RemoteFile | null>,
+  chooseSave?: (suggestedName: string, signal?: AbortSignal) => Promise<{ id?: string; parentId?: string; name: string; revision?: RemoteRevision } | null>,
 ) {
   return {
-    async onOpenFile() {
-      const selected = await chooseOpen();
-      if (!selected) return null;
-      const { blob, file } = await provider.read(selected.id);
+    async onOpenFile(signal?: AbortSignal) {
+      if (signal?.aborted) return null;
+      const selected = await chooseOpen(signal);
+      if (!selected || signal?.aborted) return null;
+      const { blob, file } = await provider.read(selected.id, signal);
+      if (signal?.aborted) return null;
       const name = file.name || selected.name;
       return { file: new File([blob], name, { type: file.mimeType || blob.type }), remote: { provider, file } };
     },
-    async onSaveFile(name: string, blob: Blob, current?: import('./local-files.js').LocalDocument) {
-      if (current?.remote) {
+    async onSaveFile(name: string, blob: Blob, current?: import('./local-files.js').LocalDocument, signal?: AbortSignal, operation?: { saveAs?: boolean }) {
+      if (signal?.aborted) return null;
+      if (current?.remote && !operation?.saveAs) {
         const { provider: source, file } = current.remote;
         if (!source.save) throw new Error('This remote source is read-only. Choose a writable destination.');
-        const saved = await source.save(file.id, blob, file.revision ? { ifRevision: file.revision } : {});
+        const saved = await source.save(file.id, blob, { ...(file.revision ? { ifRevision: file.revision } : {}), ...(signal ? { signal } : {}) });
+        if (signal?.aborted) return null;
         return { file: new File([blob], saved.name || name, { type: blob.type }), remote: { provider: source, file: saved } };
       }
       if (!chooseSave) throw new Error('No remote destination chooser is configured.');
-      const destination = await chooseSave(name);
-      if (!destination) return null;
+      const destination = await chooseSave(name, signal);
+      if (!destination || signal?.aborted) return null;
       let file: RemoteFile;
-      if (destination.id && provider.save) file = await provider.save(destination.id, blob);
-      else if (provider.create) file = await provider.create(destination.parentId, destination.name, blob);
+      if (destination.id && provider.save) file = await provider.save(destination.id, blob, { ...(destination.revision ? { ifRevision: destination.revision } : {}), ...(signal ? { signal } : {}) });
+      else if (provider.create) file = await provider.create(destination.parentId, destination.name, blob, signal);
       else throw new Error('This provider cannot create files.');
+      if (signal?.aborted) return null;
       return { file: new File([blob], file.name || destination.name, { type: blob.type }), remote: { provider, file } };
     },
   };

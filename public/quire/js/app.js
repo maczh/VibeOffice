@@ -5,7 +5,7 @@
   const { h } = L;
   const ui = L.ui;
 
-  /* original application icon: a folded quire of pages with a ribbon marker */
+  /* original application icon: a folded stack of pages with a ribbon marker */
   L.icons.app = function (size) {
     const sz = size || 16;
     return `<svg class="appico" width="${sz}" height="${sz}" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5h7l3 3v10h-10z" fill="#fff" stroke="#1c4a9c"/><path d="M10.5 1.5v3h3" fill="#d6e2f7" stroke="#1c4a9c"/><path d="M1.5 4.5h7v9h-7z" fill="#2b5fbf" stroke="#173f86"/><circle cx="5" cy="8.8" r="2.2" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M5.7 9.8l1.6 1.9" stroke="#fff" stroke-width="1.2"/><path d="M10 7.5h2.5M10 9.5h2.5M10 11.5h2.5" stroke="#7a8aa6"/></svg>`;
@@ -55,7 +55,7 @@
   /* ================= menus ================= */
   function buildMenus() {
     const menus = [
-      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', 'fileSearch', '-', 'webPreview', '-', 'pageSetup', 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['sendMail', 'exportPDF'] }, 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
+      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', ...(window.VO?.host.kind === 'desktop' ? VO.recentMenuItems(4) : []), 'fileSearch', '-', 'webPreview', '-', 'pageSetup', 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['sendMail', 'exportPDF'] }, 'properties', ...(L.file.native() ? ['versions'] : []), '-', 'exitApp'] },
       {
         label: '&Edit', items: () => ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', 'pasteHyperlink', '-',
           { label: 'Cle&ar', sub: ['clearFormats', 'clearContents'] }, 'selectAll', '-', 'find', 'replace', 'goTo', '-', 'links', 'editObject'],
@@ -351,8 +351,12 @@
     L.$('#drawrow').appendChild(A.toolbarsEl.drawing);
     /* view buttons & browse */
     const vb = L.$('#viewbar');
-    vb.append(ui.tbButton('viewNormal'), ui.tbButton('viewWeb'), ui.tbButton('viewPrint'), ui.tbButton('viewOutline'), ui.tbButton('viewReading'), h('span', { class: 'vb-sp' }),
-      h('span', { class: 'browse' }, ui.tbButton('browsePrev'), ui.tbDrop('', 'browseObj', (r) => A.browseMenu(r), 'Select Browse Object'), ui.tbButton('browseNext')));
+    if (window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected) {
+      ui.reactToolbar('viewbar', '', vb, ['viewNormal', 'viewWeb', 'viewPrint', 'viewOutline', 'viewReading', h('span', { class: 'vb-sp' }), 'browsePrev', ui.tbDrop('', 'browseObj', (r) => A.browseMenu(r), 'Select Browse Object'), 'browseNext'], 'viewbar');
+      return;
+    }
+    vb.append(ui.tbButton('viewNormal', { forceDOM: true }), ui.tbButton('viewWeb', { forceDOM: true }), ui.tbButton('viewPrint', { forceDOM: true }), ui.tbButton('viewOutline', { forceDOM: true }), ui.tbButton('viewReading', { forceDOM: true }), h('span', { class: 'vb-sp' }),
+      h('span', { class: 'browse' }, ui.tbButton('browsePrev', { forceDOM: true }), ui.tbDrop('', 'browseObj', (r) => A.browseMenu(r), 'Select Browse Object'), ui.tbButton('browseNext', { forceDOM: true })));
   }
   A.fontOptions = () => {
     const docFonts = [doc().defaults.rPr.font];
@@ -550,13 +554,27 @@
   let statusTimer = 0;
   function buildStatus() {
     const sb = L.$('#statusbar');
-    const cell = (cls, tip) => h('div', { class: 'sb-cell ' + (cls || ''), 'data-tip': tip || null });
+    const direct = window.VO && VO.reactDirectHost;
+    const cell = (cls, tip) => {
+      if (!direct) return h('div', { class: 'sb-cell ' + (cls || ''), 'data-tip': tip || null });
+      const state = { textContent: '', className: 'sb-cell ' + (cls || ''), dataset: { tip: tip || '' }, innerHTML: '' };
+      state.classList = { toggle(name, force) {
+        const names = new Set(state.className.split(/\s+/).filter(Boolean));
+        if (force) names.add(name); else names.delete(name);
+        state.className = Array.from(names).join(' ');
+      } };
+      return state;
+    };
     A.sb = {
       page: cell('', L.N('Page')), sec: cell('', L.N('Section')), pages: cell('', 'Page / pages'), at: cell('', 'Vertical position'), ln: cell('', L.N('Line|position')), col: cell('', L.N('Column|position')),
       rec: cell('flag', 'Record macro'), trk: cell('flag act', 'Track Changes (double-click to toggle)'), ext: cell('flag act', 'Extend selection'), ovr: cell('flag act', 'Overtype (double-click to toggle)'),
       lang: cell('act', L.N('Language')), spell: cell('act sb-spell', 'Spelling and grammar status'), msg: cell('grow'),
     };
-    if (window.VO && VO.reactDirectHost) A.sb.msg.dataset.reactStatus = '';
+    if (direct) {
+      A.sb.msg = document.createElement('div');
+      A.sb.msg.dataset.reactStatus = '';
+      A.sb.msg.className = 'sb-cell grow';
+    }
     A.sb.rec.textContent = L.t('REC'); A.sb.trk.textContent = L.t('TRK'); A.sb.ext.textContent = L.t('EXT'); A.sb.ovr.textContent = L.t('OVR');
     A.sb.lang.textContent = A.langName('en-US');
     A.sb.spell.innerHTML = '<svg width="18" height="14" viewBox="0 0 18 14"><rect x="1.5" y="1.5" width="11" height="11" fill="#fff" stroke="#556"/><path d="M3 4h7M3 6.5h7M3 9h5" stroke="#889"/><path d="M10 9l2.5 3 4.5-7" fill="none" stroke="#2f9a3a" stroke-width="1.6"/></svg>';
@@ -586,7 +604,8 @@
       L.bus.on('doc-loaded', spellIcon);
     }
     spellIcon();
-    sb.append(A.sb.page, A.sb.sec, A.sb.pages, A.sb.at, A.sb.ln, A.sb.col, A.sb.rec, A.sb.trk, A.sb.ext, A.sb.ovr, A.sb.lang, A.sb.spell, A.sb.msg);
+    if (direct) sb.append(A.sb.msg);
+    else sb.append(A.sb.page, A.sb.sec, A.sb.pages, A.sb.at, A.sb.ln, A.sb.col, A.sb.rec, A.sb.trk, A.sb.ext, A.sb.ovr, A.sb.lang, A.sb.spell, A.sb.msg);
   }
   A.status = (msg, ms) => { if (!A.sb) return; const text = L.t(msg); if (ui.reactStatus(text, ms || 4000)) return; A.sb.msg.textContent = text; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sb.msg.textContent = ''; }, ms || 4000); };
   A.updateStatus = L.debounce(function () {
@@ -660,7 +679,7 @@
     }
     return { ln, col };
   };
-  A.updateTitle = () => { document.title = `${L.file.titled(A.fileName)} - ${window.VO?.oneDocument ? 'Quire' : 'Wordx'}`; };
+  A.updateTitle = () => { const title = `${L.file.titled(A.fileName)} - Wordx`; if (window.VO && VO.reactHost) { VO.reactDirectHost?.titleChanged?.(title); return; } document.title = title; };
 
   /* ================= rulers ================= */
   A.updateRulers = function () {
@@ -734,8 +753,12 @@
     return ctxToolbar(k);
   };
   A.toggleToolbar = (id) => { const v = A.opts.toolbars[id]; A.opts.toolbars[id] = A.tbShown(id) ? (v === 'auto' || v === true ? false : false) : true; if (A.opts.toolbars[id] === false && ['reviewing', 'picture', 'outlining', 'headerFooter', 'wordart'].includes(id) && v === true) A.opts.toolbars[id] = 'auto'; A.saveOpts(); A.updateToolbars(); };
+  A.reactToolbarVisibility = () => Object.fromEntries(Object.keys(A.toolbarsEl || {}).map((id) => [id,
+    id === 'drawing' ? A.tbShown(id) && !['preview', 'reading', 'outline'].includes(A.view) : A.view === 'reading' ? id === 'standard' : A.tbShown(id) && A.view !== 'preview',
+  ]));
   A.updateToolbars = function () {
     if (!A.toolbarsEl) return;
+    if (window.VO && VO.reactDirectHost) { ui.refresh(); return; }
     for (const id of Object.keys(A.toolbarsEl)) if (id !== 'drawing') A.toolbarsEl[id].hidden = !A.tbShown(id) || A.view === 'preview';
     if (A.view === 'reading') for (const id of Object.keys(A.toolbarsEl)) if (id !== 'drawing') A.toolbarsEl[id].hidden = id !== 'standard';
     A.tbRows.forEach((r) => { r.hidden = Array.from(r.children).every((c) => c.hidden); });
@@ -860,7 +883,7 @@
   const blank = () => D.applyLocale(D.newDoc(), L.locale && L.locale.get());
   A.newDocument = async function (opts) {
     /* the desktop app: a blank document in a window of its own (one with content goes through loadDoc) */
-    if (!opts && !pristine() && window.VO && VO.oneDocument) return VO.go(VO.url('quire', { new: true })).catch((e) => ui.msg(String(e), { icon: 'error' }));
+    if (!opts && !pristine() && window.VO && VO.oneDocument) return VO.go(VO.url(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'wordx' : 'quire', { new: true })).catch((e) => ui.msg(String(e), { icon: 'error' }));
     A.untitled++;
     const d = opts && opts.modern ? D.newDoc({ modern: true }) : blank();
     if (opts && opts.build) opts.build(d);
@@ -1176,7 +1199,8 @@
       if (refF && refF.si < pg.si) pg.ftr.dataset.same = '1'; else delete pg.ftr.dataset.same;
     }
   }
-  L.bus.on('layout-done', () => { if (LY.hfEdit) labelHF(); });
+  A.reactHeaderFooterLayoutChanged = () => { if (LY.hfEdit) labelHF(); };
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('layout-done', A.reactHeaderFooterLayoutChanged);
   /** back to the body: the caret where ev (a double-click on the body) was, else where it was before the header */
   let hfReturn = null;
   A.closeHeaderFooter = function (silent, ev) {
@@ -1439,12 +1463,19 @@
 
   /* ================= wiring ================= */
   function wire() {
-    L.bus.on('sel', () => { A.updateStatus(); ui.refresh(); if (L.rulers) L.rulers.drawSoon(); });
+    A.reactSelectionChanged = () => { A.updateStatus(); ui.refresh(); if (L.rulers) L.rulers.drawSoon(); };
+    A.reactObjectSelectionChanged = () => { A.updateToolbars(); ui.refresh(); };
+    A.reactDocumentChanged = () => { if (window.VO) VO.changed(doc()); A.updateStatus(); ui.refresh(); if (doc().settings.track || Object.keys(doc().comments).length) A.updateToolbars(); };
+    A.reactLayoutChanged = () => { A.updateStatus(); if (L.rulers) L.rulers.drawSoon(); if (L.drawing) L.drawing.placeHandles(); E.placeHandles(); };
+    A.reactZoomChanged = () => { ui.refresh(); if (L.rulers) L.rulers.draw(); if (L.drawing) L.drawing.placeHandles(); E.placeHandles(); };
+    if (!window.__VIBE_OFFICE_DIRECT_HOST__) {
+      L.bus.on('sel', A.reactSelectionChanged);
+      L.bus.on('objsel', A.reactObjectSelectionChanged);
+      L.bus.on('doc-changed', A.reactDocumentChanged);
+      L.bus.on('layout-done', A.reactLayoutChanged);
+      L.bus.on('zoom', A.reactZoomChanged);
+    }
     if (!(window.VO && VO.reactDirectHost)) L.bus.on('sel-done', () => { A.painter.release(); A.highlighter.release(); });
-    L.bus.on('objsel', () => { A.updateToolbars(); ui.refresh(); });
-    L.bus.on('doc-changed', () => { if (window.VO) VO.changed(doc()); A.updateStatus(); ui.refresh(); if (doc().settings.track || Object.keys(doc().comments).length) A.updateToolbars(); });
-    L.bus.on('layout-done', () => { A.updateStatus(); if (L.rulers) L.rulers.drawSoon(); if (L.drawing) L.drawing.placeHandles(); E.placeHandles(); });
-    L.bus.on('zoom', () => { ui.refresh(); if (L.rulers) L.rulers.draw(); if (L.drawing) L.drawing.placeHandles(); E.placeHandles(); });
     if (!(window.VO && VO.reactDirectHost)) L.addMountListener(LY.scroller, 'scroll', A.reactScroll);
     if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'beforeunload', A.reactBeforeUnload);
     if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'resize', A.reactResize);
@@ -1564,7 +1595,7 @@
     A.applyOpts();
     if (A.opts.docMap) A.toggleDocMap(true);
     ui.refresh();
-    if (window.VO) VO.attach('quire', {
+    if (window.VO) VO.attach(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'wordx' : 'quire', {
       async open(f, o) {
         await A.openFile(f);
         /* a document a page made (desktop app): never saved */

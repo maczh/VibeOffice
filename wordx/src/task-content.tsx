@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { OfficeDialog } from '@vibeoffice/core';
 
 type HelpEntry = [string, string];
 interface ClipArtItem { id: string; name: string; svg: string }
@@ -66,13 +67,15 @@ interface WordxRuntime {
   find?: { reactGoToCatalog?(): Array<{ id: string; label: string; prompt: string }>; reactGoToAction?(kind: string, value: string, dir: number): boolean; reactCloseDialog?(): void; reactFindTab?(): number; reactFindCommand?(action: string, anchor?: HTMLElement): void; reactFindFormatState?(): { find: string; replace: string }; reactFindFormatMenuCatalog?(): Array<{ id: string; label: string }>; reactFindFormatMenuAction?(id: string): void; reactFindSpecialMenuCatalog?(): Array<{ code: string; label: string }>; reactFindSpecialMenuAction?(code: string): void };
   dlg?: { reactTablePropsCatalog?(): TablePropertiesState; reactTablePropsAction?(action: string, value?: Partial<TablePropertiesState>): TablePropertiesState | void; reactBordersCatalog?(): BordersDialogState; reactBordersAction?(action: string, value?: any): BordersDialogState | void; reactParagraphCatalog?(): ParagraphDialogState; reactParagraphAction?(action: string, value?: unknown): ParagraphDialogState | void; reactCaptionNumberingCatalog?(): CaptionNumbering; reactCaptionNumberingAction?(value: Partial<CaptionNumbering>): void; reactCaptionCatalog?(): CaptionDialogState; reactCaptionAction?(action: string, value?: Partial<CaptionDialogState>): Promise<void> | void; reactPageSetupCatalog?(): PageSetupState; reactPageSetupAction?(action: string, value?: Partial<PageSetupState>): void; reactColumnsCatalog?(): ColumnsDialogState; reactColumnsAction?(action: string, value?: Partial<ColumnsDialogState> | { n: number; eq: boolean; fractions?: number[] }): void; reactLineNumbersCatalog?(): { enabled: boolean; start: number; distance: string; countBy: number; restart: string; restarts: Array<[string, string]> }; reactLineNumbersAction?(action: string, value?: Record<string, unknown>): void; reactDropCapCatalog?(): { position: string; positions: Array<[string, string]>; fonts: string[]; font: string; lines: number; distanceText: string }; reactDropCapAction?(action: string, value?: string): void; reactLanguageCatalog?(): { languages: Array<{ value: string; label: string }>; language: string; noProof: boolean; detect: boolean }; reactLanguageAction?(action: string, value?: string): void; reactBookmarkCatalog?(): { name: string; sort: string; hidden: boolean; names: string[] }; reactBookmarkAction?(action: string, value?: string): boolean | void; reactObjectCatalog?(): Array<{ value: string; label: string }>; reactObjectAction?(action: string, value?: string): void; reactEquationAction?(action: string, value?: string): void; reactBreakCatalog?(): Array<{ value: string; label: string }>; reactBreakAction?(value: string): void; reactDateTimeCatalog?(): Array<{ value: string; label: string }>; reactDateTimeState?(): { format: string; autoUpdate: boolean }; reactPageNumberAction?(position: string, alignment: string, showFirst: boolean): void; reactPageNumberFormatState?(): { fmt: string; chapter: boolean; mode: string; start: number }; reactPageNumberFormatCatalog?(): Array<{ value: string; label: string }>; reactPageNumberFormatAction?(format: string, chapter: boolean, mode: string, start: number): void; reactCellDialogCatalog?(kind?: string): Array<[string, string]>; reactCellDialogKind?: string; reactInsertTableState?(): { columns: number; rows: number }; reactInsertTableAction?(action: string, options?: { columns: number; rows: number; fit: string; width: string; remember: boolean }): void; reactSplitCellsState?(): { columns: number; rows: number; merge: boolean }; reactTextToTableState?(): { initialSeparator: string; columns: number; paragraphs: Array<{ text: string; tabs: number }> }; reactTextToTableAction?(options: { sep: string; cols: number; autofit: string }): void; reactFormulaCatalog?(): { guess: string; functions: string[]; bookmarks: string[]; formats: string[] }; reactFormulaAction?(formula: string, format: string): void; reactCrossRefCatalog?(type?: string): { types: Array<{ value: string; label: string }>; references: Array<{ value: string; label: string }>; items: Array<{ value: string; label: string }> }; reactCrossRefAction?(type: string, index: number, reference: string, hyperlink: boolean, aboveBelow: boolean): void; reactMarkEntryState?(): { main: string; sub: string; option: string; xref: string; bold: boolean; italic: boolean }; reactMarkEntryAction?(all: boolean, values: { main: string; sub: string; option: string; xref: string; bold: boolean; italic: boolean }): void };
   rulers?: { draw?(): void; reactTabState?(): { kind: string; label: string }; reactTabNext?(): { kind: string; label: string }; reactMarkers?(): Array<{ className: string; tip: string; left: number; top?: number; width?: number; kind?: string; pos?: number; cid?: string; html: string }>; reactVerticalMarkers?(): Array<{ kind: string; top: number; left: number; width: number }>; reactMarkerDown?(event: PointerEvent): void; reactVerticalMarginDown?(event: PointerEvent, which: string): void; reactRulerDown?(event: PointerEvent): void; reactRulerDoubleClick?(event: MouseEvent): void; reactVerticalDoubleClick?(): void };
-  app?: { fileName?: string; view?: string; prevView?: string; toggleDocMap?(): void; toggleThumbs?(): void; setView?(view: string): void; reactMapSplitterDown?(event: PointerEvent): void; reactSplitDown?(event: PointerEvent): void; reactSplitPageClick?(index: number): void; reactResize?(): void; reactScroll?(): void; reactBeforeUnload?(event: globalThis.BeforeUnloadEvent): void; reactAppKeydown?(event: globalThis.KeyboardEvent): void; reactModifierKey?(event: globalThis.KeyboardEvent): void; reactDropHintActive?: boolean; reactDropEvent?(kind: string, event: globalThis.DragEvent): void; painter?: { release(): boolean; start(sticky?: boolean, value?: unknown): boolean; on(): boolean }; highlighter?: { release(): boolean; start(sticky?: boolean, value?: unknown): boolean; on(): boolean; stop(): void }; reactStatusState?(): Array<{ id: string; text: string; className: string; tip: string; html: string }>; reactStatusAction?(action: string): void; reactShapeMenuCatalog?(): Array<{ kind: string; label: string; line: boolean; svg: string }>; reactShapeMenuAction?(kind: string): void; reactShadowMenuCatalog?(): Array<{ index: number; label: string; svg: string }>; reactShadowMenuAction?(index: number): void };
-  ed?: { reactEvent?(type: string, event: Event): void; reactInlineHandleDown?(event: PointerEvent): void; pressing?(): boolean };
+  app?: { fileName?: string; view?: string; prevView?: string; toggleDocMap?(): void; toggleThumbs?(): void; setView?(view: string): void; reactMapSplitterDown?(event: PointerEvent): void; reactSplitDown?(event: PointerEvent): void; reactSplitPageClick?(index: number): void; reactResize?(): void; reactScroll?(): void; reactBeforeUnload?(event: globalThis.BeforeUnloadEvent): void; reactAppKeydown?(event: globalThis.KeyboardEvent): void; reactExtendEscape?(event: globalThis.KeyboardEvent): void; reactModifierKey?(event: globalThis.KeyboardEvent): void; reactDropHintActive?: boolean; reactDropEvent?(kind: string, event: globalThis.DragEvent): void; painter?: { release(): boolean; start(sticky?: boolean, value?: unknown): boolean; on(): boolean }; highlighter?: { release(): boolean; start(sticky?: boolean, value?: unknown): boolean; on(): boolean; stop(): void }; reactStatusState?(): Array<{ id: string; text: string; className: string; tip: string; html: string }>; reactStatusAction?(action: string): void; reactShapeMenuCatalog?(): Array<{ kind: string; label: string; line: boolean; svg: string }>; reactShapeMenuAction?(kind: string): void; reactShadowMenuCatalog?(): Array<{ index: number; label: string; svg: string }>; reactShadowMenuAction?(index: number): void };
+  ed?: { reactEvent?(type: string, event: Event): void; reactInlineHandleDown?(event: PointerEvent): void; reactLayoutSelection?(): void; reactPagePointerDown?(event: PointerEvent): void; reactSelectionChange?(): void; reactDragEnd?(): void; pressing?(): boolean };
   templates?: { reactSelectPlaceholder?(): void };
   fields?: { reactLayoutDone?(): void };
-  drawtool?: { start(options: { geom: string; line: boolean }): void; reactPointerDown?(event: PointerEvent): void; reactKeydown?(event: globalThis.KeyboardEvent): void };
-  drawing?: { reactHandleDown?(event: PointerEvent): void };
-  review?: { togglePane(on: boolean): void; reactPaneCatalog?(): Array<{ index: number; kind: string; head: string; body: string; color: string }>; reactPaneSelect?(index: number, edit?: boolean): void; reactReviewersCatalog?(): Array<{ author: string; color: string }>; reactCommentCatalog?(): { text: string } | null; reactCommentSetText?(text: string): void; reactBalloonDown?(id: string): void };
+  autocorrect?: { reactSelectionChanged?(): void };
+  drawtool?: { active?: unknown; start(options: { geom: string; line: boolean }): void; reactPointerDown?(event: PointerEvent): void; reactBegin?(event: PointerEvent): { opts: { line?: boolean; geom?: string }; hit: { r: DOMRect }; k: number; sc: HTMLElement; sr: DOMRect; x0: number; y0: number; pointerId: number } | null; reactCommit?(session: unknown, x: number, y: number, moved: boolean): void; reactAbort?(): void; reactKeydown?(event: globalThis.KeyboardEvent): void };
+  tables?: { reactPointerMove?(event: PointerEvent): void; reactPointerDown?(event: PointerEvent): void; reactKeydown?(event: globalThis.KeyboardEvent): void };
+  drawing?: { reactHandleDown?(event: PointerEvent): void; reactLayoutDone?(): void; reactObjectSelection?(): void };
+  review?: { togglePane(on: boolean): void; reactPaneCatalog?(): Array<{ index: number; kind: string; head: string; body: string; color: string }>; reactPaneSelect?(index: number, edit?: boolean): void; reactReviewersCatalog?(): Array<{ author: string; color: string }>; reactCommentCatalog?(): { text: string } | null; reactCommentSetText?(text: string): void; reactBalloonDown?(id: string): void; reactLayoutChanged?(): void };
   icons?: { get(name: string): string; app?(size: number): string };
   ui?: { keyText(key: string): string; colorMenu?(anchor: HTMLElement, options: { mode: string }, onPick: (value: unknown) => void): void; moreColors?(initial: string | null, onPick: (color: string | null) => void): void };
   color?: { STANDARD: string[] };
@@ -89,6 +92,7 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     const offs = [
       L.bus?.on('layout-done', () => L.spell?.reactLayoutChanged?.()),
       L.bus?.on('layout-done', () => L.fields?.reactLayoutDone?.()),
+      L.bus?.on('layout-done', () => L.ed?.reactLayoutSelection?.()),
       L.bus?.on('doc-loaded', () => L.spell?.reactDocumentLoaded?.()),
       L.bus?.on('proof-state', spellStatus),
       L.bus?.on('doc-loaded', spellStatus),
@@ -108,8 +112,79 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     const observer = new MutationObserver(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
-    return () => { offs.forEach((off) => off?.()); offReady?.(); observer.disconnect(); scroller?.removeEventListener('scroll', onScroll); };
+    const pagePointerDown = (event: PointerEvent) => L.ed?.reactPagePointerDown?.(event);
+    const selectionChange = () => L.ed?.reactSelectionChange?.();
+    const dragEnd = () => L.ed?.reactDragEnd?.();
+    host.addEventListener('pointerdown', pagePointerDown, true);
+    host.addEventListener('dragend', dragEnd, true);
+    document.addEventListener('selectionchange', selectionChange);
+    return () => { offs.forEach((off) => off?.()); offReady?.(); observer.disconnect(); scroller?.removeEventListener('scroll', onScroll); host.removeEventListener('pointerdown', pagePointerDown, true); host.removeEventListener('dragend', dragEnd, true); document.removeEventListener('selectionchange', selectionChange); };
   }, [host, L]);
+  useEffect(() => {
+    let timer = 0;
+    const onLayout = () => { window.clearTimeout(timer); timer = window.setTimeout(() => L.drawing?.reactLayoutDone?.(), 0); };
+    const offLayout = L.bus?.on('layout-done', onLayout);
+    const offSelection = L.bus?.on('objsel', () => L.drawing?.reactObjectSelection?.());
+    return () => { offLayout?.(); offSelection?.(); window.clearTimeout(timer); };
+  }, [L]);
+  useEffect(() => {
+    let timer = 0;
+    const offFind = L.bus?.on('layout-done', () => {
+      const find = L.find as (typeof L.find & { reactLayoutChanged?(): void }) | undefined;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => find?.reactLayoutChanged?.(), 0);
+    });
+    const offSplit = L.bus?.on('layout-done', () => {
+      const app = L.app as (typeof L.app & { reactSplitLayoutChanged?(): void }) | undefined;
+      app?.reactSplitLayoutChanged?.();
+    });
+    return () => { offFind?.(); offSplit?.(); window.clearTimeout(timer); };
+  }, [L]);
+  useEffect(() => {
+    const off = L.bus?.on('sel', () => L.autocorrect?.reactSelectionChanged?.());
+    return () => off?.();
+  }, [L]);
+  useEffect(() => {
+    const off = L.bus?.on('layout-done', () => L.review?.reactLayoutChanged?.());
+    return () => off?.();
+  }, [L]);
+  useEffect(() => {
+    const off = L.bus?.on('layout-done', () => {
+      const app = L.app as (typeof L.app & { reactHeaderFooterLayoutChanged?(): void }) | undefined;
+      app?.reactHeaderFooterLayoutChanged?.();
+    });
+    return () => off?.();
+  }, [L]);
+  useEffect(() => {
+    const app = L.app as (typeof L.app & {
+      reactSelectionChanged?(): void;
+      reactObjectSelectionChanged?(): void;
+      reactDocumentChanged?(): void;
+      reactLayoutChanged?(): void;
+      reactZoomChanged?(): void;
+    }) | undefined;
+    const offs = [
+      L.bus?.on('sel', () => app?.reactSelectionChanged?.()),
+      L.bus?.on('objsel', () => app?.reactObjectSelectionChanged?.()),
+      L.bus?.on('doc-changed', () => app?.reactDocumentChanged?.()),
+      L.bus?.on('layout-done', () => app?.reactLayoutChanged?.()),
+      L.bus?.on('zoom', () => app?.reactZoomChanged?.()),
+    ];
+    return () => offs.forEach((off) => off?.());
+  }, [L]);
+  useEffect(() => {
+    const task = L.panes?.task as (NonNullable<WordxRuntime['panes']>['task'] & {
+      reactRefreshSelection?: () => void;
+      reactRefreshDocument?: () => void;
+      reactRefreshLoaded?: () => void;
+    }) | undefined;
+    const offs = [
+      L.bus?.on('sel', () => task?.reactRefreshSelection?.()),
+      L.bus?.on('doc-changed', () => task?.reactRefreshDocument?.()),
+      L.bus?.on('doc-loaded', () => task?.reactRefreshLoaded?.()),
+    ];
+    return () => offs.forEach((off) => off?.());
+  }, [L]);
   useEffect(() => {
     const select = () => { if (!L.ed?.pressing?.()) L.templates?.reactSelectPlaceholder?.(); };
     const selectDone = () => L.templates?.reactSelectPlaceholder?.();
@@ -161,9 +236,6 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       dragover: (event) => L.app?.reactDropEvent?.('over', event),
       drop: (event) => L.app?.reactDropEvent?.('drop', event),
     };
-    const drawPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Element && event.target.closest('#scroller')) L.drawtool?.reactPointerDown?.(event);
-    };
     let app: HTMLElement | null = null;
     let observer: MutationObserver | null = null;
     const attach = () => {
@@ -173,14 +245,13 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       app = next;
       if (app) {
         types.forEach((type) => app?.addEventListener(type, handlers[type]));
-        app.addEventListener('pointerdown', drawPointerDown, true);
       }
       if (app) observer?.disconnect();
     };
     observer = new MutationObserver(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
-    return () => { observer.disconnect(); if (app) { types.forEach((type) => app?.removeEventListener(type, handlers[type])); app.removeEventListener('pointerdown', drawPointerDown, true); } };
+    return () => { observer.disconnect(); if (app) types.forEach((type) => app?.removeEventListener(type, handlers[type])); };
   }, [host, L]);
   useEffect(() => {
     const pointerDown = (event: PointerEvent) => L.app?.reactMapSplitterDown?.(event);
@@ -216,18 +287,22 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     const attach = () => {
       const next = host.querySelector<HTMLElement>('#scroller');
       if (next === scroller) { if (next) observer?.disconnect(); return; }
-      scroller?.removeEventListener('scroll', scroll);
+      scroller?.removeEventListener('scroll', scroll); scroller?.removeEventListener('pointermove', tablePointerMove); scroller?.removeEventListener('pointerdown', tablePointerDown, true);
       scroller = next;
       scroller?.addEventListener('scroll', scroll);
+      scroller?.addEventListener('pointermove', tablePointerMove);
+      scroller?.addEventListener('pointerdown', tablePointerDown, true);
       if (scroller) observer?.disconnect();
     };
+    const tablePointerMove = (event: PointerEvent) => L.tables?.reactPointerMove?.(event);
+    const tablePointerDown = (event: PointerEvent) => L.tables?.reactPointerDown?.(event);
     observer = new MutationObserver(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
-    return () => { observer.disconnect(); scroller?.removeEventListener('scroll', scroll); };
+    return () => { observer.disconnect(); scroller?.removeEventListener('scroll', scroll); scroller?.removeEventListener('pointermove', tablePointerMove); scroller?.removeEventListener('pointerdown', tablePointerDown, true); };
   }, [host, L]);
   useEffect(() => {
-    const keydown = (event: globalThis.KeyboardEvent) => { L.app?.reactModifierKey?.(event); L.app?.reactAppKeydown?.(event); L.drawtool?.reactKeydown?.(event); };
+    const keydown = (event: globalThis.KeyboardEvent) => { L.app?.reactModifierKey?.(event); L.app?.reactAppKeydown?.(event); L.app?.reactExtendEscape?.(event); L.drawtool?.reactKeydown?.(event); L.tables?.reactKeydown?.(event); };
     const keyup = (event: globalThis.KeyboardEvent) => L.app?.reactModifierKey?.(event);
     let root: HTMLElement | null = null;
     let observer: MutationObserver | null = null;
@@ -246,7 +321,104 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     attach();
     return () => { observer.disconnect(); root?.removeEventListener('keydown', keydown); root?.removeEventListener('keyup', keyup); };
   }, [L]);
-  return null;
+  return <DrawToolInteractionBridge L={L} host={host} />;
+}
+
+function DrawToolInteractionBridge({ L, host }: { L: WordxRuntime; host: HTMLElement }) {
+  type Session = { opts: { line?: boolean; geom?: string }; hit: { r: DOMRect }; k: number; sc: HTMLElement; sr: DOMRect; x0: number; y0: number; pointerId: number };
+  const [gesture, setGesture] = useState<{ session: Session; x: number; y: number; moved: boolean } | null>(null);
+  const [drawingMode, setDrawingMode] = useState(!!L.drawtool?.active);
+  const drawingModeRef = useRef(drawingMode);
+  drawingModeRef.current = drawingMode;
+  const active = useRef<typeof gesture>(null);
+  const scroller = gesture?.session.sc || null;
+  useEffect(() => {
+    const refresh = () => setDrawingMode(!!L.drawtool?.active);
+    const off = L.bus?.on('drawtool-state', refresh);
+    refresh();
+    return () => off?.();
+  }, [L]);
+  useEffect(() => {
+    host.querySelector<HTMLElement>('#scroller')?.classList.toggle('drawing-mode', drawingMode);
+  }, [host, drawingMode]);
+  useEffect(() => {
+    let target: HTMLElement | null = null;
+    const sync = () => {
+      const next = host.querySelector<HTMLElement>('#scroller');
+      if (target !== next) { target?.classList.remove('drawing-mode'); target = next; }
+      target?.classList.toggle('drawing-mode', drawingModeRef.current);
+    };
+    const observer = new MutationObserver(sync);
+    observer.observe(host, { childList: true, subtree: true }); sync();
+    return () => { observer.disconnect(); target?.classList.remove('drawing-mode'); };
+  }, [host]);
+  useEffect(() => {
+    let target: HTMLElement | null = null;
+    let observer: MutationObserver | null = null;
+    const onDown = (event: PointerEvent) => {
+      const session = L.drawtool?.reactBegin?.(event);
+      if (!session) return;
+      event.preventDefault(); event.stopPropagation();
+      const next = { session, x: event.clientX, y: event.clientY, moved: false };
+      active.current = next;
+      setGesture(next);
+    };
+    const onMove = (event: PointerEvent) => {
+      const current = active.current;
+      if (!current || event.pointerId !== (current.session as Session & { pointerId?: number }).pointerId) return;
+      let x = event.clientX, y = event.clientY;
+      if (event.shiftKey) {
+        const dx = x - current.session.x0, dy = y - current.session.y0;
+        if (current.session.opts.line) { const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 12)) * (Math.PI / 12); const length = Math.hypot(dx, dy); x = current.session.x0 + Math.cos(angle) * length; y = current.session.y0 + Math.sin(angle) * length; }
+        else { const size = Math.max(Math.abs(dx), Math.abs(dy)); x = current.session.x0 + Math.sign(dx || 1) * size; y = current.session.y0 + Math.sign(dy || 1) * size; }
+      }
+      const moved = current.moved || Math.hypot(event.clientX - current.session.x0, event.clientY - current.session.y0) > 2;
+      const next = { ...current, x, y, moved };
+      active.current = next; setGesture(next);
+    };
+    const onUp = (event: PointerEvent) => {
+      const current = active.current;
+      if (!current || event.pointerId !== (current.session as Session & { pointerId?: number }).pointerId) return;
+      const x = current.moved ? current.x : event.clientX, y = current.moved ? current.y : event.clientY;
+      active.current = null; setGesture(null);
+      L.drawtool?.reactCommit?.(current.session, x, y, current.moved);
+    };
+    const onCancel = (event: PointerEvent) => {
+      if (!active.current || event.pointerId !== (active.current.session as Session & { pointerId?: number }).pointerId) return;
+      active.current = null; setGesture(null);
+    };
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || !active.current) return;
+      active.current = null; setGesture(null); L.drawtool?.reactAbort?.();
+    };
+    const attach = () => {
+      const next = host.querySelector<HTMLElement>('#scroller');
+      if (next === target) { if (next) observer?.disconnect(); return; }
+      target?.removeEventListener('pointerdown', onDown, true);
+      target = next;
+      target?.addEventListener('pointerdown', onDown, true);
+      if (target) observer?.disconnect();
+    };
+    observer = new MutationObserver(attach); observer.observe(host, { childList: true, subtree: true }); attach();
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
+    const root = (window as Window & { VO?: { reactDirectHost?: { root?: HTMLElement | null } } }).VO?.reactDirectHost?.root;
+    root?.addEventListener('keydown', onKeyDown);
+    return () => { observer?.disconnect(); target?.removeEventListener('pointerdown', onDown, true); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onCancel); root?.removeEventListener('keydown', onKeyDown); active.current = null; };
+  }, [host, L]);
+  if (!gesture || !scroller) return null;
+  const { session, x, y } = gesture;
+  const dx = x - session.x0, dy = y - session.y0;
+  const line = !!session.opts.line;
+  const style: CSSProperties = line ? {
+    left: session.x0 - session.sr.left + scroller.scrollLeft, top: session.y0 - session.sr.top + scroller.scrollTop,
+    width: Math.hypot(dx, dy), height: 0, border: 0, borderTop: '1px solid #000', transformOrigin: '0 0', transform: `rotate(${Math.atan2(dy, dx)}rad)`,
+  } : {
+    left: Math.min(session.x0, x) - session.sr.left + scroller.scrollLeft, top: Math.min(session.y0, y) - session.sr.top + scroller.scrollTop,
+    width: Math.abs(dx), height: Math.abs(dy), ...(session.opts.geom === 'ellipse' ? { borderRadius: '50%' } : {}),
+  };
+  return createPortal(<div className={`draw-ghost${line ? ' line' : ''}`} style={style} />, scroller);
 }
 
 function HelpPane({ L }: { L: WordxRuntime }) {
@@ -278,7 +450,7 @@ function SearchPane({ L }: { L: WordxRuntime }) {
     </section>
     <div className="search-results">
       {hits.length > 0 && <div className="tp-note">{hits.length === 1 ? L.t?.('{0} match in {1}', hits.length, L.app?.fileName || '') : L.t?.('{0} matches in {1}', hits.length, L.app?.fileName || '')}</div>}
-      {hits.map((hit, index) => <div className="search-hit" key={`${index}:${hit.before}:${hit.match}`} onClick={() => L.panes?.reactOpenSearchHit?.(index)}>{hit.before}<b>{hit.match}</b>{hit.after}</div>)}
+      {hits.map((hit, index) => <button className="search-hit" type="button" key={`${index}:${hit.before}:${hit.match}`} onClick={() => L.panes?.reactOpenSearchHit?.(index)}>{hit.before}<b>{hit.match}</b>{hit.after}</button>)}
       {!!query.trim() && !hits.length && <div className="tp-note">{tr(L, 'No matches were found in this document.')}</div>}
     </div>
   </div>;
@@ -430,16 +602,16 @@ function DocumentMap({ L, host }: { L: WordxRuntime; host: HTMLElement }) {
   if (catalog?.thumbs) {
     const pages = catalog.pages || [];
     if (!pages.length) return <div className="tp-note">{tr(L, 'Thumbnails show pages in Print Layout and Reading Layout.')}</div>;
-    return <div className="thumbs">{pages.map((page) => <PageThumbnail key={page.index} page={page} active={activePage === page.index} onClick={() => { setActivePage(page.index); L.panes?.reactThumbSelect?.(page.index); }} />)}</div>;
+    return <div className="thumbs">{pages.map((page) => <PageThumbnail key={page.index} L={L} page={page} active={activePage === page.index} onClick={() => { setActivePage(page.index); L.panes?.reactThumbSelect?.(page.index); }} />)}</div>;
   }
   const items = catalog?.items || [];
   if (!items.length) return <div className="dm-item" style={{ color: 'var(--ink-2)' }}>{tr(L, '(No headings)')}</div>;
-  return <>{items.map((item) => <div className={`dm-item${item.selected ? ' on' : ''}`} key={item.id} data-pid={item.id} title={item.title} translate="no" style={{ paddingLeft: 4 + (item.level - 1) * 12 }} onClick={() => L.panes?.reactDocMapSelect?.(item.id)}>
+  return <>{items.map((item) => <div className={`dm-item${item.selected ? ' on' : ''}`} key={item.id} data-pid={item.id} title={item.title} translate="no" role="button" tabIndex={0} onClick={() => L.panes?.reactDocMapSelect?.(item.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); L.panes?.reactDocMapSelect?.(item.id); } }} style={{ paddingLeft: 4 + (item.level - 1) * 12 }}>
     <button className="dm-tog" type="button" aria-label={tr(L, item.collapsed ? 'Expand heading' : 'Collapse heading')} onClick={(event) => { event.stopPropagation(); if (item.hasChildren) L.panes?.reactDocMapToggle?.(item.id); }}>{item.hasChildren ? (item.collapsed ? '+' : '−') : ''}</button><span>{item.text}</span>
   </div>)}</>;
 }
 
-function PageThumbnail({ page, active, onClick }: { page: { index: number; width: number; height: number; scale: number; source: HTMLElement }; active: boolean; onClick: () => void }) {
+function PageThumbnail({ L, page, active, onClick }: { L: WordxRuntime; page: { index: number; width: number; height: number; scale: number; source: HTMLElement }; active: boolean; onClick: () => void }) {
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
     if (!target) return;
@@ -450,7 +622,7 @@ function PageThumbnail({ page, active, onClick }: { page: { index: number; width
     target.replaceChildren(clone);
     return () => { target.replaceChildren(); };
   }, [page.source, page.scale, target]);
-  return <><div className={`thumb${active ? ' on' : ''}`} style={{ width: page.width, height: page.height }} onClick={onClick}><div ref={setTarget} /></div><div className="thumb-n">{page.index + 1}</div></>;
+  return <><div className={`thumb${active ? ' on' : ''}`} style={{ width: page.width, height: page.height }} role="button" tabIndex={0} aria-label={`${tr(L, 'Page')} ${page.index + 1}`} aria-current={active ? 'page' : undefined} onClick={onClick} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClick(); } }}><div ref={setTarget} /></div><div className="thumb-n">{page.index + 1}</div></>;
 }
 
 function MailMergePane({ L }: { L: WordxRuntime }) {
@@ -480,7 +652,7 @@ function ReviewingPane({ L }: { L: WordxRuntime }) {
   }, [L]);
   const items = L.review?.reactPaneCatalog?.() || [];
   return <><div className="rp-head"><span>{tr(L, 'Main document changes and comments')}</span><button className="tp-nav" type="button" aria-label={tr(L, 'Close Reviewing Pane')} onClick={() => L.review?.togglePane?.(false)}>×</button></div>
-    {items.length ? items.map((item) => <div className={`rp-item${selected === item.index ? ' on' : ''}`} key={item.index} onClick={() => { setSelected(item.index); L.review?.reactPaneSelect?.(item.index); }} onDoubleClick={() => { if (item.kind === 'cmt') L.review?.reactPaneSelect?.(item.index, true); }}><div className="rp-h" style={{ color: item.color }} translate="no">{item.head}</div><div className="rp-b" translate="no">{item.body}</div></div>) : <div className="rp-item tp-note">{tr(L, 'There are no tracked changes or comments in this document.')}</div>}
+    {items.length ? items.map((item) => <div className={`rp-item${selected === item.index ? ' on' : ''}`} key={item.index} role="button" tabIndex={0} onClick={() => { setSelected(item.index); L.review?.reactPaneSelect?.(item.index); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected(item.index); L.review?.reactPaneSelect?.(item.index); } }} onDoubleClick={() => { if (item.kind === 'cmt') L.review?.reactPaneSelect?.(item.index, true); }}><div className="rp-h" style={{ color: item.color }} translate="no">{item.head}</div><div className="rp-b" translate="no">{item.body}</div></div>) : <div className="rp-item tp-note">{tr(L, 'There are no tracked changes or comments in this document.')}</div>}
   </>;
 }
 
@@ -891,13 +1063,16 @@ function TablePropertiesDialogBody({ L }: { L: WordxRuntime }) {
     cellWidthEnabled: true, cellWidth: 0, verticalAlignment: 'top', sameCellMargins: true,
     cellMargins: { t: 0, b: 0, l: 0, r: 0 }, wrapText: true, fitText: false, rowLabel: 'Row:', columnLabel: 'Column:',
   });
+  const stateRef = useRef(state);
   const update = (patch: Partial<TablePropertiesState>) => {
-    const next = { ...state, ...patch };
+    const next = { ...stateRef.current, ...patch };
+    stateRef.current = next;
     setState(next);
     adapter?.reactTablePropsAction?.('change', next);
   };
+  const [optionsDialog, setOptionsDialog] = useState<'table' | 'cell' | null>(null);
   const number = (id: string, value: number, change: (value: number) => void, min = 0) => <input id={id} type="number" min={min} step="any" value={value} onChange={(event) => change(Number(event.currentTarget.value) || 0)} />;
-  const marginInputs = (scope: 'margins' | 'cellMargins') => <div className="row">{([['t','Top'],['l','Left'],['b','Bottom'],['r','Right']] as const).map(([key,label]) => <label key={key} data-table-margin={key}>{tr(L, label)}{number(`react-wordx-${scope}-${key}`, state[scope][key], (value) => update({ [scope]: { ...state[scope], [key]: value } }))}</label>)}</div>;
+  const marginInputs = (scope: 'margins' | 'cellMargins') => <div className="row">{([['t','Top'],['l','Left'],['b','Bottom'],['r','Right']] as const).map(([key,label]) => <label key={key} data-table-margin={key}>{tr(L, label)}{number(`react-wordx-${scope}-${key}`, state[scope][key], (value) => update({ [scope]: { ...stateRef.current[scope], [key]: value } }))}</label>)}</div>;
   const tabs = ['Table', 'Row', 'Column', 'Cell'];
   return <div className="col" id="react-wordx-table-properties-body">
     <div className="tabs-head" role="tablist">{tabs.map((label, index) => <button key={label} type="button" role="tab" aria-selected={state.tab === index} className={state.tab === index ? 'on' : ''} onClick={() => update({ tab: index })}>{tr(L, label)}</button>)}</div>
@@ -905,14 +1080,23 @@ function TablePropertiesDialogBody({ L }: { L: WordxRuntime }) {
       <fieldset><legend>{tr(L, 'Size')}</legend><label><input id="react-wordx-table-width-enabled" type="checkbox" checked={state.tableWidthEnabled} onChange={(event) => update({ tableWidthEnabled: event.currentTarget.checked })} />{tr(L, 'Preferred width:')}</label><label>{tr(L, 'Width:')}{number('react-wordx-table-width', state.tableWidth, (tableWidth) => update({ tableWidth }))}</label><label>{tr(L, 'Measure in:')}<select id="react-wordx-table-width-unit" value={state.tableWidthUnit} onChange={(event) => update({ tableWidthUnit: event.currentTarget.value })}><option value="dxa">{tr(L, 'Inches/cm')}</option><option value="pct">{tr(L, 'Percent')}</option></select></label></fieldset>
       <fieldset><legend>{tr(L, 'Alignment')}</legend><label>{tr(L, 'Alignment:')}<select id="react-wordx-table-alignment" value={state.alignment} onChange={(event) => update({ alignment: event.currentTarget.value })}><option value="left">{tr(L, 'Left')}</option><option value="center">{tr(L, 'Center')}</option><option value="right">{tr(L, 'Right')}</option></select></label><label>{tr(L, 'Indent from left:')}{number('react-wordx-table-indent', state.indent, (indent) => update({ indent }))}</label></fieldset>
       <fieldset><legend>{tr(L, 'Text wrapping')}</legend>{(['none','around'] as const).map((value) => <label key={value}><input type="radio" name="react-wordx-table-wrap" checked={state.wrap === value} onChange={() => update({ wrap: value })} />{tr(L, value === 'none' ? 'None' : 'Around')}</label>)}</fieldset>
-      <fieldset><legend>{tr(L, 'Default cell margins')}</legend>{marginInputs('margins')}</fieldset>
-      <fieldset><legend>{tr(L, 'Default cell spacing')}</legend><label>{tr(L, 'Allow spacing between cells')}{number('react-wordx-table-spacing', state.spacing, (spacing) => update({ spacing }))}</label></fieldset>
-      <label><input type="checkbox" checked={state.autoResize} onChange={(event) => update({ autoResize: event.currentTarget.checked })} />{tr(L, 'Automatically resize to fit contents')}</label>
+      <button type="button" className="btn small" onClick={() => setOptionsDialog('table')}>{tr(L, 'Options...')}</button>
       <button type="button" className="btn small" onClick={() => adapter?.reactTablePropsAction?.('borders')}>{tr(L, 'Borders and Shading...')}</button>
     </div> : null}
     {state.tab === 1 ? <div role="tabpanel" className="col"><div className="cd-cap">{tr(L, state.rowLabel)}</div><fieldset><legend>{tr(L, 'Size')}</legend><label><input id="react-wordx-row-height-enabled" type="checkbox" checked={state.rowHeightEnabled} onChange={(event) => update({ rowHeightEnabled: event.currentTarget.checked })} />{tr(L, 'Specify height:')}</label><label>{tr(L, 'Height:')}{number('react-wordx-row-height', state.rowHeight, (rowHeight) => update({ rowHeight }), 1)}</label><label>{tr(L, 'Row height is:')}<select id="react-wordx-row-height-rule" value={state.rowHeightRule} onChange={(event) => update({ rowHeightRule: event.currentTarget.value })}><option value="atLeast">{tr(L, 'At least')}</option><option value="exact">{tr(L, 'Exactly')}</option></select></label></fieldset><fieldset><legend>{tr(L, 'Options')}</legend><label><input type="checkbox" checked={state.allowRowBreak} onChange={(event) => update({ allowRowBreak: event.currentTarget.checked })} />{tr(L, 'Allow row to break across pages')}</label><label><input id="react-wordx-row-header" type="checkbox" checked={state.repeatHeader} onChange={(event) => update({ repeatHeader: event.currentTarget.checked })} />{tr(L, 'Repeat as header row at the top of each page')}</label></fieldset></div> : null}
     {state.tab === 2 ? <div role="tabpanel" className="col"><div className="cd-cap">{tr(L, state.columnLabel)}</div><fieldset><legend>{tr(L, 'Size')}</legend><label><input type="checkbox" checked={state.columnWidthEnabled} onChange={(event) => update({ columnWidthEnabled: event.currentTarget.checked })} />{tr(L, 'Preferred width:')}</label><label>{tr(L, 'Width:')}{number('react-wordx-column-width', state.columnWidth, (columnWidth) => update({ columnWidth }), 6)}</label></fieldset></div> : null}
-    {state.tab === 3 ? <div role="tabpanel" className="col"><fieldset><legend>{tr(L, 'Size')}</legend><label><input type="checkbox" checked={state.cellWidthEnabled} onChange={(event) => update({ cellWidthEnabled: event.currentTarget.checked })} />{tr(L, 'Preferred width:')}</label><label>{tr(L, 'Width:')}{number('react-wordx-cell-width', state.cellWidth, (cellWidth) => update({ cellWidth }), 6)}</label></fieldset><fieldset><legend>{tr(L, 'Vertical alignment')}</legend><label>{tr(L, 'Vertical alignment:')}<select id="react-wordx-cell-v-align" value={state.verticalAlignment} onChange={(event) => update({ verticalAlignment: event.currentTarget.value })}><option value="top">{tr(L, 'Top')}</option><option value="center">{tr(L, 'Center')}</option><option value="bottom">{tr(L, 'Bottom')}</option></select></label></fieldset><fieldset><legend>{tr(L, 'Cell margins')}</legend><label><input type="checkbox" checked={state.sameCellMargins} onChange={(event) => update({ sameCellMargins: event.currentTarget.checked })} />{tr(L, 'Same as the whole table')}</label>{marginInputs('cellMargins')}</fieldset><fieldset><legend>{tr(L, 'Options')}</legend><label><input type="checkbox" checked={state.wrapText} onChange={(event) => update({ wrapText: event.currentTarget.checked })} />{tr(L, 'Wrap text')}</label><label><input id="react-wordx-cell-fit-text" type="checkbox" checked={state.fitText} onChange={(event) => update({ fitText: event.currentTarget.checked })} />{tr(L, 'Fit text')}</label></fieldset></div> : null}
+    {state.tab === 3 ? <div role="tabpanel" className="col"><fieldset><legend>{tr(L, 'Size')}</legend><label><input type="checkbox" checked={state.cellWidthEnabled} onChange={(event) => update({ cellWidthEnabled: event.currentTarget.checked })} />{tr(L, 'Preferred width:')}</label><label>{tr(L, 'Width:')}{number('react-wordx-cell-width', state.cellWidth, (cellWidth) => update({ cellWidth }), 6)}</label></fieldset><fieldset><legend>{tr(L, 'Vertical alignment')}</legend><label>{tr(L, 'Vertical alignment:')}<select id="react-wordx-cell-v-align" value={state.verticalAlignment} onChange={(event) => update({ verticalAlignment: event.currentTarget.value })}><option value="top">{tr(L, 'Top')}</option><option value="center">{tr(L, 'Center')}</option><option value="bottom">{tr(L, 'Bottom')}</option></select></label></fieldset><button type="button" className="btn small" onClick={() => setOptionsDialog('cell')}>{tr(L, 'Options...')}</button></div> : null}
+    {optionsDialog === 'table' ? <OfficeDialog title={tr(L, 'Table Options')} className="wordx-table-options-dialog" onRequestClose={() => setOptionsDialog(null)}><div className="col">
+      <fieldset><legend>{tr(L, 'Default cell margins')}</legend>{marginInputs('margins')}</fieldset>
+      <fieldset><legend>{tr(L, 'Default cell spacing')}</legend><label>{tr(L, 'Allow spacing between cells')}{number('react-wordx-table-spacing', state.spacing, (spacing) => update({ spacing }))}</label></fieldset>
+      <fieldset><legend>{tr(L, 'Options')}</legend><label><input id="react-wordx-table-auto-resize" type="checkbox" checked={state.autoResize} onChange={(event) => update({ autoResize: event.currentTarget.checked })} />{tr(L, 'Automatically resize to fit contents')}</label></fieldset>
+      <button type="button" className="btn" onClick={() => setOptionsDialog(null)}>{tr(L, 'OK')}</button>
+    </div></OfficeDialog> : null}
+    {optionsDialog === 'cell' ? <OfficeDialog title={tr(L, 'Cell Options')} className="wordx-table-options-dialog" onRequestClose={() => setOptionsDialog(null)}><div className="col">
+      <fieldset><legend>{tr(L, 'Cell margins')}</legend><label><input type="checkbox" checked={state.sameCellMargins} onChange={(event) => update({ sameCellMargins: event.currentTarget.checked })} />{tr(L, 'Same as the whole table')}</label>{marginInputs('cellMargins')}</fieldset>
+      <fieldset><legend>{tr(L, 'Options')}</legend><label><input id="react-wordx-cell-wrap-text" type="checkbox" checked={state.wrapText} onChange={(event) => update({ wrapText: event.currentTarget.checked })} />{tr(L, 'Wrap text')}</label><label><input id="react-wordx-cell-fit-text" type="checkbox" checked={state.fitText} onChange={(event) => update({ fitText: event.currentTarget.checked })} />{tr(L, 'Fit text')}</label></fieldset>
+      <button type="button" className="btn" onClick={() => setOptionsDialog(null)}>{tr(L, 'OK')}</button>
+    </div></OfficeDialog> : null}
   </div>;
 }
 

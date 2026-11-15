@@ -81,7 +81,7 @@ export function legacyRuntime(app) {
             response.setHeader('Cache-Control', 'no-store');
             const text = contents.toString('utf8');
             response.end(prefix === '/manifest.webmanifest' ? reactManifest(text) : pathname === '/common/templates.json' ? reactTemplates(text) : contents);
-          }).catch(next);
+          }).catch((error) => error?.code === 'ENOENT' ? next() : next(error));
       });
     },
     async writeBundle(options) {

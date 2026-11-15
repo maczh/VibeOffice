@@ -22,6 +22,44 @@
     const dec = unit === 'in' || unit === 'cm' ? 2 : unit === 'pt' ? 1 : 1;
     const fmt = (v) => (v == null || v === '' ? L.t(o.autoLabel || '') : L.round(v / k, dec) + UNIT_LABEL[unit]);
     const id = o.id || nid('len');
+    const directRoot = window.VO && VO.reactDirectHost && VO.reactDirectHost.root;
+    if (directRoot && directRoot.isConnected) {
+      const wrap = h('span', { class: 'spin' });
+      let val = pt;
+      let pending = fmt(pt);
+      const read = () => wrap.querySelector('input');
+      const pendingListeners = [];
+      const inp = {};
+      Object.defineProperty(inp, 'value', { get: () => read()?.value ?? pending, set: (value) => { pending = String(value ?? ''); const input = read(); if (input) input.value = pending; } });
+      inp.addEventListener = (type, listener, options) => {
+        const input = read();
+        if (input) input.addEventListener(type, listener, options);
+        else pendingListeners.push([type, listener, options]);
+      };
+      const parse = () => {
+        const text = inp.value.trim();
+        if (!text && o.autoLabel) return null;
+        if (o.autoLabel && text.toLowerCase() === L.t(o.autoLabel).toLowerCase()) return null;
+        const parsed = D.parseLen(text, unit);
+        return parsed == null || isNaN(parsed) ? val : parsed;
+      };
+      const options = {
+        id, value: val, min: o.min == null ? -1e6 : o.min, max: o.max == null ? 1e6 : o.max, step: step * k, dec,
+        fmt: (value) => fmt(value), parse: () => parse(), onMount: (input) => pendingListeners.splice(0).forEach(([type, listener, listenerOptions]) => input.addEventListener(type, listener, listenerOptions)),
+        onChange: (value) => { val = value; options.value = value; pending = fmt(value); if (o.onChange) o.onChange(value); },
+      };
+      wrap.dataset.reactSpinId = id;
+      directRoot.dispatchEvent(new CustomEvent('vibeoffice-react-spin', { bubbles: true, detail: { target: wrap, options } }));
+      wrap.input = inp;
+      wrap.get = () => parse();
+      wrap.set = (value) => { val = value; options.value = value; inp.value = fmt(value); };
+      wrap.setDisabled = (disabled) => {
+        wrap.__reactSpinDisabled = !!disabled;
+        wrap.dispatchEvent(new Event('vibeoffice-react-spin-disabled'));
+        wrap.classList.toggle('dis', !!disabled);
+      };
+      return wrap;
+    }
     const inp = h('input', { type: 'text', id, class: 'spin-in', value: fmt(pt), autocomplete: 'off', inputmode: 'decimal' });
     let val = pt;
     const parse = () => { const s = inp.value.trim(); if (!s && o.autoLabel) return null; if (o.autoLabel && s.toLowerCase() === L.t(o.autoLabel).toLowerCase()) return null; const v = D.parseLen(s, unit); return v == null || isNaN(v) ? val : v; };

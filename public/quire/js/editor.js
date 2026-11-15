@@ -151,7 +151,8 @@
     try { r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); } catch (e) { CSS.highlights.delete('wordx-sel'); return; }
     CSS.highlights.set('wordx-sel', new Highlight(r));
   };
-  L.bus.on('layout-done', () => { if (selDrawn) E.drawSel(true); });
+  E.reactLayoutSelection = () => { if (selDrawn) E.drawSel(true); };
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('layout-done', E.reactLayoutSelection);
   /** pull a pending DOM selection into the model before acting on a key (selectionchange is asynchronous) */
   E.syncSel = function () {
     if (E.composing || !LY.root || domIsOurs()) return;
@@ -669,9 +670,14 @@
   E.init = function () {
     const root = LY.root;
     try { document.execCommand('enableObjectResizing', false, false); document.execCommand('enableInlineTableEditing', false, false); } catch (e) { /* firefox only */ }
-    L.addMountListener(L.domHost(), 'pointerdown', onPagePointerDown, true);
-    L.addMountListener(document, 'selectionchange', E.onSelectionChange);
-    L.addMountListener(L.domHost(), 'dragend', clearDragData, true);
+    E.reactPagePointerDown = onPagePointerDown;
+    E.reactSelectionChange = E.onSelectionChange;
+    E.reactDragEnd = clearDragData;
+    if (!(window.VO && VO.reactDirectHost)) {
+      L.addMountListener(L.domHost(), 'pointerdown', onPagePointerDown, true);
+      L.addMountListener(document, 'selectionchange', E.onSelectionChange);
+      L.addMountListener(L.domHost(), 'dragend', clearDragData, true);
+    }
     const editorEvents = {
       beforeinput: onBeforeInput,
       keydown: onKeyDown,

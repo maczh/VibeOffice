@@ -562,7 +562,7 @@
     paneG = g ? g.id : null;
     if (!g) { b.append(h('div', { class: 'tp-note', text: 'Select an IntelliArt graphic to type its text here.' }), h('div', { class: 'tp-row' }, ui.button('Insert IntelliArt...', () => ui.exec('insertDiagram'), { class: 'btn' }))); return; }
     b.append(h('div', { class: 'tp-h', text: 'Type your text here' }));
-    b.append(h('div', { class: 'sa-tools' }, ...['diagramAddShape', 'diagramPromote', 'diagramDemote', 'diagramMoveUp', 'diagramMoveDown'].map((id) => ui.tbButton(id))));
+    b.append(h('div', { class: 'sa-tools' }, ...['diagramAddShape', 'diagramPromote', 'diagramDemote', 'diagramMoveUp', 'diagramMoveDown'].map((id) => ui.tbButton(id, { forceDOM: true }))));
     const list = h('div', { class: 'sa-pane', role: 'tree', 'aria-label': 'IntelliArt text' });
     for (const row of rowsOf(g)) {
       const inp = h('input', { type: 'text', class: 'sa-row', value: row.item.text, placeholder: '[Text]', 'aria-label': L.t('Item, level {0}', row.level + 1), 'data-item': row.item.id, style: `margin-left:${row.level * 16}px` });

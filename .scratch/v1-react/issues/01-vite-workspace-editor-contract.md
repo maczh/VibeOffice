@@ -18,6 +18,7 @@
 
 ## Comments
 
+- 2026-11-15: The consumer-style Vite host now forwards missing legacy asset paths back to Vite, so package aliases such as `/wordx/src/index.ts` no longer get intercepted as old engine files. Added middleware regression coverage; the production package contract remains incomplete because engine runtime assets and state are still legacy/global.
 - 2026-11-14: The typed direct-host bridge accepts explicit classic-script exclusions and records which ordered scripts it loads. PPTX now consumes this seam to avoid loading its package-owned Ribbon definition; production and workspace tests cover the package registration and exclusion. Broader engine assets/modules still load from the public compatibility bundles, so both runtime-migration acceptance items remain open.
 
 - 2026-11-12: The packages now expose a typed same-document direct-engine mount bridge and browser coverage confirms clean unmounts for all three editors. The legacy engines are still loaded from their public HTML/script bundles and share mutable global state, so the acceptance items remain unchecked until those engine interfaces and lifecycle boundaries are genuinely isolated.

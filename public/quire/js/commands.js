@@ -219,7 +219,7 @@
   const selectedObjIs = (pred) => { const it = L.drawing && L.drawing.selectedItem(); return !!it && pred(it); };
 
   /* ================= File ================= */
-  C('new', { label: '&New...', menuLabel: '&New...', icon: 'new', key: 'Ctrl+N', tip: 'New Blank Document', run: (arg, ev) => { if (ev && ev.currentTarget && ev.currentTarget.closest && ev.currentTarget.closest('.toolbar')) A.newDocument(); else if (window.VO) VO.newDialog('quire', (id) => (id ? L.templates.create(id) : A.newDocument())); else pane('new')(); } });
+  C('new', { label: '&New...', menuLabel: '&New...', icon: 'new', key: 'Ctrl+N', tip: 'New Blank Document', run: (arg, ev) => { if (ev && ev.currentTarget && ev.currentTarget.closest && ev.currentTarget.closest('.toolbar')) A.newDocument(); else if (window.VO) VO.newDialog(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'wordx' : 'quire', (id) => (id ? L.templates.create(id) : A.newDocument())); else pane('new')(); } });
   C('newBlank', { label: '&Blank document', icon: 'new', run: () => A.newDocument() });
   C('open', { label: '&Open...', icon: 'open', key: 'Ctrl+O', run: () => A.openDialog() });
   C('close', { label: '&Close', icon: 'close', run: () => A.closeDocument() });
@@ -751,7 +751,8 @@
     pane2.appendChild(sizer);
     pane2.scrollTop = top;
   }, 300);
-  L.bus.on('layout-done', () => { if (A.splitOn) A.refreshSplit(); });
+  A.reactSplitLayoutChanged = () => { if (A.splitOn) A.refreshSplit(); };
+  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('layout-done', A.reactSplitLayoutChanged);
 
   /* ---------- extend selection (F8) ---------- */
   A.extendStep = function () {
@@ -771,8 +772,9 @@
     if (E.sel && !D.eqPos(E.sel.a, A.extAnchor) && D.storyOf(doc(), E.sel.f.p) === D.storyOf(doc(), A.extAnchor.p)) { A.extBusy = true; E.setSel(A.extAnchor, E.sel.f, { noScroll: true }); A.extBusy = false; }
   });
   L.bus.on('app-ready', () => {
-    L.addMountListener(L.domHost(), 'keydown', (e) => { if (e.key === 'Escape' && E.extend) { E.extend = false; A.extAnchor = null; A.updateStatus(); } }, true);
+    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(L.domHost(), 'keydown', A.reactExtendEscape, true);
   });
+  A.reactExtendEscape = (e) => { if (e.key === 'Escape' && E.extend) { E.extend = false; A.extAnchor = null; A.updateStatus(); } };
 
   /* ---------- go back (Shift+F5): last three edit locations ---------- */
   A.editTrail = [];
