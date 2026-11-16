@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 type ActionKind = 'next' | 'prev' | 'first' | 'last' | 'lastViewed' | 'end' | 'slide' | 'url';
 interface ActionSettingsCatalog { none: boolean; kind: ActionKind; slide: string; url: string; actions: Array<[ActionKind, string]>; slides: Array<{ id: string; label: string }> }
@@ -13,6 +13,7 @@ function runtime(): ActionSettingsRuntime | undefined { return (window as Window
 /** React-owned mouse-action settings; selected-shape hyperlink transactions remain engine-backed. */
 export function PptxActionSettingsDialog() {
   const [catalog, setCatalog] = useState<ActionSettingsCatalog | null>(null);
+  const id = useId().replaceAll(':', '');
   useEffect(() => {
     const refresh = () => { const next = runtime()?.dlg?.reactActionSettingsCatalog?.() || null; setCatalog(next ? { ...next, actions: [...next.actions], slides: [...next.slides] } : null); };
     const off = runtime()?.bus?.on('pptx-action-settings-dialog', refresh);
@@ -24,8 +25,8 @@ export function PptxActionSettingsDialog() {
   const close = () => runtime()?.dlg?.reactActionSettingsAction?.('close');
   const apply = () => runtime()?.dlg?.reactActionSettingsAction?.('apply', { none: catalog.none, kind: catalog.kind, slide: catalog.slide, url: catalog.url });
   return <OfficeDialog title={t('Action Settings')} className="pptx-action-settings-dialog" style={{ width: 'min(92vw, 430px)' }} onRequestClose={close}>
-    <div role="tablist" aria-label={t('Action Settings')} className="tabs-head"><button type="button" role="tab" aria-selected="true">{t('Mouse Click')}</button></div>
-    <section role="tabpanel" className="col"><strong>{t('Action on click')}</strong>
+    <div className="tabs-head"><span id={`${id}-mouse-click-title`} className="tab on">{t('Mouse Click')}</span></div>
+    <section role="tabpanel" aria-labelledby={`${id}-mouse-click-title`} className="col"><strong>{t('Action on click')}</strong>
       <label><input type="radio" name="pptx-action-mode" checked={catalog.none} onChange={() => update({ none: true })} />{t('&None').replace('&', '')}</label>
       <label><input type="radio" name="pptx-action-mode" checked={!catalog.none} onChange={() => update({ none: false })} />{t('&Hyperlink to:').replace('&', '')}</label>
       <div className="col" style={{ marginLeft: 20 }}>

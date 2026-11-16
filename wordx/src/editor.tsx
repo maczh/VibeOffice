@@ -6,6 +6,15 @@ import { WordxListBoxLayer } from './list-box.js';
 import { WordxMenuContentLayer } from './menu-content.js';
 import { installWordxRibbonSpec } from './ribbon-spec.js';
 import { WordxTaskContentLayer } from './task-content.js';
+import { installWordxTemplates } from './templates.js';
+import { installWordxLineBoxes } from './line-boxes.js';
+import { installWordxDrawTool } from './draw-tool.js';
+import { installWordxOutline } from './outline.js';
+import { installWordxAutoCorrect } from './autocorrect.js';
+import { installWordxRulers } from './rulers.js';
+import { installWordxOmml } from './omml.js';
+import { installWordxMailMerge } from './mail-merge.js';
+import { installWordxFind } from './find.js';
 
 export interface WordxEngineControls {
   restoreDraft(draft: LocalDraft<Blob>): void;
@@ -40,8 +49,8 @@ export function WordxEditor({ services, mountEngine, engine, draftStore, onDraft
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx', '.docm', '.dotx', '.dotm'],
         'text/plain': ['.txt', '.md', '.markdown', '.rtf', '.html', '.htm', '.zip'],
       },
-      configureRuntime: installWordxRibbonSpec,
-      skipLegacyScripts: ['/quire/js/ribbon.js'],
+      configureRuntime: (runtime) => { installWordxRibbonSpec(runtime); installWordxTemplates(runtime); installWordxLineBoxes(runtime); installWordxDrawTool(runtime); installWordxOutline(runtime); installWordxAutoCorrect(runtime); installWordxRulers(runtime); installWordxOmml(runtime); installWordxMailMerge(runtime); installWordxFind(runtime); },
+      skipLegacyScripts: ['/quire/js/ribbon.js', '/quire/js/templates.js', '/quire/js/portions.js', '/quire/js/drawtool.js', '/quire/js/outline.js', '/quire/js/autocorrect.js', '/quire/js/rulers.js', '/quire/js/omml.js', '/quire/js/mailmerge.js', '/quire/js/find.js'],
       ...(allowedRemoteOrigins ? { allowedRemoteOrigins } : {}), ...(onOpenUrl ? { onOpenUrl } : {}),
       ...(draftStore ? { draftStore } : {}),
       ...(onDraftSaved ? { onDraftSaved } : {}),

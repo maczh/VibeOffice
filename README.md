@@ -12,15 +12,15 @@
 <table>
   <tr>
     <td align="center" width="33%">
-      <a href="https://vibeoffice.work/wordx/?template=flyer"><img src="docs/images/quire.png" alt="Wordx, the word processor, editing an event flyer"></a><br>
+      <a href="https://vibeoffice.work/wordx/?template=flyer"><img src="docs/images/wordx.png" alt="Wordx, the word processor, editing an event flyer"></a><br>
       <b><a href="https://vibeoffice.work/wordx/">Wordx</a></b><br>Word processor
     </td>
     <td align="center" width="33%">
-      <a href="https://vibeoffice.work/excelx/?template=loan"><img src="docs/images/ledger.png" alt="Excelx, the spreadsheet, with a loan amortization schedule"></a><br>
+      <a href="https://vibeoffice.work/excelx/?template=loan"><img src="docs/images/excelx.png" alt="Excelx, the spreadsheet, with a loan amortization schedule"></a><br>
       <b><a href="https://vibeoffice.work/excelx/">Excelx</a></b><br>Spreadsheet
     </td>
     <td align="center" width="33%">
-      <a href="https://vibeoffice.work/pptx/"><img src="docs/images/lectern.png" alt="PPTX, the presentation editor, with the sample deck: a drawn title slide, then a chart, a table, a timeline and a funnel diagram"></a><br>
+      <a href="https://vibeoffice.work/pptx/"><img src="docs/images/pptx.png" alt="PPTX, the presentation editor, with the sample deck: a drawn title slide, then a chart, a table, a timeline and a funnel diagram"></a><br>
       <b><a href="https://vibeoffice.work/pptx/">PPTX</a></b><br>Presentations
     </td>
   </tr>
@@ -51,9 +51,9 @@ The goal: edit a Word, Excel or PowerPoint file here, save it in the same format
 
 | App | | Opens and saves |
 |---|---|---|
-| [Wordx](docs/quire.md) | Word processor | .docx, .docm, .dotx, .dotm, .rtf, .htm, .txt, Markdown (.md, or .zip with pictures); PDF |
-| [Excelx](docs/ledger.md) | Spreadsheet | .xlsx, .xlsm, .xltx, .xltm, .csv, XML Spreadsheet 2003, .htm; PDF |
-| [PPTX](docs/lectern.md) | Presentations | .pptx, .pptm, .ppsx, .ppsm, .potx, .potm; PDF, PNG, .htm |
+| [Wordx](docs/wordx.md) | Word processor | .docx, .docm, .dotx, .dotm, .rtf, .htm, .txt, Markdown (.md, or .zip with pictures); PDF |
+| [Excelx](docs/excelx.md) | Spreadsheet | .xlsx, .xlsm, .xltx, .xltm, .csv, XML Spreadsheet 2003, .htm; PDF |
+| [PPTX](docs/pptx.md) | Presentations | .pptx, .pptm, .ppsx, .ppsm, .potx, .potm; PDF, PNG, .htm |
 
 Start at vibeoffice.work, the Start Center: open a file or create a document, spreadsheet or presentation from a blank page or a template.
 

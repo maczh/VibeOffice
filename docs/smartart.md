@@ -1,11 +1,11 @@
 # IntelliArt (SmartArt): status and to do
 
-IntelliArt is Lectern's name for its diagrams; in files they are Office SmartArt. Features and file behaviour:
-[lectern.md](lectern.md#intelliart-smartart). This page tracks how far PowerPoint agrees with us, and what is left.
+IntelliArt is PPTX's name for its diagrams; in files they are Office SmartArt. Features and file behaviour:
+[pptx.md](pptx.md#intelliart-smartart). This page tracks how far PowerPoint agrees with us, and what is left.
 
 ## Where it stands (2026-10-10)
 
-- **In Lectern:**
+- **In PPTX:**
   - 26 layouts (`public/common/smartart.js`), with a gallery, text pane, Diagram toolbar and IntelliArt Tools;
   - colours (two from the theme, 13 fixed palettes of our own) and styles in three families (filled, outlined,
     tinted), pictured in the IntelliArt pane;
@@ -19,7 +19,7 @@ IntelliArt is Lectern's name for its diagrams; in files they are Office SmartArt
 - **Checks that pass:**
   - Open XML SDK and `package.py` on every layout;
   - LibreOffice draws every layout from the stored drawing;
-  - Lectern reopens every layout editable;
+  - PPTX reopens every layout editable;
   - `tests/lectern/smartart-office.py`: 43/43 corpus decks;
   - `frames.mjs`: 25/25.
 - **PowerPoint:**
@@ -49,10 +49,10 @@ Learned from PowerPoint (bisection, and PowerPoint's own org chart in the corpus
 
 **Current definitions (uncommitted):** each saved diagram gets its own layout definition (uniqueId
 `…/layout/<id>#<hash>`). It places every shape exactly where our engine draws it (a composite, one `if` branch per
-item count 1–10, Lectern's shapes sampled at the frame's aspect), with a plain row (or, for trees, the recursive tree
+item count 1–10, PPTX's shapes sampled at the frame's aspect), with a plain row (or, for trees, the recursive tree
 above) as the `else`. Items are bound with `forEach axis="ch" ptType="node" st=k cnt=1` (nested for tree paths); a
 shape's text sits in a transparent text node on top. Trees choose their branch by total items (`cnt axis="des"`) or
-by top items (`axis="ch"`); LibreOffice handles only `ch`. In LibreOffice (without the drawing) this matches Lectern
+by top items (`axis="ch"`); LibreOffice handles only `ch`. In LibreOffice (without the drawing) this matches PPTX
 for every flat layout.
 
 **Final batch result (`tmp/smartart-final`, 14 decks, 2026-10-10):** no repair prompts, but PowerPoint drew its
@@ -73,25 +73,25 @@ SmartArt files.
 
 **Final4 (`tmp/smartart-final4`, 2026-10-11): PowerPoint draws our definitions.** Chevron, Step Up, Continuous
 Arrow, Timeline, Radial (4), Continuous Cycle, the trees, Venn, Target, Linear Venn, Funnel and the pyramids look
-like Lectern. Both tree conditions worked; we keep the total item count (`des`), which falls back to the tree
+like PPTX. Both tree conditions worked; we keep the total item count (`des`), which falls back to the tree
 algorithms after Add Shape. Still wrong, fixed for final5:
 - one shape at full diagram size (Process with 4 and 7 items, Vertical Process, Cycle with 4, Radial with 2). Our
   presentation points linked every shape of an item to it, also those whose `presOf` is empty; Office links none of
   those (473 of 476 in the corpus);
 - lines down to the left drawn wrong: PowerPoint ignores `rot` on a line in a definition (shapes turn), so they use
   the `lineInv` preset;
-- text larger than Lectern's: each text node now has our size (`primFontSz` per node); Block List lost its bullets,
+- text larger than PPTX's: each text node now has our size (`primFontSz` per node); Block List lost its bullets,
   left-aligned text gets `parTxLTRAlign`.
 
 **Colours and styles (2026-10-11, not yet seen in PowerPoint):** quick styles refer to the theme's style matrix by
-index, so the themes Lectern writes now have one (`L.model.FMT`: solid, soft and rich gradient fills; 0.75, 1.5 and
+index, so the themes PPTX writes now have one (`L.model.FMT`: solid, soft and rich gradient fills; 0.75, 1.5 and
 2.5 pt lines; three drop shadows). Ranges are two-colour `fillClrLst` lists without `meth` (span, as Office writes
 Colorful Range); our palettes are `srgbClr`, the theme's choices `schemeClr`; outlined and
 tinted styles get colours of their own, saved under their own id (`…/colors/<id>/outline`, `/tint`), with the
 item's colour in `linClrLst` and in the text. The text sits on the transparent `trAlignAcc1` nodes, so that label
 carries it. LibreOffice without the drawing showed two things: it takes text colour from the style's `fontRef` (so
 outlined and tinted styles name `tx1` there), and it drops transparency in a span list (so a tint is a colour mix,
-not an alpha). Checked: `package.py`; LibreOffice with and without the drawing; Lectern and LibreOffice re-saves reopen
+not an alpha). Checked: `package.py`; LibreOffice with and without the drawing; PPTX and LibreOffice re-saves reopen
 with every diagram's colours and style.
 
 ## Method
@@ -99,14 +99,14 @@ with every diagram's colours and style.
 1. Build a small batch in `./tmp`. Each file must pass the SDK and `package.py`.
 2. The user opens the batch in PowerPoint and exports it to PDF into the same folder, or `tmp/office/office.py run`
    sends it to the Office 2016 test VM for PowerPoint 2016's PDFs (newer PowerPoint can still differ).
-3. Compare each page with Lectern's drawing (`tmp/smartart-hier/sheet.py`).
+3. Compare each page with PPTX's drawing (`tmp/smartart-hier/sheet.py`).
 4. Narrow failures by bisection: one change per copy, at most about 8 copies.
 
 LibreOffice is a partial stand-in. Without the stored drawing (`tmp/smartart-iter/loop.sh CATEGORY`) it lays our definitions out, but it draws no tree connectors and handles trees poorly.
 
 ## To do
 
-**Final5 (`tmp/smartart-final5`, 2026-10-11):** text sizes and alignment now match Lectern, and the trees are right,
+**Final5 (`tmp/smartart-final5`, 2026-10-11):** text sizes and alignment now match PPTX, and the trees are right,
 including Hierarchy's slanted lines (`lineInv`). One shape is still drawn across the whole diagram in a few counts:
 the middle arrow of a 4-item Process or Vertical Process (in every frame shape), an arrow of a 4-item Cycle, box 5 of
 a 7-item Process, the centre of a 2-satellite Radial. The copies without presentation points and drawing show the
@@ -116,7 +116,7 @@ although they look like its neighbours'.
 PowerPoint's re-saves of final5 (`*-saved.pptx`, `*-added.pptx` there) record the size it gave each shape
 (`tmp/smartart-r6-tools/ppsaved.py`): the stretched shapes are exactly the diagram's size, so their four
 constraints were ignored. They are the same nodes at every frame shape, so the cause is the structure, not the values.
-**Add Shape works:** a fifth process item took our 5-item layout at Lectern's spacing; a new org-chart box took the
+**Add Shape works:** a fifth process item took our 5-item layout at PPTX's spacing; a new org-chart box took the
 tree fallback with its connectors. `powerpoint-own.pptx` (Basic Process, Name and Title Organization Chart, Labeled
 Hierarchy made in PowerPoint) is a reference; its Basic Process boxes are 123 × 74 pt to our 125 × 75.
 
@@ -133,11 +133,11 @@ so the writer now names them that way. `tests/lectern/smartart-definitions.test.
 
 1. **Newer PowerPoint:** confirm the two fixes there (final6's decks); round 7's re-saves are no longer needed.
    Also: one slide per new style family (filled with gradients and shadows, outlined, tinted) and a palette range
-   and cycle, to see that PowerPoint steps through a range item by item as Lectern does (Lectern mixes in RGB).
+   and cycle, to see that PowerPoint steps through a range item by item as PPTX does (PPTX mixes in RGB).
    In PowerPoint 2016, still to fix:
    - more items than the count branches cover (11 in a process): the plain-row fallback draws full-height boxes;
    - a square or tall frame: the process and chevron rows come out much smaller than the frame (the branches keep
-     the aspect ratio they were sampled at); compare with Lectern's drawing in the same frame.
+     the aspect ratio they were sampled at); compare with PPTX's drawing in the same frame.
    Already right in final5, to keep an eye on:
 2. **Processes:** box proportions; Chevron, Step Up, Continuous Arrow and Basic Timeline shapes; visible arrows.
 3. **Cycles:** spacing on the ring, and arrows between items.
@@ -145,4 +145,4 @@ so the writer now names them that way. `tests/lectern/smartart-definitions.test.
 5. **Relationship, Matrix and Pyramids:** compare in PowerPoint.
 6. Tie arrows, connectors and cards in the stored drawing to their presentation points (only item shapes are tied now).
 7. An item holds one paragraph: PowerPoint items with several paragraphs are joined, and org-chart assistants become ordinary members.
-8. Later: IntelliArt in Quire (Word) and Ledger (Excel), which today keep SmartArt unchanged or (Ledger) drop it.
+8. Later: IntelliArt in Wordx (Word) and Excelx (Excel), which today keep SmartArt unchanged or (Excelx) drop it.

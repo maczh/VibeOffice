@@ -20,7 +20,7 @@ function reactManifest(source) {
   for (const product of products) {
     const shortcut = manifest.shortcuts?.find((entry) => entry.url.startsWith(product.legacy + '/'));
     if (shortcut) {
-      shortcut.url = shortcut.url.replace(product.legacy + '/', product.id + '/');
+      shortcut.url = `./?new=${product.id}`;
       shortcut.description = shortcut.description?.replace(new RegExp(product.legacy, 'i'), product.name);
     }
     const screenshot = manifest.screenshots?.find((entry) => entry.src.startsWith(product.legacy + '/'));

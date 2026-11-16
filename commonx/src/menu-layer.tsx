@@ -77,12 +77,16 @@ export function MenuLayer({ host }: MenuLayerProps) {
   const [activeBar, setActiveBar] = useState<number | null>(null);
   const panelRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeHost = useCallback((active: boolean) => {
-    const direct = (window as Window & { VO?: { reactDirectHost?: { menuOpen?: boolean } } }).VO?.reactDirectHost;
+    const direct = (window as Window & { VO?: { reactDirectHost?: { menuOpen?: boolean; menuBarApi?: { active: number | null } } } }).VO?.reactDirectHost;
     if (direct) direct.menuOpen = active;
   }, []);
   const close = useCallback((keepDepth = 0) => {
     setStack((current) => current.slice(0, Math.max(0, keepDepth)));
-    if (!keepDepth) setActiveBar(null);
+    if (!keepDepth) {
+      setActiveBar(null);
+      const direct = (window as Window & { VO?: { reactDirectHost?: { menuBarApi?: { active: number | null } } } }).VO?.reactDirectHost;
+      if (direct?.menuBarApi) direct.menuBarApi.active = null;
+    }
     activeHost(keepDepth > 0);
   }, [activeHost]);
 
@@ -166,11 +170,16 @@ export function MenuLayer({ host }: MenuLayerProps) {
         else { event.preventDefault(); event.stopPropagation(); }
       } else { event.preventDefault(); event.stopPropagation(); }
     };
+    const closeForWindowChange = () => close();
     document.addEventListener('pointerdown', outside, true);
     document.addEventListener('keydown', keydown, true);
+    window.addEventListener('blur', closeForWindowChange);
+    window.addEventListener('resize', closeForWindowChange);
     return () => {
       document.removeEventListener('pointerdown', outside, true);
       document.removeEventListener('keydown', keydown, true);
+      window.removeEventListener('blur', closeForWindowChange);
+      window.removeEventListener('resize', closeForWindowChange);
     };
   }, [stack, close, menuBar]);
 

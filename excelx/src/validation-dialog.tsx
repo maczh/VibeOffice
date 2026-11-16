@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 interface ValidationState { type: string; op: string; allowBlank: boolean; showDrop: boolean; showInput: boolean; showError: boolean; errorStyle: string; value1: string; value2: string; promptTitle: string; prompt: string; errorTitle: string; error: string; ime: string; applyAll: boolean }
 type Choice = [string, string];
@@ -13,6 +13,7 @@ function runtime(): ValidationRuntime | undefined { return (window as Window & {
 
 export function ExcelxValidationDialog() {
   const [catalog, setCatalog] = useState<ValidationCatalog | null>(null);
+  const id = useId().replaceAll(':', '');
   const [state, setState] = useState<ValidationState>({ type: 'none', op: 'between', allowBlank: true, showDrop: true, showInput: true, showError: true, errorStyle: 'stop', value1: '', value2: '', promptTitle: '', prompt: '', errorTitle: '', error: '', ime: '', applyAll: false });
   const [tab, setTab] = useState(0);
   useEffect(() => {
@@ -32,9 +33,20 @@ export function ExcelxValidationDialog() {
   const firstLabel = state.type === 'list' ? '&Source:' : state.type === 'custom' ? 'F&ormula:' : two ? (state.type === 'date' ? '&Start date:' : state.type === 'time' ? '&Start time:' : '&Minimum:') : state.type === 'date' ? '&Date:' : state.type === 'time' ? '&Time:' : state.type === 'textLength' ? '&Length:' : '&Value:';
   const secondLabel = state.type === 'date' ? '&End date:' : state.type === 'time' ? '&End time:' : 'Ma&ximum:';
   const tabs = ['Settings', 'Input Message', 'Error Alert', 'IME Mode'];
+  const tabId = (index: number) => `${id}-validation-tab-${index}`;
+  const panelId = `${id}-validation-panel`;
   return <OfficeDialog title={translate('Data Validation')} className="excelx-validation-dialog" style={{ width: 'min(94vw, 580px)' }} onRequestClose={close}>
-    <div className="excelx-validation-dialog__tabs" role="tablist">{tabs.map((name, index) => <button type="button" role="tab" aria-selected={tab === index} key={name} onClick={() => setTab(index)}>{translate(name)}</button>)}</div>
-    <div className="excelx-validation-dialog__body">
+    <div className="excelx-validation-dialog__tabs" role="tablist" aria-label={translate('Data Validation')}>{tabs.map((name, index) => <button type="button" role="tab" id={tabId(index)} aria-controls={panelId} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} key={name} onClick={() => setTab(index)} onKeyDown={(event) => {
+      const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+        : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
+          : event.key === 'Home' ? 0
+            : event.key === 'End' ? tabs.length - 1 : -1;
+      if (next < 0) return;
+      event.preventDefault();
+      setTab(next);
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    }}>{translate(name)}</button>)}</div>
+    <div id={panelId} aria-labelledby={tabId(tab)} role="tabpanel" className="excelx-validation-dialog__body">
       {tab === 0 && <div className="excelx-validation-dialog__settings"><fieldset><legend>{translate('Validation criteria')}</legend>
         {select('&Allow:', state.type, catalog.types, (type) => update({ type }))}
         {ranged && select('&Data:', state.op, catalog.operators, (op) => update({ op }))}

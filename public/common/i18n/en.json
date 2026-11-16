@@ -188,7 +188,7 @@
  },
  "&Allow Access...": {
   "where": [
-   "common/core.js:378"
+   "common/core.js:379"
   ]
  },
  "&Allow:": {
@@ -273,7 +273,7 @@
  },
  "&Attention Line": {
   "where": [
-   "quire/js/autocorrect.js:315"
+   "quire/js/autocorrect.js:323"
   ]
  },
  "&Author:": {
@@ -463,7 +463,7 @@
  },
  "&Blue:": {
   "where": [
-   "common/ui.js:1176"
+   "common/ui.js:1173"
   ]
  },
  "&Bold": {
@@ -688,7 +688,7 @@
  },
  "&Closing": {
   "where": [
-   "quire/js/autocorrect.js:315"
+   "quire/js/autocorrect.js:323"
   ]
  },
  "&Color": {
@@ -787,7 +787,7 @@
  },
  "&Continue": {
   "where": [
-   "common/ui.js:838"
+   "common/ui.js:842"
   ]
  },
  "&Continue Numbering": {
@@ -815,7 +815,7 @@
  },
  "&Copy Address": {
   "where": [
-   "common/ui.js:736"
+   "common/ui.js:740"
   ]
  },
  "&Count": {
@@ -991,7 +991,7 @@
    "lectern/js/dialogs.js:1651",
    "ledger/js/app.js:456",
    "ledger/js/app.js:535",
-   "ledger/js/app.js:936"
+   "ledger/js/app.js:930"
   ]
  },
  "&Delete Entry": {
@@ -1021,7 +1021,7 @@
  },
  "&Delete...": {
   "where": [
-   "ledger/js/app.js:941",
+   "ledger/js/app.js:935",
    "ledger/js/commands.js:69",
    "ledger/js/dialogs2.js:806",
    "quire/js/panes.js:625"
@@ -1177,7 +1177,7 @@
  },
  "&Edit Hyperlink...": {
   "where": [
-   "ledger/js/app.js:943"
+   "ledger/js/app.js:937"
   ]
  },
  "&Edit Text": {
@@ -1620,7 +1620,7 @@
  },
  "&Green:": {
   "where": [
-   "common/ui.js:1176"
+   "common/ui.js:1173"
   ]
  },
  "&Grid and Guides...": {
@@ -1689,7 +1689,7 @@
  },
  "&Header/Footer": {
   "where": [
-   "quire/js/autocorrect.js:315"
+   "quire/js/autocorrect.js:323"
   ]
  },
  "&Heading Rows Repeat": {
@@ -1886,7 +1886,7 @@
  "&Insert...": {
   "where": [
    "ledger/js/app.js:455",
-   "ledger/js/app.js:941"
+   "ledger/js/app.js:935"
   ]
  },
  "&Insertions and Deletions": {
@@ -2103,7 +2103,7 @@
   "where": [
    "ledger/js/app.js:584",
    "ledger/js/app.js:624",
-   "ledger/js/app.js:942",
+   "ledger/js/app.js:936",
    "ledger/js/commands.js:94"
   ]
  },
@@ -2184,7 +2184,7 @@
  },
  "&Mailing Instructions": {
   "where": [
-   "quire/js/autocorrect.js:315"
+   "quire/js/autocorrect.js:323"
   ]
  },
  "&Major gridlines (Value axis)": {
@@ -2434,7 +2434,7 @@
    "lectern/js/app.js:493",
    "lectern/js/slideshow.js:796",
    "ledger/js/app.js:113",
-   "ledger/js/app.js:1219"
+   "ledger/js/app.js:1213"
   ]
  },
  "&No Fill": {
@@ -2455,7 +2455,7 @@
    "lectern/js/app.js:281",
    "lectern/js/commands.js:52",
    "ledger/js/commands.js:80",
-   "quire/js/autocorrect.js:341"
+   "quire/js/autocorrect.js:349"
   ]
  },
  "&Normal font": {
@@ -2527,12 +2527,12 @@
  },
  "&Open": {
   "where": [
-   "common/core.js:425"
+   "common/core.js:426"
   ]
  },
  "&Open Hyperlink": {
   "where": [
-   "ledger/js/app.js:943",
+   "ledger/js/app.js:937",
    "quire/js/app.js:1272"
   ]
  },
@@ -2889,7 +2889,7 @@
  },
  "&Red:": {
   "where": [
-   "common/ui.js:1176"
+   "common/ui.js:1173"
   ]
  },
  "&Redo": {
@@ -2912,12 +2912,12 @@
  },
  "&Reference Initials": {
   "where": [
-   "quire/js/autocorrect.js:315"
+   "quire/js/autocorrect.js:323"
   ]
  },
  "&Reference Line": {
   "where": [
-   "quire/js/autocorrect.js:316"
+   "quire/js/autocorrect.js:324"
   ]
  },
  "&Reference:": {
@@ -3017,7 +3017,7 @@
  },
  "&Replace It": {
   "where": [
-   "common/core.js:374",
+   "common/core.js:375",
    "suite/src/main.tsx:27"
   ]
  },
@@ -3151,7 +3151,7 @@
  },
  "&Salutation": {
   "where": [
-   "quire/js/autocorrect.js:316"
+   "quire/js/autocorrect.js:324"
   ]
  },
  "&Save": {
@@ -3164,10 +3164,10 @@
  },
  "&Save As...": {
   "where": [
-   "common/core.js:374",
    "common/core.js:375",
    "common/core.js:376",
-   "common/core.js:378"
+   "common/core.js:377",
+   "common/core.js:379"
   ]
  },
  "&Screen": {
@@ -3305,7 +3305,7 @@
  },
  "&Signature": {
   "where": [
-   "quire/js/autocorrect.js:316"
+   "quire/js/autocorrect.js:324"
   ]
  },
  "&Size:": {
@@ -3506,7 +3506,7 @@
  },
  "&Subject Line": {
   "where": [
-   "quire/js/autocorrect.js:316"
+   "quire/js/autocorrect.js:324"
   ]
  },
  "&Subject:": {
@@ -3759,7 +3759,7 @@
  },
  "&Try Again": {
   "where": [
-   "common/core.js:379"
+   "common/core.js:380"
   ]
  },
  "&Two colors": {
@@ -4091,7 +4091,7 @@
    "lectern/js/app.js:493",
    "lectern/js/slideshow.js:796",
    "ledger/js/app.js:113",
-   "ledger/js/app.js:1219"
+   "ledger/js/app.js:1213"
   ]
  },
  "&Zero values": {
@@ -4129,8 +4129,8 @@
  },
  "'{0}' is protected.": {
   "where": [
-   "common/ui.js:848",
-   "common/ui.js:854"
+   "common/ui.js:852",
+   "common/ui.js:858"
   ]
  },
  "'{0}' is protected.\n\nPassword:": {
@@ -4243,7 +4243,7 @@
  },
  "(no names)": {
   "where": [
-   "ledger/js/app.js:838"
+   "ledger/js/app.js:832"
   ]
  },
  "(no spelling suggestions)": {
@@ -4315,7 +4315,7 @@
  },
  "- PAGE -": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  ". (period)": {
@@ -4709,7 +4709,7 @@
  },
  "A mount cleanup function is required": {
   "where": [
-   "common/core.js:134"
+   "common/core.js:135"
   ]
  },
  "A newer version of VibeOffice is available. This one is {0}.": {
@@ -4867,7 +4867,7 @@
  },
  "About {0}": {
   "where": [
-   "common/ui.js:793"
+   "common/ui.js:797"
   ]
  },
  "Above selected item": {
@@ -5195,7 +5195,7 @@
  },
  "Address": {
   "where": [
-   "common/ui.js:724"
+   "common/ui.js:728"
   ]
  },
  "Address Line 1": {
@@ -5435,7 +5435,7 @@
  },
  "All Fonts": {
   "where": [
-   "common/core.js:860"
+   "common/core.js:861"
   ]
  },
  "All Reference Books": {
@@ -5578,7 +5578,7 @@
  },
  "Alt|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Always": {
@@ -5604,7 +5604,7 @@
  },
  "An event target is required": {
   "where": [
-   "common/core.js:125"
+   "common/core.js:126"
   ]
  },
  "An object on this sheet couldn't be kept and will be removed.": {
@@ -5858,17 +5858,17 @@
  },
  "Aptos Display": {
   "where": [
-   "common/core.js:840"
+   "common/core.js:841"
   ]
  },
  "Aptos Narrow": {
   "where": [
-   "common/core.js:840"
+   "common/core.js:841"
   ]
  },
  "Aqua": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Arc": {
@@ -5901,7 +5901,7 @@
  },
  "Arial Black": {
   "where": [
-   "common/core.js:840",
+   "common/core.js:841",
    "lectern/js/dialogs.js:1739",
    "lectern/js/dialogs.js:1773",
    "lectern/js/render.js:535"
@@ -6051,7 +6051,7 @@
  },
  "Attention:": {
   "where": [
-   "quire/js/autocorrect.js:304"
+   "quire/js/autocorrect.js:312"
   ]
  },
  "Aurora": {
@@ -6061,7 +6061,7 @@
  },
  "Author, Page #, Date": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Auto": {
@@ -6074,7 +6074,7 @@
  },
  "Auto (as the browser)": {
   "where": [
-   "common/ui.js:1037",
+   "common/ui.js:1034",
    "lectern/js/dialogs.js:1603",
    "ledger/js/dialogs.js:1507",
    "quire/js/dialogs3.js:896"
@@ -6082,7 +6082,7 @@
  },
  "Auto Outline": {
   "where": [
-   "ledger/js/app.js:1275"
+   "ledger/js/app.js:1269"
   ]
  },
  "Auto&Correct": {
@@ -6113,7 +6113,7 @@
  },
  "Auto&Text...": {
   "where": [
-   "quire/js/autocorrect.js:338"
+   "quire/js/autocorrect.js:346"
   ]
  },
  "AutoCo&rrect": {
@@ -6123,7 +6123,7 @@
  },
  "AutoComplete": {
   "where": [
-   "quire/js/autocorrect.js:290"
+   "quire/js/autocorrect.js:297"
   ]
  },
  "AutoContent Wizard": {
@@ -6263,7 +6263,7 @@
  },
  "AutoSum": {
   "where": [
-   "ledger/js/app.js:1170",
+   "ledger/js/app.js:1164",
    "ledger/js/commands.js:249",
    "ledger/js/panes.js:146",
    "ledger/js/ribbon.js:37"
@@ -6276,10 +6276,10 @@
  },
  "AutoText": {
   "where": [
-   "quire/js/autocorrect.js:324",
-   "quire/js/autocorrect.js:325",
-   "quire/js/autocorrect.js:326",
-   "quire/js/autocorrect.js:355"
+   "quire/js/autocorrect.js:332",
+   "quire/js/autocorrect.js:333",
+   "quire/js/autocorrect.js:334",
+   "quire/js/autocorrect.js:363"
   ]
  },
  "AutoText entries": {
@@ -6289,7 +6289,7 @@
  },
  "Automatic": {
   "where": [
-   "common/ui.js:1091",
+   "common/ui.js:1088",
    "lectern/js/dialogs.js:876",
    "ledger/js/dialogs.js:638",
    "ledger/js/dialogs.js:639"
@@ -6359,7 +6359,7 @@
  },
  "Average={0}": {
   "where": [
-   "ledger/js/app.js:750"
+   "ledger/js/app.js:744"
   ]
  },
  "Averages the values in a column in a list or database that match conditions you specify.": {
@@ -6472,7 +6472,7 @@
  },
  "Backspace|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Balloons": {
@@ -6629,12 +6629,12 @@
  },
  "Best regards,": {
   "where": [
-   "quire/js/autocorrect.js:305"
+   "quire/js/autocorrect.js:313"
   ]
  },
  "Best wishes,": {
   "where": [
-   "quire/js/autocorrect.js:305"
+   "quire/js/autocorrect.js:313"
   ]
  },
  "Bevel": {
@@ -6649,7 +6649,7 @@
  },
  "Black": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "lectern/js/slideshow.js:934",
    "quire/js/app.js:201"
   ]
@@ -6755,7 +6755,7 @@
  },
  "Blue": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "lectern/js/slideshow.js:934",
    "quire/js/app.js:200",
    "quire/js/dialogs3.js:842"
@@ -6773,7 +6773,7 @@
  },
  "Blue-Gray": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Blueprint": {
@@ -7047,7 +7047,7 @@
  },
  "Bright Green": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:200"
   ]
  },
@@ -7087,7 +7087,7 @@
  },
  "Brown": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Browse by Comment": {
@@ -7411,7 +7411,7 @@
  },
  "Calculate": {
   "where": [
-   "ledger/js/app.js:715"
+   "ledger/js/app.js:709"
   ]
  },
  "Calculate &Now": {
@@ -7511,7 +7511,7 @@
  },
  "Calibri Light": {
   "where": [
-   "common/core.js:840"
+   "common/core.js:841"
   ]
  },
  "Calibri, Carlito, sans-serif": {
@@ -7555,8 +7555,8 @@
   "where": [
    "common/charts.js:496",
    "common/suite.js:685",
-   "common/ui.js:806",
-   "common/ui.js:838"
+   "common/ui.js:810",
+   "common/ui.js:842"
   ]
  },
  "Cancel an entry": {
@@ -7576,7 +7576,7 @@
  },
  "Cannot justify cells that contain numbers or formulas.": {
   "where": [
-   "ledger/js/app.js:1018"
+   "ledger/js/app.js:1012"
   ]
  },
  "Cannot rename a sheet to the same name as another sheet, a referenced object library or a workbook referenced by Visual Basic.": {
@@ -7835,7 +7835,7 @@
  },
  "Century Gothic": {
   "where": [
-   "common/core.js:840",
+   "common/core.js:841",
    "lectern/js/model.js:110"
   ]
  },
@@ -8357,7 +8357,7 @@
  },
  "Choose the folder of “{0}” and click Open to let {1} save there.": {
   "where": [
-   "common/core.js:464"
+   "common/core.js:465"
   ]
  },
  "Chooses a value or action to perform from a list of values, based on an index number.": {
@@ -8447,15 +8447,15 @@
  "Clear All": {
   "where": [
    "lectern/js/panes.js:815",
-   "ledger/js/panes.js:170",
+   "ledger/js/panes.js:168",
    "quire/js/panes.js:356"
   ]
  },
  "Clear Co&ntents": {
   "where": [
-   "ledger/js/app.js:936",
-   "ledger/js/app.js:937",
-   "ledger/js/app.js:941"
+   "ledger/js/app.js:930",
+   "ledger/js/app.js:931",
+   "ledger/js/app.js:935"
   ]
  },
  "Clear Comments": {
@@ -8481,12 +8481,12 @@
  },
  "Clear Outline": {
   "where": [
-   "ledger/js/app.js:1284"
+   "ledger/js/app.js:1278"
   ]
  },
  "Clear Print Area": {
   "where": [
-   "ledger/js/app.js:1343"
+   "ledger/js/app.js:1337"
   ]
  },
  "Clear Tab": {
@@ -8496,7 +8496,7 @@
  },
  "Click Continue to save anyway, or Cancel to go back to your document without saving.": {
   "where": [
-   "common/ui.js:828"
+   "common/ui.js:832"
   ]
  },
  "Click a button to apply borders:": {
@@ -8546,7 +8546,7 @@
  },
  "Click on the cells to apply formatting": {
   "where": [
-   "ledger/js/app.js:715"
+   "ledger/js/app.js:709"
   ]
  },
  "Click the color in the picture you want to make transparent.": {
@@ -8616,7 +8616,7 @@
   "where": [
    "lectern/js/panes.js:812",
    "lectern/js/ribbon.js:20",
-   "ledger/js/panes.js:167",
+   "ledger/js/panes.js:165",
    "ledger/js/ribbon.js:21"
   ]
  },
@@ -8632,9 +8632,9 @@
  },
  "Close": {
   "where": [
-   "common/core.js:425",
-   "common/ui.js:632",
-   "common/ui.js:736",
+   "common/core.js:426",
+   "common/ui.js:636",
+   "common/ui.js:740",
    "lectern/js/app.js:1104"
   ]
  },
@@ -8880,7 +8880,7 @@
  },
  "Colors": {
   "where": [
-   "common/ui.js:1181",
+   "common/ui.js:1178",
    "lectern/js/diagram.js:580",
    "lectern/js/dialogs.js:700",
    "quire/js/dialogs3.js:252"
@@ -8896,7 +8896,7 @@
  },
  "Colors:": {
   "where": [
-   "common/ui.js:1177"
+   "common/ui.js:1174"
   ]
  },
  "Colu&mn:": {
@@ -9025,7 +9025,7 @@
  },
  "Comic Sans MS": {
   "where": [
-   "common/core.js:840"
+   "common/core.js:841"
   ]
  },
  "Comma Style": {
@@ -9157,7 +9157,7 @@
  },
  "Compatibility Checker": {
   "where": [
-   "common/ui.js:837"
+   "common/ui.js:841"
   ]
  },
  "Complete the merge": {
@@ -9242,7 +9242,7 @@
  },
  "Confidential, Page #, Date": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Confirm Password": {
@@ -9394,7 +9394,7 @@
  },
  "Convert to Range": {
   "where": [
-   "ledger/js/app.js:1222",
+   "ledger/js/app.js:1216",
    "ledger/js/ribbon.js:103"
   ]
  },
@@ -9577,7 +9577,7 @@
  },
  "Copied.": {
   "where": [
-   "common/ui.js:733"
+   "common/ui.js:737"
   ]
  },
  "Copies": {
@@ -9678,12 +9678,12 @@
  },
  "Count Nums={0}": {
   "where": [
-   "ledger/js/app.js:752"
+   "ledger/js/app.js:746"
   ]
  },
  "Count={0}": {
   "where": [
-   "ledger/js/app.js:751"
+   "ledger/js/app.js:745"
   ]
  },
  "Counts nonblank cells in the field (column) of records in the database that match the conditions you specify.": {
@@ -9723,7 +9723,7 @@
  },
  "Courier New": {
   "where": [
-   "common/core.js:841",
+   "common/core.js:842",
    "lectern/js/model.js:152",
    "quire/js/autocorrect.js:234",
    "quire/js/dialogs.js:624"
@@ -9833,7 +9833,7 @@
  },
  "Created by": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Created by {0} on {1}": {
@@ -9844,7 +9844,7 @@
  },
  "Created on": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Created:": {
@@ -10217,7 +10217,7 @@
  },
  "Ctrl|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Cu&t": {
@@ -10273,7 +10273,7 @@
  },
  "Current": {
   "where": [
-   "common/ui.js:1178"
+   "common/ui.js:1175"
   ]
  },
  "Current &array": {
@@ -10330,7 +10330,7 @@
  },
  "Custom": {
   "where": [
-   "common/ui.js:1177",
+   "common/ui.js:1174",
    "lectern/js/model.js:512",
    "ledger/js/dialogs.js:1400",
    "ledger/js/dialogs2.js:336"
@@ -10534,29 +10534,29 @@
  },
  "Dark Blue": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:200"
   ]
  },
  "Dark Green": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Dark Red": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:201"
   ]
  },
  "Dark Teal": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Dark Yellow": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:201"
   ]
  },
@@ -10803,12 +10803,12 @@
  },
  "Dear Mother and Father,": {
   "where": [
-   "quire/js/autocorrect.js:310"
+   "quire/js/autocorrect.js:318"
   ]
  },
  "Dear Sir or Madam:": {
   "where": [
-   "quire/js/autocorrect.js:310",
+   "quire/js/autocorrect.js:318",
    "quire/js/dialogs3.js:621",
    "quire/js/dialogs3.js:638"
   ]
@@ -10831,7 +10831,7 @@
  },
  "Decrease": {
   "where": [
-   "common/ui.js:959",
+   "common/ui.js:963",
    "quire/js/dialogs.js:68"
   ]
  },
@@ -10940,7 +10940,7 @@
  "Delete": {
   "where": [
    "lectern/js/ribbon.js:115",
-   "ledger/js/app.js:1405",
+   "ledger/js/app.js:1399",
    "ledger/js/dialogs.js:940",
    "ledger/js/dialogs.js:1396"
   ]
@@ -10977,7 +10977,7 @@
  },
  "Delete Background": {
   "where": [
-   "ledger/js/app.js:1410"
+   "ledger/js/app.js:1404"
   ]
  },
  "Delete Bookmark": {
@@ -11006,7 +11006,7 @@
  },
  "Delete Columns": {
   "where": [
-   "ledger/js/app.js:1081",
+   "ledger/js/app.js:1075",
    "ledger/js/ops.js:784",
    "quire/js/tables.js:265"
   ]
@@ -11041,7 +11041,7 @@
  },
  "Delete Rows": {
   "where": [
-   "ledger/js/app.js:1081",
+   "ledger/js/app.js:1075",
    "ledger/js/ops.js:784",
    "quire/js/tables.js:184"
   ]
@@ -11134,7 +11134,7 @@
  },
  "Del|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Demote": {
@@ -11158,7 +11158,7 @@
  },
  "DengXian Light": {
   "where": [
-   "common/core.js:737"
+   "common/core.js:738"
   ]
  },
  "Denim": {
@@ -11566,7 +11566,7 @@
  },
  "Do you want to convert the list to a normal range?": {
   "where": [
-   "ledger/js/app.js:1219"
+   "ledger/js/app.js:1213"
   ]
  },
  "Do you want to delete style {0}?": {
@@ -11976,7 +11976,7 @@
  },
  "Drop a workbook to open it, or pictures to insert them": {
   "where": [
-   "ledger/js/app.js:1511"
+   "ledger/js/app.js:1505"
   ]
  },
  "Drop to open": {
@@ -12095,7 +12095,7 @@
  },
  "Earlier versions of “{0}”, kept as saves replaced them:": {
   "where": [
-   "common/core.js:424"
+   "common/core.js:425"
   ]
  },
  "Early Sunset": {
@@ -12274,7 +12274,7 @@
  },
  "Edit|mode": {
   "where": [
-   "ledger/js/app.js:714"
+   "ledger/js/app.js:708"
   ]
  },
  "Effect": {
@@ -12444,7 +12444,7 @@
  },
  "End|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Engineering": {
@@ -12590,7 +12590,7 @@
  },
  "Enter password to open file": {
   "where": [
-   "common/ui.js:854"
+   "common/ui.js:858"
   ]
  },
  "Enter section number:": {
@@ -12615,12 +12615,12 @@
  },
  "Enter|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Enter|mode": {
   "where": [
-   "ledger/js/app.js:714"
+   "ledger/js/app.js:708"
   ]
  },
  "Entire &column": {
@@ -12791,7 +12791,7 @@
  },
  "Esc|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Estimates standard deviation based on a sample (ignores logical values and text in the sample).": {
@@ -12957,7 +12957,7 @@
  },
  "Excelx cannot calculate a formula. Cell references in the formula refer to the formula's result, creating a circular reference.\n\nTo fix it, remove or change the reference, or turn on iterative calculation (Tools ▸ Options ▸ Calculation).": {
   "where": [
-   "ledger/js/app.js:709"
+   "ledger/js/app.js:1576"
   ]
  },
  "Excelx cannot determine which row in your list or selection contains column labels, which are required for this command.": {
@@ -12967,7 +12967,7 @@
  },
  "Excelx cannot find any dependent cells.": {
   "where": [
-   "ledger/js/app.js:1445"
+   "ledger/js/app.js:1439"
   ]
  },
  "Excelx cannot find the data you're searching for.": {
@@ -12978,7 +12978,7 @@
  },
  "Excelx cannot read this picture.": {
   "where": [
-   "ledger/js/app.js:1391"
+   "ledger/js/app.js:1385"
   ]
  },
  "Excelx did not find anything to print.": {
@@ -13021,7 +13021,7 @@
  },
  "Excelx requires the shared mount-scope runtime": {
   "where": [
-   "ledger/js/app.js:1616"
+   "ledger/js/app.js:1621"
   ]
  },
  "Excelx shows one window per workbook. Use the Window menu to switch between open workbooks.": {
@@ -13090,7 +13090,7 @@
  },
  "Expense Statement": {
   "where": [
-   "ledger/js/panes.js:239"
+   "ledger/js/panes.js:237"
   ]
  },
  "Explosion 1": {
@@ -13473,12 +13473,12 @@
  },
  "Filename": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Filename and path": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Files": {
@@ -13527,7 +13527,7 @@
  },
  "Fill Down": {
   "where": [
-   "ledger/js/app.js:1005"
+   "ledger/js/app.js:999"
   ]
  },
  "Fill Effects": {
@@ -13539,23 +13539,23 @@
  },
  "Fill Effects...": {
   "where": [
-   "common/ui.js:1078",
-   "common/ui.js:1116"
+   "common/ui.js:1075",
+   "common/ui.js:1113"
   ]
  },
  "Fill Left": {
   "where": [
-   "ledger/js/app.js:1005"
+   "ledger/js/app.js:999"
   ]
  },
  "Fill Right": {
   "where": [
-   "ledger/js/app.js:1005"
+   "ledger/js/app.js:999"
   ]
  },
  "Fill Up": {
   "where": [
-   "ledger/js/app.js:1005"
+   "ledger/js/app.js:999"
   ]
  },
  "Fill down / right": {
@@ -14095,7 +14095,7 @@
   "where": [
    "lectern/js/app.js:1363",
    "lectern/js/commands.js:123",
-   "ledger/js/app.js:1106",
+   "ledger/js/app.js:1100",
    "ledger/js/commands.js:170"
   ]
  },
@@ -14138,7 +14138,7 @@
  },
  "Font names are used solely to identify the fonts specified in documents and to maintain interoperability with Office Open XML files and the applications that create them; such names may be trademarks of their respective owners. VibeOffice renders text with the fonts installed on your computer. Where a specified font is not installed, VibeOffice substitutes an open-source font supplied with it or another font available on your computer, and the document may therefore appear differently than in other applications. VibeOffice does not include or distribute any commercial font software.": {
   "where": [
-   "common/ui.js:792",
+   "common/ui.js:796",
    "index.html:302"
   ]
  },
@@ -14183,7 +14183,7 @@
  },
  "Fonts on This Computer": {
   "where": [
-   "common/core.js:862"
+   "common/core.js:863"
   ]
  },
  "Fonts on this computer": {
@@ -14661,7 +14661,7 @@
  },
  "Freeze Panes": {
   "where": [
-   "ledger/js/app.js:1309",
+   "ledger/js/app.js:1303",
    "ledger/js/ops.js:457",
    "ledger/js/ribbon.js:79"
   ]
@@ -15039,7 +15039,7 @@
  },
  "Gold": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "lectern/js/dialogs.js:592",
    "lectern/js/slideshow.js:934",
    "quire/js/dialogs3.js:241"
@@ -15106,24 +15106,24 @@
  },
  "Gray-25%": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:201"
   ]
  },
  "Gray-40%": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Gray-50%": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:201"
   ]
  },
  "Gray-80%": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Grayscale": {
@@ -15147,7 +15147,7 @@
  },
  "Green": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "lectern/js/slideshow.js:934",
    "quire/js/app.js:201",
    "quire/js/dialogs3.js:842"
@@ -15193,7 +15193,7 @@
  "Group": {
   "where": [
    "lectern/js/app.js:1201",
-   "ledger/js/app.js:1246",
+   "ledger/js/app.js:1240",
    "ledger/js/dialogs.js:948",
    "ledger/js/dialogs.js:956"
   ]
@@ -15269,12 +15269,12 @@
  },
  "HG Gothic E": {
   "where": [
-   "common/core.js:734"
+   "common/core.js:735"
   ]
  },
  "HG Mincho E": {
   "where": [
-   "common/core.js:734"
+   "common/core.js:735"
   ]
  },
  "HTML Format": {
@@ -15329,7 +15329,7 @@
  },
  "He&x:": {
   "where": [
-   "common/ui.js:1176"
+   "common/ui.js:1173"
   ]
  },
  "Header": {
@@ -15464,7 +15464,7 @@
  },
  "Help": {
   "where": [
-   "common/ui.js:631",
+   "common/ui.js:635",
    "lectern/js/panes.js:766",
    "ledger/js/panes.js:151",
    "quire/js/commands.js:460"
@@ -15526,7 +15526,7 @@
  },
  "Hide Detail": {
   "where": [
-   "ledger/js/app.js:1266"
+   "ledger/js/app.js:1260"
   ]
  },
  "Hide Sheet": {
@@ -15604,7 +15604,7 @@
  },
  "Home|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Hori&zontal": {
@@ -15700,7 +15700,7 @@
  },
  "Hyperlink": {
   "where": [
-   "common/ui.js:736",
+   "common/ui.js:740",
    "lectern/js/dialogs.js:1412",
    "lectern/js/dialogs.js:1414",
    "lectern/js/dialogs.js:1442"
@@ -15875,7 +15875,7 @@
  },
  "In reply to:": {
   "where": [
-   "quire/js/autocorrect.js:309",
+   "quire/js/autocorrect.js:317",
    "quire/js/dialogs3.js:622"
   ]
  },
@@ -15952,7 +15952,7 @@
  },
  "Increase": {
   "where": [
-   "common/ui.js:958",
+   "common/ui.js:962",
    "quire/js/dialogs.js:67"
   ]
  },
@@ -16032,7 +16032,7 @@
  },
  "Indigo": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Industrial": {
@@ -16331,7 +16331,7 @@
  },
  "Insert Page Break": {
   "where": [
-   "ledger/js/app.js:1355"
+   "ledger/js/app.js:1349"
   ]
  },
  "Insert Page Number": {
@@ -16345,7 +16345,7 @@
    "lectern/js/app.js:1468",
    "lectern/js/commands.js:83",
    "lectern/js/render.js:572",
-   "ledger/js/app.js:1400"
+   "ledger/js/app.js:1394"
   ]
  },
  "Insert Row": {
@@ -16653,7 +16653,7 @@
  },
  "Ins|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "IntelliArt": {
@@ -16832,7 +16832,7 @@
  },
  "Justify": {
   "where": [
-   "ledger/js/app.js:1024",
+   "ledger/js/app.js:1018",
    "ledger/js/dialogs.js:603",
    "ledger/js/dialogs.js:604",
    "ledger/js/dialogs2.js:955"
@@ -16863,7 +16863,7 @@
  },
  "Keyboard Shortcuts": {
   "where": [
-   "ledger/js/panes.js:156"
+   "ledger/js/panes.js:154"
   ]
  },
  "Keyboard shortcuts": {
@@ -16929,7 +16929,7 @@
  },
  "Ladies and Gentlemen:": {
   "where": [
-   "quire/js/autocorrect.js:310",
+   "quire/js/autocorrect.js:318",
    "quire/js/dialogs3.js:621",
    "quire/js/dialogs3.js:638"
   ]
@@ -16965,7 +16965,7 @@
  },
  "Language:": {
   "where": [
-   "common/ui.js:1037",
+   "common/ui.js:1034",
    "quire/js/panes.js:158",
    "quire/js/panes.js:694"
   ]
@@ -17033,7 +17033,7 @@
  },
  "Last printed": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Last printed:": {
@@ -17044,7 +17044,7 @@
  },
  "Last saved by": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Last saved by:": {
@@ -17085,7 +17085,7 @@
  },
  "Lavender": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Lay out this document as if created in:": {
@@ -17443,27 +17443,27 @@
  },
  "Light Blue": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Light Green": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Light Orange": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Light Turquoise": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Light Yellow": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Light and calm: warm paper tones, one teal accent, rounded shapes.": {
@@ -17503,7 +17503,7 @@
  },
  "Lime": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Limit formatting to a selection of styles": {
@@ -17678,7 +17678,7 @@
  },
  "Links in documents can lead to harmful sites. If you trust this one, copy its address and paste it into your browser's address bar.": {
   "where": [
-   "common/ui.js:729"
+   "common/ui.js:733"
   ]
  },
  "List": {
@@ -17746,7 +17746,7 @@
  },
  "Load all fonts on your computer...": {
   "where": [
-   "common/core.js:852"
+   "common/core.js:853"
   ]
  },
  "Load fonts on this computer": {
@@ -17765,7 +17765,7 @@
  },
  "Loan Amortization": {
   "where": [
-   "ledger/js/panes.js:214"
+   "ledger/js/panes.js:212"
   ]
  },
  "Location": {
@@ -17938,27 +17938,27 @@
  },
  "MS Gothic": {
   "where": [
-   "common/core.js:732"
+   "common/core.js:733"
   ]
  },
  "MS Mincho": {
   "where": [
-   "common/core.js:732"
+   "common/core.js:733"
   ]
  },
  "MS PGothic": {
   "where": [
-   "common/core.js:732"
+   "common/core.js:733"
   ]
  },
  "MS PMincho": {
   "where": [
-   "common/core.js:732"
+   "common/core.js:733"
   ]
  },
  "MS UI Gothic": {
   "where": [
-   "common/core.js:733"
+   "common/core.js:734"
   ]
  },
  "MS-DOS (OEM 866)": {
@@ -18010,7 +18010,7 @@
  },
  "Made possible by open source software: {0}.": {
   "where": [
-   "common/ui.js:789",
+   "common/ui.js:793",
    "start.js:171"
   ]
  },
@@ -18096,7 +18096,7 @@
  },
  "Malgun Gothic": {
   "where": [
-   "common/core.js:735"
+   "common/core.js:736"
   ]
  },
  "Manual Line Break": {
@@ -18273,7 +18273,7 @@
  },
  "Max={0}": {
   "where": [
-   "ledger/js/app.js:753"
+   "ledger/js/app.js:747"
   ]
  },
  "Maximum &change:": {
@@ -18341,7 +18341,7 @@
  },
  "Meiryo UI": {
   "where": [
-   "common/core.js:734"
+   "common/core.js:735"
   ]
  },
  "Memos": {
@@ -18400,7 +18400,7 @@
  },
  "Microsoft JhengHei": {
   "where": [
-   "common/core.js:742"
+   "common/core.js:743"
   ]
  },
  "Microsoft Office Excel Workbook (*.xlsx)": {
@@ -18440,7 +18440,7 @@
  },
  "Microsoft YaHei": {
   "where": [
-   "common/core.js:738"
+   "common/core.js:739"
   ]
  },
  "Middle": {
@@ -18473,7 +18473,7 @@
  },
  "Min={0}": {
   "where": [
-   "ledger/js/app.js:754"
+   "ledger/js/app.js:748"
   ]
  },
  "Minus": {
@@ -18595,8 +18595,8 @@
  },
  "More Colors...": {
   "where": [
-   "common/ui.js:1076",
-   "common/ui.js:1115"
+   "common/ui.js:1073",
+   "common/ui.js:1112"
   ]
  },
  "More Contrast": {
@@ -18607,8 +18607,8 @@
  },
  "More Fill Colors...": {
   "where": [
-   "common/ui.js:1076",
-   "common/ui.js:1115"
+   "common/ui.js:1073",
+   "common/ui.js:1112"
   ]
  },
  "More Layouts...": {
@@ -18619,8 +18619,8 @@
  },
  "More Line Colors...": {
   "where": [
-   "common/ui.js:1076",
-   "common/ui.js:1115"
+   "common/ui.js:1073",
+   "common/ui.js:1112"
   ]
  },
  "More Lines...": {
@@ -18637,7 +18637,7 @@
  },
  "More options": {
   "where": [
-   "common/ui.js:459"
+   "common/ui.js:463"
   ]
  },
  "More...": {
@@ -19127,7 +19127,7 @@
  },
  "New|color": {
   "where": [
-   "common/ui.js:1178"
+   "common/ui.js:1175"
   ]
  },
  "Nex&t": {
@@ -19228,8 +19228,8 @@
  },
  "No Fill": {
   "where": [
-   "common/ui.js:1066",
-   "common/ui.js:1090",
+   "common/ui.js:1063",
+   "common/ui.js:1087",
    "lectern/js/dialogs.js:328",
    "quire/js/dialogs.js:545"
   ]
@@ -19241,8 +19241,8 @@
  },
  "No Line": {
   "where": [
-   "common/ui.js:1066",
-   "common/ui.js:1090",
+   "common/ui.js:1063",
+   "common/ui.js:1087",
    "lectern/js/dialogs.js:328",
    "quire/js/dialogs3.js:32"
   ]
@@ -19321,7 +19321,7 @@
  },
  "No invalid data on this sheet.": {
   "where": [
-   "ledger/js/app.js:1468"
+   "ledger/js/app.js:1462"
   ]
  },
  "No limit": {
@@ -19498,12 +19498,12 @@
  },
  "Not installed": {
   "where": [
-   "common/core.js:797"
+   "common/core.js:798"
   ]
  },
  "Not installed; uses {0}": {
   "where": [
-   "common/core.js:797"
+   "common/core.js:798"
   ]
  },
  "Not {0}": {
@@ -19574,26 +19574,26 @@
  },
  "Noto Sans CJK SC": {
   "where": [
-   "common/core.js:741",
-   "common/core.js:844"
+   "common/core.js:742",
+   "common/core.js:845"
   ]
  },
  "Noto Sans SC": {
   "where": [
-   "common/core.js:741",
-   "common/core.js:844"
+   "common/core.js:742",
+   "common/core.js:845"
   ]
  },
  "Noto Serif CJK SC": {
   "where": [
-   "common/core.js:741",
-   "common/core.js:844"
+   "common/core.js:742",
+   "common/core.js:845"
   ]
  },
  "Noto Serif SC": {
   "where": [
-   "common/core.js:741",
-   "common/core.js:844"
+   "common/core.js:742",
+   "common/core.js:845"
   ]
  },
  "Nud&ge": {
@@ -19779,9 +19779,9 @@
  "OK": {
   "where": [
    "common/charts.js:496",
-   "common/ui.js:593",
-   "common/ui.js:638",
-   "common/ui.js:793"
+   "common/ui.js:597",
+   "common/ui.js:642",
+   "common/ui.js:797"
   ]
  },
  "OVR": {
@@ -19801,7 +19801,7 @@
  },
  "Object": {
   "where": [
-   "ledger/js/app.js:807",
+   "ledger/js/app.js:801",
    "ledger/js/drawing.js:157",
    "quire/js/dialogs2.js:750"
   ]
@@ -19881,7 +19881,7 @@
  },
  "Olive Green": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Omit background &graphics from master": {
@@ -20009,18 +20009,18 @@
  },
  "Open list": {
   "where": [
-   "common/ui.js:493"
+   "common/ui.js:497"
   ]
  },
  "Open source licenses": {
   "where": [
-   "common/ui.js:790",
+   "common/ui.js:794",
    "start.js:171"
   ]
  },
  "Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.": {
   "where": [
-   "common/ui.js:791",
+   "common/ui.js:795",
    "index.html:301"
   ]
  },
@@ -20115,7 +20115,7 @@
  },
  "Orange": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Order": {
@@ -20553,7 +20553,7 @@
  },
  "Page Down|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Page Field": {
@@ -20615,7 +20615,7 @@
  },
  "Page Up|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Page Width": {
@@ -20628,7 +20628,7 @@
  },
  "Page X of Y": {
   "where": [
-   "quire/js/autocorrect.js:306"
+   "quire/js/autocorrect.js:314"
   ]
  },
  "Page brea&ks": {
@@ -20721,13 +20721,13 @@
  },
  "Palatino Linotype": {
   "where": [
-   "common/core.js:841",
+   "common/core.js:842",
    "quire/js/dialogs.js:1132"
   ]
  },
  "Pale Blue": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Pape&r size:": {
@@ -20864,7 +20864,7 @@
  },
  "Password": {
   "where": [
-   "common/ui.js:854",
+   "common/ui.js:858",
    "ledger/js/app.js:182",
    "suite/src/main.tsx:29"
   ]
@@ -20935,7 +20935,7 @@
  "Paste All": {
   "where": [
    "lectern/js/panes.js:815",
-   "ledger/js/panes.js:170",
+   "ledger/js/panes.js:168",
    "quire/js/panes.js:356"
   ]
  },
@@ -20981,7 +20981,7 @@
  },
  "Paste as Hyperlink": {
   "where": [
-   "ledger/js/app.js:1425",
+   "ledger/js/app.js:1419",
    "quire/js/commands.js:250"
   ]
  },
@@ -21024,8 +21024,8 @@
  },
  "Patterned Lines...": {
   "where": [
-   "common/ui.js:1078",
-   "common/ui.js:1116"
+   "common/ui.js:1075",
+   "common/ui.js:1113"
   ]
  },
  "Patterns": {
@@ -21114,17 +21114,17 @@
  },
  "Personal Monthly Budget": {
   "where": [
-   "ledger/js/panes.js:290"
+   "ledger/js/panes.js:288"
   ]
  },
  "PgDn|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "PgUp|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Phone Number": {
@@ -21172,7 +21172,7 @@
  },
  "Pick:": {
   "where": [
-   "common/ui.js:1175"
+   "common/ui.js:1172"
   ]
  },
  "Picture": {
@@ -21270,7 +21270,7 @@
  },
  "Pink": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:200"
   ]
  },
@@ -21355,7 +21355,7 @@
  },
  "Plum": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Plus": {
@@ -21384,7 +21384,7 @@
  },
  "Point|mode": {
   "where": [
-   "ledger/js/app.js:714"
+   "ledger/js/app.js:708"
   ]
  },
  "Polish": {
@@ -22156,7 +22156,7 @@
   "where": [
    "ledger/js/app.js:669",
    "ledger/js/app.js:674",
-   "ledger/js/app.js:714"
+   "ledger/js/app.js:708"
   ]
  },
  "Received from": {
@@ -22182,7 +22182,7 @@
  },
  "Recently Used Fonts": {
   "where": [
-   "common/core.js:858"
+   "common/core.js:859"
   ]
  },
  "Recently used": {
@@ -22263,7 +22263,7 @@
  },
  "Recovered the unsaved changes. Save the workbook to keep them.": {
   "where": [
-   "ledger/js/app.js:1594"
+   "ledger/js/app.js:1599"
   ]
  },
  "Rectangle": {
@@ -22286,7 +22286,7 @@
  },
  "Red": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "lectern/js/slideshow.js:934",
    "quire/js/app.js:200",
    "quire/js/dialogs3.js:842"
@@ -22342,8 +22342,8 @@
  },
  "Reference is not valid.": {
   "where": [
-   "ledger/js/app.js:780",
-   "ledger/js/app.js:961",
+   "ledger/js/app.js:774",
+   "ledger/js/app.js:955",
    "ledger/js/dialogs.js:330",
    "ledger/js/dialogs.js:1191"
   ]
@@ -22361,7 +22361,7 @@
  "Reference:": {
   "where": [
    "ledger/js/dialogs3.js:516",
-   "quire/js/autocorrect.js:309"
+   "quire/js/autocorrect.js:317"
   ]
  },
  "References": {
@@ -22451,7 +22451,7 @@
  },
  "Reload fonts on your computer...": {
   "where": [
-   "common/core.js:852"
+   "common/core.js:853"
   ]
  },
  "Remember dime&nsions for new tables": {
@@ -22508,7 +22508,7 @@
  },
  "Remove Page Break": {
   "where": [
-   "ledger/js/app.js:1355"
+   "ledger/js/app.js:1349"
   ]
  },
  "Remove Subtotals": {
@@ -22730,7 +22730,7 @@
  },
  "Reset Page Breaks": {
   "where": [
-   "ledger/js/app.js:1359"
+   "ledger/js/app.js:1353"
   ]
  },
  "Reset Paragraph": {
@@ -22775,7 +22775,7 @@
  },
  "Respectfully yours,": {
   "where": [
-   "quire/js/autocorrect.js:305"
+   "quire/js/autocorrect.js:313"
   ]
  },
  "Restart": {
@@ -24645,7 +24645,7 @@
  },
  "Rose": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Rota&tion:": {
@@ -24927,7 +24927,7 @@
  },
  "Sales Invoice": {
   "where": [
-   "ledger/js/panes.js:257"
+   "ledger/js/panes.js:255"
   ]
  },
  "Salutation:": {
@@ -25010,7 +25010,7 @@
  },
  "Save As": {
   "where": [
-   "common/core.js:401",
+   "common/core.js:402",
    "lectern/js/dialogs.js:1694",
    "ledger/js/dialogs.js:1356",
    "ledger/js/panes.js:143"
@@ -25232,7 +25232,7 @@
  },
  "Sea Green": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Search": {
@@ -25413,7 +25413,7 @@
  },
  "Segoe UI": {
   "where": [
-   "common/core.js:841"
+   "common/core.js:842"
   ]
  },
  "Segoe UI Symbol": {
@@ -25790,7 +25790,7 @@
  },
  "Set Print Area": {
   "where": [
-   "ledger/js/app.js:1343"
+   "ledger/js/app.js:1337"
   ]
  },
  "Set Tab": {
@@ -26050,7 +26050,7 @@
  },
  "Shift|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Shimmer": {
@@ -26065,7 +26065,7 @@
  },
  "Shopping List": {
   "where": [
-   "ledger/js/panes.js:338"
+   "ledger/js/panes.js:336"
   ]
  },
  "Short Dash Dot": {
@@ -26145,7 +26145,7 @@
  },
  "Show Detail": {
   "where": [
-   "ledger/js/app.js:1266"
+   "ledger/js/app.js:1260"
   ]
  },
  "Show First Line Only": {
@@ -26393,7 +26393,7 @@
  },
  "Sincerely yours,": {
   "where": [
-   "quire/js/autocorrect.js:305"
+   "quire/js/autocorrect.js:313"
   ]
  },
  "Single": {
@@ -26509,7 +26509,7 @@
  },
  "Sky Blue": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Slant Down": {
@@ -26914,7 +26914,7 @@
  },
  "Some of this file can't be saved exactly as it was:": {
   "where": [
-   "common/ui.js:827"
+   "common/ui.js:831"
   ]
  },
  "Sort": {
@@ -27006,12 +27006,12 @@
  },
  "Source Han Sans SC": {
   "where": [
-   "common/core.js:740"
+   "common/core.js:741"
   ]
  },
  "Source Han Serif SC": {
   "where": [
-   "common/core.js:740"
+   "common/core.js:741"
   ]
  },
  "Source: (the Wordx clipboard is empty — copy something first, or press Ctrl+V)": {
@@ -27061,7 +27061,7 @@
  },
  "Space|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Spacing": {
@@ -27360,7 +27360,7 @@
  },
  "Standard": {
   "where": [
-   "common/ui.js:1177",
+   "common/ui.js:1174",
    "lectern/js/app.js:266",
    "ledger/js/app.js:619",
    "ledger/js/dialogs.js:1796"
@@ -27775,7 +27775,7 @@
  },
  "Subject:": {
   "where": [
-   "quire/js/autocorrect.js:312",
+   "quire/js/autocorrect.js:320",
    "quire/js/dialogs2.js:688",
    "quire/js/dialogs3.js:635"
   ]
@@ -27834,7 +27834,7 @@
  },
  "Sum={0}": {
   "where": [
-   "ledger/js/app.js:749"
+   "ledger/js/app.js:743"
   ]
  },
  "Sumi Painting": {
@@ -28227,17 +28227,17 @@
  },
  "Tab|key": {
   "where": [
-   "common/ui.js:175"
+   "common/ui.js:179"
   ]
  },
  "Take care,": {
   "where": [
-   "quire/js/autocorrect.js:305"
+   "quire/js/autocorrect.js:313"
   ]
  },
  "Tan": {
   "where": [
-   "common/ui.js:1123"
+   "common/ui.js:1120"
   ]
  },
  "Target": {
@@ -28264,7 +28264,7 @@
  },
  "Task Tracker": {
   "where": [
-   "ledger/js/panes.js:315"
+   "ledger/js/panes.js:313"
   ]
  },
  "Task pane": {
@@ -28325,7 +28325,7 @@
  },
  "Teal": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:200"
   ]
  },
@@ -28619,12 +28619,12 @@
  },
  "Thank you,": {
   "where": [
-   "quire/js/autocorrect.js:305"
+   "quire/js/autocorrect.js:313"
   ]
  },
  "That action could not be completed: {0}": {
   "where": [
-   "common/ui.js:149"
+   "common/ui.js:153"
   ]
  },
  "That command cannot be used on multiple selections.": {
@@ -28694,7 +28694,7 @@
  },
  "The active cell does not contain a formula that refers to a valid reference.": {
   "where": [
-   "ledger/js/app.js:1439"
+   "ledger/js/app.js:1433"
   ]
  },
  "The active cell does not contain a formula.": {
@@ -28704,7 +28704,7 @@
  },
  "The active cell does not contain an error value.": {
   "where": [
-   "ledger/js/app.js:1439"
+   "ledger/js/app.js:1433"
   ]
  },
  "The cache has no remaining pivot tables.": {
@@ -28850,8 +28850,8 @@
  },
  "The editor mount scope is disposed": {
   "where": [
-   "common/core.js:100",
-   "common/core.js:107"
+   "common/core.js:101",
+   "common/core.js:108"
   ]
  },
  "The error check of the entire sheet is complete.": {
@@ -28901,12 +28901,12 @@
  },
  "The fonts on this computer could not be listed: permission was not given. You can allow it in the site settings of your browser.": {
   "where": [
-   "common/core.js:872"
+   "common/core.js:873"
   ]
  },
  "The fonts on this computer could not be listed: {0}": {
   "where": [
-   "common/core.js:872",
+   "common/core.js:873",
    "start.js:262"
   ]
  },
@@ -28977,7 +28977,7 @@
  },
  "The new language is used in the windows you open from now on.": {
   "where": [
-   "common/ui.js:1042",
+   "common/ui.js:1039",
    "lectern/js/dialogs.js:1217",
    "ledger/js/dialogs.js:1527",
    "quire/js/dialogs3.js:980"
@@ -29037,7 +29037,7 @@
  },
  "The password is incorrect. Try again.": {
   "where": [
-   "common/ui.js:854"
+   "common/ui.js:858"
   ]
  },
  "The password is incorrect. {0} cannot open the document.": {
@@ -29121,7 +29121,7 @@
  },
  "The selection contains multiple data values. Merging into one cell will keep the upper-left most data only.": {
   "where": [
-   "ledger/js/app.js:1125"
+   "ledger/js/app.js:1119"
   ]
  },
  "The slicer/timeline source or all its views were deleted.": {
@@ -29247,12 +29247,12 @@
  },
  "Theme Fonts": {
   "where": [
-   "common/core.js:854"
+   "common/core.js:855"
   ]
  },
  "Theme:": {
   "where": [
-   "common/ui.js:1034"
+   "common/ui.js:1031"
   ]
  },
  "Themes": {
@@ -29336,7 +29336,7 @@
  },
  "There isn't enough space on the disk to save “{0}”. Your file hasn't changed.": {
   "where": [
-   "common/core.js:380"
+   "common/core.js:381"
   ]
  },
  "Thesaurus": {
@@ -29673,7 +29673,7 @@
  },
  "This link goes to:": {
   "where": [
-   "common/ui.js:727"
+   "common/ui.js:731"
   ]
  },
  "This modification is not allowed because the selection is locked.": {
@@ -29781,7 +29781,7 @@
  },
  "This worksheet contains more than 255 invalid cells. Only 255 cells will be marked.": {
   "where": [
-   "ledger/js/app.js:1467"
+   "ledger/js/app.js:1461"
   ]
  },
  "Through": {
@@ -29830,12 +29830,12 @@
  },
  "Timecard": {
   "where": [
-   "ledger/js/panes.js:273"
+   "ledger/js/panes.js:271"
   ]
  },
  "Times New Roman": {
   "where": [
-   "common/core.js:841",
+   "common/core.js:842",
    "lectern/js/dialogs.js:1508",
    "lectern/js/dialogs.js:1520",
    "lectern/js/dialogs.js:1739"
@@ -29989,7 +29989,7 @@
  },
  "To Whom It May Concern:": {
   "where": [
-   "quire/js/autocorrect.js:310",
+   "quire/js/autocorrect.js:318",
    "quire/js/dialogs3.js:621",
    "quire/js/dialogs3.js:638"
   ]
@@ -30021,7 +30021,7 @@
  },
  "To write to this address, copy it and paste it into your e-mail program.": {
   "where": [
-   "common/ui.js:728"
+   "common/ui.js:732"
   ]
  },
  "To&p": {
@@ -30172,7 +30172,7 @@
  },
  "Total Row": {
   "where": [
-   "ledger/js/app.js:1201",
+   "ledger/js/app.js:1195",
    "ledger/js/ribbon.js:104"
   ]
  },
@@ -30301,7 +30301,7 @@
  },
  "Trebuchet MS": {
   "where": [
-   "common/core.js:841",
+   "common/core.js:842",
    "lectern/js/dialogs.js:1739",
    "lectern/js/model.js:86",
    "lectern/js/model.js:163"
@@ -30355,7 +30355,7 @@
  },
  "Turquoise": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:200"
   ]
  },
@@ -30590,13 +30590,13 @@
  },
  "Unfreeze Panes": {
   "where": [
-   "ledger/js/app.js:1295"
+   "ledger/js/app.js:1289"
   ]
  },
  "Ungroup": {
   "where": [
    "lectern/js/app.js:1217",
-   "ledger/js/app.js:1246",
+   "ledger/js/app.js:1240",
    "ledger/js/dialogs.js:948",
    "ledger/js/dialogs.js:956"
   ]
@@ -31068,13 +31068,13 @@
  },
  "Version {0}": {
   "where": [
-   "common/ui.js:787",
+   "common/ui.js:791",
    "start.js:169"
   ]
  },
  "Versions": {
   "where": [
-   "common/core.js:424"
+   "common/core.js:425"
   ]
  },
  "Vertical": {
@@ -31217,7 +31217,7 @@
  },
  "Violet": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:201"
   ]
  },
@@ -31365,12 +31365,12 @@
  },
  "Weekly Schedule": {
   "where": [
-   "ledger/js/panes.js:359"
+   "ledger/js/panes.js:357"
   ]
  },
  "Welcome to Page Break Preview\n\nYou can adjust where the page breaks are by clicking and dragging them with your mouse.": {
   "where": [
-   "ledger/js/app.js:1316"
+   "ledger/js/app.js:1310"
   ]
  },
  "Welcome to Wordx": {
@@ -31381,7 +31381,7 @@
  },
  "WenQuanYi Micro Hei": {
   "where": [
-   "common/core.js:739"
+   "common/core.js:740"
   ]
  },
  "West": {
@@ -31484,7 +31484,7 @@
  },
  "White": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "lectern/js/slideshow.js:934"
   ]
  },
@@ -31723,7 +31723,7 @@
    "quire/js/app.js:27",
    "quire/js/app.js:43",
    "quire/js/app.js:1028",
-   "quire/js/autocorrect.js:301"
+   "quire/js/autocorrect.js:309"
   ]
  },
  "Wordx could not shrink this document by one page.": {
@@ -31831,9 +31831,9 @@
  },
  "Working...": {
   "where": [
+   "common/ui.js:1367",
    "common/ui.js:1370",
-   "common/ui.js:1373",
-   "common/ui.js:1376"
+   "common/ui.js:1373"
   ]
  },
  "Worksheet": {
@@ -31909,7 +31909,7 @@
  },
  "Yellow": {
   "where": [
-   "common/ui.js:1123",
+   "common/ui.js:1120",
    "quire/js/app.js:200"
   ]
  },
@@ -32004,27 +32004,27 @@
  },
  "Yours truly,": {
   "where": [
-   "quire/js/autocorrect.js:305"
+   "quire/js/autocorrect.js:313"
   ]
  },
  "Yu Gothic": {
   "where": [
-   "common/core.js:733"
+   "common/core.js:734"
   ]
  },
  "Yu Gothic Light": {
   "where": [
-   "common/core.js:733"
+   "common/core.js:734"
   ]
  },
  "Yu Gothic UI": {
   "where": [
-   "common/core.js:733"
+   "common/core.js:734"
   ]
  },
  "Yu Mincho": {
   "where": [
-   "common/core.js:733"
+   "common/core.js:734"
   ]
  },
  "ZIP Code": {
@@ -32085,7 +32085,7 @@
  },
  "[cells]": {
   "where": [
-   "ledger/js/panes.js:173"
+   "ledger/js/panes.js:171"
   ]
  },
  "[object]": {
@@ -32534,12 +32534,13 @@
  },
  "{0} (Press ENTER to Insert)": {
   "where": [
-   "quire/js/autocorrect.js:275"
+   "quire/js/autocorrect.js:279",
+   "quire/js/autocorrect.js:283"
   ]
  },
  "{0} (Read-Only)": {
   "where": [
-   "common/core.js:392"
+   "common/core.js:393"
   ]
  },
  "{0} (defined name)": {
@@ -32602,7 +32603,7 @@
  },
  "{0} KB": {
   "where": [
-   "common/core.js:421"
+   "common/core.js:422"
   ]
  },
  "{0} Minutes": {
@@ -32638,7 +32639,7 @@
  },
  "{0} and {1} more": {
   "where": [
-   "common/ui.js:825"
+   "common/ui.js:829"
   ]
  },
  "{0} can't open {1}. {2}": {
@@ -32664,7 +32665,7 @@
  },
  "{0} doesn't save “{1}”.": {
   "where": [
-   "common/core.js:491"
+   "common/core.js:492"
   ]
  },
  "{0} entries marked.": {
@@ -32701,7 +32702,7 @@
  },
  "{0} hasn't kept any earlier versions of “{1}”. It keeps the version a save replaces, for 30 days.": {
   "where": [
-   "common/core.js:419"
+   "common/core.js:420"
   ]
  },
  "{0} is in the older binary PowerPoint 97–2003 format. Open it in PowerPoint, Keynote, Google Slides or LibreOffice and save it as .pptx, then open the .pptx here.": {
@@ -32711,12 +32712,12 @@
  },
  "{0} is not installed on this computer, so its text is shown in a default font. The document keeps the font name {0} and shows in that font on computers that have it.": {
   "where": [
-   "common/core.js:798"
+   "common/core.js:799"
   ]
  },
  "{0} is not installed on this computer, so its text is shown in {1}. The document keeps the font name {0} and shows in that font on computers that have it.": {
   "where": [
-   "common/core.js:799"
+   "common/core.js:800"
   ]
  },
  "{0} is not installed on this computer; a default font is used on screen and in print.": {
@@ -32777,7 +32778,7 @@
  },
  "{0} of 24 - Clipboard. Click an item to paste.": {
   "where": [
-   "ledger/js/panes.js:171",
+   "ledger/js/panes.js:169",
    "quire/js/panes.js:356"
   ]
  },
@@ -32877,12 +32878,12 @@
  },
  "{1} can't save “{0}”: it is read-only, or you don't have permission to change it. Your file hasn't changed.": {
   "where": [
-   "common/core.js:376"
+   "common/core.js:377"
   ]
  },
  "{1} doesn't have permission to save “{0}” in its folder. Allow {1} into the folder, or save this version under another name? Your file hasn't changed.": {
   "where": [
-   "common/core.js:378"
+   "common/core.js:379"
   ]
  },
  "{none}": {
@@ -32957,22 +32958,22 @@
  },
  "“{0}” couldn't be saved: {1} Your file hasn't changed.": {
   "where": [
-   "common/core.js:454"
+   "common/core.js:455"
   ]
  },
  "“{0}” is no longer where it was: it was moved, renamed or deleted.": {
   "where": [
-   "common/core.js:375"
+   "common/core.js:376"
   ]
  },
  "“{0}” is open in another program, which is keeping it from being changed. Your file hasn't changed.": {
   "where": [
-   "common/core.js:379"
+   "common/core.js:380"
   ]
  },
  "“{0}” is open in another {1} window. Close it there, or choose another name.": {
   "where": [
-   "common/core.js:405"
+   "common/core.js:406"
   ]
  },
  "“{0}” is over 50 MB, so its changes aren't kept for recovery after a crash. Save it to keep them.": {
@@ -32982,7 +32983,7 @@
  },
  "“{0}” was changed by another program after you opened it. Replace it with this version, or save this version under another name?": {
   "where": [
-   "common/core.js:374"
+   "common/core.js:375"
   ]
  },
  "” Double Closing Quote": {

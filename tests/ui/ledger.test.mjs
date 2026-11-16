@@ -45,6 +45,74 @@ test('Excelx Getting Started offers open/create actions without Recent Files', a
   } finally { await u.close(); }
 });
 
+test('classic Excelx retains Help topics and keyboard shortcuts without the React package catalog', async () => {
+  const u = await ledger();
+  try {
+    const result = await u.evaluate(`(() => {
+      const packageCatalog = L.reactModules?.excelxHelpContent;
+      L.panes.task.show('help');
+      const topics = document.querySelectorAll('#taskpane .help-topic').length;
+      L.panes.task.show('keys');
+      const shortcuts = document.querySelectorAll('#taskpane .kbd-table tr').length;
+      return { packageCatalog: !!packageCatalog, reactBridge: typeof L.panes.reactHelpData, topics, shortcuts };
+    })()`);
+    assert.deepEqual(result, { packageCatalog: false, reactBridge: 'undefined', topics: 15, shortcuts: 54 }, 'classic Ledger still renders its built-in Help and shortcut catalogs');
+  } finally { await u.close(); }
+});
+
+test('Excelx circular-reference subscription and pending warning belong to its mount scope', async () => {
+  const preload = `(() => {
+    let changedSubscriptions = 0;
+    const trackedCallbacks = new WeakSet();
+    const wrapBus = (bus) => new Proxy(bus, { get(target, key, receiver) {
+      if (key === 'on') {
+        const on = Reflect.get(target, key, receiver);
+        return function (event, callback) {
+          if (event !== 'changed') return on.call(this, event, callback);
+          changedSubscriptions++;
+          trackedCallbacks.add(callback);
+          return on.call(this, event, callback);
+        };
+      }
+      if (key === 'off') {
+        const off = Reflect.get(target, key, receiver);
+        return function (event, callback) {
+          if (event === 'changed' && trackedCallbacks.delete(callback)) changedSubscriptions--;
+          return off.call(this, event, callback);
+        };
+      }
+      return Reflect.get(target, key, receiver);
+    } });
+    const L = new Proxy({}, { set(target, key, value, receiver) {
+      if (key === 'bus') value = wrapBus(value);
+      if (key === 'createMountScope') {
+        const createScope = value;
+        value = (...args) => {
+          const scope = createScope(...args), dispose = scope.dispose;
+          window.__excelxMountProbe = { before: changedSubscriptions, scope, get during() { return changedSubscriptions; }, dispose: () => { dispose(); window.__excelxMountProbe.after = changedSubscriptions; } };
+          return scope;
+        };
+      }
+      return Reflect.set(target, key, value, receiver);
+    } });
+    Object.defineProperty(window, 'L', { configurable: true, writable: true, value: L });
+    window.__excelxMountProbe = null;
+  })();`;
+  const u = await open('ledger', { preload });
+  try {
+    const ready = await u.evaluate(`new Promise((resolve) => { const end=Date.now()+5000; const poll=()=>window.__excelxMountProbe?resolve({before:window.__excelxMountProbe.before,during:window.__excelxMountProbe.during}):Date.now()>end?resolve(false):setTimeout(poll,20); poll(); })`);
+    assert.ok(ready && ready.before === 0 && ready.during > 0, `Excelx changed subscriptions are established by mount, not script evaluation: ${JSON.stringify(ready)}`);
+    const afterDispose = await u.evaluate(`new Promise((resolve) => {
+      const L=window.L, probe=window.__excelxMountProbe, workbook=L.grid.wb, graph=workbook.graph.byCell, oldValues=graph.values, oldCircular=L.calc.circular;
+      const fakeCell={}; graph.values=()=>[{cell:fakeCell,sh:L.grid.sheet(),r:0,c:0}][Symbol.iterator](); L.calc.circular=new Set([fakeCell]);
+      let warnings=0; const msg=L.ui.msg; L.ui.msg=function(text,...args){if(String(text).startsWith('Excelx cannot calculate a formula.'))warnings++;return msg.call(this,text,...args)};
+      L.bus.emit('changed'); probe.dispose(); graph.values=oldValues; L.calc.circular=oldCircular;
+      setTimeout(()=>resolve({subscriptions:probe.after,warnings,rootRestored:L.domHost()===document.body}),25);
+    })`);
+    assert.deepEqual(afterDispose, { subscriptions: 0, warnings: 0, rootRestored: true }, 'unmount removes the changed handler and cancels its queued circular-reference warning');
+  } finally { await u.close(); }
+});
+
 test('Excelx HTML clipboard metadata uses the rebranded protocol', async () => {
   const u = await ledger();
   try {

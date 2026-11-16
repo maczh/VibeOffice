@@ -36,6 +36,18 @@ test('each editor production package runs independently from its standalone dire
         const mounted = await page.evaluate(`new Promise((resolve) => { const end=Date.now()+10000; const poll=()=>document.querySelector('.vibe-editor__engine #app') && (${editor.ready}) ? resolve(true) : Date.now()>end ? resolve(false) : setTimeout(poll,50); poll(); })`);
         const diagnostic = mounted ? null : await page.evaluate("({url:location.href,title:document.title,body:document.body.innerText.slice(0,1000),editor:!!document.querySelector('.vibe-editor__engine #app'),scriptErrors:window.__capturedErrors||[]})");
         assert.equal(mounted, true, `${editor.id} standalone loads its React editor and document engine: ${JSON.stringify({ diagnostic, errors: page.errors, requests: page.requests })}`);
+        if (editor.id === 'wordx') {
+          await page.evaluate("(()=>{const d=L.D.newDoc();d.main.blocks=[L.D.para([L.D.text('Sep')])];L.app.opts.autoComplete=true;L.app.loadDoc(d,'Standalone AutoComplete');const p=L.D.firstPara(L.D.doc.main.blocks);L.ed.setSel(L.D.pos(p,L.D.plen(p)));L.ed.focus()})()");
+          const caretReady = await page.evaluate("new Promise((resolve)=>{const end=Date.now()+3000;const poll=()=>{L.ed.caretRect()?resolve(true):Date.now()>end?resolve(false):setTimeout(poll,20)};poll()})");
+          assert.equal(caretReady, true, 'standalone Wordx has a laid-out caret before typing');
+          await page.send('Input.insertText', { text: 't' });
+          const suggestion = await page.evaluate("new Promise((resolve)=>{const end=Date.now()+1200;const poll=()=>{const tip=document.querySelector('[data-react-autocomplete=wordx]');tip?resolve(tip.textContent):Date.now()>end?resolve(false):setTimeout(poll,20)};poll()})");
+          assert.equal(suggestion, 'September (Press ENTER to Insert)', `standalone Wordx renders its AutoComplete suggestion through the React package: ${JSON.stringify({ errors: page.errors })}`);
+          await page.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
+          await page.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
+          const completed = await page.evaluate("new Promise((resolve)=>{const end=Date.now()+1000;const poll=()=>{const text=L.D.ptext(L.D.firstPara(L.D.doc.main.blocks));text==='September'?resolve(text):Date.now()>end?resolve(text):setTimeout(poll,20)};poll()})");
+          assert.equal(completed, 'September', 'standalone React Wordx accepts the suggestion using the existing document transaction');
+        }
         assert.equal(await page.evaluate('location.pathname'), '/');
         assert.equal(await page.evaluate("document.querySelectorAll('iframe').length"), 0);
         assert.deepEqual(page.errors, []);

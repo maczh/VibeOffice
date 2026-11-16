@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 type Kind = 'web' | 'place' | 'mail';
 type Catalog = { editing: boolean; kind: Kind; text: string; address: string; cell: string; sheet: string; email: string; subject: string; tooltip: string; sheets: { value: string; label: string }[] };
@@ -12,6 +12,9 @@ const KINDS: [Kind, string][] = [['web', 'Existing File or Web Page'], ['place',
 export function ExcelxHyperlinkDialog() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [form, setForm] = useState<State>({ kind: 'web', text: '', address: '', cell: 'A1', sheet: '', email: '', subject: '', tooltip: '' });
+  const id = useId().replaceAll(':', '');
+  const tabId = (kind: Kind) => `${id}-hyperlink-tab-${kind}`;
+  const panelId = `${id}-hyperlink-panel`;
   useEffect(() => {
     const refresh = () => { const next = runtime()?.dlg?.reactHyperlinkCatalog?.() || null; setCatalog(next); if (next) setForm({ kind: next.kind, text: next.text, address: next.address, cell: next.cell, sheet: next.sheet, email: next.email, subject: next.subject, tooltip: next.tooltip }); };
     const off = runtime()?.bus?.on('excelx-hyperlink-dialog', refresh); return () => off?.();
@@ -26,9 +29,20 @@ export function ExcelxHyperlinkDialog() {
       {field('&Text to display:', 'text')}
       <div className="excelx-hyperlink-dialog__main">
         <div className="excelx-hyperlink-dialog__kinds" role="tablist" aria-label={t('Link type')}>
-          {KINDS.map(([kind, label]) => <button key={kind} type="button" role="tab" aria-selected={form.kind === kind} onClick={() => update('kind', kind)}>{t(label)}</button>)}
+          {KINDS.map(([kind, label], index) => <button key={kind} id={tabId(kind)} type="button" role="tab" aria-controls={panelId} aria-selected={form.kind === kind} tabIndex={form.kind === kind ? 0 : -1} onClick={() => update('kind', kind)} onKeyDown={(event) => {
+            const nextIndex = event.key === 'ArrowRight' ? (index + 1) % KINDS.length
+              : event.key === 'ArrowLeft' ? (index - 1 + KINDS.length) % KINDS.length
+                : event.key === 'Home' ? 0
+                  : event.key === 'End' ? KINDS.length - 1 : -1;
+            if (nextIndex < 0) return;
+            event.preventDefault();
+            const next = KINDS[nextIndex];
+            if (!next) return;
+            update('kind', next[0]);
+            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]?.focus();
+          }}>{t(label)}</button>)}
         </div>
-        <div className="excelx-hyperlink-dialog__target" role="tabpanel">
+        <div id={panelId} aria-labelledby={tabId(form.kind)} className="excelx-hyperlink-dialog__target" role="tabpanel">
           {form.kind === 'web' && field('Addr&ess:', 'address', { placeholder: 'https://', translate: 'no' })}
           {form.kind === 'place' && <>{field('Type the cell refere&nce:', 'cell')}<label>{t('Or select a place in this document:')}<select value={form.sheet} onChange={(event) => { const value = event.currentTarget.value; update('sheet', value); }} translate="no">{catalog.sheets.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label></>}
           {form.kind === 'mail' && <>{field('&E-mail address:', 'email')} {field('Su&bject:', 'subject')}</>}

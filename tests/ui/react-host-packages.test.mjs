@@ -24,7 +24,7 @@ test('an external React host wires its remote provider into direct editor Open a
   const server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--config', 'tests/vite/host.vite.config.ts', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, stdio: 'ignore' });
   process.env.BASE = base;
   process.env.CDP ||= 'http://127.0.0.1:9223';
-  let page;
+  let page, mountPage;
   try {
     for (let attempt = 0; attempt < 80 && !await fetch(`${base}/tests/vite/host-fixture.html`).then((response) => response.ok).catch(() => false); attempt++) await new Promise((resolve) => setTimeout(resolve, 100));
     page = await openPage(undefined, { url: `${base}/tests/vite/host-fixture.html?lang=qps`, ready: "document.readyState === 'complete'", timeout: 20000, bypassServiceWorker: true });
@@ -38,6 +38,30 @@ test('an external React host wires its remote provider into direct editor Open a
     const opened = await page.evaluate(`new Promise((resolve) => { const end=Date.now()+15000; const poll=()=>{const blocks=window.L?.D?.doc?.main?.blocks; const text=blocks?.length ? L.D.plainText(blocks[0]) : ''; text.includes('Opened through the host-provided storage adapter') ? resolve(text) : Date.now()>end ? resolve(false) : setTimeout(poll,50);}; poll(); })`);
     assert.ok(typeof opened === 'string', 'the editor opened the provider-selected sample');
     assert.equal(await page.evaluate('document.title'), 'VibeOffice host fixture', 'opening through Wordx leaves the host page title unchanged');
+    const tabLifecycle = await page.evaluate(`(async()=>{
+      const callbacks=[];
+      const bodies=[document.createElement('div'),document.createElement('div')];
+      bodies[0].textContent='First panel'; bodies[1].textContent='Second panel';
+      const tabs=L.ui.tabs([{label:'First',body:bodies[0],onShow:()=>callbacks.push({index:0,hidden:bodies.map((body)=>body.hidden)})},{label:'Second',body:bodies[1],onShow:()=>callbacks.push({index:1,hidden:bodies.map((body)=>body.hidden)})}]);
+      VO.reactDirectHost.root.append(tabs); window.__tabLifecycle={tabs,bodies,callbacks};
+      const ready=await new Promise((resolve)=>{const end=Date.now()+1500;const poll=()=>tabs.querySelectorAll('[role=tabpanel]').length===2?resolve(true):Date.now()>end?resolve(false):setTimeout(poll,10);poll()});
+      if(!ready)return {ready:false}; callbacks.length=0;
+      tabs.querySelectorAll('[role=tab]')[1].click();
+      const afterClick={selected:tabs.querySelectorAll('[role=tab]')[1].getAttribute('aria-selected'),hidden:bodies.map((body)=>body.hidden),callback:callbacks.at(-1)};
+      tabs.select(0);
+      const afterApi={selected:tabs.querySelectorAll('[role=tab]')[0].getAttribute('aria-selected'),hidden:bodies.map((body)=>body.hidden),callback:callbacks.at(-1)};
+      tabs.remove();
+      const released=await new Promise((resolve)=>{const end=Date.now()+1000;const poll=()=>bodies.every((body)=>!body.hasAttribute('role')&&!body.hasAttribute('id')&&!body.hasAttribute('aria-labelledby')&&!body.hasAttribute('hidden')&&!body.classList.contains('tab-pane'))?resolve(true):Date.now()>end?resolve(false):setTimeout(poll,10);poll()});
+      const accessible=[...tabs.querySelectorAll('[role=tab]')].every((tab)=>{const panel=document.getElementById(tab.getAttribute('aria-controls'));return panel?.getAttribute('aria-labelledby')===tab.id;});
+      return {ready,afterClick,afterApi,released,accessible};
+    })()`);
+    assert.deepEqual(tabLifecycle, {
+      ready: true,
+      afterClick: { selected: 'true', hidden: [true, false], callback: { index: 1, hidden: [true, false] } },
+      afterApi: { selected: 'true', hidden: [false, true], callback: { index: 0, hidden: [false, true] } },
+      released: true,
+      accessible: true,
+    }, 'shared React tabs own panel visibility before onShow callbacks and restore reusable panel DOM on unmount');
     await page.evaluate("[...document.querySelectorAll('button')].find((button)=>button.textContent.includes('Save through host provider'))?.click()");
     const saved = await page.evaluate(`new Promise((resolve) => { const end=Date.now()+10000; const poll=()=>{const text=document.querySelector('[aria-label="Host provider status"]')?.textContent||''; text==='Saved sample.txt at revision 2' ? resolve(text) : Date.now()>end ? resolve(false) : setTimeout(poll,50);}; poll(); })`);
     assert.equal(saved, 'Saved sample.txt at revision 2', 'the opened revision reaches the host provider on Save');
@@ -57,7 +81,13 @@ test('an external React host wires its remote provider into direct editor Open a
       assert.equal(savedAppFile, `Saved sample.txt at revision ${revision}`, `${title} preserves the provider revision through Save`);
     }
     assert.deepEqual(page.errors, []);
+
+    mountPage = await openPage(undefined, { url: `${base}/tests/vite/engine-mount-fixture.html`, ready: "typeof window.mountEngineFixture === 'function'", timeout: 10000, bypassServiceWorker: true });
+    const mountOwnership = await mountPage.evaluate("(async()=>{const host=document.querySelector('#engine-host'),dispose=await window.mountEngineFixture(host);const mounted={before:!!host.querySelector('#host-before'),shell:host.textContent.includes('Mounted engine shell'),root:!!host.querySelector('[data-vibeoffice-engine-root]')};const after=document.createElement('span');after.id='host-after';host.append(after);dispose();return {...mounted,after:host.contains(after),before:!!host.querySelector('#host-before'),rootRemoved:!host.querySelector('[data-vibeoffice-engine-root]'),hostConnected:host.isConnected}})()");
+    assert.deepEqual(mountOwnership, { before: true, shell: true, root: true, after: true, rootRemoved: true, hostConnected: true }, 'mount and disposal preserve host-owned content and remove only the editor root');
+    assert.deepEqual(mountPage.errors, []);
   } finally {
+    if (mountPage) await mountPage.close();
     if (page) await page.close();
     server.kill();
     if (previousBase === undefined) delete process.env.BASE; else process.env.BASE = previousBase;

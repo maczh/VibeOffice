@@ -94,6 +94,13 @@ function Suite() {
     }
   }, []);
 
+  useEffect(() => {
+    const shortcutApp = apps.find((app) => app.id === new URLSearchParams(window.location.search).get('new'));
+    if (!shortcutApp) return;
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.hash);
+    setActive({ app: shortcutApp });
+  }, []);
+
   const openFile = (file?: File) => {
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase();

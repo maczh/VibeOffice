@@ -2227,9 +2227,10 @@
       if (!this.o.element) (this.o.parent || document.body).appendChild(el);
 
       if (mode === 'desktop') {
-        el.tabIndex = 0;
-        el.setAttribute('role', 'img');
-        el.setAttribute('aria-label', this.o.label);
+        const control = this.o.reactOwned ? this.o.avatarElement : el;
+        control.tabIndex = 0;
+        control.setAttribute('role', this.o.reactOwned ? 'button' : 'img');
+        control.setAttribute('aria-label', this.o.label);
         const h = this.o.size * 235 / 260;
         this._pos = [this.o.x != null ? this.o.x : innerWidth - this.o.size - 20, this.o.y != null ? this.o.y : innerHeight - h - 16];
         this._place();
@@ -3009,23 +3010,25 @@
         this._dragging = false; el.classList.remove('is-dragging'); this._restAt = this._clock;
         if (e.type !== 'pointerup') return;
         if (s.moved) { if (o.onmoved) o.onmoved(this._pos[0], this._pos[1]); }
-        else if (o.onclick) o.onclick();
+        else if (!o.reactOwned && o.onclick) o.onclick();
       };
       el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
-      el.addEventListener('keydown', e => {
-        if (e.target.closest('.scout-balloon')) return;
-        if ((e.key === 'Enter' || e.key === ' ') && o.onclick) { e.preventDefault(); o.onclick(); }
-        else if ((e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) && o.onmenu) {
+      if (!o.reactOwned) {
+        el.addEventListener('keydown', e => {
+          if (e.target.closest('.scout-balloon')) return;
+          if ((e.key === 'Enter' || e.key === ' ') && o.onclick) { e.preventDefault(); o.onclick(); }
+          else if ((e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) && o.onmenu) {
+            e.preventDefault();
+            const r = this.svg.getBoundingClientRect();
+            o.onmenu(r.left + r.width / 2, r.top + r.height / 2);
+          }
+          else if (e.key === 'Escape') this.stop();
+        });
+        el.addEventListener('contextmenu', e => {
           e.preventDefault();
-          const r = this.svg.getBoundingClientRect();
-          o.onmenu(r.left + r.width / 2, r.top + r.height / 2);
-        }
-        else if (e.key === 'Escape') this.stop();
-      });
-      el.addEventListener('contextmenu', e => {
-        e.preventDefault();
-        if (o.onmenu && !e.target.closest('.scout-balloon')) o.onmenu(e.clientX, e.clientY);
-      });
+          if (o.onmenu && !e.target.closest('.scout-balloon')) o.onmenu(e.clientX, e.clientY);
+        });
+      }
       this._onResize = () => this.placeAt(this._pos[0], this._pos[1]);
       addEventListener('resize', this._onResize);
     }

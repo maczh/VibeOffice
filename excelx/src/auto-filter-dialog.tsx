@@ -43,8 +43,8 @@ export function ExcelxAutoFilterDialog() {
   if (!catalog) return null;
   const t = (text: string) => runtime()?.t?.(text) || text;
   const close = () => runtime()?.filter?.reactDialogAction?.('cancel');
-  if (catalog.kind === 'list') return <div ref={listRef} className="excelx-auto-filter-list" role="listbox" tabIndex={-1} style={{ left: catalog.left, top: catalog.top, minWidth: catalog.minWidth }}>
-    {(catalog.items || []).map((item, index) => <div key={`${index}-${item.value}`} className={`excelx-auto-filter-list__item${item.value === catalog.current ? ' cur' : ''}${index === active ? ' act' : ''}`} role="option" aria-selected={item.value === catalog.current} translate="no" onPointerEnter={() => setActive(index)} onClick={() => runtime()?.filter?.reactDialogAction?.('apply', item.value)}>{item.label}</div>)}
+  if (catalog.kind === 'list') return <div ref={listRef} id="excelx-auto-filter-list" className="excelx-auto-filter-list" role="listbox" aria-activedescendant={catalog.items?.[active] ? `excelx-auto-filter-list-option-${active}` : undefined} tabIndex={-1} style={{ left: catalog.left, top: catalog.top, minWidth: catalog.minWidth }}>
+    {(catalog.items || []).map((item, index) => <div id={`excelx-auto-filter-list-option-${index}`} key={`${index}-${item.value}`} className={`excelx-auto-filter-list__item${item.value === catalog.current ? ' cur' : ''}${index === active ? ' act' : ''}`} role="option" aria-selected={item.value === catalog.current} translate="no" onPointerEnter={() => setActive(index)} onClick={() => runtime()?.filter?.reactDialogAction?.('apply', item.value)}>{item.label}</div>)}
   </div>;
   const submit = () => {
     const result: Result = catalog.kind === 'custom' ? { first, second, and } : { top, percent: kind === 'percent', val: Math.max(1, Math.min(500, Math.round(value) || 1)) };

@@ -702,12 +702,6 @@
     const n = list.find((x) => x.sh === sh()) || list[0];
     return L.t('Circular: {0}', (n.sh === sh() ? '' : F.quoteSheet(n.sh.name) + '!') + F.cellName(n.r, n.c));
   }
-  L.bus.on('changed', () => {
-    const fresh = circularCells().filter((n) => !warnedCircular.has(n.cell));
-    if (!fresh.length) return;
-    for (const n of circularCells()) warnedCircular.add(n.cell);
-    setTimeout(() => ui.msg('Excelx cannot calculate a formula. Cell references in the formula refer to the formula\'s result, creating a circular reference.\n\nTo fix it, remove or change the reference, or turn on iterative calculation (Tools ▸ Options ▸ Calculation).', { icon: 'warn' }), 0);
-  });
   const updateStatus = L.debounce(() => {
     if (!sbMode || !G().wb) return;
     const ed = L.editor;
@@ -1572,6 +1566,17 @@
     if (L.panes) L.ribbonUI.follow({ task: L.panes.task, sets: { chart: true, picture: true, drawing: true }, on: () => A.opts.paneFollows !== false });
     A.addBook(w, (tpl ? tpl.name.replace(/\s+/g, '') : 'Book') + untitled, { type: 'xlsx', untitled: true });
     setupDrop();
+    L.bus.on('changed', () => {
+      const fresh = circularCells().filter((n) => !warnedCircular.has(n.cell));
+      if (!fresh.length) return;
+      for (const n of fresh) warnedCircular.add(n.cell);
+      let release = () => {};
+      const timer = setTimeout(() => {
+        release();
+        ui.msg('Excelx cannot calculate a formula. Cell references in the formula refer to the formula\'s result, creating a circular reference.\n\nTo fix it, remove or change the reference, or turn on iterative calculation (Tools ▸ Options ▸ Calculation).', { icon: 'warn' });
+      }, 0);
+      release = L.addMountCleanup(() => clearTimeout(timer));
+    });
     L.bus.on('selection', () => { updateStatus(); ui.refresh(); A.updateToolbars(); });
     L.bus.on('changed', () => { updateStatus(); ui.refresh(); renderTabsSoon(); });
     L.bus.on('mode', () => updateStatus());

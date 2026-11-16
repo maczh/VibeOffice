@@ -1,4 +1,4 @@
-import { Children, createElement, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { Children, createElement, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { PptxRibbonSpec, RibbonContext, RibbonItem } from './ribbon-spec.js';
 
@@ -162,20 +162,40 @@ function ColorSchemesPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLElem
 function AnimationSchemesPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLElement }) {
   const schemes = L.panes?.reactAnimationSchemes?.() || [];
   const [selected, setSelected] = useState<number | null>(null);
+  const [focused, setFocused] = useState<number | null>(() => schemes.find((scheme) => !scheme.group)?.index ?? null);
   const [autoPreview, setAutoPreview] = useState(!!L.app?.opts?.autoPreview);
   const selectedScheme = schemes.find((scheme) => scheme.index === selected);
   const apply = (all: boolean) => L.panes?.reactApplyAnimationScheme?.(selectedScheme?.definition || null, all);
   const play = () => L.panes?.reactPlayAnimationPreview?.();
+  const onSchemeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>, scheme: AnimationSchemeChoice) => {
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      const list = event.currentTarget.closest<HTMLElement>('[role="listbox"]');
+      const options = [...(list?.querySelectorAll<HTMLElement>('[role="option"]') || [])];
+      const current = options.indexOf(event.currentTarget);
+      const from = current >= 0 ? current : Math.max(0, options.findIndex((option) => Number(option.dataset.schemeIndex) === focused));
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : (from + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+      const option = options[next];
+      if (option) { event.preventDefault(); event.stopPropagation(); setFocused(Number(option.dataset.schemeIndex)); option.focus(); }
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelected(scheme.index);
+      L.panes?.reactApplyAnimationScheme?.(scheme.definition, false);
+      if (autoPreview) play();
+    }
+  };
   return createPortal(<div className="tp-body">
     <div className="col">
       <button className="tp-link" type="button" onClick={() => L.panes?.task?.show('design')}><span>{translate(L, 'Design Templates')}</span></button>
       <button className="tp-link" type="button" onClick={() => L.panes?.task?.show('colors')}><span>{translate(L, 'Color Schemes')}</span></button>
       <button className="tp-link" type="button" onClick={() => L.panes?.task?.show('animSchemes')}><span>{translate(L, 'Animation Schemes')}</span></button>
     </div>
-    <section className="tp-sec"><div className="tp-h">{translate(L, 'Apply to selected slides:')}</div><div className="list-box trans-list" style={{ maxHeight: 300 }} role="listbox" aria-label={translate(L, 'Animation Schemes')}>
+    <section className="tp-sec"><div className="tp-h">{translate(L, 'Apply to selected slides:')}</div><div className="list-box trans-list" style={{ maxHeight: 300 }} role="listbox" aria-label={translate(L, 'Animation Schemes')} aria-activedescendant={focused == null ? undefined : `pptx-animation-scheme-${focused}`}>
       {schemes.map((scheme) => scheme.group
         ? <div className="li-group" key={`group-${scheme.index}`}>{translate(L, scheme.name)}</div>
-        : <div className={`li${selected === scheme.index ? ' on' : ''}`} key={`scheme-${scheme.index}`} role="option" aria-selected={selected === scheme.index} tabIndex={0} data-scheme-index={scheme.index} onClick={() => { setSelected(scheme.index); L.panes?.reactApplyAnimationScheme?.(scheme.definition, false); if (autoPreview) play(); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected(scheme.index); L.panes?.reactApplyAnimationScheme?.(scheme.definition, false); if (autoPreview) play(); } }}>{translate(L, scheme.name)}</div>)}
+        : <div id={`pptx-animation-scheme-${scheme.index}`} className={`li${selected === scheme.index ? ' on' : ''}`} key={`scheme-${scheme.index}`} role="option" aria-selected={selected === scheme.index} tabIndex={focused === scheme.index ? 0 : -1} data-scheme-index={scheme.index} onClick={() => { setFocused(scheme.index); setSelected(scheme.index); L.panes?.reactApplyAnimationScheme?.(scheme.definition, false); if (autoPreview) play(); }} onKeyDown={(event) => onSchemeKeyDown(event, scheme)}>{translate(L, scheme.name)}</div>)}
     </div></section>
     <div className="tp-btns"><button className="btn tp-btn" type="button" onClick={() => apply(true)}>{translate(L, 'Apply to All Slides')}</button></div>
     <div className="tp-btns"><button className="btn small" type="button" onClick={play}>▶ {translate(L, 'Play')}</button><button className="btn small" type="button" onClick={() => L.ui?.exec('showFromCurrent')}>{translate(L, 'Slide Show')}</button></div>
@@ -200,6 +220,7 @@ function SlideTransitionPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLE
   const [, refresh] = useState(0);
   const catalog = L.panes?.reactTransitionCatalog?.() || { available: false, transitions: [], currentName: '', speed: 'fast', click: true, after: null, autoPreview: true };
   const [selectedName, setSelectedName] = useState(catalog.currentName);
+  const [focusedTransition, setFocusedTransition] = useState(() => catalog.transitions.find((transition) => transition.name === catalog.currentName)?.index ?? catalog.transitions[0]?.index ?? -1);
   const [speed, setSpeed] = useState(catalog.speed);
   const [click, setClick] = useState(catalog.click);
   const [after, setAfter] = useState(catalog.after);
@@ -208,6 +229,7 @@ function SlideTransitionPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLE
   useEffect(() => L.bus?.on('slides-changed', () => refresh((value) => value + 1)), [L]);
   useEffect(() => {
     setSelectedName(catalog.currentName);
+    if (!mount.contains(mount.ownerDocument.activeElement)) setFocusedTransition(catalog.transitions.find((transition) => transition.name === catalog.currentName)?.index ?? catalog.transitions[0]?.index ?? -1);
     setSpeed(catalog.speed);
     setClick(catalog.click);
     setAfter(catalog.after);
@@ -215,9 +237,24 @@ function SlideTransitionPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLE
   }, [catalog.currentName, catalog.speed, catalog.click, catalog.after]);
   if (!catalog.available) return createPortal(<div className="tp-body"><div className="tp-note">{translate(L, 'Transitions are set in Normal or Slide Sorter view.')}</div></div>, mount);
   const commitAfter = (value: number | null) => { setAfter(value); L.panes?.reactSetTransitionAfter?.(automatic ? value : null); };
+  const chooseTransition = (transition: TransitionChoice) => { setSelectedName(transition.name); L.panes?.reactChooseTransition?.(transition); };
+  const moveTransition = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const key = event.key;
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(key) || !catalog.transitions.length) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const list = event.currentTarget.closest<HTMLElement>('[role="listbox"]');
+    const options = [...(list?.querySelectorAll<HTMLElement>('[data-transition-index]') || [])];
+    const current = options.indexOf(event.currentTarget);
+    const selected = catalog.transitions.findIndex((transition) => transition.name === selectedName);
+    const from = current >= 0 ? current : Math.max(0, selected);
+    const next = key === 'Home' ? 0 : key === 'End' ? options.length - 1 : (from + (key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+    const option = options[next];
+    if (option) { setFocusedTransition(Number(option.dataset.transitionIndex)); option.focus(); }
+  };
   return createPortal(<div className="tp-body">
-    <section className="tp-sec"><div className="tp-h">{translate(L, 'Apply to selected slides:')}</div><div className="list-box trans-list" style={{ height: 220 }} role="listbox" aria-label={translate(L, 'Slide Transitions')}>
-      {catalog.transitions.map((transition) => <div className={`li${transition.name === selectedName ? ' on' : ''}`} key={`${transition.index}-${transition.name}`} role="option" aria-selected={transition.name === selectedName} tabIndex={0} data-transition-index={transition.index} onClick={() => { setSelectedName(transition.name); L.panes?.reactChooseTransition?.(transition); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedName(transition.name); L.panes?.reactChooseTransition?.(transition); } }}>{translate(L, transition.name)}</div>)}
+    <section className="tp-sec"><div className="tp-h">{translate(L, 'Apply to selected slides:')}</div><div className="list-box trans-list" style={{ height: 220 }} role="listbox" aria-label={translate(L, 'Slide Transitions')} aria-activedescendant={focusedTransition >= 0 ? `pptx-transition-${focusedTransition}` : undefined}>
+      {catalog.transitions.map((transition) => <div id={`pptx-transition-${transition.index}`} className={`li${transition.name === selectedName ? ' on' : ''}`} key={`${transition.index}-${transition.name}`} role="option" aria-selected={transition.name === selectedName} tabIndex={transition.index === focusedTransition ? 0 : -1} data-transition-index={transition.index} onClick={() => { setFocusedTransition(transition.index); chooseTransition(transition); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); chooseTransition(transition); } else moveTransition(event); }}>{translate(L, transition.name)}</div>)}
     </div></section>
     <section className="tp-sec"><div className="tp-h">{translate(L, 'Modify transition')}</div>
       <div className="tp-row"><label htmlFor="react-transition-speed">{translate(L, 'Speed:')}</label><select id="react-transition-speed" value={speed} onChange={(event) => { const value=event.currentTarget.value; setSpeed(value); L.panes?.reactSetTransitionSpeed?.(value); }}><option value="slow">{translate(L, 'Slow')}</option><option value="med">{translate(L, 'Medium')}</option><option value="fast">{translate(L, 'Fast')}</option></select></div>
@@ -237,8 +274,10 @@ function CustomAnimationPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLE
   const [, refresh] = useState(0);
   const catalog = L.panes?.reactCustomAnimationCatalog?.() || { available: false, animations: [], selectedId: null, hasSelection: false, starts: [], directions: [], speeds: [], autoPreview: false };
   const [autoPreview, setAutoPreview] = useState(catalog.autoPreview);
+  const [focusedId, setFocusedId] = useState<string | null>(() => catalog.selectedId || catalog.animations[0]?.id || null);
   useEffect(() => L.bus?.on('pptx-task-render', () => refresh((value) => value + 1)), [L]);
   useEffect(() => setAutoPreview(catalog.autoPreview), [catalog.autoPreview]);
+  useEffect(() => { if (!mount.querySelector('[role="listbox"]')?.contains(mount.ownerDocument.activeElement)) setFocusedId(catalog.selectedId || catalog.animations[0]?.id || null); }, [catalog.selectedId, catalog.animations, mount]);
   if (!catalog.available) return createPortal(<div className="tp-body"><div className="tp-note">{translate(L, 'Custom animation is available in Normal view.')}</div></div>, mount);
   const selected = catalog.animations.find((animation) => animation.id === catalog.selectedId);
   const chooseStart = (value: string) => L.panes?.reactUpdateAnimation?.('start', value);
@@ -249,8 +288,16 @@ function CustomAnimationPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLE
       <div className="tp-row"><label htmlFor="react-animation-direction">{translate(L, 'Direction:')}</label><select id="react-animation-direction" value={selected?.dir || ''} disabled={!selected || catalog.directionDisabled} onChange={(event) => L.panes?.reactUpdateAnimation?.('dir', event.currentTarget.value)}>{(catalog.directions.length ? catalog.directions : [{ value: '', name: '' }]).map((option) => <option key={option.value} value={option.value}>{translate(L, option.name)}</option>)}</select></div>
       <div className="tp-row"><label htmlFor="react-animation-speed">{translate(L, 'Speed:')}</label><select id="react-animation-speed" value={catalog.selectedSpeed || 1000} disabled={catalog.speedDisabled} onChange={(event) => L.panes?.reactUpdateAnimation?.('dur', Number(event.currentTarget.value))}>{catalog.speeds.map((option) => <option key={option.value} value={option.value}>{translate(L, option.name)}</option>)}</select></div>
     </section>
-    <div className="list-box" style={{ minHeight: 150 }} role="listbox" aria-label={translate(L, 'Custom Animation')}>
-      {catalog.animations.map((animation) => <div className={`li${animation.id === catalog.selectedId ? ' on' : ''}`} key={animation.id} role="option" aria-selected={animation.id === catalog.selectedId} tabIndex={0} data-animation-id={animation.id} title={animation.tooltip} onClick={() => L.panes?.reactSelectAnimation?.(animation.id)} onDoubleClick={() => L.panes?.reactAnimationOptions?.(animation.id)} onContextMenu={(event) => { event.preventDefault(); L.panes?.reactAnimationMenu?.(animation.id, event.clientX, event.clientY); }}>
+    <div className="list-box" style={{ minHeight: 150 }} role="listbox" aria-label={translate(L, 'Custom Animation')} aria-activedescendant={focusedId ? `pptx-animation-${focusedId}` : undefined}>
+      {catalog.animations.map((animation, index) => <div id={`pptx-animation-${animation.id}`} className={`li${animation.id === catalog.selectedId ? ' on' : ''}`} key={animation.id} role="option" aria-selected={animation.id === catalog.selectedId} tabIndex={animation.id === focusedId || (!focusedId && index === 0) ? 0 : -1} data-animation-id={animation.id} title={animation.tooltip} onClick={() => { setFocusedId(animation.id); L.panes?.reactSelectAnimation?.(animation.id); }} onKeyDown={(event) => {
+        if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+          const options = [...(event.currentTarget.closest('[role="listbox"]')?.querySelectorAll<HTMLElement>('[data-animation-id]') || [])];
+          const current = options.indexOf(event.currentTarget);
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : (current + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+          const option = options[next];
+          if (option) { event.preventDefault(); event.stopPropagation(); setFocusedId(option.dataset.animationId || null); option.focus(); }
+        } else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); L.panes?.reactSelectAnimation?.(animation.id); }
+      }} onDoubleClick={() => L.panes?.reactAnimationOptions?.(animation.id)} onContextMenu={(event) => { event.preventDefault(); L.panes?.reactAnimationMenu?.(animation.id, event.clientX, event.clientY); }}>
         <span className="li-num">{animation.step}</span><span className="li-ico" style={{ color: animation.color }}>★</span><span className="li-n">{animation.name}{animation.by === 'para' ? ' ¶' : ''} — {animation.label}</span>
       </div>)}
       {!catalog.animations.length && <div className="tp-note" style={{ padding: 8 }}>{translate(L, 'Select an element of the slide, then click "Add Effect" to add animation.')}</div>}

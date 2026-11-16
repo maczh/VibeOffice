@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import './table-format-dialog.css';
 
 type BorderKind = 'all' | 'out' | 'in' | 'none' | 't' | 'b' | 'l' | 'r';
@@ -30,6 +30,9 @@ function runtime(): TableFormatRuntime | undefined { return (window as Window & 
 export function PptxTableFormatDialog() {
   const [catalog, setCatalog] = useState<TableFormatCatalog | null>(null);
   const [tab, setTab] = useState<'borders' | 'fill' | 'text'>('borders');
+  const id = useId().replaceAll(':', '');
+  const tabId = (key: 'borders' | 'fill' | 'text') => `${id}-table-format-tab-${key}`;
+  const panelId = (key: 'borders' | 'fill' | 'text') => `${id}-table-format-panel-${key}`;
   const wasOpen = useRef(false);
   useEffect(() => {
     const refresh = () => {
@@ -46,9 +49,19 @@ export function PptxTableFormatDialog() {
   const chooseColor = (kind: 'border' | 'fill', anchor: HTMLButtonElement) => runtime()?.app?.reactTableFormatColorMenu?.(kind, anchor);
   return <OfficeDialog title={t('Format Table')} className="pptx-table-format-dialog" style={{ width: 'min(94vw, 420px)' }} onRequestClose={() => runtime()?.app?.reactTableFormatClose?.()}>
     <div className="pptx-table-format__tabs" role="tablist" aria-label={t('Format Table')}>
-      {([['borders', 'Borders'], ['fill', 'Fill'], ['text', 'Text Box']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{t(label)}</button>)}
+      {([['borders', 'Borders'], ['fill', 'Fill'], ['text', 'Text Box']] as const).map(([key, label], index) => <button key={key} id={tabId(key)} type="button" role="tab" aria-controls={panelId(key)} aria-selected={tab === key} tabIndex={tab === key ? 0 : -1} onClick={() => setTab(key)} onKeyDown={(event) => {
+        const next = event.key === 'ArrowRight' ? (index + 1) % 3
+          : event.key === 'ArrowLeft' ? (index - 1 + 3) % 3
+            : event.key === 'Home' ? 0
+              : event.key === 'End' ? 2 : -1;
+        if (next < 0) return;
+        event.preventDefault();
+        const nextTab = (['borders', 'fill', 'text'] as const)[next];
+        if (nextTab) setTab(nextTab);
+        event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+      }}>{t(label)}</button>)}
     </div>
-    {tab === 'borders' && <section className="pptx-table-format__body" role="tabpanel" aria-label={t('Borders')}>
+    <section id={panelId('borders')} aria-labelledby={tabId('borders')} className="pptx-table-format__body" role="tabpanel" hidden={tab !== 'borders'}>
       <label>{t('&Style:').replace('&', '')}<select aria-label={t('Border style')} value={catalog.dash} onChange={(event) => runtime()?.app?.reactTableFormatSet?.('dash', event.currentTarget.value)}>{catalog.dashes.map((dash) => <option key={dash.value} value={dash.value}>{dash.label}</option>)}</select></label>
       <label>{t('&Color:').replace('&', '')}<button type="button" className="btn small" aria-label={t('Border color')} onClick={(event) => chooseColor('border', event.currentTarget)}><span aria-hidden="true" style={{ display: 'inline-block', width: 64, height: 14, border: '1px solid #555', background: catalog.colorHex }} /> <span translate="no">{catalog.color}</span></button></label>
       <label>{t('&Width:').replace('&', '')}<select aria-label={t('Border width')} value={catalog.width} onChange={(event) => runtime()?.app?.reactTableFormatSet?.('width', Number(event.currentTarget.value))}>{catalog.widths.map((width) => <option key={width} value={width}>{t('{0} pt', width)}</option>)}</select></label>
@@ -56,13 +69,13 @@ export function PptxTableFormatDialog() {
       <div className="pptx-table-format__borders" role="group" aria-label={t('Apply borders')}>
         {catalog.borderChoices.map((choice) => <button key={choice.kind} type="button" className="btn small" aria-label={choice.label} title={choice.label} dangerouslySetInnerHTML={{ __html: runtime()?.icons?.get(choice.icon) || '' }} onClick={() => runtime()?.app?.reactTableFormatBorder?.(choice.kind)} />)}
       </div>
-    </section>}
-    {tab === 'fill' && <section className="pptx-table-format__body" role="tabpanel" aria-label={t('Fill')}>
+    </section>
+    <section id={panelId('fill')} aria-labelledby={tabId('fill')} className="pptx-table-format__body" role="tabpanel" hidden={tab !== 'fill'}>
       <label>{t('Fill &color:').replace('&', '')}<button type="button" className="btn small" aria-label={t('Fill color')} onClick={(event) => chooseColor('fill', event.currentTarget)}><span aria-hidden="true" style={{ display: 'inline-block', width: 70, height: 14, border: '1px solid #555', background: 'repeating-linear-gradient(45deg,#fff 0 4px,#eee 4px 8px)' }} /> <span>{t('Choose fill')}</span></button></label>
-    </section>}
-    {tab === 'text' && <section className="pptx-table-format__body" role="tabpanel" aria-label={t('Text Box')}>
+    </section>
+    <section id={panelId('text')} aria-labelledby={tabId('text')} className="pptx-table-format__body" role="tabpanel" hidden={tab !== 'text'}>
       <label>{t('Text &alignment:').replace('&', '')}<select aria-label={t('Text alignment')} defaultValue="t" onChange={(event) => runtime()?.app?.reactTableFormatSet?.('anchor', event.currentTarget.value)}><option value="t">{t('Top')}</option><option value="ctr">{t('Middle')}</option><option value="b">{t('Bottom')}</option></select></label>
-    </section>}
+    </section>
     <div className="vibeoffice-dialog__actions"><button type="button" className="primary" onClick={() => runtime()?.app?.reactTableFormatClose?.()}>{t('OK')}</button></div>
   </OfficeDialog>;
 }

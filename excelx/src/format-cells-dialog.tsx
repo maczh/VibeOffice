@@ -1,6 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { createPortal } from 'react-dom';
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent } from 'react';
 import './format-cells-dialog.css';
 
 interface FontColor { hex: string; automatic: boolean }
@@ -120,12 +120,30 @@ export function ExcelxFormatCellsDialog() {
     if (item) setNumberCategoryValue(item.value);
   };
   const activeNumberCategoryIndex = Math.max(0, catalog.numberCategories.findIndex((item) => item.value === numberCategory));
+  const onNumberCategoryKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.key === 'Home') { const first = catalog.numberCategories[0]; if (first) setNumberCategoryValue(first.value); }
+    else if (event.key === 'End') { const last = catalog.numberCategories.at(-1); if (last) setNumberCategoryValue(last.value); }
+    else selectNumberCategory(event.key === 'ArrowDown' ? 1 : -1);
+  };
+  const onNumberFormatKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const formats = numberOptions?.formats || [];
+    if (!formats.length || !['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const current = Math.max(0, formats.findIndex((format) => format.value === numberOptions?.selected));
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? formats.length - 1 : event.key === 'ArrowDown' ? Math.min(formats.length - 1, current + 1) : event.key === 'ArrowUp' ? Math.max(0, current - 1) : current;
+    const format = formats[next];
+    if (format) updateNumberOptions({ code: format.value });
+  };
   const close = () => runtime()?.dlg?.reactFormatCellsClose?.();
   return <OfficeDialog title={translate(catalog.title)} className="excelx-format-cells-dialog" style={{ width: 'min(96vw, 520px)' }} onRequestClose={close}>
     <div ref={contentHost} className="excelx-format-cells-dialog__content" />
     {numberHost && createPortal(<div className="excelx-format-cells-dialog__number-category">
       <label>{translate('Category:')}</label>
-      <div className="lbox excelx-format-cells-dialog__category-list" role="listbox" aria-label={translate('Category:')} aria-activedescendant={`excelx-format-cells-category-${activeNumberCategoryIndex}`} tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); selectNumberCategory(event.key === 'ArrowDown' ? 1 : -1); } }}>
+      <div className="lbox excelx-format-cells-dialog__category-list" role="listbox" aria-label={translate('Category:')} aria-activedescendant={`excelx-format-cells-category-${activeNumberCategoryIndex}`} tabIndex={0} onKeyDown={onNumberCategoryKeyDown}>
         {catalog.numberCategories.map((item, index) => <div id={`excelx-format-cells-category-${index}`} key={item.value} className={`lbox-i${numberCategory === item.value ? ' on' : ''}`} role="option" aria-selected={numberCategory === item.value} onClick={() => setNumberCategoryValue(item.value)}>{translate(item.label)}</div>)}
       </div>
     </div>, numberHost)}
@@ -134,7 +152,7 @@ export function ExcelxFormatCellsDialog() {
       {['number','currency','accounting','percentage','scientific'].includes(numberOptions.kind) && <label>{translate('&Decimal places:').replace('&', '')}<input aria-label={translate('&Decimal places:').replace('&', '')} type="number" min="0" max="30" step="1" value={numberOptions.dec || 0} onChange={(event) => updateNumberOptions({ dec: Number(event.currentTarget.value) })} /></label>}
       {numberOptions.kind === 'catalog' && <>
         <label>{translate('Type:')}</label>
-        <div className="lbox short excelx-format-cells-dialog__number-format-list" role="listbox" aria-label={translate('Type:')}>{(numberOptions.formats || []).map((format) => <div key={format.value} data-format={format.value} className={`lbox-i${numberOptions.selected === format.value ? ' on' : ''}`} role="option" aria-selected={numberOptions.selected === format.value} onClick={() => updateNumberOptions({ code: format.value })}>{translate(format.label)}</div>)}</div>
+        <div className="lbox short excelx-format-cells-dialog__number-format-list" role="listbox" aria-label={translate('Type:')} aria-activedescendant={`excelx-format-cells-number-format-${Math.max(0, (numberOptions.formats || []).findIndex((format) => format.value === numberOptions.selected))}`} tabIndex={0} onKeyDown={onNumberFormatKeyDown}>{(numberOptions.formats || []).map((format, index) => <div id={`excelx-format-cells-number-format-${index}`} key={format.value} data-format={format.value} className={`lbox-i${numberOptions.selected === format.value ? ' on' : ''}`} role="option" aria-selected={numberOptions.selected === format.value} onClick={() => updateNumberOptions({ code: format.value })}>{translate(format.label)}</div>)}</div>
         {numberOptions.locale && <label>{translate('&Locale (location):').replace('&', '')}<select aria-label={translate('&Locale (location):').replace('&', '')}><option value="en-US">{translate('English (United States)')}</option></select></label>}
         {numberOptions.description && <p className="hint">{translate(numberOptions.description)}</p>}
       </>}

@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 type HyperlinkKind = 'web' | 'place' | 'mail';
 interface HyperlinkPlace { value: string; label: string }
@@ -14,6 +14,9 @@ function runtime(): HyperlinkRuntime | undefined { return (window as Window & { 
 /** React-owned hyperlink destination forms; links continue through the selected text/object history APIs. */
 export function PptxHyperlinkDialog() {
   const [catalog, setCatalog] = useState<HyperlinkCatalog | null>(null);
+  const id = useId().replaceAll(':', '');
+  const tabId = (kind: HyperlinkKind) => `${id}-hyperlink-tab-${kind}`;
+  const panelId = `${id}-hyperlink-panel`;
   useEffect(() => {
     const refresh = () => { const next = runtime()?.dlg?.reactHyperlinkCatalog?.() || null; setCatalog(next ? { ...next, places: [...next.places] } : null); };
     const off = runtime()?.bus?.on('pptx-hyperlink-dialog', refresh);
@@ -31,9 +34,20 @@ export function PptxHyperlinkDialog() {
       <label>{t('&Text to display:').replace('&', '')}<input aria-label={t('Text to display:')} type="text" value={catalog.display} disabled={!catalog.editing} onChange={(event) => update({ display: event.currentTarget.value })} /></label>
       <div className="row" style={{ alignItems: 'stretch', gap: 12 }}>
         <section className="col" style={{ flex: '0 0 150px' }}><strong>{t('Link to:')}</strong><div role="tablist" aria-label={t('Link to:')} className="col">
-          {kinds.map(([kind, label]) => <button key={kind} type="button" role="tab" aria-selected={catalog.kind === kind} onClick={() => update({ kind })}>{t(label)}</button>)}
+          {kinds.map(([kind, label], index) => <button key={kind} id={tabId(kind)} type="button" role="tab" aria-controls={panelId} aria-selected={catalog.kind === kind} tabIndex={catalog.kind === kind ? 0 : -1} onClick={() => update({ kind })} onKeyDown={(event) => {
+            const nextIndex = event.key === 'ArrowRight' ? (index + 1) % kinds.length
+              : event.key === 'ArrowLeft' ? (index - 1 + kinds.length) % kinds.length
+                : event.key === 'Home' ? 0
+                  : event.key === 'End' ? kinds.length - 1 : -1;
+            if (nextIndex < 0) return;
+            event.preventDefault();
+            const next = kinds[nextIndex];
+            if (!next) return;
+            update({ kind: next[0] });
+            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]?.focus();
+          }}>{t(label)}</button>)}
         </div></section>
-        <section role="tabpanel" className="col" style={{ flex: '1 1 auto', minWidth: 0 }}>
+        <section id={panelId} aria-labelledby={tabId(catalog.kind)} role="tabpanel" className="col" style={{ flex: '1 1 auto', minWidth: 0 }}>
           {catalog.kind === 'web' && <><label>{t('Addr&ess:').replace('&', '')}<input aria-label={t('Address:')} type="text" value={catalog.address} onChange={(event) => update({ address: event.currentTarget.value })} /></label><label>{t('ScreenTip:')}<input aria-label={t('ScreenTip:')} type="text" value={catalog.tip} onChange={(event) => update({ tip: event.currentTarget.value })} /></label></>}
           {catalog.kind === 'place' && <label>{t('Select a place in this d&ocument:').replace('&', '')}<select aria-label={t('Place in this document')} size={10} value={catalog.place} onChange={(event) => update({ place: event.currentTarget.value })}>{catalog.places.map((place) => <option key={place.value} value={place.value}>{t(place.label)}</option>)}</select></label>}
           {catalog.kind === 'mail' && <><label>{t('&E-mail address:').replace('&', '')}<input aria-label={t('E-mail address:')} type="text" value={catalog.email} onChange={(event) => update({ email: event.currentTarget.value })} /></label><label>{t('Su&bject:').replace('&', '')}<input aria-label={t('Subject:')} type="text" value={catalog.subject} onChange={(event) => update({ subject: event.currentTarget.value })} /></label></>}

@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import './options-dialog.css';
 
 type Catalog = {
@@ -20,6 +20,7 @@ const VIEW_FIELDS: [keyof Catalog['view'], string][] = [['pages','Page brea&ks']
 export function ExcelxOptionsDialog() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [tab, setTab] = useState('View');
+  const id = useId().replaceAll(':', '');
   const [draft, setDraft] = useState<Catalog | null>(null);
   const [listIndex, setListIndex] = useState(-1);
   const [listText, setListText] = useState('');
@@ -56,9 +57,22 @@ export function ExcelxOptionsDialog() {
   const spellingBody = <div className="excelx-options-dialog__column">{select('&Dictionary language:', String(draft.options.dictLang || 'en_US'), [['en_US','English (U.S.)'],['en_GB','English (U.K.)']], (value) => setOption('dictLang', value))}{setCheck('Ignore words in &UPPERCASE', !!draft.options.ignoreUpper, (value) => setOption('ignoreUpper', value))}{setCheck('Ignore words with &numbers', !!draft.options.ignoreNum, (value) => setOption('ignoreNum', value))}{setCheck('Ignore &Internet and file addresses', !!draft.options.ignoreInternet, (value) => setOption('ignoreInternet', value))}<button type="button" onClick={() => action?.('autocorrect')}>{t('&AutoCorrect Options...').replace('&', '')}</button></div>;
   const securityBody = <div className="excelx-options-dialog__column">{group('File encryption settings for this workbook', <>{field('Password to &open:', <input type="password" autoComplete="new-password" value={draft.general.password} onChange={(event) => setGeneral('password', event.currentTarget.value)} />)}<p className="hint">{t('The workbook is encrypted with AES-256 the next time you save it as an Excel workbook, the way Excel 2007 and later do. Leave the box empty to save it without a password. If you lose or forget the password, it cannot be recovered.')}</p></>)}{group('Privacy options', setCheck('&Remove personal information from file properties on save', draft.workbook.privacy, (value) => setWorkbook('privacy', value)))}</div>;
   const bodies: Record<string, React.ReactNode> = { View: viewBody, Calculation: calcBody, Edit: editBody, General: generalBody, 'Custom Lists': customListBody, 'Error Checking': errorBody, Spelling: spellingBody, Security: securityBody };
+  const tabId = (index: number) => `${id}-options-tab-${index}`;
+  const panelId = (index: number) => `${id}-options-panel-${index}`;
   return <OfficeDialog title={t('Options')} className="excelx-options-dialog" style={{ width: 'min(96vw, 620px)' }} onRequestClose={() => action?.('cancel')}>
-    <div className="excelx-options-dialog__tabs" role="tablist">{TABS.map((item) => <button key={item} type="button" role="tab" aria-selected={tab === item} onClick={() => setTab(item)}>{t(item)}</button>)}</div>
-    <div className="excelx-options-dialog__panel" role="tabpanel">{bodies[tab]}</div>
+    <div className="excelx-options-dialog__tabs" role="tablist" aria-label={t('Options')}>{TABS.map((item, index) => <button key={item} id={tabId(index)} type="button" role="tab" aria-controls={panelId(index)} aria-selected={tab === item} tabIndex={tab === item ? 0 : -1} onClick={() => setTab(item)} onKeyDown={(event) => {
+      const current = TABS.indexOf(item);
+      const next = event.key === 'ArrowRight' ? (current + 1) % TABS.length
+        : event.key === 'ArrowLeft' ? (current - 1 + TABS.length) % TABS.length
+          : event.key === 'Home' ? 0
+            : event.key === 'End' ? TABS.length - 1 : -1;
+      if (next < 0) return;
+      event.preventDefault();
+      const nextTab = TABS[next];
+      if (nextTab) setTab(nextTab);
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    }}>{t(item)}</button>)}</div>
+    {TABS.map((item, index) => <div key={item} id={panelId(index)} aria-labelledby={tabId(index)} role="tabpanel" className="excelx-options-dialog__panel" hidden={tab !== item}>{bodies[item]}</div>)}
     <div className="excelx-options-dialog__actions"><button type="button" className="primary" onClick={() => action?.('save', draft)}>{t('OK')}</button><button type="button" onClick={() => action?.('cancel')}>{t('Cancel')}</button></div>
   </OfficeDialog>;
 }

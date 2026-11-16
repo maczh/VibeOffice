@@ -30,7 +30,9 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const [taskMount, setTaskMount] = useState<HTMLElement | null>(null);
   const [sorterMount, setSorterMount] = useState<HTMLElement | null>(null);
   const [revision, setRevision] = useState(0);
+  const [sorterFocusIndex, setSorterFocusIndex] = useState(0);
   const outlineMutated = useRef(false);
+  const keyboardSelection = useRef<((index: number, event: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }, inSorter: boolean) => void) | null>(null);
   const slideDrag = useRef<{ pointerId: number; startX: number; startY: number; dragging: boolean; target: number | null; line: HTMLElement | null; body: HTMLElement; list: HTMLElement; indices: number[] } | null>(null);
   const sorterDrag = useRef<{ pointerId: number; startX: number; startY: number; dragging: boolean; target: number | null; marker: HTMLElement | null; root: HTMLElement; indices: number[] } | null>(null);
   useEffect(() => {
@@ -133,6 +135,19 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       if (sorterDrag.current?.pointerId === event.pointerId) clearSorterDrag(false);
     };
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') { clearSlideDrag(false); clearSorterDrag(false); } };
+    const onThumbnailKeyDownCapture = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const ElementConstructor = host.ownerDocument.defaultView?.Element;
+      if (!ElementConstructor || !(event.target instanceof ElementConstructor)) return;
+      const button = event.target.closest<HTMLButtonElement>('.sorter .so-frame, #react-slides-root .th-frame');
+      if (!button || !host.contains(button)) return;
+      const item = button.closest<HTMLElement>('.so-it[data-i], .th[data-i]');
+      const index = Number(item?.dataset.i);
+      if (!Number.isInteger(index) || index < 0) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      keyboardSelection.current?.(index, event, button.classList.contains('so-frame'));
+    };
     const onOtherPointerDown = (event: PointerEvent) => {
       if (slideDrag.current && event.pointerId !== slideDrag.current.pointerId) clearSlideDrag(false);
       if (sorterDrag.current && event.pointerId !== sorterDrag.current.pointerId) clearSorterDrag(false);
@@ -142,6 +157,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     window.addEventListener('pointercancel', onPointerCancel);
     window.addEventListener('keydown', onKeyDown, true);
     window.addEventListener('pointerdown', onOtherPointerDown);
+    host.addEventListener('keydown', onThumbnailKeyDownCapture, true);
     const attach = () => {
       const target = host.querySelector<HTMLElement>('#react-slides-root');
       const tabsTarget = host.querySelector<HTMLElement>('#react-slides-tabs-root');
@@ -210,6 +226,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       window.removeEventListener('pointercancel', onPointerCancel);
       window.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('pointerdown', onOtherPointerDown);
+      host.removeEventListener('keydown', onThumbnailKeyDownCapture, true);
       sorterSurfaceCleanup?.();
       sorterSurfaceCleanup = undefined;
       leftBody?.removeEventListener('focus', onLeftFocus, true);
@@ -234,6 +251,9 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const presentation = L?.pres;
   const slides = presentation?.slides;
   void revision;
+  useEffect(() => {
+    if (L && !sorterMount?.contains(sorterMount.ownerDocument.activeElement)) setSorterFocusIndex(L.ed?.idx || 0);
+  }, [sorterMount, L?.ed?.idx, slides?.length]);
   if (!L || !pane) return null;
   const selectFromKeyboard = (index: number, event: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }, inSorter: boolean) => {
     if (!L.app || !L.ed) return;
@@ -252,6 +272,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     }
     L.bus?.emit(inSorter ? 'pptx-sorter-mark' : 'pptx-slides-mark');
   };
+  keyboardSelection.current = selectFromKeyboard;
   const selectPaneTab = (tab: 'outline' | 'slides') => {
     if (tab === 'outline' && pane.tab !== 'outline') outlineMutated.current = false;
     if (tab === 'slides') outlineMutated.current = false;
@@ -263,7 +284,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     if (!destination) return;
     event.preventDefault(); event.stopPropagation();
     selectPaneTab(destination);
-    requestAnimationFrame(() => tabsMount?.querySelector<HTMLButtonElement>(`[data-pane-tab="${destination}"]`)?.focus());
+    tabsMount?.querySelector<HTMLButtonElement>(`[data-pane-tab="${destination}"]`)?.focus();
   };
   const taskId = task ? task.stack[task.pos] : undefined;
   const taskTitle = taskId ? task?.registry[taskId]?.title : undefined;
@@ -292,7 +313,15 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
         if (!handled || !sorterMount || !L.app) return;
         sorterDrag.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, dragging: false, target: null, marker: null, root: sorterMount, indices: [...L.app.slideSel].sort((a, b) => a - b) };
       }} onDoubleClick={() => { if (L.ed) L.ed.idx = index; L.app?.setView('normal'); }} onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => { event.preventDefault(); if (!L.app?.slideSel.has(index)) { if (L.app) L.app.slideSel = new Set([index]); if (L.ed) L.ed.idx = index; sorter.mark(); } L.app?.contextThumb(event.nativeEvent); }}>
-        <button className="so-frame" type="button" aria-label={L.t?.('Slide {0}', index + 1) || `Slide ${index + 1}`} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); selectFromKeyboard(index, event, true); } }} onClick={(event) => { if (event.detail === 0) selectFromKeyboard(index, event, true); }} dangerouslySetInnerHTML={{ __html: markup }} />
+        <button className="so-frame" type="button" tabIndex={sorterFocusIndex === index ? 0 : -1} aria-label={L.t?.('Slide {0}', index + 1) || `Slide ${index + 1}`} onKeyDown={(event) => {
+          if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+            const columns = Math.max(1, getComputedStyle(event.currentTarget.parentElement?.parentElement || event.currentTarget).gridTemplateColumns.split(' ').length);
+            const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowDown' ? columns : event.key === 'ArrowUp' ? -columns : 0;
+            const destination = event.key === 'Home' ? 0 : event.key === 'End' ? slides.length - 1 : Math.max(0, Math.min(slides.length - 1, index + delta));
+            event.preventDefault(); event.stopPropagation(); setSorterFocusIndex(destination);
+            sorterMount?.querySelectorAll<HTMLButtonElement>('.so-frame')[destination]?.focus();
+          } else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); selectFromKeyboard(index, event, true); }
+        }} onClick={(event) => { if (event.detail === 0) selectFromKeyboard(index, event, true); }} dangerouslySetInnerHTML={{ __html: markup }} />
         <div className="so-foot">{slide.trans?.type && slide.trans.type !== 'none' && <button type="button" className="th-star" title={L.anim?.transName(slide.trans)} aria-label={L.t?.('Preview transition') || 'Preview transition'} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); const frame = event.currentTarget.closest('.so-it')?.querySelector('.so-frame') || null; L.show?.previewTransition(frame, presentation, slide, slides[index - 1]); }}><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .8l1.5 3.2 3.4.4-2.5 2.3.7 3.4L6 8.4 2.9 10.1l.7-3.4L1.1 4.4l3.4-.4z" fill="none" stroke="#333" /></svg></button>}{slide.trans?.after != null && <span>{formatTransitionDelay(slide.trans.after)}</span>}<span className={`so-num${slide.hidden ? ' hid' : ''}`}>{String(index + (presentation.firstNum || 1))}</span></div>
       </div>;
     })}

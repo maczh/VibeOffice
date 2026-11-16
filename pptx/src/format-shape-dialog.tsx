@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useState, type CSSProperties } from 'react';
 
 interface Fill { t: string; c?: string; a?: number; [key: string]: unknown }
 interface ColorOption { value: string; label: string; color: string }
@@ -34,6 +34,8 @@ export function PptxFormatShapeDialog({ initialTab }: { initialTab?: string }) {
   const [catalog, setCatalog] = useState<FormatCatalog | null>(null);
   const [changes, setChanges] = useState<Record<string, unknown>>({});
   const [tab, setTab] = useState('');
+  const id = useId().replaceAll(':', '');
+  const panelId = `${id}-format-shape-panel`;
   useEffect(() => {
     const refresh = () => {
       const next = runtime()?.dlg?.reactFormatShapeCatalog?.() || null;
@@ -66,8 +68,19 @@ export function PptxFormatShapeDialog({ initialTab }: { initialTab?: string }) {
   const style: CSSProperties = { minWidth: 0 };
   const commit = () => runtime()?.dlg?.reactFormatShapeAction?.('apply', changes);
   return <OfficeDialog title={t(catalog.title)} className="pptx-format-shape-dialog" style={{ width: 'min(96vw, 560px)' }} onRequestClose={() => runtime()?.dlg?.reactFormatShapeAction?.('close')}>
-    <div role="tablist" aria-label={t('Format options')} className="row" style={{ flexWrap: 'wrap', gap: 3 }}>{tabs.map((name) => <button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>{t(name)}</button>)}</div>
-    <div role="tabpanel" className="col" style={{ ...style, minHeight: 290, padding: 8 }}>
+    <div role="tablist" aria-label={t('Format options')} className="row" style={{ flexWrap: 'wrap', gap: 3 }}>{tabs.map((name, index) => <button key={name} id={`${id}-format-shape-tab-${index}`} type="button" role="tab" aria-controls={panelId} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => setTab(name)} onKeyDown={(event) => {
+      const current = tabs.indexOf(name);
+      const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
+        : event.key === 'ArrowLeft' ? (current - 1 + tabs.length) % tabs.length
+          : event.key === 'Home' ? 0
+            : event.key === 'End' ? tabs.length - 1 : -1;
+      if (next < 0) return;
+      event.preventDefault();
+      const nextTab = tabs[next];
+      if (nextTab) setTab(nextTab);
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    }}>{t(name)}</button>)}</div>
+    <div id={panelId} aria-labelledby={`${id}-format-shape-tab-${Math.max(0, tabs.indexOf(tab))}`} role="tabpanel" className="col" style={{ ...style, minHeight: 290, padding: 8 }}>
       {tab === 'Colors and Lines' && <div className="col" style={{ gap: 12 }}>
         {(!catalog.isLine || catalog.isPic) && <fieldset className="row" style={{ flexWrap: 'wrap', alignItems: 'end' }}><legend>{t('Fill')}</legend><ColorFill label="Color:" fill={fill} colors={catalog.colors} onChange={(next) => update('fill', next)} />{!catalog.isPic && <label>{t('Transparency')}: {Math.round((1 - Number(value('alpha', catalog.alpha)))*100)}%<input aria-label={t('Transparency')} type="range" min="0" max="100" step="5" value={Math.round((1 - Number(value('alpha', catalog.alpha)))*100)} onChange={(event) => update('alpha', 1 - Number(event.currentTarget.value) / 100)} /></label>}</fieldset>}
         <fieldset className="row" style={{ flexWrap: 'wrap', alignItems: 'end' }}><legend>{t('Line')}</legend><ColorFill label="Color:" fill={line} colors={catalog.colors} line onChange={(next) => update('lineColor', next)} /><label>{t('Dashed')}<select aria-label={t('Dashed')} value={value('dash', catalog.dash)} onChange={(event) => update('dash', event.currentTarget.value)}>{dashOptions.map(([key,name])=><option key={key} value={key}>{t(name)}</option>)}</select></label><label>{t('Style')}<select aria-label={t('Style')} value={value('cmpd', catalog.compound)} onChange={(event) => update('cmpd', event.currentTarget.value)}>{compoundOptions.map(([key,name])=><option key={key} value={key}>{t(name)}</option>)}</select></label>{number('Weight:', 'lineW', catalog.lineWidth, 0, 1584, .25, 'pt')}</fieldset>

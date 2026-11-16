@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { OfficeDialog } from './dialog.js';
 import { useVibeOffice } from './react-bridge.js';
 
@@ -30,6 +30,9 @@ function rgbHex([red, green, blue]: [number, number, number]): string {
 /** Custom color picker retaining the legacy standard palette and RGB/hex editing workflow. */
 export function MoreColorsDialog({ request, onClose }: MoreColorsDialogProps) {
   const { translate } = useVibeOffice();
+  const id = useId().replaceAll(':', '');
+  const tabId = (value: 'standard' | 'custom') => `${id}-color-tab-${value}`;
+  const panelId = (value: 'standard' | 'custom') => `${id}-color-panel-${value}`;
   const initial = request.initial.toUpperCase();
   const [color, setColor] = useState(initial);
   const [rgb, setRgb] = useState<[number, number, number]>(() => hexRgb(initial));
@@ -62,17 +65,29 @@ export function MoreColorsDialog({ request, onClose }: MoreColorsDialogProps) {
     <form onSubmit={(event) => { event.preventDefault(); finish(color); }}>
       <div className="cc-wrap">
         <div className="tabs">
-          <div className="tabs-head" role="tablist">{tabs.map((item) => <button key={item.id} className={`tab${tab === item.id ? ' on' : ''}`} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>
+          <div className="tabs-head" role="tablist">{tabs.map((item, index) => <button key={item.id} id={tabId(item.id)} aria-controls={panelId(item.id)} className={`tab${tab === item.id ? ' on' : ''}`} type="button" role="tab" aria-selected={tab === item.id} tabIndex={tab === item.id ? 0 : -1} onClick={() => setTab(item.id)} onKeyDown={(event) => {
+            const nextIndex = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+              : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
+                : event.key === 'Home' ? 0
+                  : event.key === 'End' ? tabs.length - 1 : -1;
+            if (nextIndex < 0) return;
+            event.preventDefault();
+            const nextTab = tabs[nextIndex];
+            if (!nextTab) return;
+            setTab(nextTab.id);
+            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]?.focus();
+          }}>{item.label}</button>)}</div>
           <div className="tabs-body">
-            {tab === 'standard' ? <div role="tabpanel">
+            <div id={panelId('standard')} aria-labelledby={tabId('standard')} role="tabpanel" hidden={tab !== 'standard'}>
               <div className="cc-cap">{translate('Colors:')}</div>
               <div className="cc-honey">{request.rows.map((row, index) => <div className="cc-hrow" key={index}>{row.map((value) => <button key={value} type="button" className="cc-hex" style={{ background: value }} aria-label={value} onClick={() => update(value)} />)}</div>)}</div>
               <div className="cc-grays">{request.grays.map((value) => <button key={value} type="button" className="cc-hex" style={{ background: value }} aria-label={value} onClick={() => update(value)} />)}</div>
-            </div> : <div className="cc-custom" role="tabpanel">
+            </div>
+            <div id={panelId('custom')} aria-labelledby={tabId('custom')} className="cc-custom" role="tabpanel" hidden={tab !== 'custom'}>
               <div className="field"><label htmlFor="vibeoffice-color-native">{translate('Pick:')}</label><input id="vibeoffice-color-native" type="color" value={color.toLowerCase()} onChange={(event) => update(event.currentTarget.value)} /></div>
               {(['Red', 'Green', 'Blue'] as const).map((label, index) => <div className="field" key={label}><label htmlFor={`vibeoffice-color-${label}`}>{translate(label)}:</label><input id={`vibeoffice-color-${label}`} type="number" min="0" max="255" step="1" value={rgb[index]} onChange={(event) => setChannel(index, Number(event.currentTarget.value))} /></div>)}
               <div className="field"><label htmlFor="vibeoffice-color-hex">{translate('Hex:')}</label><input id="vibeoffice-color-hex" type="text" maxLength={7} value={hex} onChange={(event) => setHex(event.currentTarget.value)} onBlur={() => update(/^#?[\da-f]{6}$/i.test(hex) ? hex.startsWith('#') ? hex : `#${hex}` : color)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); const value = /^#?[\da-f]{6}$/i.test(hex) ? hex.startsWith('#') ? hex : `#${hex}` : color; update(value); } }} /></div>
-            </div>}
+            </div>
           </div>
         </div>
         <aside className="cc-side">

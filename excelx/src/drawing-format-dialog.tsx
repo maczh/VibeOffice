@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import './drawing-format-dialog.css';
 
 type Catalog = { title: string; kind: string; fill: string | null; line: string | null; lineW: number; width: number; height: number; editAs: string; alt: string; locked: boolean; print: boolean; aspect: boolean; hasLine: boolean; hasPosition: boolean; hasChart: boolean };
@@ -10,6 +10,7 @@ function runtime(): Runtime | undefined { return (window as Window & { L?: Runti
 export function ExcelxDrawingFormatDialog() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [tab, setTab] = useState('');
+  const id = useId().replaceAll(':', '');
   const t = (text: string) => runtime()?.t?.(text) || text;
   const action = (name: string, patch?: Record<string, unknown>) => runtime()?.drawing?.reactFormatAction?.(name, patch);
   const listen = (eventName: string) => {
@@ -22,9 +23,18 @@ export function ExcelxDrawingFormatDialog() {
   const close = () => { action('cancel'); setCatalog(null); };
   const save = () => { action('apply'); setCatalog(null); };
   const tabs = [catalog.hasChart ? 'Chart' : '', catalog.hasLine ? 'Colors and Lines' : '', 'Size', catalog.hasPosition ? 'Properties' : '', 'Web'].filter(Boolean);
+  const tabIndex = tabs.indexOf(tab);
+  const tabId = (index: number) => `${id}-drawing-format-tab-${index}`;
+  const panelId = `${id}-drawing-format-panel`;
   return <OfficeDialog title={t(catalog.title)} className="excelx-drawing-format" style={{ width: 'min(94vw, 500px)' }} onRequestClose={close}>
-    <div className="excelx-drawing-format__tabs" role="tablist">{tabs.map((name) => <button type="button" role="tab" aria-selected={tab===name} key={name} onClick={()=>setTab(name)}>{t(name)}</button>)}</div>
-    <div className="excelx-drawing-format__body">
+    <div className="excelx-drawing-format__tabs" role="tablist" aria-label={t(catalog.title)}>{tabs.map((name, index) => <button type="button" role="tab" id={tabId(index)} aria-controls={panelId} aria-selected={tab===name} tabIndex={tab===name?0:-1} key={name} onClick={()=>setTab(name)} onKeyDown={(event)=>{
+      const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index-1+tabs.length)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:-1;
+      if(next<0)return;
+      event.preventDefault();
+      const nextTab=tabs[next];if(nextTab)setTab(nextTab);
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    }}>{t(name)}</button>)}</div>
+    <div id={panelId} aria-labelledby={tabId(Math.max(0,tabIndex))} role="tabpanel" className="excelx-drawing-format__body">
       {tab==='Chart'&&<div className="excelx-drawing-format__chart"><button type="button" onClick={()=>{action('chartOptions');setCatalog(null)}}>{t('Chart &Options...').replace('&','')}</button><button type="button" onClick={(event)=>{action('chartType',{x:event.clientX,y:event.clientY});setCatalog(null)}}>{t('Chart &Type...').replace('&','')}</button></div>}
       {tab==='Colors and Lines'&&<><fieldset><legend>{t('Fill')}</legend><label>{t('&Color:')}<button type="button" className="swatch" aria-label={t('Choose fill color')} style={{background:catalog.fill||'transparent'}} onClick={(event)=>action('color',{key:'fill',anchor:event.currentTarget})}><span className="dd-arrow"/></button></label></fieldset>{catalog.kind==='shape'&&<fieldset><legend>{t('Line')}</legend><label>{t('C&olor:')}<button type="button" className="swatch" aria-label={t('Choose line color')} style={{background:catalog.line||'transparent'}} onClick={(event)=>action('color',{key:'line',anchor:event.currentTarget})}><span className="dd-arrow"/></button></label><label>{t('&Weight:')}<input type="number" min="0.25" max="20" step="0.25" value={catalog.lineW} onChange={(event)=>change({lineW:Number(event.currentTarget.value)})}/>{t(' pt')}</label></fieldset>}</>}
       {tab==='Size'&&<><fieldset><legend>{t('Size and rotate')}</legend><label>{t('H&eight:')}<input type="number" min="0.01" max="50" step="0.1" value={(catalog.height/72).toFixed(2)} onChange={(event)=>change({height:Number(event.currentTarget.value)*72})}/>{'"'}</label><label>{t('Wi&dth:')}<input type="number" min="0.01" max="50" step="0.1" value={(catalog.width/72).toFixed(2)} onChange={(event)=>change({width:Number(event.currentTarget.value)*72})}/>{'"'}</label><label><input type="checkbox" checked={catalog.aspect} onChange={(event)=>change({aspect:event.currentTarget.checked})}/>{t('Lock &aspect ratio')}</label></fieldset></>}

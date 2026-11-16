@@ -23,12 +23,14 @@ function handleOptionKeys(event: KeyboardEvent<HTMLDivElement>) {
   else if (event.key === 'End') next = options.length - 1;
   else if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
+    event.stopPropagation();
     (document.activeElement as HTMLElement | null)?.click();
     return;
   } else return;
   const target = options[next];
   if (!target) return;
   event.preventDefault();
+  event.stopPropagation();
   target.focus();
   target.click();
 }

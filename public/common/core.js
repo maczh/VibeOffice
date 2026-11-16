@@ -81,10 +81,11 @@
     };
     return restore;
   };
-  /** Keep selectors and shared UI layers on a React-owned editor root until it is disposed. */
+  /** Keep one root registration; lifecycle owners adopt it instead of aborting existing module subscriptions. */
   L.mountDomRoot = function (root) {
     if (!root || typeof root.querySelector !== 'function' || typeof root.querySelectorAll !== 'function') throw new TypeError('A DOM query root is required');
-    rootDisposers.get(root)?.();
+    const mounted = rootDisposers.get(root);
+    if (mounted) return mounted;
     const restore = L.setDomRoot(root);
     rootDisposers.set(root, restore);
     return restore;

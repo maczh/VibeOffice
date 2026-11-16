@@ -362,7 +362,7 @@
   };
   E.enter = function (kind) {
     if (!E.sel) return;
-    if (!kind && L.autocorrect && L.autocorrect.acceptTip && L.autocorrect.acceptTip()) return;
+    if (!(window.VO && VO.reactDirectHost) && !kind && L.autocorrect && L.autocorrect.acceptTip && L.autocorrect.acceptTip()) return;
     /* finishing a paragraph finishes its last word: run the as-you-type corrections on it */
     if (L.autocorrect && E.collapsed() && E.sel.f.o > 0 && /\S/.test(D.ptext(E.sel.f.p, E.sel.f.o - 1, E.sel.f.o))) L.autocorrect.afterType('\n', true);
     const d = doc();

@@ -206,6 +206,8 @@
 
   L.assistant = {
     show, hide, shown: () => on, scout: () => scout,
+    activate: () => { if (scout && !scout.hidden) scout.o.onclick && scout.o.onclick(); },
+    menuAt: (x, y) => { if (scout && !scout.hidden) scout.o.onmenu && scout.o.onmenu(x, y); },
     attachReactHost(factory) {
       reactHostFactory = factory;
       if (scout) { scout.destroy(); scout = null; }

@@ -121,6 +121,7 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
     const runtimeWindow = view as Window & { L?: { app?: { mount?: (element: HTMLElement) => void | (() => void) | Promise<void | (() => void)>; newDocument?: () => void; newWorkbook?: () => void; newPresentation?: () => void }; ui?: { exec?(id: string): unknown; searchResults?(query: string, layout: string): unknown[] } } };
     if (!root || !runtimeWindow.L?.app?.mount) { cleanupDocument(); throw new Error(`The ${options.editor} runtime does not expose a direct mount API`); }
     options.configureRuntime?.(runtimeWindow);
+    root.dispatchEvent(new CustomEvent('vibeoffice-engine-runtime-ready', { bubbles: true, detail: { editor: options.editor } }));
     const onCommand = (event: Event) => {
       const command = (event as CustomEvent<{ command?: unknown }>).detail?.command;
       const app = runtimeWindow.L?.app;

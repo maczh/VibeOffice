@@ -1,4 +1,4 @@
-# Quire — Web Edition
+# Wordx — Web Edition
 
 A Word 2003–style word processor written in plain HTML and vanilla JavaScript (no build step, no
 libraries). It reads and writes Office Open XML (`.docx`, `.docm`, `.dotx`, `.dotm`) files.
@@ -8,9 +8,9 @@ the tool tabs) takes the place of the menus and toolbars.
 
 ## Using it
 
-Open https://vibeoffice.work/quire/. The app is `public/quire/`; every path below is relative to it.
+Open https://vibeoffice.work/wordx/. The legacy engine source is `public/quire/`; every path below is relative to it.
 Everything runs in the browser: there is no back end, no account and no network service behind any
-feature. The proofing dictionaries are fetched at run time from `../common/dict/` (shared with Ledger),
+feature. The proofing dictionaries are fetched at run time from `../common/dict/` (shared with Excelx),
 so the site is served rather than opened from disk (a `file://` page cannot fetch them; editing still
 works, but spelling and the thesaurus stay off). To run it locally, see [testing.md](testing.md).
 The metric-compatible fonts (see *Rendering notes*) are served with the site from `public/fonts/`.
@@ -56,7 +56,7 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   negative indents; floating pictures and inline AutoShapes can cross columns. Checked against
   Word 2016 PDFs of six controls (equal/unequal columns, single column, floats, rotation/flips,
   AutoShapes) and issue #5's three-page document (`tests/from-issues/5/`). Both its original and
-  Quire's save open without repair prompts; this display fix changes no saved DOCX part.
+  Wordx's save open without repair prompts; this display fix changes no saved DOCX part.
 - East Asian text is drawn with the run's East Asian font (`w:eastAsia`, or the theme's for the
   document's East Asian language) and marked with its East Asian language, and takes that font's line
   height where it is the taller ([i18n.md](i18n.md), Fonts). A new document follows the UI's language:
@@ -65,7 +65,7 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   language, and an East Asian font chosen there is for all the text, a Western one for Latin text only.
 - Each line is as tall as what it holds, as Word sizes lines (`js/portions.js`, after Apache OpenOffice
   Writer's line portions): a line with text by its text, a picture alone in its line exactly the
-  picture's height (Quire added the text's descent below it, 3 to 7pt), a large first word no longer
+  picture's height (Wordx added the text's descent below it, 3 to 7pt), a large first word no longer
   makes every line of its paragraph that tall, and blanks and tabs don't raise a line. A line holding
   nothing that counts takes the paragraph mark's font, or that of the line break that ends it; with
   exact spacing every line is the value, whatever sizes its text has; a Symbol or Wingdings bullet's
@@ -77,7 +77,7 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   changed all moved toward Word's, none away (`tools/quire-pages.mjs`).
   Not covered yet: a picture in a line with exact spacing or a rotated inline picture (Word clips
   these vertically to the line), a picture alone
-  with multiple spacing or on a grid, a line of only a small picture (Quire follows LibreOffice: the
+  with multiple spacing or on a grid, a line of only a small picture (Wordx follows LibreOffice: the
   mark's line, the picture at its foot), and a large paragraph mark after small text (matched to
   LibreOffice only).
 - On a document line grid (East Asian documents) a line is the grid pitch times its "multiple"
@@ -110,7 +110,7 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
 - SmartArt is drawn from the picture Word stores with it; files saved without that picture (Word 2007
   and some generators) get a simple diagram built from the SmartArt data.
 - Fonts are drawn with the fonts installed on your computer. When a document uses a font you don't
-  have, Quire substitutes a metric-compatible one where one exists (Carlito for Calibri, Caladea for
+  have, Wordx substitutes a metric-compatible one where one exists (Carlito for Calibri, Caladea for
   Cambria and Gelasio for Georgia, served with the site; Liberation or Tinos/Arimo/Cousine for Times New
   Roman/Arial/Courier New where installed; TeX Gyre
   fonts for Palatino, Bookman, Century Schoolbook and Century Gothic), so line breaks and page counts
@@ -136,10 +136,10 @@ https or from localhost). A document opened with its password keeps that passwor
 
 ## Markdown
 
-Quire reads and writes the Markdown GitHub uses: CommonMark plus tables, task lists, strikethrough,
+Wordx reads and writes the Markdown GitHub uses: CommonMark plus tables, task lists, strikethrough,
 extended autolinks, footnotes and alerts (`> [!NOTE]`).
 
-| In the file | In Quire | Written back as |
+| In the file | In Wordx | Written back as |
 | --- | --- | --- |
 | `#` … `######` headings | Heading 1–6 | `#` headings (Title as `#`, Subtitle as `##`) |
 | `**bold**`, `*italic*`, `~~strike~~`, `` `code` `` | Bold, italic, strikethrough, the HTML Code character style | The same; where a delimiter could not open or close, `<strong>`, `<em>`, `<del>` |
@@ -178,7 +178,7 @@ Checks (tools in docs/testing.md):
 
 ## What a save keeps, converts and drops
 
-Quire keeps package dependencies, control boundaries, text/section properties and opaque object XML beside
+Wordx keeps package dependencies, control boundaries, text/section properties and opaque object XML beside
 its editable model. Save and drafts retain DOCX/DOCM/DOTX/DOTM and encryption. The Compatibility
 Checker shows, before a user download, only the losses that cost the user content or a working
 feature (see docs/suite.md, What the user is told). Drafts retain notices silently, and cancelling a conversion does not leave its notice on a later preserving save.
@@ -277,7 +277,7 @@ skipped. Recovering them in valid paragraphs/runs retains all four pages on save
 with a recorded notice. The pinned scan finds one affected readable input and
 records 33 archive/XML read failures separately. Seven command states and seven corpus
 save/edit/history/draft states add no package/SDK diagnostics; 25 browser assertions and all 27
-Quire unit tests pass. All seven emitted corpus states retain four LibreOffice pages.
+Wordx unit tests pass. All seven emitted corpus states retain four LibreOffice pages.
 Reports: `~/corpora/results/quire-break-recovery-2026-10-09/`.
 Office batch 6 file 05 checks that correction in Word; its package/SDK and four-page LibreOffice
 comparisons pass, and the user accepted it in Word.
@@ -290,7 +290,7 @@ failures and count differences remain separate in the reports; these are not los
 The current run and explicit retry results are retained in `~/corpora/results/lossless-final-984eaf3/`.
 The twelve remaining pairs are listed in its `consolidated/render-exceptions.json`; known source defects and
 unresolved reflow are distinguished. Malformed extra-body/final-section notices cover two readable
-corpus inputs: six save/edit/draft attempts and 14 package/SDK states pass, as do all 29 Quire unit
+corpus inputs: six save/edit/draft attempts and 14 package/SDK states pass, as do all 29 Wordx unit
 tests. All emitted package content matches the frozen saves except generated metadata timestamps,
 so the existing layout evidence applies. The scope scan retains 35 failed archive/main-XML reads
 separately. Evidence: `~/corpora/results/quire-structure-notices-2026-10-09/`.
@@ -307,7 +307,7 @@ Review of that fix adds **5 edge-case regression groups**, all failing on the fi
 passing after correction: protected fill destinations, split CRLF pairs through formatting and
 save/reopen, forced-line pagination, mark placement in rotated, RTL and vertical text at
 three zoom levels, and omission of all formatting symbols from print/PDF rendering.
-The original four groups still pass, as do **79 Ledger and 29 Quire unit
+The original four groups still pass, as do **79 Excelx and 29 Wordx unit
 tests**. Three split-CRLF packages pass package/SDK validation without diagnostics and retain
 their line count in LibreOffice. Reports: `~/corpora/results/issue-1-review-2026-10-11/`.
 
@@ -407,7 +407,7 @@ watermark elements byte for byte before editing. The relevant Office batch-2 sam
 ## Compatibility testing
 
 The reproducible OOXML run uses the pinned LibreOffice, Apache POI and Open XML SDK inputs from
-`tools/corpora.sh`. Quire runs in Chromium through CDP; independent package checks, SDK diagnostics
+`tools/corpora.sh`. Wordx runs in Chromium through CDP; independent package checks, SDK diagnostics
 and LibreOffice compare the saved file with its original. Page counts, Word's saved page-break markers
 and reference PDFs help diagnose layout. Missing fonts, tight wrapping around irregular pictures,
 vertical text and complex data bindings remain known differences. RC4-encrypted legacy binary files
@@ -445,15 +445,15 @@ compatibility results are archived with the run history rather than mixed into c
 | `js/review.js` | Track changes, comments, balloons, Reviewing pane, compare documents |
 | `js/tables.js` | Tables and Borders toolbar, table styles, draw/erase, merge/split, sort, formulas |
 | `js/drawing.js`, `js/drawtool.js`, `../common/geometry.js`, `../common/charts.js`, `../common/metafile.js`, `../common/clipart.js` | Pictures, AutoShapes, LettersArt (WordArt), diagrams, charts, WMF/EMF, clip art |
-| `js/autocorrect.js`, `../common/spell.js`, `js/spell.js` | AutoCorrect, AutoFormat as you type, AutoText; the shared spelling engine and Quire's Spelling and Grammar (offline) |
+| `js/autocorrect.js`, `../common/spell.js`, `js/spell.js` | AutoCorrect, AutoFormat as you type, AutoText; the shared spelling engine and Wordx's Spelling and Grammar (offline) |
 | `js/omml.js` | Office Math (OMML) to MathML for equations |
-| `../common/dict/` | Spelling word lists, thesaurus, licences (shared with Ledger) |
+| `../common/dict/` | Spelling word lists, thesaurus, licences (shared with Excelx) |
 | `js/outline.js`, `js/rulers.js`, `js/panes.js` | Outline view, rulers, task panes (Research/Thesaurus, Clip Art, Styles…; while open, Picture or Drawing Tools for a selected object, docs/suite.md), Document Map, thumbnails, Print Preview, Reading Layout |
 | `js/mailmerge.js`, `js/templates.js` | Mail Merge wizard and toolbar, document templates |
 | `../common/ui.js`, `../common/search.js`, `../common/icons.js`, `../common/looks.css`, `../common/ui.css` | Menus, toolbars, dialogs, colour pickers, Search commands, original 16×16 icon set, the looks (shared) |
 | `js/commands.js`, `js/dialogs*.js`, `js/find.js`, `js/app.js` | Command registry, all dialogs, Find and Replace, application controller |
-| `js/ribbon.js`, `../common/ribbon.js` | The Paper 2016 look's ribbon: Word's tabs and groups over Quire's commands ([suite.md](suite.md#the-ribbon)) |
+| `js/ribbon.js`, `../common/ribbon.js` | The Paper 2016 look's ribbon: Word's tabs and groups over Wordx's commands ([suite.md](suite.md#the-ribbon)) |
 | `../common/scout/` | Scout, the assistant: Help ▸ Show the Assistant ([suite.md](suite.md#the-assistant-scout)) |
 
-Quire is an independent program. Microsoft, Word and Office are trademarks of Microsoft Corporation;
-Quire is not affiliated with Microsoft. More in the README (Legal).
+Wordx is an independent program. Microsoft, Word and Office are trademarks of Microsoft Corporation;
+Wordx is not affiliated with Microsoft. More in the README (Legal).

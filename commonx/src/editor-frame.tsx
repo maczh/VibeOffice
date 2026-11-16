@@ -4,6 +4,7 @@ import { MessageDialog, type MessageRequest } from './message-dialog.js';
 import { Toast, type ToastRequest } from './toast.js';
 import { BusyOverlay, type BusyRequest } from './busy-overlay.js';
 import { EditorTooltip } from './tooltip.js';
+import { EditorFocusBehavior } from './focus-behavior.js';
 import { PromptDialog, type PromptRequest } from './prompt-dialog.js';
 import { PasswordDialog, type PasswordRequest } from './password-dialog.js';
 import { LinkDialog, type LinkRequest } from './link-dialog.js';
@@ -122,7 +123,7 @@ export function EngineEditorFrame({ mount, onMountError, appLayers, children, ..
     };
   }, [mount, onMountError, props.editor]);
 
-  return <EditorFrame {...props}><EditorChrome appName={props.appName} /><div className="vibe-editor__engine" ref={bindHost}>{children}</div>{engineHost && <><EditorTooltip host={engineHost} /><MenuLayer host={engineHost} /><EditorRibbon host={engineHost} /><EditorToolbarLayer host={engineHost} /><EditorStatusMessage host={engineHost} /><EditorComboLayer host={engineHost} /><EditorSelectLayer host={engineHost} /><EditorSpinLayer host={engineHost} /><EditorChoiceLayer host={engineHost} /><EditorTabsLayer host={engineHost} /><EditorButtonLayer host={engineHost} /><EditorUiContentLayer host={engineHost} /><ChartEditorDialog /><ScoutAssistant host={engineHost} />{appLayers?.(engineHost)}</>}</EditorFrame>;
+  return <EditorFrame {...props}><EditorChrome appName={props.appName} /><div className="vibe-editor__engine" ref={bindHost}>{children}</div>{engineHost && <><EditorFocusBehavior host={engineHost} /><EditorTooltip host={engineHost} /><MenuLayer host={engineHost} /><EditorRibbon host={engineHost} /><EditorToolbarLayer host={engineHost} /><EditorStatusMessage host={engineHost} /><EditorComboLayer host={engineHost} /><EditorSelectLayer host={engineHost} /><EditorSpinLayer host={engineHost} /><EditorChoiceLayer host={engineHost} /><EditorTabsLayer host={engineHost} /><EditorButtonLayer host={engineHost} /><EditorUiContentLayer host={engineHost} /><ChartEditorDialog /><ScoutAssistant host={engineHost} />{appLayers?.(engineHost)}</>}</EditorFrame>;
 }
 
 function EditorChrome({ appName }: { appName: string }) {

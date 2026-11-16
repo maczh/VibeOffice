@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 
 interface WordArtPreview { label: string; svg: string }
 interface WordArtGalleryCatalog { selected: number; previews: WordArtPreview[] }
@@ -23,9 +23,33 @@ export function PptxWordArtGalleryDialog() {
   const select = (index: number) => { runtime()?.dlg?.reactWordartGalleryAction?.('select', index); setCatalog({ ...catalog, selected: index }); };
   const apply = () => runtime()?.dlg?.reactWordartGalleryAction?.('apply');
   const close = () => runtime()?.dlg?.reactWordartGalleryAction?.('close');
+  const onGalleryKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const options = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]')];
+    if (!options.length) return;
+    const focused = options.indexOf(document.activeElement as HTMLButtonElement);
+    const current = focused >= 0 ? focused : catalog.selected;
+    let next = current;
+    if (event.key === 'ArrowRight') next = Math.min(options.length - 1, current + 1);
+    else if (event.key === 'ArrowLeft') next = Math.max(0, current - 1);
+    else if (event.key === 'ArrowDown') next = Math.min(options.length - 1, current + 5);
+    else if (event.key === 'ArrowUp') next = Math.max(0, current - 5);
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = options.length - 1;
+    else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      select(current);
+      apply();
+      return;
+    } else return;
+    event.preventDefault();
+    event.stopPropagation();
+    select(next);
+    options[next]?.focus();
+  };
   return <OfficeDialog title={t('LettersArt Gallery')} className="pptx-wordart-gallery-dialog" style={{ width: 'min(94vw, 520px)' }} onRequestClose={close}>
-    <div className="col"><strong>{t('Select a LettersArt style:')}</strong><div className="wa-grid" role="listbox" aria-label={t('LettersArt styles')} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, maxHeight: 'min(62vh, 420px)', overflow: 'auto' }}>
-      {catalog.previews.map((preview, index) => <button key={index} type="button" role="option" aria-label={t(preview.label)} aria-selected={catalog.selected === index} className={catalog.selected === index ? 'on' : ''} onClick={() => select(index)} onDoubleClick={() => { select(index); apply(); }} dangerouslySetInnerHTML={{ __html: preview.svg }} />)}
+    <div className="col"><strong>{t('Select a LettersArt style:')}</strong><div className="wa-grid" role="listbox" aria-label={t('LettersArt styles')} aria-orientation="vertical" onKeyDown={onGalleryKeyDown} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, maxHeight: 'min(62vh, 420px)', overflow: 'auto' }}>
+      {catalog.previews.map((preview, index) => <button key={index} type="button" role="option" aria-label={t(preview.label)} aria-selected={catalog.selected === index} tabIndex={catalog.selected === index ? 0 : -1} className={catalog.selected === index ? 'on' : ''} onClick={() => select(index)} onDoubleClick={() => { select(index); apply(); }} dangerouslySetInnerHTML={{ __html: preview.svg }} />)}
     </div></div>
     <div className="vibeoffice-dialog__actions"><button className="primary" type="button" onClick={apply}>{t('OK')}</button><button type="button" onClick={close}>{t('Cancel')}</button></div>
   </OfficeDialog>;

@@ -1,5 +1,5 @@
 """SmartArt spike: decks that answer how PowerPoint treats SmartArt written by Lectern, before the writer
-is built (docs/lectern.md, Diagrams). Our layout, quick-style and colour definitions are our own, under
+is built (docs/pptx.md, Diagrams). Our layout, quick-style and colour definitions are our own, under
 urn:vibeoffice.work URNs; nothing is copied from Microsoft's built-in definitions.
 
     python3 tests/lectern/smartart-spike.py BASE.pptx POWERPOINT_SMARTART.pptx OUTDIR

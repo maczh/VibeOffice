@@ -97,7 +97,7 @@
     },
   });
   /* ---------- Help ---------- */
-  const HELP = [
+  const HELP = L.reactModules?.excelxHelpContent?.topics || [
     ['Entering data', L.N('Click a cell and type, then press Enter (moves down), Tab (moves right) or an arrow key. F2 edits the active cell; Alt+Enter starts a new line inside a cell. Ctrl+Enter fills the typed entry into every selected cell. Numbers, dates (3/14/2026, 14-Mar), times (9:30 AM), percentages (12%) and currency ($1,200) are recognised and formatted automatically. Start an entry with an apostrophe to keep it as text.')],
     [L.N('Formulas'), L.N('Start with = and use cell references (A1, $A$1, Sheet2!B3, named ranges, table references like Sales[Amount]). While typing a formula, click or drag on the sheet to insert references, and press F4 to cycle absolute and relative references. Ctrl+Shift+Enter enters an array formula; dynamic-array functions such as FILTER, SORT, UNIQUE and SEQUENCE spill their results. Insert ▸ Function (Shift+F3) lists more than 450 functions with argument help.')],
     ['AutoFill and series', L.N('Drag the fill handle (the square at the bottom-right of the selection) to copy cells or extend a series: 1, 2 → 3, 4…; Mon → Tue; Jan → Feb; Q1 → Q2; dates by day, weekday, month or year. Double-click the handle to fill down beside your data. Edit ▸ Fill ▸ Series gives full control; Ctrl+D and Ctrl+R fill down and right.')],
@@ -139,7 +139,7 @@
       P.helpQuery = '';
     },
   });
-  const KEYS = [
+  const KEYS = L.reactModules?.excelxHelpContent?.keys || [
     [L.N('Ctrl+N / O / S / P'), 'New, Open, Save, Print'], ['F12', 'Save As'], [L.N('Ctrl+Z / Ctrl+Y'), 'Undo / Redo'], ['F4', L.N('Repeat; in a formula, cycle $ references')],
     [L.N('Ctrl+X / C / V'), 'Cut, Copy, Paste'], [L.N('Ctrl+Alt+V'), 'Paste Special'], [L.N('Ctrl+F / H'), 'Find, Replace'], [L.N('F5 / Ctrl+G'), 'Go To'],
     ['F2', 'Edit the active cell'], [L.N('Esc'), 'Cancel an entry'], [L.N('Alt+Enter'), 'New line in a cell'], [L.N('Ctrl+Enter'), 'Fill the selection with the entry'], [L.N('Ctrl+Shift+Enter'), 'Enter an array formula'],
@@ -150,8 +150,6 @@
     [L.N('Ctrl+9 / Ctrl+Shift+('), 'Hide / unhide rows'], [L.N('Ctrl+0 / Ctrl+Shift+)'), 'Hide / unhide columns'], [L.N('Ctrl+- / Ctrl+Shift++'), 'Delete / insert cells'], [L.N('Shift+F11'), 'Insert worksheet'], ['F11', L.N('Chart')], [L.N('Shift+F2'), 'Insert or edit comment'], [L.N('Ctrl+K'), L.N('Hyperlink')], [L.N('Ctrl+F3 / F3'), 'Define / paste name'], [L.N('Ctrl+L'), 'Create List'],
     [L.N('Alt+Down'), 'Pick from drop-down list'], [L.N('Ctrl+`'), 'Show formulas'], ['F7', L.N('Spelling')], [L.N('Shift+F10'), 'Shortcut menu'], [L.N('Ctrl+F1'), 'Task pane'], ['F1', L.N('Help')], [L.N('Ctrl+Scroll'), L.N('Zoom')],
   ];
-  P.KEYS = KEYS;
-  P.reactHelpData = () => ({ topics: HELP, keys: KEYS });
   TP.register({
     id: 'keys', title: 'Keyboard Shortcuts',
     render(b) { b.appendChild(h('table', { class: 'kbd-table' }, ...KEYS.map(([k, d]) => h('tr', null, h('td', { text: k }), h('td', { text: d }))))); },

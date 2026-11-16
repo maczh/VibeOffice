@@ -271,14 +271,21 @@
     showTip(hit, p, o, word.length);
   }
   function showTip(text, p, o, typed) {
+    const directHost = !!(window.VO && window.VO.reactDirectHost);
+    const r = E.caretRect();
+    if (directHost) {
+      if (!r) return hideTip();
+      tipState = { text, p, o, typed };
+      L.bus.emit('wordx-autocomplete-show', { text: L.t('{0} (Press ENTER to Insert)', text), x: Math.max(4, r.left - 10), y: Math.max(4, r.top - 24) });
+      return;
+    }
     if (!tip) { tip = L.h('div', { class: 'tooltip ac-tip' }); L.domHost().appendChild(tip); }
     tip.textContent = L.t('{0} (Press ENTER to Insert)', text);
     tip.hidden = false;
-    const r = E.caretRect();
     if (r) { tip.style.left = Math.max(4, r.left - 10) + 'px'; tip.style.top = Math.max(4, r.top - 24) + 'px'; }
     tipState = { text, p, o, typed };
   }
-  function hideTip() { if (tip) tip.hidden = true; tipState = null; }
+  function hideTip() { if (tip) tip.hidden = true; if (window.VO && window.VO.reactDirectHost) L.bus.emit('wordx-autocomplete-hide'); tipState = null; }
   AC.hideTip = hideTip;
   AC.reactSelectionChanged = () => { if (tipState && E.sel && (E.sel.f.p !== tipState.p || E.sel.f.o !== tipState.o)) hideTip(); };
   AC.acceptTip = function () {
@@ -295,6 +302,7 @@
     });
     return true;
   };
+  AC.reactAcceptTip = () => { if (!tipState) return false; E.syncSel(); return AC.acceptTip(); };
   if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('sel', AC.reactSelectionChanged);
 
   /* ---------- AutoText ---------- */

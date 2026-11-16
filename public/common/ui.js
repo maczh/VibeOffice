@@ -30,15 +30,19 @@
     const offs = [];
     const doc = host.ownerDocument || document;
     const win = doc.defaultView || window;
-    if (!(root.VO && root.VO.reactDirectHost)) offs.push(on(host, 'pointerover', legacyPointerover));
-    offs.push(on(host, 'pointerdown', hideTip, true));
-    offs.push(on(host, 'keydown', hideTip, true));
-    offs.push(on(host, 'pointerdown', legacyCloseOutside, true));
-    offs.push(on(host, 'mousedown', legacyKeepKeyboard, true));
-    offs.push(on(host, 'keydown', legacyStopBrush, true));
+    const reactDirectHost = !!(root.VO && root.VO.reactDirectHost);
+    if (!reactDirectHost) {
+      offs.push(on(host, 'pointerover', legacyPointerover));
+      offs.push(on(host, 'pointerdown', hideTip, true));
+      offs.push(on(host, 'keydown', hideTip, true));
+    }
+    if (!reactDirectHost) offs.push(on(host, 'pointerdown', legacyCloseOutside, true));
+    if (!reactDirectHost) offs.push(on(host, 'mousedown', legacyKeepKeyboard, true));
+    if (!reactDirectHost) offs.push(on(host, 'keydown', legacyStopBrush, true));
     let shared = windowMounts.get(win);
     if (!shared) {
-      shared = { count: 0, offs: [on(win, 'blur', legacyCloseMenus), on(win, 'resize', legacyCloseMenus), ...mountPointerEvents.map((type) => on(win, type, swallowOtherButtons, true))] };
+      const legacyMenuEvents = reactDirectHost ? [] : [on(win, 'blur', legacyCloseMenus), on(win, 'resize', legacyCloseMenus)];
+      shared = { count: 0, offs: [...legacyMenuEvents, ...mountPointerEvents.map((type) => on(win, type, swallowOtherButtons, true))] };
       windowMounts.set(win, shared);
     }
     shared.count++;
@@ -205,7 +209,7 @@
     const reactRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
     if (reactRoot && reactRoot.isConnected) reactRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-hide-tooltip', { bubbles: true }));
   }
-  if (typeof document !== 'undefined') installLegacyUi();
+  if (typeof document !== 'undefined' && !(root.VO && root.VO.reactDirectHost)) installLegacyUi();
   ui.hideTip = hideTip;
 
   /* ---------- menus ---------- */
@@ -978,15 +982,8 @@
       const initial = Math.max(0, Math.min(Number.isInteger(active) ? active : 0, tabs.length - 1));
       function sel(i) {
         if (!Number.isInteger(i) || i < 0 || i >= tabs.length) return;
-        tabs.forEach((tab, index) => {
-          tab.body.classList.add('tab-pane');
-          tab.body.id = id + '-panel-' + index;
-          tab.body.setAttribute('role', 'tabpanel');
-          tab.body.setAttribute('aria-labelledby', id + '-tab-' + index);
-          tab.body.hidden = index !== i;
-        });
-        head.__reactSetActive && head.__reactSetActive(i);
-        if (tabs[i].onShow) tabs[i].onShow();
+        if (head.__reactSelect) head.__reactSelect(i);
+        else if (tabs[i].onShow) tabs[i].onShow();
       }
       tabs.forEach((tab) => bodies.appendChild(tab.body));
       const el = h('div', { class: 'tabs', 'data-react-tabs-id': id }, head, bodies);

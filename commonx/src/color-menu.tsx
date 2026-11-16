@@ -35,7 +35,9 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
     const bounds = panel.current.getBoundingClientRect();
     panel.current.style.left = `${Math.max(4, Math.min(request.left, window.innerWidth - bounds.width - 4))}px`;
     panel.current.style.top = `${Math.max(4, Math.min(request.bottom, window.innerHeight - bounds.height - 4))}px`;
-    panel.current.querySelector<HTMLButtonElement>('button')?.focus();
+    const buttons = [...panel.current.querySelectorAll<HTMLButtonElement>('button')].filter((button) => !button.disabled);
+    buttons.forEach((button, index) => { button.tabIndex = index === 0 ? 0 : -1; });
+    buttons[0]?.focus();
   }, [request]);
 
   useEffect(() => {
@@ -44,16 +46,37 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
       if (target instanceof Node && !panel.current?.contains(target) && !request.anchor?.contains(target)) onClose();
     };
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); }
-      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-        const buttons = [...(panel.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])].filter((button) => !button.disabled);
-        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-        if (buttons.length) { event.preventDefault(); event.stopPropagation(); buttons[(index + 1 + buttons.length) % buttons.length]?.focus(); }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+        const anchor = request.anchor as (Element & { focus?: () => void }) | undefined;
+        if (typeof anchor?.focus === 'function') {
+          window.requestAnimationFrame(() => {
+            if (anchor.isConnected) anchor.focus?.();
+          });
+        }
+        return;
       }
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === 'End') {
         const buttons = [...(panel.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])].filter((button) => !button.disabled);
         const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-        if (buttons.length) { event.preventDefault(); event.stopPropagation(); buttons[(index - 1 + buttons.length) % buttons.length]?.focus(); }
+        if (buttons.length) {
+          event.preventDefault(); event.stopPropagation();
+          const next = event.key === 'End' ? buttons.length - 1 : (index + 1 + buttons.length) % buttons.length;
+          buttons.forEach((button, itemIndex) => { button.tabIndex = itemIndex === next ? 0 : -1; });
+          buttons[next]?.focus();
+        }
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp' || event.key === 'Home') {
+        const buttons = [...(panel.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])].filter((button) => !button.disabled);
+        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        if (buttons.length) {
+          event.preventDefault(); event.stopPropagation();
+          const next = event.key === 'Home' ? 0 : (index - 1 + buttons.length) % buttons.length;
+          buttons.forEach((button, itemIndex) => { button.tabIndex = itemIndex === next ? 0 : -1; });
+          buttons[next]?.focus();
+        }
       }
     };
     document.addEventListener('pointerdown', outside, true);

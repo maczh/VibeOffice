@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useId, useState, type ChangeEvent } from 'react';
 
 interface OptionsCatalog { options: Record<string, boolean>; optionKeys: string[]; undo: number; user: string; password: string; looks: Array<[string, string]>; languages: Array<[string, string]>; look: string; lang: string }
 interface OptionsRuntime {
@@ -31,6 +31,9 @@ export function PptxOptionsDialog() {
   const [look, setLook] = useState('');
   const [lang, setLang] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const id = useId().replaceAll(':', '');
+  const panelId = `${id}-options-panel`;
+  const tabId = (index: number) => `${id}-options-tab-${index}`;
   useEffect(() => {
     const openOptions = () => {
       const next = runtime()?.dlg?.reactOptionsCatalog?.() || null;
@@ -59,8 +62,17 @@ export function PptxOptionsDialog() {
   const check = ([key, label]: [string, string]) => <label key={key}><input type="checkbox" aria-label={t(label).replace('&', '')} checked={!!options[key]} onChange={toggle(key)} />{t(label).replace('&', '')}</label>;
   return <>
     {catalog && <OfficeDialog title={t('Options')} className="pptx-options-dialog" style={{ width: 'min(96vw, 560px)' }} onRequestClose={closeOptions}>
-      <div role="tablist" aria-label={t('Options')} className="row">{tabs.map((label, index) => <button key={label} type="button" role="tab" aria-selected={tab === index} onClick={() => setTab(index)}>{t(label)}</button>)}</div>
-      <section role="tabpanel" className="col" style={{ minHeight: 220, paddingTop: 12 }}>
+      <div role="tablist" aria-label={t('Options')} className="row">{tabs.map((label, index) => <button key={label} id={tabId(index)} type="button" role="tab" aria-controls={panelId} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)} onKeyDown={(event) => {
+        const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+          : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
+            : event.key === 'Home' ? 0
+              : event.key === 'End' ? tabs.length - 1 : -1;
+        if (next < 0) return;
+        event.preventDefault();
+        setTab(next);
+        event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+      }}>{t(label)}</button>)}</div>
+      <section id={panelId} aria-labelledby={tabId(tab)} role="tabpanel" className="col" style={{ minHeight: 220, paddingTop: 12 }}>
         {tab === 0 && <fieldset><legend>{t('Show')}</legend><div className="col">{viewOptions.slice(0, 5).map(check)}</div><fieldset><legend>{t('Slide show')}</legend>{viewOptions.slice(5).map(check)}</fieldset></fieldset>}
         {tab === 1 && <div className="col">{(catalog.looks.length > 0 || catalog.languages.length > 0) && <fieldset><legend>{t('General')}</legend>{catalog.looks.length > 0 && <label>{t('Theme:')}<select aria-label={t('Theme')} value={look} onChange={(event) => setLook(event.currentTarget.value)}>{catalog.looks.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>}{catalog.languages.length > 0 && <label>{t('Language:')}<select aria-label={t('Language')} value={lang} onChange={(event) => setLang(event.currentTarget.value)}>{catalog.languages.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}</fieldset>}<fieldset><legend>{t('User information')}</legend><label>{t('&Name:').replace('&', '')}<input aria-label={t('Name')} type="text" value={user} onChange={(event) => setUser(event.currentTarget.value)} /></label></fieldset></div>}
         {tab === 2 && <div className="col"><fieldset><legend>{t('Text')}</legend>{editOptions.map(check)}</fieldset><fieldset><legend>{t('Undo')}</legend><label>{t('&Maximum number of undos:').replace('&', '')}<input aria-label={t('Maximum number of undos')} type="number" min={3} max={150} step={1} value={undo} onChange={(event) => setUndo(Number(event.currentTarget.value))} /></label></fieldset></div>}

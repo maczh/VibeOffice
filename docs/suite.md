@@ -60,7 +60,7 @@ Each app, in its `A.init`, picks template, blank or sample from `VO.launch` and 
     VO.attach('<app>', { open(file, { draft, name, saved }), thumb(), message(text), templates(),
                          snapshot(doc), docInfo(doc), isDirty(doc), current(), autosave(), showRecovery() })
 
-and reports `VO.opened(file, doc)` after any successful open (File ▸ Open, drop, Start Center), `VO.saved(name, blob, doc)` after a save in its own format, `VO.changed(doc)` after an edit and `VO.discard(doc)` when the user drops the changes (Quire `.docx/.dotx`; Ledger everything but web pages and PDF; Lectern `.pptx/.ppsx/.potx`). Every call is guarded with `if (window.VO)`, so an app page still runs on its own.
+and reports `VO.opened(file, doc)` after any successful open (File ▸ Open, drop, Start Center), `VO.saved(name, blob, doc)` after a save in its own format, `VO.changed(doc)` after an edit and `VO.discard(doc)` when the user drops the changes (Wordx `.docx/.dotx`; Excelx everything but web pages and PDF; PPTX `.pptx/.ppsx/.potx`). Every call is guarded with `if (window.VO)`, so an app page still runs on its own.
 
 ## Templates
 
@@ -68,13 +68,13 @@ Each app owns its templates; the Start Center only shows them.
 
 | App | Where | Templates |
 |---|---|---|
-| Quire | `quire/js/templates.js` (`L.templates`, also File ▸ New) | Contemporary Letter, Professional Memo, Elegant Fax, Contemporary Résumé, Professional Report, Meeting Agenda, Meeting Minutes, To-Do Checklist, Event Flyer, Recipe |
-| Ledger | `ledger/js/panes.js` (`TPL`, also the New Workbook task pane) | Loan Amortization, Expense Statement, Sales Invoice, Timecard, Personal Monthly Budget, Task Tracker, Shopping List, Weekly Schedule |
-| Lectern | `lectern/js/templates.js` (`L.templates`): content decks, each on one of the 15 designs | Project Status Report, Team Meeting, Lesson, Event Announcement |
+| Wordx | `quire/js/templates.js` (`L.templates`, also File ▸ New) | Contemporary Letter, Professional Memo, Elegant Fax, Contemporary Résumé, Professional Report, Meeting Agenda, Meeting Minutes, To-Do Checklist, Event Flyer, Recipe |
+| Excelx | `ledger/js/panes.js` (`TPL`, also the New Workbook task pane) | Loan Amortization, Expense Statement, Sales Invoice, Timecard, Personal Monthly Budget, Task Tracker, Shopping List, Weekly Schedule |
+| PPTX | `lectern/js/templates.js` (`L.templates`): content decks, each on one of the 15 designs | Project Status Report, Team Meeting, Lesson, Event Announcement |
 
 Inside the apps, File ▸ New… (and Ctrl+N) shows the same gallery, Blank first, with the same previews: `VO.newDialog(app, create)` builds it in the app's own dialog (`L.ui.dialog`) from `common/templates.json`, and `create(id)` makes the document in that app (`''` is Blank). The New toolbar button still makes a blank document straight away, as in Office.
 
-Placeholder text says what goes where (Quire's are click-to-replace fields). The gallery's list and pictures are generated, never edited by hand: after adding or changing a template run
+Placeholder text says what goes where (Wordx's are click-to-replace fields). The gallery's list and pictures are generated, never edited by hand: after adding or changing a template run
 
     node tools/templates.mjs
 
@@ -82,7 +82,7 @@ which opens every app and template in Chromium and writes `public/common/templat
 
 ## Shared code (public/common/)
 
-One copy of everything the three apps share; a change here is a change in every app, so check all three. Classic scripts like the apps' own, attaching to `window.L`, with the Node-safe wrapper `(function (root) { const L = root.L || (root.L = {}); … })(typeof window !== 'undefined' ? window : globalThis)` (Ledger's tests load some of them in Node).
+One copy of everything the three apps share; a change here is a change in every app, so check all three. Classic scripts like the apps' own, attaching to `window.L`, with the Node-safe wrapper `(function (root) { const L = root.L || (root.L = {}); … })(typeof window !== 'undefined' ? window : globalThis)` (Excelx's tests load some of them in Node).
 
 | File | What | Loaded by |
 |---|---|---|
@@ -96,20 +96,20 @@ One copy of everything the three apps share; a change here is a change in every 
 | `zip.js`, `sha.js`, `crypto.js` | ZIP read/write; SHA (`L.sha.digest`: WebCrypto's, or its own over plain http); ECMA-376 encryption (password-protected files) | all |
 | `xml.js`, `opc.js`, `opc-order.js` | Portable XML tree, immutable OOXML packages, dependency and identity maps, fragment capture and geometry adapters, the suite's random UUIDs and GUIDs (`K.uuid`, `K.guid`); generated schema order and preset adjustment tables. | all |
 | `geometry.js`, `metafile.js` | AutoShape presets and preset pattern fills; WMF/EMF player | all |
-| `charts.js` | chart model, SVG renderer, chart data dialog (Lectern's `chart-draw.js` adds the v2 renderer) | all |
-| `numfmt.js` | Excel number formats | Ledger, Lectern |
-| `dml.js` | DrawingML helpers | Quire, Ledger |
-| `spell.js` | spelling engine: word lists (`dict/`), checking, suggestions, custom dictionary, Ignore All | Quire, Ledger |
-| `clipart.js` | built-in clip art | Quire, Lectern |
-| `smartart.js` | the SmartArt layout engine: items → shapes for each layout, one text size per role (`tests/smartart.test.mjs`) | Lectern |
+| `charts.js` | chart model, SVG renderer, chart data dialog (PPTX's `chart-draw.js` adds the v2 renderer) | all |
+| `numfmt.js` | Excel number formats | Excelx, PPTX |
+| `dml.js` | DrawingML helpers | Wordx, Excelx |
+| `spell.js` | spelling engine: word lists (`dict/`), checking, suggestions, custom dictionary, Ignore All | Wordx, Excelx |
+| `clipart.js` | built-in clip art | Wordx, PPTX |
+| `smartart.js` | the SmartArt layout engine: items → shapes for each layout, one text size per role (`tests/smartart.test.mjs`) | PPTX |
 | `scout/` | the assistant (see The assistant): `scout.js` the character, `assistant.js` the suite's use of him, `scout.css` his balloon | all |
 | `suite.js`, `dict/`, `templates.json` | the suite: Start Center services; word lists; template gallery | — |
 
 What each app provides:
 
 - its name on its page's `<html>`: `data-app="quire" data-app-name="Quire"`, which `core.js` reads as `L.APP_ID` and `L.APP_NAME` (no inline script: Security). `APP_ID` prefixes the app's settings (`quire.…`, `L.store`; Settings), so it must never change.
-- in its `app.js`, at load: `L.icons.app` (its icon), `ui.hooks = { beforeExec, refocus, commitEdit }` (its editor around commands, toolbar boxes and dialogs); Lectern also `ui.schemeColors` / `ui.currentDesign` (theme colours in colour menus) and PowerPoint's `L.SIZE_LIST`.
-- a spelling UI sets `L.spell.refreshSoon` if it draws underlines (Quire).
+- in its `app.js`, at load: `L.icons.app` (its icon), `ui.hooks = { beforeExec, refocus, commitEdit }` (its editor around commands, toolbar boxes and dialogs); PPTX also `ui.schemeColors` / `ui.currentDesign` (theme colours in colour menus) and PowerPoint's `L.SIZE_LIST`.
+- a spelling UI sets `L.spell.refreshSoon` if it draws underlines (Wordx).
 
 **Drags.** Every press-and-drag of the apps (moving a shape, a ruler marker, a cell range, drawing a shape, a
 splitter) is a `ui.drag(e, { move, up, cancel, threshold, capture })` from `ui.js`: one at a time; `move` only after
@@ -117,47 +117,47 @@ splitter) is a `ui.drag(e, { move, up, cancel, threshold, capture })` from `ui.j
 committed, on Esc (which also ends the tool and puts a brush down), Ctrl+Z or Ctrl+Y (the drag is what gets undone), a
 second button (its menu doesn't open), a release the page never saw, a lost capture, the window losing focus or
 `ui.dragCancel()` (a tool, view, sheet, slide or zoom switch); a tool stays armed after the other cancels. Other keys
-go nowhere while the button is held (the modifiers still shape the drag), and each app's history push (Quire `D.tx`,
-Ledger `O.tx`, Lectern `L.hist.push`) cancels a live drag before it records, so no edit comes between a drag's start
+go nowhere while the button is held (the modifiers still shape the drag), and each app's history push (Wordx `D.tx`,
+Excelx `O.tx`, PPTX `L.hist.push`) cancels a live drag before it records, so no edit comes between a drag's start
 and its step. The cursor of the press stays while the pointer moves (`cursor: false` holds none). The browser's own
-text-selection drags stay its own; Quire watches its text selections with a `ui.drag` that holds nothing
+text-selection drags stay its own; Wordx watches its text selections with a `ui.drag` that holds nothing
 (`{ capture: false, cursor: false }`), so a selection let go in another window or cut short by Esc or a second button
 ends without `'sel-done'` (`tests/ui/drag.test.mjs`, `tests/ui/gestures.test.mjs`; todos/UI_MOUSE_LOGIC_IMPROVE.md).
 
-**Selections.** Each app has one setter for its selection, and it ends the other kinds: Quire's `E.setSel` ends an
-object selection (`E.selectObject` is the one way into one, `E.clearObjSel` the one way out), Ledger's `G.select`,
-`G.selectRange` and `G.selectAll` end a drawing object's, Lectern's `E.select` ends text editing and a range of table
-cells. Lectern's `E.endInteraction()` ends what is under way on the slide (a drag, a freeform, a cell range) on a tool
+**Selections.** Each app has one setter for its selection, and it ends the other kinds: Wordx's `E.setSel` ends an
+object selection (`E.selectObject` is the one way into one, `E.clearObjSel` the one way out), Excelx's `G.select`,
+`G.selectRange` and `G.selectAll` end a drawing object's, PPTX's `E.select` ends text editing and a range of table
+cells. PPTX's `E.endInteraction()` ends what is under way on the slide (a drag, a freeform, a cell range) on a tool
 switch, another slide and undo.
 
 **Focus.** The keyboard stays with the document unless the user picks a control of its own. A press on chrome with
 none (a toolbar's, the ribbon's or a pane's background, a grip, the status bar, a tab strip), on a menu, the menu bar
 or a button outside a dialog keeps it where it is (one `mousedown` listener in `ui.js`). A dialog closing gives it back
-to what had it, editable text with the selection it had (Lectern's speaker notes), except the document's own text
-(`ui.hooks.ownsText(el)`: Quire's page, Lectern's slide), which the app's `ui.hooks.refocus()` gives back with its
-model selection (Quire `E.refocus`, Lectern the text at `L.te.lastSel`, the slide or the Slides pane); a menu command
+to what had it, editable text with the selection it had (PPTX's speaker notes), except the document's own text
+(`ui.hooks.ownsText(el)`: Wordx's page, PPTX's slide), which the app's `ui.hooks.refocus()` gives back with its
+model selection (Wordx `E.refocus`, PPTX the text at `L.te.lastSel`, the slide or the Slides pane); a menu command
 that leaves it nowhere calls `refocus()` too (`tests/ui/focus.test.mjs`).
 
-**Hyperlinks.** The suite never opens a document's hyperlink itself: a link in a file can lead anywhere. Ctrl+click (⌘+click on a Mac), Open Hyperlink and a click in Lectern's slide show call `ui.linkDialog(url)` (`common/ui.js`), which shows the address as written with a warning and Copy Address, to paste into the browser's address bar (for `mailto:`, into an e-mail program). Links within the document still go there: Quire's bookmarks (`L.ed.followLink`), Ledger's cell references (`A.followLink`), Lectern's slide jumps. Over a full-screen slide show, dialogs and menus attach inside the full-screen element, where they can be seen (`tests/ui/hyperlinks.test.mjs`).
+**Hyperlinks.** The suite never opens a document's hyperlink itself: a link in a file can lead anywhere. Ctrl+click (⌘+click on a Mac), Open Hyperlink and a click in PPTX's slide show call `ui.linkDialog(url)` (`common/ui.js`), which shows the address as written with a warning and Copy Address, to paste into the browser's address bar (for `mailto:`, into an e-mail program). Links within the document still go there: Wordx's bookmarks (`L.ed.followLink`), Excelx's cell references (`A.followLink`), PPTX's slide jumps. Over a full-screen slide show, dialogs and menus attach inside the full-screen element, where they can be seen (`tests/ui/hyperlinks.test.mjs`).
 
 **HTML we write.** Save as Web Page and the HTML put on the clipboard are documents of their own, opened later
 away from the suite's pages, so document data goes into them as text, never as markup: `L.esc` for text and
 attributes (style attributes included: they hold font names and colours), `L.cssString` for a font name in CSS, links
-only for http(s), mailto and bookmarks, and data inside a page's script as JSON with `<` escaped (Lectern). Each
+only for http(s), mailto and bookmarks, and data inside a page's script as JSON with `<` escaped (PPTX). Each
 exported page carries its own Content-Security-Policy, `L.exportCSP(script)` (`common/core.js`): pictures and fonts
 from inside the file, no requests, and no script but the page's own, allowed by its SHA-256
 (`tests/hostile/export-html.test.mjs`).
 
-**Brushes.** The Format Painter of each app, and Quire's highlighter, is a `ui.brush({ el, pick, apply, hint, status })`: a click on its button arms it for one use or puts it down, a double-click keeps it on, Esc puts it down, and one brush is on at a time. Arming it changes nothing else: the selection and the text being edited stay. It paints once, when the mouse is let go, never while a selection is still being dragged out: the app calls `brush.release()` then (Quire on the editor's `sel-done`, Ledger at the end of a cell drag, Lectern at pointer up in the slide editor) and its `apply` paints what was marked. What the apps paint follows Office and LibreOffice's Clone Formatting (Writer, Calc, Impress): a click inside a word paints the word; Ledger tiles the source range over a larger target; Lectern carries the text's formatting from text being edited and the whole object's otherwise, paints the text dragged over in any box and the whole object when the press is beside its text, and a click beside the objects puts even a kept-on painter down. The painted formatting replaces the target's own; links, fields and revision marks stay (`tests/ui/painter.test.mjs`).
+**Brushes.** The Format Painter of each app, and Wordx's highlighter, is a `ui.brush({ el, pick, apply, hint, status })`: a click on its button arms it for one use or puts it down, a double-click keeps it on, Esc puts it down, and one brush is on at a time. Arming it changes nothing else: the selection and the text being edited stay. It paints once, when the mouse is let go, never while a selection is still being dragged out: the app calls `brush.release()` then (Wordx on the editor's `sel-done`, Excelx at the end of a cell drag, PPTX at pointer up in the slide editor) and its `apply` paints what was marked. What the apps paint follows Office and LibreOffice's Clone Formatting (Writer, Calc, Impress): a click inside a word paints the word; Excelx tiles the source range over a larger target; PPTX carries the text's formatting from text being edited and the whole object's otherwise, paints the text dragged over in any box and the whole object when the press is beside its text, and a click beside the objects puts even a kept-on painter down. The painted formatting replaces the target's own; links, fields and revision marks stay (`tests/ui/painter.test.mjs`).
 
-Version: `VO.VERSION` in `suite.js` is the one version string (`L.VERSION` reads it); it says `dev` in the repository, the desktop app's build sets it, and the published copy stamps it. The format is `v<yyyy>.<mm>.<dd>-<6 hex>`, the date (UTC) and commit of the tree (`tools/current-tree-version.sh`, e.g. `v2026.10.11-d2134d`; copies before said `2026.10.8f8494`). `VO.compareVersions(a, b)` compares two by their dates alone (negative, 0, positive; `dev` is newer than any dated version, an old-format one counts as day 0 of its month). `VO.monthsOld(v, now)`: a version's age in whole calendar months (null for `dev`); `VO.isOutdated(v, now)`: whether it is two or more, for Check for updates. The Start Center (under its privacy note, and in About) and each app's Help ▸ About show it; Help ▸ About and the Getting Started pane name the edition too, in English in every language (`VO.editionName`: Quire Web Edition, Windows Edition, macOS Edition (DMG) or (App Store), Linux Edition). `public/updater/current.json` names, per policy and platform, the oldest version that needs no Update button or dialog, and `public/updater/whatsnew.json` what each version brought, for the Update dialog (docs/desktop.md, Versions and updates).
+Version: `VO.VERSION` in `suite.js` is the one version string (`L.VERSION` reads it); it says `dev` in the repository, the desktop app's build sets it, and the published copy stamps it. The format is `v<yyyy>.<mm>.<dd>-<6 hex>`, the date (UTC) and commit of the tree (`tools/current-tree-version.sh`, e.g. `v2026.10.11-d2134d`; copies before said `2026.10.8f8494`). `VO.compareVersions(a, b)` compares two by their dates alone (negative, 0, positive; `dev` is newer than any dated version, an old-format one counts as day 0 of its month). `VO.monthsOld(v, now)`: a version's age in whole calendar months (null for `dev`); `VO.isOutdated(v, now)`: whether it is two or more, for Check for updates. The Start Center (under its privacy note, and in About) and each app's Help ▸ About show it; Help ▸ About and the Getting Started pane name the edition too, in English in every language (`VO.editionName`: Wordx Web Edition, Windows Edition, macOS Edition (DMG) or (App Store), Linux Edition). `public/updater/current.json` names, per policy and platform, the oldest version that needs no Update button or dialog, and `public/updater/whatsnew.json` what each version brought, for the Update dialog (docs/desktop.md, Versions and updates).
 
 ## Security: the pages' policy
 
 Every page carries one Content-Security-Policy, as a `<meta http-equiv>` first in its `<head>`, so it travels with
 the files: the site, the PWA's offline copy (the service worker serves it from its cache, where a server's header
 never reaches), the desktop app's pages and the local tests. `tools/csp.mjs` holds it and writes it into the pages
-and the sources other tools build pages from (Ledger's template, `tools/oss-licenses.py`); `--check`, run by
+and the sources other tools build pages from (Excelx's template, `tools/oss-licenses.py`); `--check`, run by
 `tests/csp.test.mjs`, fails on a page without it or with an inline script, an `on…=` handler or a `javascript:` URL.
 
     default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
@@ -175,7 +175,7 @@ and the sources other tools build pages from (Ledger's template, `tools/oss-lice
   filter may not see (docs/desktop.md, Network).
 - **`form-action 'none'`:** the Start Center's `<form method="dialog">` only closes its dialog, which isn't a
   submission the policy governs.
-- **To add a source:** change `POLICY` in `tools/csp.mjs`, run it (it rebuilds Ledger's page), and run
+- **To add a source:** change `POLICY` in `tools/csp.mjs`, run it (it rebuilds Excelx's page), and run
   `python3 tools/oss-licenses.py`. Say why here.
 
 What the policy doesn't cover:
@@ -200,7 +200,7 @@ The chrome (menus, toolbars, task panes, dialogs, status bar, rulers, sheet head
 - Only chrome is themed. Document content (pages, cells, slides, comments, revisions, objects and their handles, Excel's in-cell buttons), icons and colour swatches keep their colours in every look.
 - Each page's head loads `common/look.js`, which sets `data-look` from the setting `vibeoffice.look` (Settings; default `classic`, the desktop app's Paper) and `data-layout` (`ribbon` for Paper 2016, otherwise `bars`) on `<html>` before the stylesheets load, so a page never flashes the wrong look. The key is suite-wide (not `L.store`, which is per app).
 - `VO.look` (`suite.js`): `list()` (`[{ id, name, note, layout }]`), `get()`, `layout()` (`'bars'` or `'ribbon'`), `set(id)`. `set` saves the choice, switches this page, updates `<meta name="theme-color">` from `--theme-color` and fires `vo-look` on `window`; other windows switch when they hear of the setting (`VO.settings.on`). `ui.lookField()` is the Options dialogs' Theme drop-down.
-- Chrome drawn on canvases reads settings with `L.lookColor(name, fallback)` (cached, cleared on `vo-look`) and redraws through `L.onLook(fn)`: Quire's and Lectern's rulers, Ledger's row and column headers and cell selection (`RD.lookColors`). Ledger's gridlines, frozen-pane lines and page breaks are the sheet's own.
+- Chrome drawn on canvases reads settings with `L.lookColor(name, fallback)` (cached, cleared on `vo-look`) and redraws through `L.onLook(fn)`: Wordx's and PPTX's rulers, Excelx's row and column headers and cell selection (`RD.lookColors`). Excelx's gridlines, frozen-pane lines and page breaks are the sheet's own.
 - To add a look: copy Classic's block, give it a new `data-look` name and values, add it to `LOOKS` in `suite.js` (with `layout: 'ribbon'` for a ribbon look; `common/look.js` names the ribbon looks too). `node --test tests/looks.test.mjs` checks that every look sets every setting, that every setting the chrome uses exists and that `ui.css` has no colours of its own.
 
 ### The ribbon
@@ -210,7 +210,7 @@ In the Paper 2016 look each app shows a ribbon in place of the menu bar, toolbar
 - `common/ribbon.js` (`L.ribbonUI`) draws it from the app's `js/ribbon.js`, which sets `L.ribbonSpec = () => ({ icons, qat, file, tabs, contextual })`. It is built the first time a ribbon look is in use (`L.ribbonUI.init()` after the app's toolbars, then `L.onLook`), so Classic and Paper never build it.
 - A tab is `{ id, label: '&Home', groups: [{ label, icon, launcher: cmdId, items }] }`. Items: `'cmdId'` (small button), `{ cmd, size: 'large'|'medium', label, icon }`, `{ split: cmdId, menu: (rect, el) => … }`, `{ drop: label, icon, menu }`, `{ make: () => element }` (a combo box from the app's `A.parts`), `{ row: [...] }` (a row of small buttons, as in the Font group) and `'|'` (a new column). Buttons are `ui.tbButton` / `tbSplit` / `tbDrop`, so enabled, checked and colour swatches update through `ui.refresh` as on the toolbars. `icons` gives an icon to commands that have none of their own; large buttons scale the 16 px icon to 32 px.
 - `contextual: [{ id, set: 'Table Tools', when: () => bool, open, tabs }]`: the tool tabs appear while `when()` holds (each app's `A.inContext(kind)`), re-checked on every `ui-refresh`. A set opens when it appears while the Insert tab is showing (the object was just inserted) or when it has `open: true` (Header & Footer, Outlining, Slide Master); when it goes, the tab used before it comes back.
-- **The task pane follows the selected object** in every look (`RB.follow` in `common/ribbon.js`, set up by each app after its task pane). The contextual sets about objects are also task-pane panels with the same groups and commands in one column (`RB.toolsPanel`): Lectern's Picture, Drawing, Table and LettersArt Tools (an IntelliArt diagram keeps its text pane), Quire's Picture and Drawing Tools, Ledger's Chart, Picture and Drawing Tools. While the task pane is open, selecting such an object shows its panel, and selecting nothing goes back to the pane shown before. It never opens the task pane itself; a pane that its object opened (IntelliArt's text pane) closes again with it. It stays put in narrow windows (where the pane covers the document), for text, cells and tables in a document or sheet, and when the user turns off Tools ▸ Options ▸ View ▸ *Task pane follows the selected object* (`paneFollows` in the app's options).
+- **The task pane follows the selected object** in every look (`RB.follow` in `common/ribbon.js`, set up by each app after its task pane). The contextual sets about objects are also task-pane panels with the same groups and commands in one column (`RB.toolsPanel`): PPTX's Picture, Drawing, Table and LettersArt Tools (an IntelliArt diagram keeps its text pane), Wordx's Picture and Drawing Tools, Excelx's Chart, Picture and Drawing Tools. While the task pane is open, selecting such an object shows its panel, and selecting nothing goes back to the pane shown before. It never opens the task pane itself; a pane that its object opened (IntelliArt's text pane) closes again with it. It stays put in narrow windows (where the pane covers the document), for text, cells and tables in a document or sheet, and when the user turns off Tools ▸ Options ▸ View ▸ *Task pane follows the selected object* (`paneFollows` in the app's options).
 - File opens the app's File menu (`file()`, command ids) as a drop-down, ending with Options, Help, About and Exit, since the ribbon has no Tools or Help menu.
 - Keyboard: Alt or F10 shows KeyTips (numbers on the Quick Access Toolbar, the access letters on the tabs); a tab's letter opens it and shows one or two letters on each command (`ui.barKeys` routes the menu bar's keys here). Esc goes back a level. Ctrl+F1 collapses the ribbon (as does a double-click on a tab or the arrow at the right, remembered per app as `ribbonCollapsed`); a tab then opens over the document. Task Pane, Ctrl+F1 in the other looks, is under View ▸ Show.
 - In a narrow window the groups fold from the right into one button each that opens the group below it.
@@ -225,7 +225,7 @@ Every app, in every look, has a Search commands box at the top right (the end of
 - `ui.searchBox()` makes a box; `ui.searchCommands(query, layout)` gives the ranked list. The menu paths come from `ui.menus` (set by `ui.menuBar`), the toolbars from the page, the ribbon places from `L.ribbonSpec`. There is no app-specific code: a new command is found once it has a label, and shows its place once it is in a menu, toolbar or the ribbon.
 - `node --test tests/search.test.mjs` (needs Chromium) checks, in each app and both layouts, that everyday words find the intended command first and that it says where it is.
 
-Script order: `suite.js`, the app config, `core.js`, then the libraries and the app's own scripts as listed in each `index.html` (Ledger's from `tools/ledger/build/make.py`, where `'common/x'` means `public/common/x.js`).
+Script order: `suite.js`, the app config, `core.js`, then the libraries and the app's own scripts as listed in each `index.html` (Excelx's from `tools/ledger/build/make.py`, where `'common/x'` means `public/common/x.js`).
 
 ## Language
 
@@ -262,14 +262,14 @@ Scout, a beagle on his mat, is the suite's assistant, and the place where an AI 
 - **The character** (`scout.js`, `L.Scout`) is an SVG rig posed procedurally every frame, no image files: all 43 actions of the Office assistant agent under their names (Greeting, Searching, GestureUp, …), the 35 Office 2003 `msoAnimation…` constants as aliases, and 24 actions of his own (9 of them small idles for while the user works: an ear flick, licking his chops, a slow blink, settling on the mat, tail thumps, a curious tilt, a look at the user, a glance at their work with a nod, a small yawn); one camera angle, three-quarter (facing the user is a turn of the head, as in IdleLookAtYou). Calls queue: `show`, `hide`, `play(name, { loop, until })` (`interrupt`: now, in place of everything; `next`: once the act under way ends, one waiting at most), `speak(text)`, `ask(text, choices)` (resolves with the choice picked, or null), `gestureAt` / `lookAt(x, y)`, `animate`, `moveTo`, `delay`; `stop`, `freeze`, `placeAt`. Options `onclick`, `onmenu(x, y)` and `onmoved(x, y)` hand clicks, the menu and drags to the user of the character (`assistant.js`), so it has no menu or storage of its own.
 - His colours are his own in every look; the balloon is chrome, drawn like a tooltip from the look's settings (`--tip-bg`, `--tip-line`, `--tip-link`, `--ui-font`) in `scout.css`, which `tests/looks.test.mjs` checks with `ui.css`. He sits above the document and task pane (z-index 900), under menus and dialogs.
 - `L.assistant`: `show(welcome)`, `hide()`, `shown()`, `scout()` (the character, for later uses such as answers in the balloon). Office 2016 has no assistant, so he has no place in the ribbon; Search commands finds him ("assistant", "scout").
-- `node --test tests/scout.test.mjs` (needs Chromium; serves on :8775 of its own, so apps open on :8760 don't answer its changes to the shared settings) checks each app: the Help menu item, the welcome's choices, the menu, acting out Print, Find and saving (once the file is written, not when asked, not after Print), with manners (one act waiting, the newest; a nap ending before a save), and working along with a long wait, the idle stages (none straight after an act, small ones while the user works, a nap after five minutes that a key ends and moving the mouse doesn't), no frames at rest but a blink and the tail's sway (about 10 a second, as asleep), every frame acting, none in the background or once hidden, that nothing of his own (ears, the head's outline, his body or collar tag) covers his eyes, nose, muzzle or tongue in any action (hit-tested every 0.1 s), and the kept settings; and in Quire when he comes in by himself (a desktop yes; an iPhone, an automated browser, the day he was hidden no).
+- `node --test tests/scout.test.mjs` (needs Chromium; serves on :8775 of its own, so apps open on :8760 don't answer its changes to the shared settings) checks each app: the Help menu item, the welcome's choices, the menu, acting out Print, Find and saving (once the file is written, not when asked, not after Print), with manners (one act waiting, the newest; a nap ending before a save), and working along with a long wait, the idle stages (none straight after an act, small ones while the user works, a nap after five minutes that a key ends and moving the mouse doesn't), no frames at rest but a blink and the tail's sway (about 10 a second, as asleep), every frame acting, none in the background or once hidden, that nothing of his own (ears, the head's outline, his body or collar tag) covers his eyes, nose, muzzle or tongue in any action (hit-tested every 0.1 s), and the kept settings; and in Wordx when he comes in by himself (a desktop yes; an iPhone, an automated browser, the day he was hidden no).
 
 ## Preservation
 
 Same-format Office saves carry what the model cannot edit. These contracts apply to all three apps;
-the current feature and edit-behaviour tables are in [Quire](quire.md#what-a-save-keeps-converts-and-drops),
-[Ledger](ledger.md#what-a-save-keeps-converts-and-drops) and
-[Lectern](lectern.md#what-a-save-keeps-converts-and-drops). Conversions to Markdown, CSV, PDF and other
+the current feature and edit-behaviour tables are in [Wordx](wordx.md#what-a-save-keeps-converts-and-drops),
+[Excelx](excelx.md#what-a-save-keeps-converts-and-drops) and
+[PPTX](pptx.md#what-a-save-keeps-converts-and-drops). Conversions to Markdown, CSV, PDF and other
 formats have their own rules.
 
 - OOXML preservation uses `common/opc.js`: immutable package bytes stay outside JSON history; model fragments carry source identities and dependency references. Classify parts as opaque, merged or regenerated. Preserve original identities unless every referrer is regenerated; duplicates remap definitions and references together. Merge settings-like parts only; regenerate content parts with model-attached fragments. Record conversions and drops in the document's loss ledger.
@@ -381,13 +381,13 @@ IndexedDB database `vibeoffice`, store `recent`: `{ key, app, name, size, time, 
 
 **Keeping the data.** Safari clears a site's data after about 7 days without a visit; the first time a document's unsaved version is stored, `navigator.storage.persist()` asks the browser to keep it (Safari and Chrome decide without asking the user). Where IndexedDB is missing (Safari's Lockdown Mode), the Start Center shows an alert explaining how to turn Lockdown Mode off for the site.
 
-**Autosave.** The app calls `VO.changed(doc)` when a document changes; 15 s after the last change `hooks.snapshot(doc)` writes it in the app's own format (including macro, template and slideshow variants; password-protected documents stay encrypted) into the entry's `draft`. `VO.opened(file, doc)` and `VO.saved(name, blob, doc)` tie the document to its entry; saving clears the draft (and retires the `~` entry of a never-saved document); No in "Do you want to save the changes…?" calls `VO.discard(doc)`, which throws the draft away. Closing the tab or a crash leaves it. To spare the disk, a document's unsaved versions are at least 2 minutes apart (a save counts as one), a large document's 12 s for each MB (50 MB: 10 minutes, as Word's AutoRecover) and a slow one's 30 × the time the last write took; typing on doesn't put one off for longer than that. One over 50 MB isn't kept: the app says so once (a toast), then only tries again after that gap. Draft metadata also keeps pending and acknowledged compatibility entries; recovery restores them silently so the next user save can report an earlier conversion. Quire's Tools ▸ Options ▸ Save ▸ "Save AutoRecover info" turns it off.
+**Autosave.** The app calls `VO.changed(doc)` when a document changes; 15 s after the last change `hooks.snapshot(doc)` writes it in the app's own format (including macro, template and slideshow variants; password-protected documents stay encrypted) into the entry's `draft`. `VO.opened(file, doc)` and `VO.saved(name, blob, doc)` tie the document to its entry; saving clears the draft (and retires the `~` entry of a never-saved document); No in "Do you want to save the changes…?" calls `VO.discard(doc)`, which throws the draft away. Closing the tab or a crash leaves it. To spare the disk, a document's unsaved versions are at least 2 minutes apart (a save counts as one), a large document's 12 s for each MB (50 MB: 10 minutes, as Word's AutoRecover) and a slow one's 30 × the time the last write took; typing on doesn't put one off for longer than that. One over 50 MB isn't kept: the app says so once (a toast), then only tries again after that gap. Draft metadata also keeps pending and acknowledged compatibility entries; recovery restores them silently so the next user save can report an earlier conversion. Wordx's Tools ▸ Options ▸ Save ▸ "Save AutoRecover info" turns it off.
 
 **Recovery.** When an app starts and other documents of it have unsaved versions, it opens the **Document Recovery** task pane (as in Office 2003): each one with *Open the unsaved version* and *Discard the changes*. Opening one (`VO.openRecent(key, { draft: true })`, or `<app>/?recent=<key>&draft` from the Start Center) restores the changes as unsaved, so the document still has to be saved; a never-saved one then asks for a name. On the Start Center such a card is marked *Unsaved changes* (or *Never saved*), opens the unsaved version, offers *Saved version* when there is one, and × discards the changes.
 
 **The desktop app** keeps the list itself, in `~/.vibeoffice` (docs/desktop.md, Documents and windows), one entry per file (by its path), with no copy of the file: `VO.recent.list()` comes from the native side, with `saved` (it has a file), `folder`, `preview` (`VO.recent.preview(e)` gets the picture), `open` and `here` (open in a window, this one), and `vo-recent` says when it changes. Only the Start Center lists them, opens them (a window of its own) and discards their unsaved changes; in an app the File menu's Recent Files..., the task pane's link, the Document Recovery pane and `VO.openRecent` bring the Start Center forward on them (`VO.host.showRecent`), and the app page reads no entry. A window's draft and picture go to its own entry, never by key (`VO.changed`, `VO.discard`, `VO.saved`). File ▸ Open in an app window replaces its document by reloading the window with the file picked, after the "Save changes?" question (`VO.openDialog`, docs/desktop.md).
 
-Thumbnails are JPEG, at most 320 px, made 0.6 s after an open, a save or an autosave of the current document from `hooks.thumb()`: Quire rasterizes its first page as for PDF (print layout only, with only the pictures on that page), Ledger crops the top left of its grid canvas (4:3, at most 600 px wide), Lectern draws slide 1. Without one, the card shows the app's page picture and the extension.
+Thumbnails are JPEG, at most 320 px, made 0.6 s after an open, a save or an autosave of the current document from `hooks.thumb()`: Wordx rasterizes its first page as for PDF (print layout only, with only the pictures on that page), Excelx crops the top left of its grid canvas (4:3, at most 600 px wide), PPTX draws slide 1. Without one, the card shows the app's page picture and the extension.
 
 ## Search engines
 
@@ -424,8 +424,8 @@ A copy of the site served over http from any address but `localhost` and `127.0.
 browser takes some features away from its pages. What the suite does without them:
 
 - **`crypto.subtle`:** hashes come from `common/sha.js` instead (`L.sha.digest`, WebCrypto's where the page has it):
-  opening password-protected files (`common/crypto.js` does AES decryption itself), Ledger's sheet and workbook
-  passwords, Quire's document protection. Saving with a password to open needs WebCrypto's AES and fails with
+  opening password-protected files (`common/crypto.js` does AES decryption itself), Excelx's sheet and workbook
+  passwords, Wordx's document protection. Saving with a password to open needs WebCrypto's AES and fails with
   *Saving with a password needs a secure (https) page.*
 - **`crypto.randomUUID`:** `K.uuid` and `K.guid` (`common/opc.js`) make version 4 UUIDs from `getRandomValues`, which
   every page has. Nothing else calls `randomUUID` or `crypto.subtle` (`tests/insecure.test.mjs`).

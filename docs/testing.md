@@ -40,9 +40,9 @@ Plain http: `node --test tests/insecure.test.mjs` checks that only the shared he
 
 Templates: `node tools/templates.mjs` opens every template (`<app>/?template=<id>`) and fails on a script error or a missing preview; look at the new previews in the Create File view.
 
-Pattern fills: the preset bitmaps in `common/geometry.js` are PowerPoint's. `node tools/patterns/deck.mjs` writes `tmp/patterns/patterns.pptx` (each of the 54 presets in a labelled rectangle); save it as PDF from PowerPoint and `python3 tools/patterns/read-pdf.py patterns.pdf` prints the tiles, the form of `tests/patterns.powerpoint.json` (`node --test tests/patterns.test.mjs`). Ledger's cell patterns (`js/render.js`) likewise: `node tools/patterns/sheet.mjs` writes `tmp/patterns/cellpatterns.xlsx` (the 17 patterns), Excel saves it as PDF, and `read-pdf.py --cells` prints the tiles, `tests/patterns.excel-mac.json` (from Excel for Mac, which draws them at double size; the test applies the rule in `render.js` that brings them to single pixels).
+Pattern fills: the preset bitmaps in `common/geometry.js` are PowerPoint's. `node tools/patterns/deck.mjs` writes `tmp/patterns/patterns.pptx` (each of the 54 presets in a labelled rectangle); save it as PDF from PowerPoint and `python3 tools/patterns/read-pdf.py patterns.pdf` prints the tiles, the form of `tests/patterns.powerpoint.json` (`node --test tests/patterns.test.mjs`). Excelx's cell patterns (`js/render.js`) likewise: `node tools/patterns/sheet.mjs` writes `tmp/patterns/cellpatterns.xlsx` (the 17 patterns), Excel saves it as PDF, and `read-pdf.py --cells` prints the tiles, `tests/patterns.excel-mac.json` (from Excel for Mac, which draws them at double size; the test applies the rule in `render.js` that brings them to single pixels).
 
-Line grids: Quire's line height on a document line grid (`R.gridLine` in `quire/js/render.js`) follows Word. `python3 tools/linegrid.py make` writes `tmp/linegrid/linegrid.docx`, one labelled paragraph per case (English and Chinese text at sizes either side of the pitch, several line spacings, 15.6pt and 18pt grids); save it as PDF from Word and `python3 tools/linegrid.py read linegrid.pdf` prints the distance between the lines of each case, in points, and the line each page starts with: `tests/from-issues/11/word.json`, from Word for Mac's PDF of `linegrid.docx` there. `grid-spacing.test.mjs` checks `R.gridLine` against it and `render.test.mjs` the document as Quire draws it, line spacing and page breaks (a second). LibreOffice draws these differently from Word (issue #11), so its PDF only checks the tool.
+Line grids: Wordx's line height on a document line grid (`R.gridLine` in `quire/js/render.js`) follows Word. `python3 tools/linegrid.py make` writes `tmp/linegrid/linegrid.docx`, one labelled paragraph per case (English and Chinese text at sizes either side of the pitch, several line spacings, 15.6pt and 18pt grids); save it as PDF from Word and `python3 tools/linegrid.py read linegrid.pdf` prints the distance between the lines of each case, in points, and the line each page starts with: `tests/from-issues/11/word.json`, from Word for Mac's PDF of `linegrid.docx` there. `grid-spacing.test.mjs` checks `R.gridLine` against it and `render.test.mjs` the document as Wordx draws it, line spacing and page breaks (a second). LibreOffice draws these differently from Word (issue #11), so its PDF only checks the tool.
 
 ## Looks
 
@@ -69,10 +69,12 @@ Two sizes. After each change, `node tools/quick.mjs` (the uncommitted changes, o
 and runs those, the Node tests first and one file at a time because CDP-backed Node tests share Chromium. The smoke test, `tests/ui/smoke.test.mjs` (about 20 s), runs whenever the apps
 changed: the Start Center and each app load with no errors and nothing from outside; in each app a click puts the
 keyboard in the document and typing lands there, the File menu and a dialog from its shortcut open and close with Esc
-and give the keyboard back, a drop-down inside a dialog opens above it (Ledger's Format Cells), and Undo takes the
+and give the keyboard back, a drop-down inside a dialog opens above it (Excelx's Format Cells), and Undo takes the
 typing back. A touched app adds its Node tests and its own UI file (2–3 minutes), shared event, menu and dialog code
 (`common/ui.js`) the focus tests in the Classic look and the drag tests, and a changed test file runs itself; the rules
 are at the top of `tools/quick.mjs`. Run the change's own test on the code before it too (`tools/older.mjs`).
+
+React workspace changes are mapped separately from the classic `public/` engines: `commonx/`, each editor package, and `suite/src/` select the production host/package and React-suite checks that exercise their boundaries, plus the independent-editor test and cross-app smoke test where applicable. Build the standalone outputs with `npm run build:app --workspace=@vibeoffice/<app>` before that check. A change to the suite's PWA worker or output still needs `npm run build:app --workspace=@vibeoffice/suite` followed by `tests/vite/react-pwa.test.mjs` to test the generated offline assets.
 
 The whole of `tests/ui/` (about 25 minutes) runs before a release: `node tools/ui-full.mjs` runs it and records the
 result in `.ui-full-tested.json` (ignored by Git) for a hash of `public/`'s content, committed or not.
@@ -91,31 +93,31 @@ another tab and back. Two runs at once each need a Chromium of their own: `CDP=h
   second button, a release the page never saw, a release in another tab and `ui.dragCancel()` cancel, and the key, the
   button and its menu go no further (a right-click right after a middle-button cancel still opens its menu); the
   press's cursor stays.
-- `gestures.test.mjs`: drags in each app (a floating shape in Quire, a shape and the fill handle in Ledger, moving and
-  resizing a shape in Lectern) run through the lists in `tests/lib/gestures.mjs`: each state it starts from (nothing,
+- `gestures.test.mjs`: drags in each app (a floating shape in Wordx, a shape and the fill handle in Excelx, moving and
+  resizing a shape in PPTX) run through the lists in `tests/lib/gestures.mjs`: each state it starts from (nothing,
   text or a range selected, the shape selected, text being edited), each key in the middle (an arrow, a letter,
   Delete, Ctrl+Z) and each way out (the release, Esc, a right-click, a release the page never saw, a release in
-  another tab), then, briefly, in each mode the app can be in (Track Changes and 150 % zoom in Quire; frozen panes, the
-  second sheet and 150 % in Ledger; a slide with a transition, the second slide, the Outline tab and 150 % in
-  Lectern). After any of them no drag is left and no cursor held; the release made one undo step that brings back
+  another tab), then, briefly, in each mode the app can be in (Track Changes and 150 % zoom in Wordx; frozen panes, the
+  second sheet and 150 % in Excelx; a slide with a transition, the second slide, the Outline tab and 150 % in
+  PPTX). After any of them no drag is left and no cursor held; the release made one undo step that brings back
   exactly what was there, any other ending changed and recorded nothing. A new drag adds its `matrix(…)` there, and a
   new mode goes into the lists of both files: what broke in review broke only in a mode no test had on.
 - `focus.test.mjs`: the keyboard back to the document, in each app and in the Classic and Paper 2016 looks: dialogs
   from a shortcut, a toolbar or ribbon button and the context menu, closed with Esc, Cancel and OK; menu-bar commands;
   the ribbon's tabs; presses on chrome without a control (toolbars, grips, the status bar, the ribbon's tab strip).
   After each, the element that had the keyboard has it again, with the same selection. Then the same in each app's
-  modes (Classic): Quire with Track Changes, a header being edited, Outline view; Ledger with frozen panes, the second
-  sheet, 150 %; Lectern with the speaker notes being edited, the Slides pane holding the keyboard, a slide with a
+  modes (Classic): Wordx with Track Changes, a header being edited, Outline view; Excelx with frozen panes, the second
+  sheet, 150 %; PPTX with the speaker notes being edited, the Slides pane holding the keyboard, a slide with a
   transition.
 - `textmap.test.mjs`: every piece of editable text maps to the document, and a click on it puts the caret there.
-  Check 1 sweeps the page without input (`tests/lib/textmap.mjs`): in Quire every editable text node is in an
-  indexed paragraph and maps to a position and back with the model's text; in Lectern the text of every placeholder,
+  Check 1 sweeps the page without input (`tests/lib/textmap.mjs`): in Wordx every editable text node is in an
+  indexed paragraph and maps to a position and back with the model's text; in PPTX the text of every placeholder,
   text box, shape, table cell and group or diagram node, each edited in turn, does the same. Check 2 clicks into text
   of each kind with real input: the caret is at the clicked character, and a letter typed goes there. Generated
   documents with every kind of text; `node tools/textmap-corpus.mjs quire|lectern DIR N OUT.json [--hf]` runs check 1
-  over corpus files (`--hf`: Quire's headers and footers, opened for editing).
+  over corpus files (`--hf`: Wordx's headers and footers, opened for editing).
 - `painter.test.mjs`: the Format Painter in each app (docs/suite.md, Brushes): it paints the dragged text, cells or
-  object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in Lectern
+  object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in PPTX
   the text being edited stays edited, and text in another box can be painted.
 - `quire.test.mjs`, `ledger.test.mjs`, `lectern.test.mjs`: each app's mouse, selection, drag and focus behaviour. A
   test named after an item of todos/UI_MOUSE_LOGIC_IMPROVE.md (Q1…, S1…, P1…) checks what Office does there and is
@@ -131,7 +133,7 @@ today's tests against it (`BASE`); REV is `HEAD` while `public/` has uncommitted
 
 ## SmartArt
 
-`node --test tests/sw.test.mjs` checks the service worker (docs/suite.md, Service worker) in the Chromium at :9222, on copies of `public/` staged in `./tmp/sw-test` by `tools/web-release.sh` and served on 127.0.0.1 by a server of the test's own (it redirects `index.html` to its folder, like the published site): the first install and its progress (bytes too), the cached files' `Content-Type`, the Start Center's bar with its megabytes and its *Just updated successfully* notice (a button that reloads the open page in the new version), the Start Center and Quire offline, an update that fetches the new version's zip and nothing else while an open page keeps its version and a new page gets the new one, the old cache going once its page has closed, a damaged zip (one byte changed) failing the install, and no worker on any other origin (the same server as `localhost`). It clears the test origin's storage at the end. `SW_TEST_LOG=1` prints the tabs it opens and the pages it loads.
+`node --test tests/sw.test.mjs` checks the service worker (docs/suite.md, Service worker) in the Chromium at :9222, on copies of `public/` staged in `./tmp/sw-test` by `tools/web-release.sh` and served on 127.0.0.1 by a server of the test's own (it redirects `index.html` to its folder, like the published site): the first install and its progress (bytes too), the cached files' `Content-Type`, the Start Center's bar with its megabytes and its *Just updated successfully* notice (a button that reloads the open page in the new version), the Start Center and Wordx offline, an update that fetches the new version's zip and nothing else while an open page keeps its version and a new page gets the new one, the old cache going once its page has closed, a damaged zip (one byte changed) failing the install, and no worker on any other origin (the same server as `localhost`). It clears the test origin's storage at the end. `SW_TEST_LOG=1` prints the tabs it opens and the pages it loads.
 
 To try the worker by hand, serve a published copy on another 127.0.0.1 port (the dev server's own files are unstamped, so the worker caches nothing on :8760):
 
@@ -140,22 +142,22 @@ To try the worker by hand, serve a published copy on another 127.0.0.1 port (the
 
 and open http://127.0.0.1:8770/. For an update, stop the server, stage again with a later version (`…-000002`, after an edit to see it change) and serve that: the open Start Center shows *Updating cached resources* and then *Just updated successfully, Click here to reload*. With the server stopped the pages still open (offline). Afterwards clear the site's data (DevTools ▸ Application ▸ Storage ▸ Clear site data), or it goes on serving that copy.
 
-`node --test tests/smartart.test.mjs` runs the layout engine (`public/common/smartart.js`) in Node: every layout, for 1 to 7 items, gives finite shapes inside the box, one shape per item it shows, and one text size within the limits. A change to the SmartArt writer (`public/lectern/js/smartart-io.js`, `diagramFrameXML` in `pptx-write.js`) is checked on a deck with one diagram per layout: save it from Lectern, run the Open XML SDK validator and `tools/ooxml/package.py check` on it, convert it with LibreOffice to PDF (does every diagram draw, with no word broken) and to PPTX, and reopen both copies in Lectern (every diagram editable again). Keep the decks and renders in `./tmp`.
+`node --test tests/smartart.test.mjs` runs the layout engine (`public/common/smartart.js`) in Node: every layout, for 1 to 7 items, gives finite shapes inside the box, one shape per item it shows, and one text size within the limits. A change to the SmartArt writer (`public/lectern/js/smartart-io.js`, `diagramFrameXML` in `pptx-write.js`) is checked on a deck with one diagram per layout: save it from PPTX, run the Open XML SDK validator and `tools/ooxml/package.py check` on it, convert it with LibreOffice to PDF (does every diagram draw, with no word broken) and to PPTX, and reopen both copies in PPTX (every diagram editable again). Keep the decks and renders in `./tmp`.
 
-`python3 tests/lectern/smartart-office.py OUT [name]` checks SmartArt that PowerPoint made, in the corpus decks whose layouts Lectern has: unedited saves keep every diagram part byte-identical, an edit through the items gives a save with no new `package.py` findings, and that save reopens with the diagram editable (`OUT/results.json`). It removes the Recent Files entries it makes; run the SDK validator on `OUT/*-edited.pptx` too.
+`python3 tests/lectern/smartart-office.py OUT [name]` checks SmartArt that PowerPoint made, in the corpus decks whose layouts PPTX has: unedited saves keep every diagram part byte-identical, an edit through the items gives a save with no new `package.py` findings, and that save reopens with the diagram editable (`OUT/results.json`). It removes the Recent Files entries it makes; run the SDK validator on `OUT/*-edited.pptx` too.
 
-## Quire: tests/quire/
+## Wordx: tests/quire/
 
 | | |
 |---|---|
 | `node tests/quire/mdspec.js DIR` | The Markdown reader against the CommonMark spec examples and the GFM extension examples (in Node). DIR holds `spec.json` (https://spec.commonmark.org/0.31.2/spec.json), cmark-gfm's `test/spec.txt` saved as `gfm-spec.txt`, and the WHATWG `entities.json` |
-| `node tests/quire/mdroundtrip.mjs DIR` | Markdown round trips in Quire (through `shot.mjs`): every `.md` in DIR saved unchanged (must be byte for byte the same), with one paragraph edited (only that block may change), and fully rewritten (same HTML). `--spec spec.json` runs the rewrite check on the spec examples |
-| `python3 tests/quire/loss-audit.py originals/ saved/ out.json` | What a save loses: each original `.docx` against Quire's saved copy, feature by feature and word by word (standard library only); results in docs/quire.md |
+| `node tests/quire/mdroundtrip.mjs DIR` | Markdown round trips in Wordx (through `shot.mjs`): every `.md` in DIR saved unchanged (must be byte for byte the same), with one paragraph edited (only that block may change), and fully rewritten (same HTML). `--spec spec.json` runs the rewrite check on the spec examples |
+| `python3 tests/quire/loss-audit.py originals/ saved/ out.json` | What a save loses: each original `.docx` against Wordx's saved copy, feature by feature and word by word (standard library only); results in docs/wordx.md |
 
-Run both after a change to `markdown.js` or `mdio.js`; the numbers are in docs/quire.md.
+Run both after a change to `markdown.js` or `mdio.js`; the numbers are in docs/wordx.md.
 
 Line heights (`quire/js/portions.js`): `node --test tests/quire/lines.test.mjs` (a few seconds; `REPORT=1` prints what it
-measured) checks two documents in Quire against another application's PDF, read by `python3 tools/wordlines.py PDF DOCX
+measured) checks two documents in Wordx against another application's PDF, read by `python3 tools/wordlines.py PDF DOCX
 OUT.json` into rows (the text at one height on a page, matched by a hash of its last characters, so a document whose
 text isn't ours is compared without storing it):
 
@@ -168,7 +170,7 @@ text isn't ours is compared without storing it):
   tests/quire/lines/linecases-lo.json`): the cases LibreOffice draws as Word does are asserted, the others recorded.
 
 Page counts across the corpus: `node tools/quire-pages.mjs OUT.jsonl [--jobs 4]` opens every Word-saved `.docx` in
-`~/corpora/word` (Microsoft Office Word with `<Pages>` in docProps/app.xml) and records Quire's page count beside
+`~/corpora/word` (Microsoft Office Word with `<Pages>` in docProps/app.xml) and records Wordx's page count beside
 Word's; `--compare BEFORE.jsonl AFTER.jsonl` lists what a change moved, and every file it moved away from Word's count.
 For the "before", serve the last commit's site on a port of its own (`git archive HEAD public | tar -x -C
 tmp/pages-before`, `python3 tools/serve.py 8771 tmp/pages-before/public`) and run with `BASE=http://127.0.0.1:8771`.
@@ -177,9 +179,9 @@ tmp/pages-before`, `python3 tools/serve.py 8771 tmp/pages-before/public`) and ru
 
 Regression tests for a reported issue live in `tests/from-issues/N/` (N is the issue number), so a later change that breaks one shows which report it reopens. Each fails on the commit before its fix.
 
-`node tests/from-issues/1/regressions.mjs OUTPUT [fill|fields|marks|breaks]` runs the issue #1 browser regressions (Ledger and Quire)
-in isolated tabs without persistence. It checks Ledger's real Ctrl+D/Ctrl+R events, formulas,
-formatting and undo/redo; Quire's 9/10 and 99/100 page totals, section counts and tab positions;
+`node tests/from-issues/1/regressions.mjs OUTPUT [fill|fields|marks|breaks]` runs the issue #1 browser regressions (Excelx and Wordx)
+in isolated tabs without persistence. It checks Excelx's real Ctrl+D/Ctrl+R events, formulas,
+formatting and undo/redo; Wordx's 9/10 and 99/100 page totals, section counts and tab positions;
 unchanged visible-text geometry when toggling marks in Print and Web Layout; and encoded
 carriage returns through edits, history and DOCX save/reopen. It writes screenshots, a JSON report
 and generated DOCX fixtures for independent package/SDK and LibreOffice comparisons. Set `BASE`
@@ -199,12 +201,12 @@ Documents written to attack the suite (todos/HARDENING.md, phase 3), and checks 
 another site in the tab. `tests/csp.test.mjs` (Node, in a second) checks that every page carries the policy and no
 inline script (`node tools/csp.mjs --check`). `export-html.test.mjs` (about 6 s, in the quick
 check when an HTML writer changes) gives each app a document whose font names, colours, notes and link addresses
-are markup, writes Save as Web Page (and Quire's and Ledger's clipboard HTML), and checks the result as a document
+are markup, writes Save as Web Page (and Wordx's and Excelx's clipboard HTML), and checks the result as a document
 of its own: no element, attribute or script the writer didn't make, the names still there as text, the page's own
 policy (`L.exportCSP`) in place; then it opens each page from a local server, where nothing of the document runs
-and Lectern's own script still does.
+and PPTX's own script still does.
 
-## Ledger: tests/ledger/
+## Excelx: tests/ledger/
 
 The engine and the file readers and writers load in Node through `load.js` (the shared ones from `public/common/`; a missing file is an error), so most checks run without a browser.
 
@@ -220,9 +222,9 @@ The engine and the file readers and writers load in Node through `load.js` (the 
 | `pool.js script.js dir out.jsonl`, `recalc-all.js`, `summ.js` | run a per-file script over a corpus with a process pool, summarise the results |
 | `ui/*.js` | Playwright checks in Chromium against http://127.0.0.1:8760/ledger/: `smoke`, `flows` (44 end-to-end flows), `allcmds` (every menu and toolbar command), `password`, `perf`, `shots`. Need Playwright (`npm install --no-save playwright`) |
 
-## Lectern: tests/lectern/
+## PPTX: tests/lectern/
 
-`corpus.js` opens real decks in Chromium (open, render every slide, save, reopen, compare), `summarize.js` sums up its results, `ui-features.js` drives the password dialog, Tools ▸ Options ▸ Security and the chart dialog, `chartedit.js` writes every chart for validation, `decrypt.py` checks encrypted saves independently, `loss-audit.py` counts what a save loses (features and words, original against saved copy; standard-library Python), `viscompare.py` / `triptych.py` / `stack.py` compare renderings. They need Playwright; how to run them is in docs/lectern.md.
+`corpus.js` opens real decks in Chromium (open, render every slide, save, reopen, compare), `summarize.js` sums up its results, `ui-features.js` drives the password dialog, Tools ▸ Options ▸ Security and the chart dialog, `chartedit.js` writes every chart for validation, `decrypt.py` checks encrypted saves independently, `loss-audit.py` counts what a save loses (features and words, original against saved copy; standard-library Python), `viscompare.py` / `triptych.py` / `stack.py` compare renderings. They need Playwright; how to run them is in docs/pptx.md.
 
 ## Corpora
 
@@ -285,18 +287,18 @@ node tests/lectern/corpus.js ~/corpora/powerpoint /tmp/lectern.jsonl --lossless 
 ```
 
 Default scenarios are `save` and `repeat` (save, reopen, save again). `--edit` selects separate text,
-formatting, geometry, duplicate and delete-object scenarios, plus row/column/sheet operations in Ledger
-or slide insertion/deletion in Lectern. Each successful mutation also saves its undo and redo states.
+formatting, geometry, duplicate and delete-object scenarios, plus row/column/sheet operations in Excelx
+or slide insertion/deletion in PPTX. Each successful mutation also saves its undo and redo states.
 `--scenarios text` runs just text editing; `--scenarios draft` in the browser drivers exercises the app's
-actual snapshot and recovery hooks. For Ledger drafts, use `node tests/ledger/browser-corpus.mjs`
+actual snapshot and recovery hooks. For Excelx drafts, use `node tests/ledger/browser-corpus.mjs`
 with the same arguments; the Node engine driver rejects that scenario. `--limit N` limits files; `--resume` skips recorded input hashes and
 scenarios. A single Office file or a file list can replace the directory. Saved artifacts go into
 `save/`, `repeat/`, `repeat-second/`, `text/`, `text-undo/`, etc. Files retain their source extensions so
 variant errors remain observable. The browser drivers use the existing CDP browser and close only their
-own tabs. Ledger uses isolated Node workers with a per-file timeout. The older Lectern rendering driver
+own tabs. Excelx uses isolated Node workers with a per-file timeout. The older PPTX rendering driver
 without these switches remains available and still requires Playwright.
 
-Quire history regressions run with `node --test tests/quire/history.test.js`. The real-file check
+Wordx history regressions run with `node --test tests/quire/history.test.js`. The real-file check
 `node tests/quire/history.mjs ~/corpora/word/libreoffice__9b899b6707be__chart-size.docx`
 checks original chart bytes after editing, undo, redo, copying and whole-document snapshot restore.
 
@@ -335,7 +337,7 @@ geometry adapters. These tests do not replace real-file comparisons or Office ac
 and edit-preservation rules are in [suite.md](suite.md#preservation).
 
 Load `common/xml.js`, `common/opc.js`, then `common/opc-order.js`. `L.xmlTree` supplies a portable tree;
-Ledger's small `js/xml.js` bridge exposes it as `L.xml`. `L.opc.open(zip)` keeps a separate immutable
+Excelx's small `js/xml.js` bridge exposes it as `L.xml`. `L.opc.open(zip)` keeps a separate immutable
 baseline; `attach(model, pkg)` makes `model.pkg` non-enumerable. `fragment(element, {pkg, part})` produces
 JSON-safe XML and dependency/identity references. Use an original baseline element when exact lexical
 XML is needed: `raw` reads its source range, not later mutations. `captureAC(dom, rawText)` makes its
@@ -392,7 +394,7 @@ embedded objects sharing one preview (`shared-vml-preview`), two spreadsheet VML
 `o:idmap` block (`duplicate-vml-block`) and diagram/chart/OLE part animations whose target is not a
 graphic frame (`animation-part-target`). None occurs in the 4,697 pinned originals.
 
-Ledger's `pivots.test.js` and `threads.test.js` use the pinned public inputs (`VO_CORPORA` overrides
+Excelx's `pivots.test.js` and `threads.test.js` use the pinned public inputs (`VO_CORPORA` overrides
 `~/corpora`). `PIVOT_RESULTS=DIR` / `THREAD_RESULTS=DIR` retain the emitted edit/history states and
 their source paths for package/SDK comparisons. Pivot source fixtures are generated automatically from
 the pinned input into `PIVOT_RESULTS/fixtures` (or a temporary directory); `PIVOT_FIXTURES` overrides
@@ -489,7 +491,7 @@ successful PDFs with verified source/package/PDF hashes and identical LibreOffic
 and rendering policy. Each reused record identifies the old engine and cache entry. Failed attempts
 stay in the original report and are attempted again; never publish worker-cascade errors as app failures.
 
-### Lectern preservation
+### PPTX preservation
 
 `node tools/ooxml/conversions.mjs OUTPUT_DIR [SCENARIO_REGEX]` checks conversion notices on public
 Word/Excel/PowerPoint files and verifies that reverting an edit removes its save-time notice.
@@ -568,10 +570,10 @@ are intentional conversions and must be matched with their recorded loss entries
 absent from the pinned inventory: a defined-name source and a two-area consolidation source. It keeps
 all unchanged package parts byte-identical, records source/output hashes and changed parts, and
 requires an empty destination. Consolidation input cells, cached records and displayed output agree.
-These are structural fixtures; package/SDK validity does not establish Office acceptance or Ledger's
+These are structural fixtures; package/SDK validity does not establish Office acceptance or Excelx's
 edit behavior. Use them alongside the public range, table, external-source and shared-cache workbooks.
 
-### Quire controls, properties and objects
+### Wordx controls, properties and objects
 
 `node --test tests/quire/*.test.js` covers control boundaries and locks, independent property
 replacement, alternatives, range/object identity and history. `node tests/quire/controls.mjs
@@ -617,7 +619,7 @@ properties and watermarks, plus generated row/cell alternatives with populated a
 It writes originals and every edit/history/draft state, checking that deletion cannot restore hidden
 table content and that original watermark elements remain byte-identical before editing.
 Use the resulting JSONL state rows with `validate.py`; it validates every emitted state.
-The Office batch generator supports Quire edits `picture-properties`, `shape-shadow`, `drawing-anchor`
+The Office batch generator supports Wordx edits `picture-properties`, `shape-shadow`, `drawing-anchor`
 and `watermark`, so review copies and previous-writer comparisons use the same scripted edits.
 
 Current results belong in the app docs. Preserve complete run commands, hashes, previous-writer

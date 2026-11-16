@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 interface Fill { t: string; [key: string]: unknown }
 interface FillColor { value: string; label: string; color: string }
@@ -39,6 +39,9 @@ export function PptxFillEffectsDialog() {
   const [tab, setTab] = useState(0);
   const [fill, setFill] = useState<Fill | null>(null);
   const [assetName, setAssetName] = useState('');
+  const id = useId().replaceAll(':', '');
+  const panelId = `${id}-fill-effects-panel`;
+  const tabId = (index: number) => `${id}-fill-effects-tab-${index}`;
   useEffect(() => {
     const refresh = () => {
       const next = runtime()?.dlg?.reactFillEffectsCatalog?.() || null;
@@ -80,9 +83,18 @@ export function PptxFillEffectsDialog() {
   const preview = fill ? runtime()?.dlg?.reactFillEffectsPreview?.(fill) || '' : activeGradient?.css || '';
   const tabs = ['Gradient', 'Texture', 'Pattern', 'Picture'];
   return <OfficeDialog title={t('Fill Effects')} className="pptx-fill-effects-dialog" style={{ width: 'min(96vw, 760px)' }} onRequestClose={() => runtime()?.dlg?.reactFillEffectsFinish?.(null)}>
-    <div role="tablist" aria-label={t('Fill effect types')} className="row" style={{ gap: 4, borderBottom: '1px solid #888' }}>{tabs.map((name, index) => <button key={name} type="button" role="tab" aria-selected={tab === index} onClick={() => setTab(index)}>{t(name)}</button>)}</div>
+    <div role="tablist" aria-label={t('Fill effect types')} className="row" style={{ gap: 4, borderBottom: '1px solid #888' }}>{tabs.map((name, index) => <button key={name} id={tabId(index)} type="button" role="tab" aria-controls={panelId} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)} onKeyDown={(event) => {
+      const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+        : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
+          : event.key === 'Home' ? 0
+            : event.key === 'End' ? tabs.length - 1 : -1;
+      if (next < 0) return;
+      event.preventDefault();
+      setTab(next);
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    }}>{t(name)}</button>)}</div>
     <div className="row" style={{ alignItems: 'stretch', gap: 16, minHeight: 310, paddingTop: 10 }}>
-      <div role="tabpanel" className="col" style={{ flex: '1 1 auto', minWidth: 0 }}>
+      <div id={panelId} aria-labelledby={tabId(tab)} role="tabpanel" className="col" style={{ flex: '1 1 auto', minWidth: 0 }}>
         {tab === 0 && <div className="col" style={{ gap: 8 }}>
           <div className="row" style={{ alignItems: 'start', flexWrap: 'wrap' }}><fieldset className="col"><legend>{t('Colors')}</legend>{(['one', 'two', 'preset'] as const).map((mode) => <label key={mode}><input type="radio" name="pptx-fill-mode" checked={config.mode === mode} onChange={() => update('mode', mode)} />{t(mode === 'one' ? 'One color' : mode === 'two' ? 'Two colors' : 'Preset')}</label>)}</fieldset>
             {config.mode === 'one' && <div className="col">{colorControl('Color 1:', config.c1, 'c1')}<label>{t('Dark')} — {t('Light')}<input aria-label={t('Dark to light')} type="range" min="0" max="100" value={config.dark * 100} onChange={(event) => update('dark', Number(event.currentTarget.value) / 100)} /></label></div>}

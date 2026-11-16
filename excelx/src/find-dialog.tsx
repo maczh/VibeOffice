@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import './find-dialog.css';
 
 type SearchState = { what: string; with: string; within: 'sheet' | 'workbook'; by: 'rows' | 'cols'; lookIn: 'formulas' | 'values' | 'comments'; matchCase: boolean; whole: boolean; more: boolean };
@@ -11,6 +11,7 @@ function runtime(): Runtime | undefined { return (window as Window & { L?: Runti
 /** Modeless React Find/Replace window; workbook matching and replacement remain in Excelx operations. */
 export function ExcelxFindDialog() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const id = useId().replaceAll(':', '');
   useEffect(() => {
     const refresh = () => setCatalog(runtime()?.dlg?.reactFindCatalog?.() || null);
     const off = runtime()?.bus?.on('excelx-find-dialog', refresh);
@@ -21,13 +22,25 @@ export function ExcelxFindDialog() {
   const action = runtime()?.dlg?.reactFindAction;
   const set = (key: keyof SearchState, value: string | boolean) => action?.('set', key, value);
   const mnemonic = (value: string) => t(value).replace('&', '');
+  const labels = [t('Fi&nd').replace('&', ''), t('Re&place').replace('&', '')];
+  const tabId = (index: number) => `${id}-find-tab-${index}`;
+  const panelId = `${id}-find-panel`;
   return <section className="dlg excelx-find-dialog" role="dialog" aria-label={t('Find and Replace')}>
     <div className="dlg-ttl">{t('Find and Replace')}</div>
     <div className="dlg-body">
-      <div className="excelx-find-dialog__tabs" role="tablist">
-        {[t('Fi&nd').replace('&', ''), t('Re&place').replace('&', '')].map((label, index) => <button type="button" role="tab" aria-selected={catalog.mode === index} key={label} onClick={() => action?.('tab', undefined, index)}>{label}</button>)}
+      <div className="excelx-find-dialog__tabs" role="tablist" aria-label={t('Find and Replace')}>
+        {labels.map((label, index) => <button type="button" role="tab" id={tabId(index)} aria-controls={panelId} aria-selected={catalog.mode === index} tabIndex={catalog.mode === index ? 0 : -1} key={label} onClick={() => action?.('tab', undefined, index)} onKeyDown={(event) => {
+          const next = event.key === 'ArrowRight' ? (index + 1) % 2
+            : event.key === 'ArrowLeft' ? (index - 1 + 2) % 2
+              : event.key === 'Home' ? 0
+                : event.key === 'End' ? 1 : -1;
+          if (next < 0) return;
+          event.preventDefault();
+          action?.('tab', undefined, next);
+          event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+        }}>{label}</button>)}
       </div>
-      <div className="excelx-find-dialog__form">
+      <div id={panelId} aria-labelledby={tabId(catalog.mode)} role="tabpanel" className="excelx-find-dialog__form">
         <label>{mnemonic('Fi&nd what:')}<input autoFocus value={catalog.state.what} onChange={(event) => set('what', event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); action?.(event.shiftKey ? 'previous' : 'next'); } }} /></label>
         {catalog.mode === 1 && <label>{mnemonic('R&eplace with:')}<input value={catalog.state.with} onChange={(event) => set('with', event.currentTarget.value)} /></label>}
         <button type="button" aria-expanded={catalog.state.more} onClick={() => set('more', !catalog.state.more)}>{t(catalog.state.more ? 'Options <<' : 'Op&tions >>').replace('&', '')}</button>

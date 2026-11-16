@@ -33,6 +33,12 @@ const SECONDS = { 'tests/ui/smoke.test.mjs': 20, 'tests/ui/quire.test.mjs': 175,
   'tests/hostile/export-html.test.mjs': 6, 'tests/hostile/helpers.test.mjs': 7, 'tests/csp.test.mjs': 1 };
 const RULES = [
   [/^tools\/win_test_server\/|^tests\/win_test_server\//, ['tests/win-test-server.test.mjs']],
+  [/^commonx\/src\//, ['tests/vite/workspace-packages.test.mjs', 'tests/ui/react-host.test.mjs', 'tests/ui/react-host-apps.test.mjs', 'tests/ui/react-host-packages.test.mjs', 'tests/ui/react-suite.test.mjs', 'tests/ui/smoke.test.mjs']],
+  [/^wordx\/src\//, ['tests/vite/workspace-packages.test.mjs', 'tests/ui/react-host-apps.test.mjs', 'tests/ui/react-host-packages.test.mjs', 'tests/ui/react-suite.test.mjs', 'tests/ui/react-standalone.test.mjs', 'tests/ui/smoke.test.mjs']],
+  [/^excelx\/src\//, ['tests/vite/workspace-packages.test.mjs', 'tests/ui/react-host-apps.test.mjs', 'tests/ui/react-host-packages.test.mjs', 'tests/ui/react-suite.test.mjs', 'tests/ui/react-standalone.test.mjs', 'tests/ui/smoke.test.mjs']],
+  [/^pptx\/src\//, ['tests/vite/workspace-packages.test.mjs', 'tests/ui/react-host-apps.test.mjs', 'tests/ui/react-host-packages.test.mjs', 'tests/ui/react-suite.test.mjs', 'tests/ui/react-standalone.test.mjs', 'tests/ui/lectern.test.mjs', 'tests/ui/smoke.test.mjs']],
+  [/^suite\/src\//, ['tests/vite/workspace-packages.test.mjs', 'tests/ui/react-host.test.mjs', 'tests/ui/react-host-packages.test.mjs', 'tests/ui/react-suite.test.mjs', 'tests/ui/smoke.test.mjs']],
+  [/^tools\/vite\/react-pwa\.mjs$/, ['tests/vite/react-pwa.test.mjs']],
   [/^public\/(quire|ledger|lectern|common)\/|^public\/[^/]+\.(html|js|css)$/, ['tests/ui/smoke.test.mjs', 'tests/licenses.test.mjs', 'tests/from-issues/*/*.test.mjs', 'tests/i18n.test.mjs']],   // and the reported issues' tests, the English catalog
   [/^public\/ledger\/|^tools\/ledger\//, ['tests/ledger/*.test.js', 'tests/ui/ledger.test.mjs']],
   [/^public\/quire\//, ['tests/quire/*.test.js', 'tests/ui/quire.test.mjs']],

@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { EXCELX_HELP } from './help-content.js';
+import { EXCELX_WORKBOOK_TEMPLATES } from './template-catalog.js';
 
-interface WorkbookTemplate { name: string }
-interface HelpData { topics: Array<[string, string]>; keys: Array<[string, string]> }
 interface ClipboardEntry { clip: unknown; text: string; time: number }
 interface TaskPaneApi {
   current?: string;
@@ -13,7 +13,7 @@ interface TaskPaneApi {
   pos?: number;
   registry?: Record<string, { id: string; title: string; hidden?: boolean }>;
 }
-interface ExcelxPanesApi { task?: TaskPaneApi; TEMPLATES?: Record<string, WorkbookTemplate>; newFromTemplate?(id: string): void; helpQuery?: string; reactHelpData?(): HelpData; clips?: ClipboardEntry[] }
+interface ExcelxPanesApi { task?: TaskPaneApi; newFromTemplate?(id: string): void; helpQuery?: string; clips?: ClipboardEntry[] }
 interface ExcelxTaskRuntime {
   panes?: ExcelxPanesApi;
   ui?: { exec(command: string): unknown; openMenu(items: unknown[], rect: { left: number; bottom: number }): unknown };
@@ -41,6 +41,7 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [, refresh] = useState(0);
   const [helpQuery, setHelpQuery] = useState('');
+  const [gettingStartedQuery, setGettingStartedQuery] = useState('');
   const L = runtime();
   const panes = L?.panes;
   const task = panes?.task;
@@ -126,6 +127,7 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   }, [host]);
 
   useEffect(() => {
+    if (current === 'getting-started') setGettingStartedQuery('');
     if (current === 'help') {
       setHelpQuery(panes?.helpQuery || '');
       if (panes) panes.helpQuery = '';
@@ -139,6 +141,7 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   </button>;
   const currentEntry = task.registry?.[current || ''];
   const title = currentEntry ? translate(L, currentEntry.title) : '';
+  const openHelp = (query: string) => { if (panes) panes.helpQuery = query; task.show('help'); };
   const titleMenu = (button: HTMLButtonElement) => {
     const rect = button.getBoundingClientRect();
     const items = Object.values(task.registry || {}).filter((pane) => !pane.hidden).map((pane) => ({ label: pane.title, run: () => task.show(pane.id), checked: () => task.current === pane.id }));
@@ -153,17 +156,15 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   </div>, headMount) : null;
   const withHeader = (content: ReactNode | null) => <>{head}{content}</>;
   if (!mount || !['getting-started', 'new', 'help', 'keys', 'clipboard'].includes(current || '')) return head;
-  const templates = Object.entries(panes?.TEMPLATES || {});
-
   if (current === 'help') {
-    const data = panes?.reactHelpData?.() || { topics: [], keys: [] };
+    const data = EXCELX_HELP;
     const words = helpQuery.toLocaleLowerCase().split(/\s+/).filter(Boolean);
     const matches = (text: string) => words.every((word) => text.toLocaleLowerCase().includes(word));
     const topics = data.topics.filter(([title, body]) => !words.length || matches(`${translate(L, title)} ${translate(L, body)}`));
     const functions = words.length ? (L.fninfo?.all() || []).filter((fn) => matches(`${fn.name} ${translate(L, fn.desc)}`)).slice(0, 12) : [];
     const keys = words.length ? data.keys.filter(([key, body]) => matches(`${translate(L, key)} ${translate(L, body)}`)) : [];
     return withHeader(createPortal(<>
-      <div className="tp-row"><input id="hp-q" type="text" placeholder={translate(L, 'Search')} value={helpQuery} style={{ flex: 1, minWidth: 0 }} onChange={(event) => setHelpQuery(event.currentTarget.value)} onKeyDown={(event) => event.stopPropagation()} /></div>
+      <div className="tp-row"><input id="hp-q" type="text" aria-label={translate(L, 'Search')} placeholder={translate(L, 'Search')} value={helpQuery} style={{ flex: 1, minWidth: 0 }} onChange={(event) => setHelpQuery(event.currentTarget.value)} onKeyDown={(event) => event.stopPropagation()} /></div>
       {topics.map(([title, body]) => <article className="help-topic" key={title}><h4>{translate(L, title)}</h4><p>{translate(L, body)}</p></article>)}
       {functions.length > 0 && <article className="help-topic"><h4>{translate(L, 'Functions')}</h4>{functions.map((fn) => <button className="help-fn" type="button" key={fn.name} onClick={() => L.dlg?.insertFunction(fn.name)}><b translate="no">{L.fninfo?.syntax(fn)}</b><span>{translate(L, fn.desc)}</span></button>)}</article>}
       {keys.length > 0 && <article className="help-topic"><h4>{translate(L, 'Keyboard shortcuts')}</h4><table className="kbd-table"><tbody>{keys.map(([key, body]) => <tr key={key}><td>{translate(L, key)}</td><td>{translate(L, body)}</td></tr>)}</tbody></table></article>}
@@ -172,7 +173,7 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   }
 
   if (current === 'keys') {
-    const keys = panes?.reactHelpData?.().keys || [];
+    const keys = EXCELX_HELP.keys;
     return withHeader(createPortal(<table className="kbd-table"><tbody>{keys.map(([key, description]) => <tr key={key}><td>{translate(L, key)}</td><td>{translate(L, description)}</td></tr>)}</tbody></table>, mount));
   }
 
@@ -194,7 +195,9 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   if (!mount) return head;
   if (current === 'new') return withHeader(createPortal(<>
     {section('New', link('new', 'Blank workbook', () => L.app?.newWorkbook()), link('open', 'From existing workbook...', () => L.app?.openDialog?.('.xlsx,.xlsm,.xltx,.xltm')))}
-    {section('Templates', ...templates.map(([id, template]) => link('sheetIcon', template.name, () => panes?.newFromTemplate?.(id))))}
+    {section('Templates', ...EXCELX_WORKBOOK_TEMPLATES.map(({ id, name }) => <button className="tp-link" type="button" data-template-id={id} key={id} onClick={() => panes?.newFromTemplate?.(id)}>
+      <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.get('sheetIcon') || '' }} /><span>{translate(L, name)}</span>
+    </button>))}
     <div className="tp-note">{translate(L, 'Templates open as new, unsaved workbooks.')}</div>
   </>, mount));
 
@@ -202,17 +205,13 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   return withHeader(createPortal(<>
     <div className="tp-row"><span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.app?.(32) || '' }} /><b translate="no" style={{ color: 'var(--pane-ink)' }}>{editionName}</b></div>
     {section('Search for:', <div className="tp-row">
-      <input type="text" placeholder={translate(L, 'Search help')} style={{ flex: 1, minWidth: 0 }} onKeyDown={(event) => {
-        if (event.key === 'Enter') { if (panes) panes.helpQuery = event.currentTarget.value; task.show('help'); }
+      <input type="text" aria-label={translate(L, 'Search help')} placeholder={translate(L, 'Search help')} value={gettingStartedQuery} style={{ flex: 1, minWidth: 0 }} onChange={(event) => setGettingStartedQuery(event.currentTarget.value)} onKeyDown={(event) => {
+        if (event.key === 'Enter') openHelp(gettingStartedQuery);
       }} />
-      <button className="btn small" type="button" onClick={(event) => {
-        const query = event.currentTarget.parentElement?.querySelector('input')?.value || '';
-        if (panes) panes.helpQuery = query;
-        task.show('help');
-      }}>{translate(L, 'Go')}</button>
+      <button className="btn small" type="button" onClick={() => openHelp(gettingStartedQuery)}>{translate(L, 'Go')}</button>
     </div>)}
     {section('Open', link('open', 'More...', () => L.ui?.exec('open')), link('new', 'Create a new workbook...', () => task.show('new')))}
-    {section('Learn', link('help', 'What Excelx can do', () => { if (panes) panes.helpQuery = ''; task.show('help'); }),
+    {section('Learn', link('help', 'What Excelx can do', () => openHelp('')),
       link('fx', 'Functions reference', () => L.dlg?.insertFunction()), link('help', 'Keyboard shortcuts', () => task.show('keys')))}
     {section('Files', <div className="tp-note">{translate(L, 'Opens .xlsx, .xlsm, .xltx, .csv, .txt and XML Spreadsheet 2003 files; drop a file anywhere on the window to open it. Saves .xlsx, .xlsm, .xltx, .csv, .txt, .htm, .xml and PDF.')}</div>)}
   </>, mount));

@@ -349,6 +349,82 @@ test('remote Save As can explicitly update a selected destination revision', asy
   assert.deepEqual(calls, [['save', 'existing', { ifRevision: destinationRevision }]]);
 });
 
+test('host POST and signed-object providers plug into editor open, save and Save As callbacks', async () => {
+  const postRequests = [];
+  let serviceRevision = 4;
+  const postTransport = async (path, blob, headers = {}) => {
+    postRequests.push({ path, method: 'POST', blob, headers });
+    serviceRevision++;
+    return { id: path.split('/').pop() || 'created', name: path.split('/').pop() || 'created.docx', revision: { value: `r${serviceRevision}`, kind: 'custom' } };
+  };
+  const postProvider = {
+    async list() { return [{ id: 'files/source.docx', name: 'source.docx', revision: { value: 'r4', kind: 'custom' } }]; },
+    async read(id) { return { file: { id, name: 'source.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', revision: { value: 'r4', kind: 'custom' } }, blob: new Blob(['source']) }; },
+    async save(id, blob, options) { return postTransport(`/api/documents/${id}`, blob, { 'If-Match': options?.ifRevision?.value || '' }); },
+    async create(parentId, name, blob) { return postTransport(`/api/documents/${parentId}/${name}`, blob, { 'If-None-Match': '*' }); },
+  };
+  const postCallbacks = createRemoteFileCallbacks(postProvider,
+    async () => ({ id: 'files/source.docx', name: 'source.docx', revision: { value: 'r4', kind: 'custom' } }),
+    async (name) => ({ parentId: 'archive', name }));
+  const postOpened = await postCallbacks.onOpenFile();
+  const postSaved = await postCallbacks.onSaveFile('source.docx', new Blob(['edited']), postOpened);
+  await postCallbacks.onSaveFile('copy.docx', new Blob(['copy']), postOpened, undefined, { saveAs: true });
+  assert.equal(postSaved.remote.file.revision.value, 'r5');
+  assert.deepEqual(postRequests.map(({ path, method, headers }) => ({ path, method, headers })), [
+    { path: '/api/documents/files/source.docx', method: 'POST', headers: { 'If-Match': 'r4' } },
+    { path: '/api/documents/archive/copy.docx', method: 'POST', headers: { 'If-None-Match': '*' } },
+  ]);
+
+  const signerCalls = [];
+  const signedRequests = [];
+  const sign = async (method, key, conditions = {}) => {
+    signerCalls.push({ method, key, ...conditions });
+    return { url: `https://objects.example/${key}?short-lived=${signerCalls.length}`, headers: method === 'PUT' ? { 'Content-Type': 'application/octet-stream', ...(conditions.ifRevision ? { 'If-Match': conditions.ifRevision.value } : {}), ...(conditions.ifNoneMatch ? { 'If-None-Match': conditions.ifNoneMatch } : {}) } : {} };
+  };
+  const signedFetch = async (url, init = {}) => {
+    signedRequests.push({ url: String(url), method: init.method || 'GET', headers: init.headers || {}, body: init.body });
+    return { ok: true, blob: async () => new Blob(['signed download']), revision: { value: 'v8', kind: 'version' } };
+  };
+  const signedProvider = {
+    async list() { return [{ id: 'bucket/a.docx', name: 'a.docx', revision: { value: 'v7', kind: 'version' } }]; },
+    async read(id) {
+      const authorization = await sign('GET', id);
+      const response = await signedFetch(authorization.url, { headers: authorization.headers });
+      return { file: { id, name: 'a.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', revision: response.revision }, blob: await response.blob() };
+    },
+    async save(id, blob, options) {
+      const authorization = await sign('PUT', id, { ifRevision: options?.ifRevision });
+      const response = await signedFetch(authorization.url, { method: 'PUT', headers: authorization.headers, body: blob });
+      return { id, name: 'a.docx', revision: response.revision || options?.ifRevision };
+    },
+    async create(parentId, name, blob) {
+      const key = `${parentId}/${name}`;
+      const authorization = await sign('PUT', key, { ifNoneMatch: '*' });
+      await signedFetch(authorization.url, { method: 'PUT', headers: authorization.headers, body: blob });
+      return { id: key, name, revision: { value: 'v9', kind: 'version' } };
+    },
+  };
+  const signedCallbacks = createRemoteFileCallbacks(signedProvider,
+    async () => ({ id: 'bucket/a.docx', name: 'a.docx', revision: { value: 'v7', kind: 'version' } }),
+    async (name) => ({ parentId: 'bucket/archive', name }));
+  const signedOpened = await signedCallbacks.onOpenFile();
+  assert.equal(await signedOpened.file.text(), 'signed download');
+  const signedSaved = await signedCallbacks.onSaveFile('a.docx', new Blob(['signed edit']), signedOpened);
+  await signedCallbacks.onSaveFile('copy.docx', new Blob(['signed copy']), signedOpened, undefined, { saveAs: true });
+  assert.deepEqual(signerCalls, [
+    { method: 'GET', key: 'bucket/a.docx' },
+    { method: 'PUT', key: 'bucket/a.docx', ifRevision: { value: 'v8', kind: 'version' } },
+    { method: 'PUT', key: 'bucket/archive/copy.docx', ifNoneMatch: '*' },
+  ]);
+  assert.equal(signedSaved.remote.file.revision.value, 'v8');
+  assert.ok(signedRequests.every(({ url, headers }) => url.startsWith('https://objects.example/') && url.includes('short-lived=') && !JSON.stringify(headers).includes('AWS')));
+  assert.deepEqual(signedRequests.map(({ method }) => method), ['GET', 'PUT', 'PUT']);
+  assert.deepEqual(signedRequests.slice(1).map(({ headers }) => ({ match: headers['If-Match'], createOnly: headers['If-None-Match'] })), [
+    { match: 'v8', createOnly: undefined },
+    { match: undefined, createOnly: '*' },
+  ]);
+});
+
 test('remote editor callbacks stop after abort and pass cancellation into pickers and providers', async () => {
   const abort = new AbortController();
   const provider = { async read(_id, signal) { abort.abort(); assert.equal(signal, abort.signal); return { file: { id: 'file', name: 'a.docx' }, blob: new Blob(['late']) }; } };

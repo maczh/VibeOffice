@@ -13,10 +13,12 @@
 - [x] React and React DOM are peer dependencies of the editor packages.
 - [x] A minimal host fixture can import and mount each package without relying on the VibeOffice Start Center.
 - [x] Vite can build the package artifacts and standalone entry points without adding runtime server requirements.
-- [ ] The existing JavaScript document engines remain available through typed interfaces without an iframe or nested browsing context.
-- [ ] Each editor engine can mount and dispose inside a React-owned host container without an iframe or nested browsing context.
+- [x] The existing JavaScript document engines remain available through typed interfaces without an iframe or nested browsing context.
+- [x] Each editor engine can mount and dispose inside a React-owned host container without an iframe or nested browsing context.
 
 ## Comments
+
+- 2026-11-15: Acceptance audit confirms the typed `EditorMount`/`EngineRuntimeOptions` seam exposes the existing engines without an iframe, and the production package/suite checks mount each editor into a React-owned container, dispose it, and switch sequentially among all three. The direct-shell container-ownership regression also confirms mount/unmount preserves host-owned siblings. `npm run typecheck`, `npm run build:apps`, `node tools/quick.mjs` (all 9 groups), focused `tests/ui/react-host-packages.test.mjs`, and `git diff --check` pass. This resolves only the typed seam and mount/dispose criteria; `#01` remains in progress because its foundation depends on the still-open full runtime/module migration and singleton isolation.
 
 - 2026-11-15: The consumer-style Vite host now forwards missing legacy asset paths back to Vite, so package aliases such as `/wordx/src/index.ts` no longer get intercepted as old engine files. Added middleware regression coverage; the production package contract remains incomplete because engine runtime assets and state are still legacy/global.
 - 2026-11-14: The typed direct-host bridge accepts explicit classic-script exclusions and records which ordered scripts it loads. PPTX now consumes this seam to avoid loading its package-owned Ribbon definition; production and workspace tests cover the package registration and exclusion. Broader engine assets/modules still load from the public compatibility bundles, so both runtime-migration acceptance items remain open.

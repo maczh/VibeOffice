@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 interface WordxMenuRuntime {
   app?: {
@@ -41,24 +41,52 @@ function runtime(): WordxMenuRuntime | undefined {
 
 function TableGrid({ L }: { L: WordxMenuRuntime }) {
   const [size, setSize] = useState<[number, number]>([0, 0]);
+  const [focused, setFocused] = useState<[number, number]>([1, 1]);
   const [bounds, setBounds] = useState<[number, number]>([4, 5]);
+  const grid = useRef<HTMLDivElement>(null);
+  const focusAfterRender = useRef(false);
   const [rows, columns] = size;
   const [maxRows, maxColumns] = bounds;
   const label = rows ? L.t?.('{0} x {1} Table', rows, columns) || `${rows} x ${columns} Table` : L.t?.('Cancel') || 'Cancel';
+  useLayoutEffect(() => {
+    if (!focusAfterRender.current) return;
+    focusAfterRender.current = false;
+    grid.current?.querySelector<HTMLElement>(`[data-cell="${focused[0]}:${focused[1]}"]`)?.focus();
+  }, [focused]);
+  const moveFocus = (event: React.KeyboardEvent<HTMLSpanElement>, row: number, column: number) => {
+    let nextRow = row;
+    let nextColumn = column;
+    if (event.key === 'ArrowUp') nextRow = Math.max(1, row - 1);
+    else if (event.key === 'ArrowDown') nextRow = Math.min(maxRows, row + 1);
+    else if (event.key === 'ArrowLeft') nextColumn = Math.max(1, column - 1);
+    else if (event.key === 'ArrowRight') nextColumn = Math.min(maxColumns, column + 1);
+    else if (event.key === 'Home') nextColumn = 1;
+    else if (event.key === 'End') nextColumn = maxColumns;
+    else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      L.app?.reactTableGridAction?.(rows, columns);
+      return;
+    } else return;
+    event.preventDefault();
+    focusAfterRender.current = true;
+    setFocused([nextRow, nextColumn]);
+    setSize([nextRow, nextColumn]);
+  };
   return <div className="tbl-grid-pick" id="react-wordx-table-grid">
-    <div className="tgp-cells" style={{ gridTemplateColumns: `repeat(${maxColumns}, 18px)` }} onPointerLeave={() => setSize([0, 0])}>
-      {Array.from({ length: maxRows }, (_, rowIndex) => Array.from({ length: maxColumns }, (_, columnIndex) => {
+    <div ref={grid} className="tgp-cells" role="grid" aria-label={L.t?.('Insert Table') || 'Insert Table'} aria-rowcount={maxRows} aria-colcount={maxColumns} style={{ gridTemplateColumns: `repeat(${maxColumns}, 18px)` }} onPointerLeave={() => setSize([0, 0])}>
+      {Array.from({ length: maxRows }, (_, rowIndex) => <div role="row" style={{ display: 'contents' }} key={rowIndex}>{Array.from({ length: maxColumns }, (_, columnIndex) => {
         const row = rowIndex + 1;
         const column = columnIndex + 1;
-        return <span key={`${row}:${column}`} role="button" tabIndex={0} className={row <= rows && column <= columns ? 'on' : ''}
+        return <span key={`${row}:${column}`} role="gridcell" data-cell={`${row}:${column}`} tabIndex={focused[0] === row && focused[1] === column ? 0 : -1} aria-selected={row <= rows && column <= columns}
+          className={row <= rows && column <= columns ? 'on' : ''}
           aria-label={L.t?.('{0} x {1} Table', row, column) || `${row} x ${column} Table`}
           onPointerEnter={() => {
             setSize([row, column]);
             setBounds(([r, c]) => [row >= r - 1 && r < 12 ? r + 1 : r, column >= c - 1 && c < 10 ? c + 1 : c]);
           }}
           onClick={() => { if (rows && columns) L.app?.reactTableGridAction?.(rows, columns); }}
-          onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && rows && columns) { event.preventDefault(); L.app?.reactTableGridAction?.(rows, columns); } }} />;
-      }))}
+          onKeyDownCapture={(event) => moveFocus(event, row, column)} />;
+      })}</div>)}
     </div>
     <div className="tgp-label" aria-live="polite">{label}</div>
   </div>;
@@ -66,15 +94,35 @@ function TableGrid({ L }: { L: WordxMenuRuntime }) {
 
 function ColumnsPicker({ L }: { L: WordxMenuRuntime }) {
   const [columns, setColumns] = useState(0);
+  const [focused, setFocused] = useState(0);
+  const cellRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const onCellKeyDown = (event: React.KeyboardEvent<HTMLSpanElement>, index: number) => {
+    let next = index;
+    if (event.key === 'ArrowLeft') next = Math.max(0, index - 1);
+    else if (event.key === 'ArrowRight') next = Math.min(3, index + 1);
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = 3;
+    else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      L.app?.reactColumnsPickerAction?.(columns || index + 1);
+      return;
+    } else return;
+    event.preventDefault();
+    event.stopPropagation();
+    setFocused(next);
+    cellRefs.current[next]?.focus();
+    setColumns(next + 1);
+  };
   return <div className="tbl-grid-pick" id="react-wordx-columns-picker">
     <div className="tgp-cells" style={{ gridTemplateColumns: 'repeat(4,22px)' }}>
       {Array.from({ length: 4 }, (_, index) => {
         const value = index + 1;
         const label = L.t?.(value === 1 ? '{0} Column' : '{0} Columns', value) || `${value} ${value === 1 ? 'Column' : 'Columns'}`;
-        return <span key={value} role="button" tabIndex={0} style={{ height: 30 }} className={value <= columns ? 'on' : ''}
+        return <span key={value} ref={(element) => { cellRefs.current[index] = element; }} role="button" tabIndex={focused === index ? 0 : -1} style={{ height: 30 }} className={value <= columns ? 'on' : ''}
           aria-label={label} onPointerEnter={() => setColumns(value)} onFocus={() => setColumns(value)}
           onClick={() => L.app?.reactColumnsPickerAction?.(value)}
-          onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); L.app?.reactColumnsPickerAction?.(value); } }} />;
+          onKeyDown={(event) => onCellKeyDown(event, index)} />;
       })}
     </div>
     <div className="tgp-label" aria-live="polite">{columns ? L.t?.(columns === 1 ? '{0} Column' : '{0} Columns', columns) : L.t?.('Cancel') || 'Cancel'}</div>
@@ -91,7 +139,7 @@ function HistoryMenu({ L }: { L: WordxMenuRuntime }) {
   const kindLabel = catalog.kind === 'undo' ? 'Undo' : 'Redo';
   const status = (count: number) => L.t?.(count === 1 ? `${kindLabel} {0} Action` : `${kindLabel} {0} Actions`, count) || `${kindLabel} ${count} ${count === 1 ? 'Action' : 'Actions'}`;
   return <div className="style-list" id="react-wordx-history-menu" style={{ maxHeight: 260, overflow: 'auto', minWidth: 180 }} role="group" aria-label={kindLabel}>
-    {catalog.items.map(({ label, count }) => <button key={`${count}:${label}`} type="button" style={hovered !== null && count <= hovered ? { background: '#316ac5', color: '#fff' } : undefined}
+    {catalog.items.map(({ label, count }) => <button key={`${count}:${label}`} type="button" style={hovered !== null && count <= hovered ? { background: 'var(--sel)', color: 'var(--sel-ink)' } : undefined}
       onPointerEnter={() => setHovered(count)} onFocus={() => setHovered(count)} onClick={() => L.app?.reactHistoryMenuAction?.(count)}>{label}</button>)}
     <div className="tgp-label" aria-live="polite">{hovered === null ? catalog.initialStatus : status(hovered)}</div>
   </div>;

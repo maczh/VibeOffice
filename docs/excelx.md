@@ -1,4 +1,4 @@
-# Ledger — Web Edition
+# Excelx — Web Edition
 
 A spreadsheet in the image of Excel 2003, written in plain HTML and vanilla JavaScript, with
 no libraries, no frameworks, no build step at run time. It opens and saves Office Open XML workbooks
@@ -13,10 +13,10 @@ Setup, Sort, Chart Wizard, Insert Function, Text Import Wizard and some forty mo
 
 ## Using it
 
-Open https://vibeoffice.work/ledger/. The app is `public/ledger/`; paths below are relative to it unless
+Open https://vibeoffice.work/excelx/. The legacy engine source is `public/ledger/`; paths below are relative to it unless
 they start with `tools/`. To run it locally, see [testing.md](testing.md). Everything runs in the browser; there is no back end and no network
 service behind any feature. Two things are fetched at run time: the spelling word lists in
-`../common/dict/`, shared with Quire (which is why the site should be served rather than opened from disk — from a `file://` page
+`../common/dict/`, shared with Wordx (which is why the site should be served rather than opened from disk — from a `file://` page
 everything works except Tools ▸ Spelling), and, from the site's own `../fonts/` and only when the
 computer lacks the real font, the metric-compatible faces Carlito, Caladea and Gelasio, which stand
 in for Calibri, Cambria and Georgia so that text fits cells the way it does in Excel. Arial, Times New
@@ -116,7 +116,7 @@ searchable topics, the keyboard-shortcut reference and a function reference for 
   2003 palette, embedded or on a chart sheet. Charts follow their data as you type.
 - Charts in opened files are drawn from their own definitions (3-D charts flat; radar and stock charts
   as lines; bubble charts as scatter) and are saved back unchanged unless you edit them.
-- Pictures (PNG, JPEG, GIF, BMP, SVG and Windows metafiles — EMF and WMF are drawn by Ledger's own
+- Pictures (PNG, JPEG, GIF, BMP, SVG and Windows metafiles — EMF and WMF are drawn by Excelx's own
   metafile player), AutoShapes and text boxes: move, resize, copy, order, Format Object; their text is edited in
   place (a click in a text box, or on the text of a selected AutoShape, puts the caret there; a text box moves by its
   edge).
@@ -142,9 +142,9 @@ printer itself.
 | XML Spreadsheet 2003 `.xml` | yes | yes |
 | Web Page `.htm` / `.html` | yes: each table on the page becomes a sheet | yes: one self-contained page per workbook, with its own security policy (no scripts) |
 | PDF | — | yes |
-| Excel 97–2003 `.xls` | no — Ledger explains how to convert it | no |
+| Excel 97–2003 `.xls` | no — Excelx explains how to convert it | no |
 
-Passwords are handled in the browser (WebCrypto plus Ledger's own AES and SHA code), so the page must
+Passwords are handled in the browser (WebCrypto plus Excelx's own AES and SHA code), so the page must
 be served over https or from localhost. A workbook opened with its password keeps it when saved.
 
 ## What a save keeps, converts and drops
@@ -159,7 +159,7 @@ out in their originals. Reports: `~/corpora/results/lossless-final-984eaf3/ledge
 correction restores the original counts for `tdf66668` (two pages) and `pivottable_tabular_mode`
 (four). Signed drawing offsets are retained, and empty cells retain their original style identity
 even when it maps to the model's default style. These cells follow row shifts and undo; clearing
-formats or all content removes the retained style. All 74 Ledger tests, 19 command package/SDK
+formats or all content removes the retained style. All 74 Excelx tests, 19 command package/SDK
 comparisons and six browser draft/recovery comparisons pass. The `984eaf3` full refresh confirms both
 count corrections. Office batch 7 file 07 passed. File 08 and its untouched Excel source both offer
 repair; removing the source recovery flag does not resolve it. An Office-authored replacement with
@@ -181,7 +181,7 @@ current-format units. The conversion also replaces obsolete workbook/style/theme
 translates shared-string entries and moves the legacy colour palette into the theme. It restores ten
 previously empty text cells in the 2006 preview sample. A 2005 theme is rebuilt from readable colours
 and fonts, with a notice for unsupported details. The corpus scan identifies two affected inputs;
-23 unreadable archives remain recorded separately. All 78 Ledger tests and six save/edit/draft
+23 unreadable archives remain recorded separately. All 78 Excelx tests and six save/edit/draft
 attempts pass. Their 14 saved states pass the SDK independently with zero errors and add no package
 issues; comparisons against the unreadable originals remain failed. Both saves open in LibreOffice:
 the readable original keeps its one page, while the unreadable original has no comparable count.
@@ -213,7 +213,7 @@ focused package/SDK and LibreOffice checks and are accepted in Excel. Evidence:
 `~/corpora/results/ledger-page-setup-2026-10-09/`, `ledger-final-3cb0cd2/` and
 `office-final-corrections-2026-10-09/`.
 
-Ledger regenerates worksheets and keeps original package dependencies, workbook settings, style
+Excelx regenerates worksheets and keeps original package dependencies, workbook settings, style
 indices and shared strings. Save and drafts retain all four OOXML variants and encryption. The
 Compatibility Checker shows, before a user download, only the losses that cost the user content or a
 working feature (see docs/suite.md, What the user is told); repairs and edited-chart formatting are recorded silently.
@@ -228,7 +228,7 @@ Package/SDK comparison reports **911 OK, 35 failed and
 5 excluded** for unedited saves. Across **6,589** save/edit/history/draft states, **6,371 pass,
 201 fail and 17 are excluded**; none adds diagnostics. Malformed or unvalidatable originals
 remain failures in the reports. All validation statuses match the preceding run. The shared review
-suite and audit regression pass; all 78 Ledger unit tests pass.
+suite and audit regression pass; all 78 Excelx unit tests pass.
 
 The feature inventory compares **922 readable pairs**. The independent openpyxl cell comparison
 covers **889 workbooks / 1,649,147 cells**: **883 workbooks** keep every compared value/formula;
@@ -252,7 +252,7 @@ part in `tdf76115` explicitly.
 | Kept; Excel samples accepted | Threaded comments | 6/6 corpus records across four workbooks; five thread parts and four person parts remain byte-identical. Focused edits retain replies, mentions, person IDs and shifted cell references |
 | Kept | Notes, tables, merges, validation and names | 373/373 notes, 230/230 tables, 56,263/56,263 merges, 259/259 validations, 2,106/2,106 names |
 | Kept; Excel samples accepted | Page setup, absent defaults and printer settings | Seven public fixtures / 49 save/edit/history/draft states add no package/SDK diagnostics; all seven unedited render pairs retain their page counts. Paper and print-quality edits retain sibling options and binary printer settings |
-| Kept; Excel acceptance pending | SmartArt, Office add-ins, ink and other objects Ledger can't show | A drawing object the reader can't model is kept as its original XML (a kept frame) and shown as a placeholder with its name; it can be moved, resized, copied and deleted. SmartArt keeps its data, layout, style, colour and drawing-cache parts byte for byte; a copy gets parts of its own, as Excel writes them. An object shown by its AlternateContent Fallback (an add-in's picture, chartex, a 3-D model) keeps the whole AlternateContent until the shown object is edited, which says so. Unedited corpus saves losing a part the original used: 22 files → 1 (a fuzz file) |
+| Kept; Excel acceptance pending | SmartArt, Office add-ins, ink and other objects Excelx can't show | A drawing object the reader can't model is kept as its original XML (a kept frame) and shown as a placeholder with its name; it can be moved, resized, copied and deleted. SmartArt keeps its data, layout, style, colour and drawing-cache parts byte for byte; a copy gets parts of its own, as Excel writes them. An object shown by its AlternateContent Fallback (an add-in's picture, chartex, a 3-D model) keeps the whole AlternateContent until the shown object is edited, which says so. Unedited corpus saves losing a part the original used: 22 files → 1 (a fuzz file) |
 | Kept, with exceptions | Charts, pictures and shapes | 155/157 charts, 164/165 pictures and 492/493 shapes; unedited raw shapes retain nested compatibility alternatives and relationships |
 | Kept; Excel samples accepted | Worksheet extensions and newer conditional formatting | The 65-workbook extension sweep retains 100/100 extension entries with unchanged expanded XML: 23/23 extended bars, 53/53 extended rules, 20/20 extended validations, 9/9 sparkline groups and 63/63 unknown entries. Package checks add no issues; SDK comparisons pass in 64, with one malformed original unvalidatable |
 | Kept; Excel samples accepted | Controls, OLE, non-comment VML and sheet custom properties | All 40 relevant workbooks save without new package/SDK errors: 344/344 control references, 370/370 control/ActiveX parts, 26/26 OLE entries, 367/367 non-note VML shapes and 31/31 sheet properties. All 43 VML parts retain their original bytes |
@@ -306,7 +306,7 @@ results are in `~/corpora/results/office-accepted-2026-10-09/`.
 | Edit cells around an unedited raw shape | Keep its original XML, compatibility alternatives and relationships |
 | Move a drawing | Update its worksheet anchor |
 | Edit chart contents or a converted shape | Regenerate the modeled content with a recorded notice; general per-property preservation remains pending |
-| Copy/duplicate or delete | Controls and OLE follow the ownership rules below; other opaque-frame ownership remains part of the remaining Ledger work |
+| Copy/duplicate or delete | Controls and OLE follow the ownership rules below; other opaque-frame ownership remains part of the remaining Excelx work |
 
 ### Pivots, threads, controls and extensions: current edit limits
 
@@ -322,7 +322,7 @@ results are in `~/corpora/results/office-accepted-2026-10-09/`.
 ### Pivots: edit behavior
 
 Pivot definitions and cached records remain original package data. The model holds source and
-output locations, cache identities and pending changes; Ledger does not calculate a pivot or execute
+output locations, cache identities and pending changes; Excelx does not calculate a pivot or execute
 an external connection. Excel performs any requested refresh when it opens the saved file.
 
 | Source or edit | Required save behavior |
@@ -465,10 +465,10 @@ Eight focused cases produce **23 unique passing package/SDK states**, plus **two
 draft/recovery states**. Edited and copied samples and three history states open in LibreOffice
 with unchanged page counts. The ten-file query sweep has no new package issues; nine SDK
 comparisons pass and one original (`queryTableExport.xlsx`) has a missing dependency and cannot
-be validated. Ledger does not execute a query or enable refresh. Current focused reports:
+be validated. Excelx does not execute a query or enable refresh. Current focused reports:
 `~/corpora/results/review-fixes-2026-10-09/guid-queries/`; sweep and browser reports:
 `~/corpora/results/ledger-preservation-2026-10-08/query-*`.
-The full Ledger group measurement is reported above; the batch-3 Excel samples are accepted.
+The full Excelx group measurement is reported above; the batch-3 Excel samples are accepted.
 
 ## Compatibility testing
 
@@ -486,8 +486,8 @@ Merged-cell borders are drawn from the individual perimeter cells, retaining par
 different styles along a side, including blank cells and merges whose anchor is hidden or scrolled
 out of view. The same renderer supplies Print Preview and PDF output. Issue #22's workbook (275
 cells, 37 merged ranges) and four small border controls were checked against Excel 2016 on Windows
-10, build `16.0.4266.1003`, on 2026-11-02. The original, Ledger save and controls opened without
-repair prompts; all three Excel PDF pages of the original and Ledger save matched pixel for pixel
+10, build `16.0.4266.1003`, on 2026-11-02. The original, Excelx save and controls opened without
+repair prompts; all three Excel PDF pages of the original and Excelx save matched pixel for pixel
 at 96 dpi. An XML Spreadsheet 2003 file can hold a merge's format only on its top-left cell, so on
 opening, the merge's edge cells take that format and keep the whole outline.
 `tests/from-issues/22/borders.test.mjs` checks the screen and print borders, colors, partial edges,
@@ -506,7 +506,7 @@ support for every formula or external data source.
 - PivotTables: Data ▸ PivotTable builds a static summary report. Pivot tables in opened files keep
   their cached cells and original pivot/cache parts. Source/output edits follow the rules above;
   slicer dependents are retained and the batch-3 Excel samples are accepted.
-- Power Pivot models and Power Query connections are carried as package dependencies; Ledger does not
+- Power Pivot models and Power Query connections are carried as package dependencies; Excelx does not
   execute them or maintain their query-specific edit semantics.
 - Chart editing covers the Chart Wizard types; other chart types from files are shown and kept but
   can only be replaced, not edited in place. Surface charts are not drawn.
@@ -523,7 +523,7 @@ support for every formula or external data source.
 
 | File | What it does |
 | --- | --- |
-| `index.html`, `tools/ledger/build/` | Window chrome, Ledger's CSS after the shared `../common/looks.css` and `../common/ui.css`, script order (generated by the build script) |
+| `index.html`, `tools/ledger/build/` | Window chrome, Excelx's CSS after the shared `../common/looks.css` and `../common/ui.css`, script order (generated by the build script) |
 | `js/pivots.js` | Preserved pivot/cache identities, source and output edits, shared-cache history and refresh notices |
 | `js/threads.js` | Complete threads beside notes, root-text edits, mentions/persons and copied identities |
 | `js/objects.js` | Controls/OLE ownership, linked DrawingML/VML identities, payload copies and note/VML merging |
@@ -541,12 +541,12 @@ support for every formula or external data source.
 | `js/preserve.js` | Package ownership, workbook/property merges and retained style indices |
 | `js/xlsx-read.js`, `js/xlsx-write.js`, `js/csv.js`, `js/xmlss.js` | File formats |
 | `../common/dml.js`, `../common/charts.js`, `js/xchart.js`, `js/drawing.js`, `../common/geometry.js`, `../common/metafile.js` | DrawingML, chart model and SVG drawing, Chart Wizard, pictures and AutoShapes, WMF/EMF |
-| `js/filter.js`, `js/print.js`, `../common/spell.js`, `js/spell.js`, `js/panes.js` | AutoFilter, printing and Print Preview, the shared spelling engine with Ledger's Spelling dialog and AutoCorrect, task panes and templates |
+| `js/filter.js`, `js/print.js`, `../common/spell.js`, `js/spell.js`, `js/panes.js` | AutoFilter, printing and Print Preview, the shared spelling engine with Excelx's Spelling dialog and AutoCorrect, task panes and templates |
 | `../common/ui.js`, `../common/search.js`, `../common/icons.js`, `../common/looks.css`, `../common/ui.css`, `js/commands.js`, `js/dialogs*.js`, `js/app.js` | Menus, toolbars and dialogs; Search commands; original 16×16 icons; the command registry; the application controller |
 | `../common/scout/` | Scout, the assistant: Help ▸ Show the Assistant ([suite.md](suite.md#the-assistant-scout)) |
-| `js/ribbon.js`, `../common/ribbon.js` | The Paper 2016 look's ribbon: Excel's tabs and groups over Ledger's commands ([suite.md](suite.md#the-ribbon)) |
-| `../common/dict/` | Spelling word lists (English U.S. and U.K.) and their licences (shared with Quire) |
+| `js/ribbon.js`, `../common/ribbon.js` | The Paper 2016 look's ribbon: Excel's tabs and groups over Excelx's commands ([suite.md](suite.md#the-ribbon)) |
+| `../common/dict/` | Spelling word lists (English U.S. and U.K.) and their licences (shared with Wordx) |
 | `tests/ledger/` | The test harnesses described above (Node.js and Playwright) |
 
-Ledger is an independent program. Microsoft, Excel and Office are trademarks of Microsoft Corporation;
-Ledger is not affiliated with Microsoft. More in the README (Legal).
+Excelx is an independent program. Microsoft, Excel and Office are trademarks of Microsoft Corporation;
+Excelx is not affiliated with Microsoft. More in the README (Legal).

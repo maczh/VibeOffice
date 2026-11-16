@@ -36,9 +36,9 @@ export function PptxSlideFinderDialog() {
   return <OfficeDialog title={t('Slide Finder')} className="pptx-slide-finder-dialog" style={{ width: 'min(96vw, 700px)' }} onRequestClose={close}>
     <div className="col">
       <div>{t('Presentation: {0}', catalog.name)}</div>
-      <div className="slide-finder-grid" role="group" aria-label={t('Slides in presentation')} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10, maxHeight: 320, overflow: 'auto', padding: 4, background: '#fff', border: '1px solid #888' }}>
+      <div className="slide-finder-grid" role="group" aria-label={t('Slides in presentation')} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10, maxHeight: 320, overflow: 'auto', padding: 4, background: '#fff', border: '1px solid var(--field-border)' }}>
         {catalog.slides.map((slide) => <label key={slide.index} className="slide-finder-item" style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start', cursor: 'default' }}>
-          <span className="slide-finder-thumb" style={{ border: '1px solid #999' }} dangerouslySetInnerHTML={{ __html: slide.thumb }} />
+          <span className="slide-finder-thumb" style={{ border: '1px solid var(--field-border)' }} dangerouslySetInnerHTML={{ __html: slide.thumb }} />
           <span className="row" style={{ gap: 4, alignItems: 'center' }}><input type="checkbox" aria-label={t('Slide {0}: {1}', slide.index + 1, slide.title)} checked={selected.includes(slide.index)} onChange={(event) => toggle(slide.index, event.currentTarget.checked)} /><span>{slide.index + 1}. {slide.title.slice(0, 24)}</span></span>
         </label>)}
       </div>

@@ -154,9 +154,9 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
     restoreDomRoot?.();
     restoreDomRoot = undefined;
     styles.forEach((style) => style.remove());
-    host.replaceChildren();
+    root.remove();
   };
-  host.replaceChildren(root);
+  host.append(root);
 
   try {
     for (const node of Array.from(parsed.head.querySelectorAll('link[rel="stylesheet"][href], style'))) {

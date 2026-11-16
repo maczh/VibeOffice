@@ -48,7 +48,19 @@ function ListBoxControl({ request }: { request: ListBoxRequest }) {
     const next = options[nextIndex];
     if (!next) return;
     choose(next);
-    if (activeId) request.target.querySelector<HTMLElement>(`#${CSS.escape(activeId)}`)?.scrollIntoView({ block: 'nearest' });
+    const nextId = request.target.id ? `${request.target.id}-option-${nextIndex}` : undefined;
+    if (nextId) {
+      const option = request.target.querySelector<HTMLElement>(`#${CSS.escape(nextId)}`);
+      if (option) {
+        const list = request.target;
+        const listBounds = list.getBoundingClientRect();
+        const optionBounds = option.getBoundingClientRect();
+        const visibleTop = listBounds.top + list.clientTop;
+        const visibleBottom = visibleTop + list.clientHeight;
+        if (optionBounds.top < visibleTop) list.scrollTop -= visibleTop - optionBounds.top;
+        else if (optionBounds.bottom > visibleBottom) list.scrollTop += optionBounds.bottom - visibleBottom;
+      }
+    }
   };
   useEffect(() => {
     const target = request.target;

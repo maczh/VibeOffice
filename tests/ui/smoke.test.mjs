@@ -40,7 +40,7 @@ test('Start Center opens on Create File without Recent Files', async () => {
   } finally { await t.close(); }
 });
 
-test('Quire: type, a menu, a dialog, Undo', async () => {
+test('Wordx: type, a menu, a dialog, Undo', async () => {
   const t = await open('quire', { look: 'classic' });
   try {
     await t.evaluate(`(async () => { const { D } = L, d = D.newDoc(); d.main.blocks = [D.para([D.text('Plain text.')])]; L.app.loadDoc(d, 'Smoke'); await new Promise((r) => setTimeout(r, 400)); })()`);
@@ -59,7 +59,7 @@ test('Quire: type, a menu, a dialog, Undo', async () => {
   } finally { await t.close(); }
 });
 
-test('Ledger: type, a menu, a dialog with a drop-down, Undo', async () => {
+test('Excelx: type, a menu, a dialog with a drop-down, Undo', async () => {
   const t = await open('ledger', { look: 'classic' });
   try {
     const cell = (r, c) => t.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(${r}, ${c}); return { x: Math.round(w.left + b.x + b.w / 2), y: Math.round(w.top + b.y + b.h / 2) }; })()`);
@@ -85,7 +85,7 @@ test('Ledger: type, a menu, a dialog with a drop-down, Undo', async () => {
   } finally { await t.close(); }
 });
 
-test('Lectern: type, a menu, a dialog, Undo', async () => {
+test('PPTX: type, a menu, a dialog, Undo', async () => {
   const t = await open('lectern', { look: 'classic' });
   try {
     await t.evaluate(`(async () => { const E = L.ed, M = L.model; if (L.te.active()) L.te.end(); E.goto(0);

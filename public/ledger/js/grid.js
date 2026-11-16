@@ -1137,7 +1137,7 @@
     hoverTimer = setTimeout(() => { hoverCm = cm; G.syncObjects(); }, 250);
   }
   G.reactPointerLeave = () => { if (hoverCm) { hoverCm = null; G.syncObjects(); } };
-  L.bus.on('app-ready', () => {
-    if (!(window.VO && VO.reactDirectHost)) L.addMountListener(document, 'pointerleave', G.reactPointerLeave);
+  if (!(window.VO && VO.reactDirectHost)) L.bus.on('app-ready', () => {
+    L.addMountListener(document, 'pointerleave', G.reactPointerLeave);
   });
 })(typeof window !== 'undefined' ? window : globalThis);
