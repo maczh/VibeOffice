@@ -33,7 +33,7 @@
   /* in when the app starts: not on a day the user hid him; otherwise once they have shown him, or by default
      (but not on a phone or tablet, nor in an automated browser: UI checks) */
   const wanted = () => get(HIDDEN) !== today() && (load().on === true || (!L.isMobile && !navigator.webdriver));
-  let scout = null, on = wanted(), away = false, awayTimer = 0, reactHostFactory = null;   // away: the window is in the background
+  let scout = null, on = wanted(), away = false, awayTimer = 0, workTimer = 0, greetingTimer = 0, reactHostFactory = null;   // away: the window is in the background
 
   const searchInput = () => ui.searchInput && ui.searchInput();
   const can = (id) => !!ui.cmds[id] && ui.enabled(id);
@@ -165,54 +165,79 @@
     scout.play(act, { next: true }).then((done) => { if (done && work) scout.play('Processing', { until: work }); });
   }
 
-  addEventListener('vo-command', (e) => { lastCmd = e.detail.id; if (ACT_OF[lastCmd]) react(ACT_OF[lastCmd]); });
-  addEventListener('vo-saved', () => { if (SAVES.test(lastCmd)) react('Save'); });
-  /* work: what he is doing carries on until it is over; with nothing to do, he works along (Processing) */
-  addEventListener('vo-busy', (e) => {
-    if (!e.detail.on) { if (workDone) workDone(); work = workDone = null; return; }
-    const w = work = new Promise((r) => { workDone = r; });
-    setTimeout(() => { if (work === w && free() && (!scout.current || scout.current.idle)) scout.play('Processing', { next: true, until: w }); }, WORK_MS);
-  });
-  addEventListener('vo-message', (e) => { if (e.detail.icon === 'warn' || e.detail.icon === 'error') react('Alert'); });
-  addEventListener('beforeprint', () => react('Print'));
-  /* the user at work: what he idles at follows them (keys, presses, the wheel, the window coming back; the mouse
-     merely moving is no work) */
-  const stir = () => { if (scout) scout.userActive(); };
-  for (const type of ['keydown', 'pointerdown', 'wheel']) addEventListener(type, stir, { capture: true, passive: true });
+  function bindWindowEvents() {
+    const cleanups = [];
+    away = !document.hasFocus();
+    const listen = (type, fn, options) => {
+      addEventListener(type, fn, options);
+      cleanups.push(() => removeEventListener(type, fn, options));
+    };
+    listen('vo-command', (e) => { lastCmd = e.detail.id; if (ACT_OF[lastCmd]) react(ACT_OF[lastCmd]); });
+    listen('vo-saved', () => { if (SAVES.test(lastCmd)) react('Save'); });
+    /* work: what he is doing carries on until it is over; with nothing to do, he works along (Processing) */
+    listen('vo-busy', (e) => {
+      if (!e.detail.on) { clearTimeout(workTimer); workTimer = 0; if (workDone) workDone(); work = workDone = null; return; }
+      const w = work = new Promise((r) => { workDone = r; });
+      clearTimeout(workTimer);
+      workTimer = setTimeout(() => { workTimer = 0; if (work === w && free() && (!scout.current || scout.current.idle)) scout.play('Processing', { next: true, until: w }); }, WORK_MS);
+    });
+    listen('vo-message', (e) => { if (e.detail.icon === 'warn' || e.detail.icon === 'error') react('Alert'); });
+    listen('beforeprint', () => react('Print'));
+    /* the user at work: what he idles at follows them (keys, presses, the wheel, the window coming back; the mouse
+       merely moving is no work) */
+    const stir = () => { if (scout) scout.userActive(); };
+    for (const type of ['keydown', 'pointerdown', 'wheel']) listen(type, stir, { capture: true, passive: true });
 
-  /* the window in the background: he stands still, nothing drawn until it comes back (a hidden page draws
-     nothing anyway) */
-  addEventListener('blur', () => {
-    clearTimeout(awayTimer);
-    awayTimer = setTimeout(() => {
-      if (document.hasFocus()) return;
-      away = true;
-      if (scout) scout.freeze(true);
-    }, AWAY_MS);
-  });
-  addEventListener('focus', () => {
-    clearTimeout(awayTimer);
-    away = false;
-    if (scout) scout.freeze(false).userActive();
-  });
-  addEventListener('resize', () => { if (scout) place(); });
-  /* shown or hidden in another window */
-  if (root.VO && root.VO.settings) root.VO.settings.on((key) => {
-    if ((key !== KEY && key !== HIDDEN && key !== null) || wanted() === on) return;
-    if (on) hide(true); else show(false);
-  });
-  /* in when the app has started */
-  if (on) addEventListener('load', () => setTimeout(() => { if (on && !scout) show(false); }, 400));
+    /* the window in the background: he stands still, nothing drawn until it comes back (a hidden page draws
+       nothing anyway) */
+    listen('blur', () => {
+      clearTimeout(awayTimer);
+      awayTimer = setTimeout(() => {
+        awayTimer = 0;
+        if (document.hasFocus()) return;
+        away = true;
+        if (scout) scout.freeze(true);
+      }, AWAY_MS);
+    });
+    listen('focus', () => {
+      clearTimeout(awayTimer); awayTimer = 0;
+      away = false;
+      if (scout) scout.freeze(false).userActive();
+    });
+    listen('resize', () => { if (scout) place(); });
+    /* shown or hidden in another window */
+    if (root.VO && root.VO.settings) cleanups.push(root.VO.settings.on((key) => {
+      if ((key !== KEY && key !== HIDDEN && key !== null) || wanted() === on) return;
+      if (on) hide(true); else show(false);
+    }));
+    /* in when the classic app has started; direct-host mode calls show from attachReactHost */
+    if (on && !(root.VO && root.VO.reactDirectHost)) listen('load', () => {
+      clearTimeout(greetingTimer);
+      greetingTimer = setTimeout(() => { greetingTimer = 0; if (on && !scout) show(false); }, 400);
+    });
+    return () => {
+      clearTimeout(awayTimer); awayTimer = 0;
+      clearTimeout(workTimer); workTimer = 0;
+      clearTimeout(greetingTimer); greetingTimer = 0;
+      away = false;
+      if (workDone) workDone();
+      work = workDone = null;
+      for (const cleanup of cleanups.splice(0).reverse()) cleanup();
+    };
+  }
+  if (!(root.VO && root.VO.reactDirectHost)) bindWindowEvents();
 
   L.assistant = {
     show, hide, shown: () => on, scout: () => scout,
     activate: () => { if (scout && !scout.hidden) scout.o.onclick && scout.o.onclick(); },
     menuAt: (x, y) => { if (scout && !scout.hidden) scout.o.onmenu && scout.o.onmenu(x, y); },
     attachReactHost(factory) {
+      const stopEvents = bindWindowEvents();
       reactHostFactory = factory;
       if (scout) { scout.destroy(); scout = null; }
       if (on && !navigator.webdriver) show(false);
       return () => {
+        stopEvents();
         if (reactHostFactory !== factory) return;
         reactHostFactory = null;
         if (scout) { scout.destroy(); scout = null; }

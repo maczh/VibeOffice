@@ -152,17 +152,18 @@ try {
   const draws = async (ms) => { drawn = 0; await sleep(ms); return drawn; };
   s.o.idle = false;
   s._nextBlink = s._nextSway = 1e9;
-  /* the tail into and out of an action: no jumps (its wag keeps its own phase while the pace changes) */
-  const tailSteps = async (name) => {
-    const angles = [];
-    s._render = (p, time) => { angles.push(p.tail + p.wag * Math.sin(p.wagPh != null ? p.wagPh : Math.PI * 2 * p.wagHz * time)); render(p, time); };
-    s._clock += 300;   // five minutes on screen
-    await sleep(200); await s.play(name); await sleep(400);
-    s._render = (...a) => { drawn++; render(...a); };
-    return Math.max(...angles.slice(1).map((a, i) => Math.abs(a - angles[i])));
-  };
-  out.tailGlance = await tailSteps('LookLeft');
-  out.tailBlink = await tailSteps('IdleSlowBlink');
+  /* changing pace carries the prior frame's phase forward, independent of browser frame timing */
+  s._wagPh = 1.234; s._last = { wagHz: .5 }; s._drawnSteady = false;
+  let renderedPhase = null;
+  s._render = (p, time) => { renderedPhase = p.wagPh; render(p, time); };
+  s._tick(.1, .1);
+  const firstPhase = renderedPhase;
+  s._last.wagHz = 2; s._drawnSteady = false;
+  s._tick(.1, .1);
+  const changedPacePhase = renderedPhase;
+  s._render = (...a) => { drawn++; render(...a); };
+  const phaseError = (actual, expected) => Math.abs(((actual - expected + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI) / (Math.PI / 180);
+  out.tailContinuity = Math.max(phaseError(firstPhase, 1.234 + Math.PI * .1), phaseError(changedPacePhase, firstPhase + Math.PI * 2 * .2));
   await sleep(500);
   out.rest = await draws(2000);
   out.restTicks = await count(2000);
@@ -258,7 +259,7 @@ for (const app of ['quire', 'ledger', 'lectern']) {
     assert.equal(r.awake, null, 'awake, nothing else');
     assert.equal(r.saveWakes, 'IdleSnooze', 'asleep, a save wakes him');
     assert.equal(r.thenSaves, 'Save', 'then he saves');
-    assert.ok(r.tailGlance < 1 && r.tailBlink < 1, `the tail into and out of an action, the most it moves in a frame: ${r.tailGlance}°, ${r.tailBlink}°`);
+    assert.ok(r.tailContinuity < .01, `the tail's wag phase follows its prior pace across a speed change: ${r.tailContinuity}°`);
     assert.equal(r.rest, 0, 'at rest nothing is drawn');
     assert.ok(r.restTicks <= 4, `at rest a look at the time each second: ${r.restTicks} in 2 s`);
     assert.ok(r.sway >= 10 && r.sway <= 30, `the tail's sway, about 10 frames a second: ${r.sway} in 2 s`);

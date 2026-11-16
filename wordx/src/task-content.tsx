@@ -113,7 +113,7 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     const observer = new MutationObserver(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
-    const pagePointerDown = (event: PointerEvent) => L.ed?.reactPagePointerDown?.(event);
+    const pagePointerDown = (event: PointerEvent) => { if (!L.drawtool?.active) L.ed?.reactPagePointerDown?.(event); };
     const selectionChange = () => L.ed?.reactSelectionChange?.();
     const dragEnd = () => L.ed?.reactDragEnd?.();
     host.addEventListener('pointerdown', pagePointerDown, true);

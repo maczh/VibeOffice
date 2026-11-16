@@ -2227,10 +2227,11 @@
       if (!this.o.element) (this.o.parent || document.body).appendChild(el);
 
       if (mode === 'desktop') {
-        const control = this.o.reactOwned ? this.o.avatarElement : el;
-        control.tabIndex = 0;
-        control.setAttribute('role', this.o.reactOwned ? 'button' : 'img');
-        control.setAttribute('aria-label', this.o.label);
+        if (!this.o.reactOwned) {
+          el.tabIndex = 0;
+          el.setAttribute('role', 'img');
+          el.setAttribute('aria-label', this.o.label);
+        }
         const h = this.o.size * 235 / 260;
         this._pos = [this.o.x != null ? this.o.x : innerWidth - this.o.size - 20, this.o.y != null ? this.o.y : innerHeight - h - 16];
         this._place();
@@ -2989,30 +2990,21 @@
     }
     _bindDesktop() {
       const el = this.el, o = this.o;
-      let start = null;
-      el.addEventListener('pointerdown', e => {
-        if (e.button !== 0 || this._hidden || e.target.closest('.scout-balloon')) return;
-        start = { x: e.clientX, y: e.clientY, pos: this._pos.slice(), moved: false };
-        el.setPointerCapture(e.pointerId);
-      });
-      /* a click leaves the keyboard focus where it was (the document) */
-      el.addEventListener('mousedown', e => { e.preventDefault(); });
-      el.addEventListener('pointermove', e => {
-        if (!start) return;
-        const dx = e.clientX - start.x, dy = e.clientY - start.y;
-        if (!start.moved && Math.hypot(dx, dy) < 4) return;
-        start.moved = true; this._dragging = true; el.classList.add('is-dragging');
-        this.placeAt(start.pos[0] + dx, start.pos[1] + dy);
-      });
-      const end = e => {
-        if (!start) return;
-        const s = start; start = null;
-        this._dragging = false; el.classList.remove('is-dragging'); this._restAt = this._clock;
-        if (e.type !== 'pointerup') return;
-        if (s.moved) { if (o.onmoved) o.onmoved(this._pos[0], this._pos[1]); }
-        else if (!o.reactOwned && o.onclick) o.onclick();
-      };
-      el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+      if (!o.reactOwned) {
+        el.addEventListener('pointerdown', e => {
+          if (e.button !== 0 || e.target.closest('.scout-balloon')) return;
+          this.dragStart(e.clientX, e.clientY);
+          el.setPointerCapture(e.pointerId);
+        });
+        /* a click leaves the keyboard focus where it was (the document) */
+        el.addEventListener('mousedown', e => { e.preventDefault(); });
+        el.addEventListener('pointermove', e => this.dragMove(e.clientX, e.clientY));
+        const end = e => {
+          const result = this.dragEnd(e.type === 'pointerup');
+          if (e.type === 'pointerup' && result?.moved === false && o.onclick) o.onclick();
+        };
+        el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+      }
       if (!o.reactOwned) {
         el.addEventListener('keydown', e => {
           if (e.target.closest('.scout-balloon')) return;
@@ -3031,6 +3023,31 @@
       }
       this._onResize = () => this.placeAt(this._pos[0], this._pos[1]);
       addEventListener('resize', this._onResize);
+    }
+    /** Begin an avatar drag; the React host owns pointer capture and event registration. */
+    dragStart(x, y) {
+      if (this.o.mode !== 'desktop' || this._hidden) return false;
+      this._dragStart = { x, y, pos: this._pos.slice(), moved: false };
+      return true;
+    }
+    /** Move an active drag and report once it has crossed the click threshold. */
+    dragMove(x, y) {
+      const start = this._dragStart;
+      if (!start) return false;
+      const dx = x - start.x, dy = y - start.y;
+      if (!start.moved && Math.hypot(dx, dy) < 4) return false;
+      start.moved = true; this._dragging = true; this.el.classList.add('is-dragging');
+      this.placeAt(start.pos[0] + dx, start.pos[1] + dy);
+      return true;
+    }
+    /** Finish or cancel a drag; only a completed move persists the new position. */
+    dragEnd(commit = true) {
+      const start = this._dragStart;
+      if (!start) return null;
+      this._dragStart = null;
+      this._dragging = false; this.el.classList.remove('is-dragging'); this._restAt = this._clock;
+      if (commit && start.moved && this.o.onmoved) this.o.onmoved(this._pos[0], this._pos[1]);
+      return { moved: start.moved };
     }
     /** Put him at a desktop position now (px, top-left of the character box), kept inside the window. */
     placeAt(x, y) {

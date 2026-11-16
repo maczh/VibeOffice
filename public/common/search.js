@@ -14,53 +14,13 @@
   const L = root.L || (root.L = {});
   const { h } = L;
   const ui = L.ui;
-  const MAX = 10, RECENT = 6;
-
-  /* everyday words and spellings → the words Office's command names use ('|' between alternatives) */
-  const SYN = {
-    smartart: 'intelliart', wordart: 'lettersart', diagram: 'intelliart|diagram', diagrams: 'intelliart|diagram', orgchart: 'intelliart|organization chart', fontwork: 'lettersart',
-    image: 'picture|from file', images: 'picture|from file', pdf: 'pdf|save as', png: 'save as', html: 'web page|save as', photo: 'picture|photo album', photos: 'picture|photo album', pic: 'picture', img: 'picture',
-    graph: 'chart', graphs: 'chart', plot: 'chart', colour: 'color', colours: 'color', grey: 'gray', centre: 'center', centred: 'center',
-    remove: 'delete|clear', erase: 'delete|clear|eraser', strikethrough: 'strike', crossed: 'strike',
-    margin: 'page setup', margins: 'page setup', orientation: 'page setup', landscape: 'page setup', portrait: 'page setup', paper: 'page setup',
-    note: 'comment', notes: 'comment|notes', annotate: 'comment', toc: 'table of contents|index and tables', contents: 'index and tables|table of contents',
-    sum: 'autosum', total: 'autosum|subtotal', totals: 'subtotal', redline: 'track changes', revisions: 'track changes|changes',
-    password: 'protect|permission|encrypt', encrypt: 'protect|permission', lock: 'protect|freeze',
-    emoji: 'symbol', special: 'symbol', character: 'symbol', characters: 'symbol|word count', link: 'hyperlink', url: 'hyperlink', links: 'hyperlink|links',
-    search: 'find', locate: 'find', substitute: 'replace', swap: 'replace',
-    uppercase: 'change case', lowercase: 'change case', capital: 'change case', capitals: 'change case', caps: 'change case|all caps',
-    bigger: 'grow font', larger: 'grow font', enlarge: 'grow font', smaller: 'shrink font', plain: 'clear formatting|clear formats',
-    brush: 'format painter', background: 'background|page color|fill', height: 'spacing|row height', list: 'bullets|numbering',
-    bullet: 'bullets', numbered: 'numbering', shading: 'fill|shading', marker: 'highlight', resize: 'size|autofit', fit: 'autofit|fit',
-    present: 'slide show|view show|from beginning', presentation: 'slide show|view show', play: 'slide show|view show|from beginning', slideshow: 'slide show|view show', speaker: 'notes',
-    money: 'currency', dollar: 'currency', euro: 'currency', percentage: 'percent', decimals: 'decimal',
-    formula: 'function|formula', vlookup: 'function', lookup: 'function', average: 'function|autosum', count: 'function|word count',
-    export: 'save as|export|pdf', download: 'save as', statistics: 'word count', stats: 'word count',
-    dictionary: 'spelling', spellcheck: 'spelling', spell: 'spelling', typo: 'spelling', proofread: 'spelling', synonym: 'thesaurus', synonyms: 'thesaurus',
-    translate: 'language', settings: 'options', preferences: 'options', appearance: 'options', theme: 'options|theme', themes: 'options|theme',
-    shortcut: 'keyboard shortcuts', shortcuts: 'keyboard shortcuts', hotkey: 'keyboard shortcuts', hotkeys: 'keyboard shortcuts',
-    revert: 'undo', magnify: 'zoom', fullscreen: 'full screen', citation: 'footnote', pin: 'freeze', combine: 'merge', join: 'merge',
-    alphabetize: 'sort', order: 'sort|bring to front|send to back', clone: 'duplicate', textbox: 'text box', shape: 'autoshapes|shapes',
-    arrow: 'autoshapes|arrow', rectangle: 'autoshapes', circle: 'autoshapes', oval: 'autoshapes', email: 'send|mail', mail: 'mail merge|send',
-    vba: 'macros', script: 'macros', quit: 'exit', blank: 'new', recent: 'open', author: 'properties', metadata: 'properties',
-    info: 'properties', details: 'properties', tab: 'tabs|sheet', worksheet: 'sheet', column: 'column|columns', row: 'row|rows',
-  };
+  const MATCH = root.VO && root.VO.commandMatcher;
+  if (!MATCH) throw new Error('The command search requires the shared command matcher');
+  const MAX = MATCH.maxResults, RECENT = MATCH.maxRecent;
 
   const norm = (s) => ui.stripAmp(String(s || '')).replace(/(\.\.\.|…)$/, '').trim();
   /* words in any script, with compound names split as well as whole (AutoSum → autosum, auto, sum) */
-  const words = (s) => { const w = String(s).toLowerCase().split(/[^\p{L}\p{N}%$&+]+/u).filter(Boolean); const parts = String(s).replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^\p{L}\p{N}%$&+]+/u).filter(Boolean); return w.concat(parts.filter((x) => !w.includes(x))); };
-  const CJK = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
   const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-  /* one typo: a letter wrong, missing, extra or two letters swapped */
-  function near(a, b) {
-    if (Math.abs(a.length - b.length) > 1) return false;
-    let i = 0;
-    while (i < a.length && a[i] === b[i]) i++;
-    if (i === a.length && i === b.length) return true;
-    if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1) || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
-    return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
-  }
 
   /* where each command lives: its menu path (menu bar) and its ribbon tab and group */
   function places() {
@@ -131,39 +91,18 @@
     return out;
   }
 
-  /* how well one query word matches an entry: 0 = not at all. Its name counts most (whole word, start of a
-     word, an everyday synonym, one typo), then its tooltip and location. */
-  function wordScore(q, e) {
-    const own = e.own || (e.own = words(e.label)), also = e.also || (e.also = words(e.alias).filter((w) => !own.includes(w)));
-    const hit = (list) => {
-      let best = 0;
-      for (const w of list) {
-        if (w === q) best = Math.max(best, 5);
-        else if (w.startsWith(q)) best = Math.max(best, 4);
-        else if (q.length >= 4 && w.length >= 4 && near(q, w)) best = Math.max(best, 2.5);
-        else if (CJK.test(q) && w.includes(q)) best = Math.max(best, 3.5);   // Japanese, Korean: no spaces between words
-      }
-      const text = ' ' + list.join(' ') + ' ';
-      if (SYN[q] && SYN[q].split('|').some((alt) => text.includes(' ' + alt + ' ') || text.includes(' ' + alt + 's '))) best = Math.max(best, 3.5);
-      return best;
-    };
-    const best = Math.max(hit(own), hit(also) - 0.5);   // its own name before the submenu's
-    if (best > 0) return best;
-    return words(e.tip + ' ' + (e.path || []).join(' ')).some((w) => w.startsWith(q)) ? 1 : 0;
-  }
-
   const enabledOf = (e) => (e.id ? ui.enabled(e.id) : !e.enabledFn || !!e.enabledFn());
 
   ui.searchCommands = (query, layout) => {
     layout = layout || document.documentElement.dataset.layout || 'bars';
-    const qs = words(query);
+    const qs = MATCH.words(query);
     if (!qs.length) return [];
     const recent = L.store ? L.store.get('searchRecent', []) : [];
     const full = qs.join(' ');
     const scored = [];
     for (const e of entries(layout)) {
       let s = 0;
-      for (const q of qs) { const w = wordScore(q, e); if (!w) { s = 0; break; } s += w; }
+      for (const q of qs) { const w = MATCH.scoreWord(q, e); if (!w) { s = 0; break; } s += w; }
       if (!s) continue;
       const lab = e.label.toLowerCase();
       if (lab === full) s += 6; else if (lab.startsWith(full) || (e.keys && (' ' + e.keys).includes(' ' + full))) s += 3;
@@ -247,7 +186,7 @@
       rows = [];
       if (!q) pop.append(h('div', { class: 'm-head', text: 'Recently used' }));
       if (q && !list.length) pop.append(h('div', { class: 'm-item dis cs-none', text: L.t('No commands match “{0}”', q) }));
-      const qs = words(q);
+      const qs = MATCH.words(q);
       list.forEach((r, i) => {
         const c = r.id ? ui.cmds[r.id] : null, icon = r.entry.icon;
         const checked = !!(r.id && ui.checked(r.id));

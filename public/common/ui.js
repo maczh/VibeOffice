@@ -1,4 +1,4 @@
-/* VibeOffice — UI toolkit shared by Quire, Ledger and Lectern: commands, menus, toolbars, dialogs, pickers.
+/* VibeOffice — shared editor UI toolkit: commands, menus, toolbars, dialogs, pickers.
  * Styled after the Office 2003 "Luna" command bars.
  */
 (function (root) {
@@ -42,7 +42,8 @@
     let shared = windowMounts.get(win);
     if (!shared) {
       const legacyMenuEvents = reactDirectHost ? [] : [on(win, 'blur', legacyCloseMenus), on(win, 'resize', legacyCloseMenus)];
-      shared = { count: 0, offs: [...legacyMenuEvents, ...mountPointerEvents.map((type) => on(win, type, swallowOtherButtons, true))] };
+      const pointerEvents = reactDirectHost ? [] : mountPointerEvents.map((type) => on(win, type, swallowOtherButtons, true));
+      shared = { count: 0, offs: [...legacyMenuEvents, ...pointerEvents] };
       windowMounts.set(win, shared);
     }
     shared.count++;
@@ -132,7 +133,7 @@
    * commitEdit: finish an edit in progress before a toolbar box takes the focus; ownsText(el): el is the document's
    * own editable text, which refocus gives back with the app's selection (other editable text gets its own back). */
   ui.hooks = { beforeExec() {}, refocus() {}, commitEdit() {}, ownsText() { return false; } };
-  /* Theme colours for the colour menus (Lectern): schemeColors(design) -> [{ ref, hex, tip }], currentDesign() */
+  /* Theme colours for the colour menus: schemeColors(design) -> [{ ref, hex, tip }], currentDesign() */
   ui.schemeColors = null;
   ui.currentDesign = null;
 
@@ -587,7 +588,7 @@
     ui.closeMenus();
     hideTip();
     const prevFocus = document.activeElement;
-    /* the selection in text being edited, for text the app doesn't give back itself (Lectern's speaker notes) */
+    /* the selection in text being edited, for text the editor doesn't give back itself */
     const s0 = window.getSelection();
     const prevRange = prevFocus && prevFocus.isContentEditable && s0.rangeCount && prevFocus.contains(s0.anchorNode) ? s0.getRangeAt(0).cloneRange() : null;
     const directHost = root.VO && root.VO.reactDirectHost;
@@ -1254,8 +1255,8 @@
    *   puts a brush down (ui.brush). Other keys go nowhere while the button is held, except the modifiers.
    * - While it moves, the cursor shown at the press stays wherever the pointer goes (`cursor` sets another one;
    *   false: none is held).
-   * A text selection is the browser's own drag; an app may watch it with { capture: false, cursor: false } (Quire
-   * does, so its release, or how it ended otherwise, is known the same way). */
+   * A text selection is the browser's own drag; an editor may watch it with { capture: false, cursor: false } so its
+   * release, or how it ended otherwise, is known the same way. */
   let liveDrag = null, swallow = null, cursorStyle = null;
   /** the events of the button that cancelled a drag go no further: its press, release, auxclick and context menu */
   const swallowButton = (button) => { swallow = { button, until: Date.now() + 1500, seen: new Set() }; };
@@ -1289,42 +1290,15 @@
   };
   ui.drag = function (e, o) {
     if (e.button != null && e.button !== 0) return null;
+    const directHost = root.VO && root.VO.reactDirectHost;
+    if (directHost && typeof directHost.startDrag === 'function') return directHost.startDrag(e, o, () => { if (liveBrush) liveBrush.stop(); });
     if (liveDrag) liveDrag.end(false, null, 'new');
     const d = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, data: {} };
     const id = e.pointerId, threshold = o.threshold == null ? 4 : o.threshold;
     const cap = o.capture === false ? null : o.capture || e.target;
     let cursor = o.cursor || null;
     if (!cursor && o.cursor !== false) { try { const c = getComputedStyle(e.target).cursor; if (c && c !== 'auto') cursor = c; } catch (err) { /* no cursor kept */ } }
-    try { if (cap && id != null && cap.setPointerCapture) cap.setPointerCapture(id); } catch (err) { /* window listeners still follow */ }
-    const on = (t, type, fn, capture) => { t.addEventListener(type, fn, capture); return () => t.removeEventListener(type, fn, capture); };
-    const second = (button) => { swallowButton(button); end(false, null, 'button'); };
-    const offs = [
-      on(window, 'pointermove', (ev) => {
-        if (id != null && ev.pointerId !== id) return;
-        if (ev.buttons & 6) { second(ev.buttons & 2 ? 2 : 1); return; }
-        if (!(ev.buttons & 1)) { end(false, null, 'lost'); return; }
-        d.x = ev.clientX; d.y = ev.clientY; d.dx = d.x - d.x0; d.dy = d.y - d.y0;
-        if (!d.moved && Math.hypot(d.dx, d.dy) < threshold) return;
-        if (!d.moved && cursor) holdCursor(cursor);
-        d.moved = true;
-        if (o.move) o.move(ev, d);
-      }, true),
-      on(window, 'pointerup', (ev) => { if ((id == null || ev.pointerId === id) && ev.button === 0) end(true, ev); }, true),
-      on(window, 'keydown', (ev) => {
-        /* the modifiers shape the drag (Shift constrains it, Ctrl copies, Alt doesn't snap) */
-        if (/^(Shift|Control|Alt|Meta|AltGraph|CapsLock)$/.test(ev.key)) return;
-        ev.preventDefault(); ev.stopImmediatePropagation();
-        /* Ctrl+Z (or Y) in the middle of a drag undoes the drag, not what came before it */
-        if ((ev.ctrlKey || ev.metaKey) && /^[zy]$/i.test(ev.key)) { end(false, null, 'undo'); return; }
-        if (ev.key === 'Escape') { end(false, null, 'esc'); if (liveBrush) liveBrush.stop(); }
-        /* any other key waits for the release: an edit in the middle of a drag would come between its start and the
-           step it records */
-      }, true),
-      on(window, 'pointercancel', () => end(false, null, 'lost'), true),
-      on(window, 'blur', () => end(false, null, 'blur')),
-      on(document, 'visibilitychange', () => { if (document.hidden) end(false, null, 'blur'); }),
-    ];
-    if (cap) offs.push(on(cap, 'lostpointercapture', () => { if (cap.isConnected) end(false, null, 'lost'); }));
+    const offs = [];
     function end(ok, ev, why) {
       if (liveDrag !== live) return;
       liveDrag = null;
@@ -1333,12 +1307,51 @@
       try { if (cap && id != null && cap.hasPointerCapture && cap.hasPointerCapture(id)) cap.releasePointerCapture(id); } catch (err) { /* ignore */ }
       if (ok) { if (o.up) o.up(ev, d); } else if (o.cancel) o.cancel(d, why);
     }
-    const live = { end, d };
+    const live = {
+      end, d, id, cap, cursor,
+      capture() { try { if (cap && id != null && cap.setPointerCapture) cap.setPointerCapture(id); } catch (err) { /* window listeners still follow */ } },
+      move(ev) {
+        if (liveDrag !== live) return;
+        if (id != null && ev.pointerId !== id) return;
+        if (ev.buttons & 6) { swallowButton(ev.buttons & 2 ? 2 : 1); end(false, null, 'button'); return; }
+        if (!(ev.buttons & 1)) { end(false, null, 'lost'); return; }
+        d.x = ev.clientX; d.y = ev.clientY; d.dx = d.x - d.x0; d.dy = d.y - d.y0;
+        if (!d.moved && Math.hypot(d.dx, d.dy) < threshold) return;
+        if (!d.moved && cursor) holdCursor(cursor);
+        d.moved = true;
+        if (o.move) o.move(ev, d);
+      },
+      up(ev) { if (liveDrag === live && (id == null || ev.pointerId === id) && ev.button === 0) end(true, ev); },
+      keydown(ev) {
+        if (liveDrag !== live) return;
+        /* the modifiers shape the drag (Shift constrains it, Ctrl copies, Alt doesn't snap) */
+        if (/^(Shift|Control|Alt|Meta|AltGraph|CapsLock)$/.test(ev.key)) return;
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        /* Ctrl+Z (or Y) in the middle of a drag undoes the drag, not what came before it */
+        if ((ev.ctrlKey || ev.metaKey) && /^[zy]$/i.test(ev.key)) { end(false, null, 'undo'); return; }
+        if (ev.key === 'Escape') { end(false, null, 'esc'); if (liveBrush) liveBrush.stop(); }
+        /* any other key waits for the release: an edit in the middle of a drag would come between its start and the
+           step it records */
+      },
+      otherButton: swallowOtherButtons,
+      cancel(why) { end(false, null, why); },
+    };
     liveDrag = live;
+    live.capture();
+    const on = (t, type, fn, capture) => { t.addEventListener(type, fn, capture); return () => t.removeEventListener(type, fn, capture); };
+    offs.push(
+      on(window, 'pointermove', live.move, true),
+      on(window, 'pointerup', live.up, true),
+      on(window, 'keydown', live.keydown, true),
+      on(window, 'pointercancel', () => live.cancel('lost'), true),
+      on(window, 'blur', () => live.cancel('blur')),
+      on(document, 'visibilitychange', () => { if (document.hidden) live.cancel('blur'); }),
+    );
+    if (cap) offs.push(on(cap, 'lostpointercapture', () => { if (cap.isConnected) live.cancel('lost'); }));
     return d;
   };
-  ui.dragging = () => !!liveDrag;
-  ui.dragCancel = () => { if (liveDrag) liveDrag.end(false, null, 'api'); };
+  ui.dragging = () => { const directHost = root.VO && root.VO.reactDirectHost; return directHost && typeof directHost.dragging === 'function' ? directHost.dragging() : !!liveDrag; };
+  ui.dragCancel = () => { const directHost = root.VO && root.VO.reactDirectHost; if (directHost && typeof directHost.cancelDrag === 'function') directHost.cancelDrag(); else if (liveDrag) liveDrag.end(false, null, 'api'); };
   /* a second button cancels the drag; its own events then go no further (the pointer events report it as a move,
      before the mouse events come): its press, its release, and its auxclick or context menu, whichever ends that
      click, in whatever order the system sends them (or for 1.5 s at most) */

@@ -32,6 +32,7 @@ const NOWHERE = { quire: ['bars:strikethrough'], ledger: [], lectern: [] };
 
 const page = (cases) => `
 const out = {};
+out.sharedMatcher = { words: typeof VO.commandMatcher?.words, scorer: typeof VO.commandMatcher?.scoreWord, maxResults: VO.commandMatcher?.maxResults, maxRecent: VO.commandMatcher?.maxRecent, attach: typeof VO.attach };
 for (const [k, want] of ${JSON.stringify(Object.entries(cases))}) {
   const [lay, q] = k.includes(':') ? k.split(':') : [null, k];
   for (const layout of lay ? [lay] : ['bars', 'ribbon']) {
@@ -50,6 +51,8 @@ for (const app of Object.keys(FIRST)) {
     assert.ok(line, out);
     const r = JSON.parse(JSON.parse(line.slice(6)));
     assert.equal(r.none, 0, 'nonsense finds nothing');
+    assert.deepEqual(r.sharedMatcher, { words: 'function', scorer: 'function', maxResults: 10, maxRecent: 6, attach: 'function' }, 'classic search uses the shared matcher without replacing the Suite attachment API');
+    delete r.sharedMatcher;
     delete r.none;
     const wrong = Object.entries(r).filter(([, v]) => v.got !== v.want).map(([k, v]) => `${k}: wanted ${v.want}, got ${v.got} (${v.top.join(' | ')})`);
     assert.deepEqual(wrong, []);

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 
 interface ScoutMount { element: HTMLElement; avatarElement: HTMLElement; balloonElement: HTMLElement; textElement: HTMLElement; choicesElement: HTMLElement; onText(text: string): void; onChoices(choices: string[], visible: boolean): void }
 interface ScoutAssistantRuntime {
-  assistant?: { shown?(): boolean; activate?(): void; menuAt?(x: number, y: number): void; scout?(): { choose?(index: number): unknown; closeBalloon?(): unknown; stop?(): unknown } | null; attachReactHost?(factory: () => ScoutMount): () => void };
+  t?(text: string): string;
+  assistant?: { shown?(): boolean; activate?(): void; menuAt?(x: number, y: number): void; scout?(): { choose?(index: number): unknown; closeBalloon?(): unknown; stop?(): unknown; dragStart?(x: number, y: number): boolean; dragMove?(x: number, y: number): boolean; dragEnd?(commit?: boolean): { moved: boolean } | null } | null; attachReactHost?(factory: () => ScoutMount): () => void };
 }
 function runtime(): ScoutAssistantRuntime | undefined { return (window as Window & { L?: ScoutAssistantRuntime }).L; }
 
@@ -14,6 +15,7 @@ export function ScoutAssistant({ host }: { host: HTMLElement }) {
   const balloonRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const choicesRef = useRef<HTMLDivElement>(null);
+  const draggedRef = useRef(false);
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [speechText, setSpeechText] = useState('');
   const [choices, setChoices] = useState<string[]>([]);
@@ -48,7 +50,23 @@ export function ScoutAssistant({ host }: { host: HTMLElement }) {
 
   if (!mount) return null;
   return createPortal(<div ref={rootRef} className="scout-agent is-desktop" data-react-owned="scout-assistant">
-    <button ref={avatarRef} className="scout-avatar" type="button" data-react-owned="scout-trigger" onClick={() => runtime()?.assistant?.activate?.()} onKeyDown={(event) => {
+    <button ref={avatarRef} className="scout-avatar" type="button" data-react-owned="scout-trigger" aria-label={runtime()?.t?.('Scout, the assistant. Click him for help; right-click for more.') ?? 'Scout, the assistant. Click him for help; right-click for more.'} onMouseDown={(event) => event.preventDefault()} onPointerDown={(event) => {
+      if (event.button !== 0) return;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      draggedRef.current = false;
+      runtime()?.assistant?.scout?.()?.dragStart?.(event.clientX, event.clientY);
+    }} onPointerMove={(event) => {
+      if (runtime()?.assistant?.scout?.()?.dragMove?.(event.clientX, event.clientY)) draggedRef.current = true;
+    }} onPointerUp={() => {
+      const result = runtime()?.assistant?.scout?.()?.dragEnd?.(true);
+      draggedRef.current = !!result?.moved;
+    }} onPointerCancel={() => {
+      runtime()?.assistant?.scout?.()?.dragEnd?.(false);
+      draggedRef.current = false;
+    }} onClick={(event) => {
+      if (draggedRef.current) { event.preventDefault(); draggedRef.current = false; return; }
+      runtime()?.assistant?.activate?.();
+    }} onKeyDown={(event) => {
       if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
         event.preventDefault();
         const rect = avatarRef.current?.getBoundingClientRect();

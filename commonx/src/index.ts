@@ -38,6 +38,7 @@ export type { MoreColorsRequest } from './more-colors-dialog.js';
 export { MenuLayer } from './menu-layer.js';
 export type { ReactMenuItem, ReactMenuRequest } from './menu-layer.js';
 export { CommandSearch } from './command-search.js';
+export { installCommandSearchService } from './command-search-service.js';
 export { VibeOfficeProvider, useVibeOffice } from './react-bridge.js';
 export type { Choice, LanguageId, LookId, VibeOfficeProviderProps, VibeOfficeServiceOverrides, VibeOfficeServices } from './react-bridge.js';
 export { createIndexedDbDraftStore, openLocalDocument, saveLocalDocument } from './local-files.js';

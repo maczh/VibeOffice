@@ -1,6 +1,7 @@
 import { createDirectEngineBridge, EngineEditorFrame, VibeOfficeProvider } from '@vibeoffice/core';
 import type { VibeOfficeServiceOverrides } from '@vibeoffice/core';
 import type { DraftStore, EditorMount, EngineRuntimeOptions, LocalDocument, LocalDraft, SaveFileOperation } from '@vibeoffice/core';
+import { installCommandSearchService } from '@vibeoffice/core';
 import { useMemo, type ComponentProps } from 'react';
 import { WordxListBoxLayer } from './list-box.js';
 import { WordxMenuContentLayer } from './menu-content.js';
@@ -49,8 +50,9 @@ export function WordxEditor({ services, mountEngine, engine, draftStore, onDraft
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx', '.docm', '.dotx', '.dotm'],
         'text/plain': ['.txt', '.md', '.markdown', '.rtf', '.html', '.htm', '.zip'],
       },
+      beforeLegacyScript: (runtime, script) => { if (script.pathname.endsWith('/common/search.js')) installCommandSearchService(runtime); },
       configureRuntime: (runtime) => { installWordxRibbonSpec(runtime); installWordxTemplates(runtime); installWordxLineBoxes(runtime); installWordxDrawTool(runtime); installWordxOutline(runtime); installWordxAutoCorrect(runtime); installWordxRulers(runtime); installWordxOmml(runtime); installWordxMailMerge(runtime); installWordxFind(runtime); },
-      skipLegacyScripts: ['/quire/js/ribbon.js', '/quire/js/templates.js', '/quire/js/portions.js', '/quire/js/drawtool.js', '/quire/js/outline.js', '/quire/js/autocorrect.js', '/quire/js/rulers.js', '/quire/js/omml.js', '/quire/js/mailmerge.js', '/quire/js/find.js'],
+      skipLegacyScripts: ['/common/search.js', '/wordx/js/ribbon.js', '/wordx/js/templates.js', '/wordx/js/portions.js', '/wordx/js/drawtool.js', '/wordx/js/outline.js', '/wordx/js/autocorrect.js', '/wordx/js/rulers.js', '/wordx/js/omml.js', '/wordx/js/mailmerge.js', '/wordx/js/find.js'],
       ...(allowedRemoteOrigins ? { allowedRemoteOrigins } : {}), ...(onOpenUrl ? { onOpenUrl } : {}),
       ...(draftStore ? { draftStore } : {}),
       ...(onDraftSaved ? { onDraftSaved } : {}),

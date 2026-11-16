@@ -4,9 +4,11 @@ export interface DirectEngineDocument {
   fetch?: typeof fetch;
   directHost?: Record<string, unknown> & { editor?: 'wordx' | 'excelx' | 'pptx' };
   skipLegacyScripts?: readonly string[];
+  beforeLegacyScript?: (runtime: Window, script: URL) => void;
 }
 
 const loadedScripts = new WeakMap<Window, Map<string, Promise<void>>>();
+const mountingWindows = new WeakSet<Window>();
 
 function abortError(): DOMException {
   return new DOMException('The editor mount was cancelled', 'AbortError');
@@ -118,7 +120,7 @@ function scopedStylesheet(document: Document, source: string, sourceUrl: URL, me
 }
 
 /** Load the existing static editor shell and ordered classic modules into the React-owned host document. */
-export async function mountLegacyEngineDocument(url: string | URL, { host, signal, fetch: fetcher, directHost = {}, skipLegacyScripts = [] }: DirectEngineDocument): Promise<() => void> {
+export async function mountLegacyEngineDocument(url: string | URL, { host, signal, fetch: fetcher, directHost = {}, skipLegacyScripts = [], beforeLegacyScript }: DirectEngineDocument): Promise<() => void> {
   const document = host.ownerDocument;
   const view = document.defaultView;
   if (!view) throw new Error('The editor host document has no window');
@@ -127,6 +129,15 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   assertSameOrigin(source, base);
   if (signal.aborted) throw abortError();
   const request = fetcher ?? view.fetch.bind(view);
+  if (mountingWindows.has(view)) throw new Error('Only one VibeOffice editor can be mounted in a host document at a time');
+  mountingWindows.add(view);
+  let reservationActive = true;
+  const releaseReservation = () => {
+    if (!reservationActive) return;
+    reservationActive = false;
+    mountingWindows.delete(view);
+  };
+  try {
   const response = await request(source, { signal });
   if (!response.ok) throw new Error(`Could not load editor shell (${response.status})`);
   const markup = await response.text();
@@ -147,6 +158,7 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   if (directRuntime.root?.isConnected) throw new Error('Only one VibeOffice editor can be mounted in a host document at a time');
   let restoreDomRoot: (() => void) | undefined;
   const cleanup = () => {
+    releaseReservation();
     if (runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ === directRuntime && directRuntime.root === root) {
       directRuntime.root = null;
       for (const key of ['launch', 'open', 'save', 'saveAs', 'ready']) delete directRuntime[key];
@@ -195,8 +207,11 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ = directRuntime;
   try {
     for (const script of scripts) {
+      if (signal.aborted) throw abortError();
       const scriptUrl = new URL(script.getAttribute('src') || '', source);
       assertSameOrigin(scriptUrl, base);
+      beforeLegacyScript?.(runtimeWindow, scriptUrl);
+      if (signal.aborted) throw abortError();
       if (skipLegacyScripts.some((path) => scriptUrl.pathname.endsWith(path))) continue;
       loadedScripts.push(scriptUrl.pathname);
       await loadScript(document, scriptUrl, signal);
@@ -217,4 +232,8 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   }
   if (signal.aborted) { cleanup(); throw abortError(); }
   return cleanup;
+  } catch (error) {
+    releaseReservation();
+    throw error;
+  }
 }
