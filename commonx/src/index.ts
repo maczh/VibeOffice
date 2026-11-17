@@ -1,6 +1,8 @@
 export { EditorFrame, EngineEditorFrame, settleEditorMount } from './editor-frame.js';
 export { AppearanceControls } from './editor-frame.js';
 export type { AppearanceControlsProps, EditorFrameProps, EngineEditorFrameProps, EditorMount, EditorMountContext, EngineRuntimeOptions, EditorKind } from './editor-frame.js';
+export { AppearanceFields } from './appearance-fields.js';
+export type { AppearanceFieldsProps, AppearanceOption } from './appearance-fields.js';
 export { OfficeDialog } from './dialog.js';
 export type { OfficeDialogProps } from './dialog.js';
 export { ChartEditorDialog } from './chart-editor-dialog.js';

@@ -23,6 +23,13 @@ import { installWordxHtmlIo } from './html-io.js';
 import { installWordxRtf } from './rtf-io.js';
 import { installWordxDocxRead } from './docx-read.js';
 import { installWordxDocxWrite } from './docx-write.js';
+import { installWordxFields } from './fields.js';
+import { installWordxCommands } from './commands.js';
+import { installWordxOperations } from './operations.js';
+import { installWordxDocumentModel } from './dmodel.js';
+import { installWordxDrawing } from './drawing.js';
+import { installWordxDrawingPreservation } from './preserve-drawing.js';
+import { installWordxPreservation } from './preservation.js';
 import { WordxEngineShell } from './engine-shell.js';
 
 export interface WordxEngineControls {
@@ -59,9 +66,9 @@ export function WordxEditor({ services, mountEngine, engine, draftStore, onDraft
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx', '.docm', '.dotx', '.dotm'],
         'text/plain': ['.txt', '.md', '.markdown', '.rtf', '.html', '.htm', '.zip'],
       },
-      beforeLegacyScript: (runtime, script) => { if (script.pathname.endsWith('/common/search.js')) installCommandSearchService(runtime); if (script.pathname.endsWith('/wordx/js/docx-read.js')) installWordxDocxRead(runtime); if (script.pathname.endsWith('/wordx/js/docx-write.js')) installWordxDocxWrite(runtime); if (script.pathname.endsWith('/wordx/js/htmlio.js')) installWordxHtmlIo(runtime); if (script.pathname.endsWith('/wordx/js/rtf.js')) installWordxRtf(runtime); if (script.pathname.endsWith('/wordx/js/spell.js')) installWordxProofing(runtime); if (script.pathname.endsWith('/wordx/js/markdown.js')) installWordxMarkdown(runtime); if (script.pathname.endsWith('/wordx/js/mdio.js')) installWordxMarkdownIo(runtime); },
+      beforeLegacyScript: (runtime, script) => { if (script.pathname.endsWith('/common/search.js')) installCommandSearchService(runtime); if (script.pathname.endsWith('/wordx/js/dmodel.js')) installWordxDocumentModel(runtime); if (script.pathname.endsWith('/wordx/js/ops.js')) installWordxOperations(runtime); if (script.pathname.endsWith('/wordx/js/docx-read.js')) installWordxDocxRead(runtime); if (script.pathname.endsWith('/wordx/js/docx-write.js')) installWordxDocxWrite(runtime); if (script.pathname.endsWith('/wordx/js/fields.js')) installWordxFields(runtime); if (script.pathname.endsWith('/wordx/js/commands.js')) installWordxCommands(runtime); if (script.pathname.endsWith('/wordx/js/htmlio.js')) installWordxHtmlIo(runtime); if (script.pathname.endsWith('/wordx/js/drawing.js')) installWordxDrawing(runtime); if (script.pathname.endsWith('/wordx/js/preserve.js')) installWordxPreservation(runtime); if (script.pathname.endsWith('/wordx/js/preserve-drawing.js')) installWordxDrawingPreservation(runtime); if (script.pathname.endsWith('/wordx/js/rtf.js')) installWordxRtf(runtime); if (script.pathname.endsWith('/wordx/js/spell.js')) installWordxProofing(runtime); if (script.pathname.endsWith('/wordx/js/markdown.js')) installWordxMarkdown(runtime); if (script.pathname.endsWith('/wordx/js/mdio.js')) installWordxMarkdownIo(runtime); },
       configureRuntime: (runtime) => { installWordxRibbonSpec(runtime); installWordxTemplates(runtime); installWordxLineBoxes(runtime); installWordxDrawTool(runtime); installWordxOutline(runtime); installWordxAutoCorrect(runtime); installWordxRulers(runtime); installWordxOmml(runtime); installWordxMailMerge(runtime); installWordxFind(runtime); },
-      skipLegacyScripts: ['/common/search.js', '/wordx/js/ribbon.js', '/wordx/js/templates.js', '/wordx/js/portions.js', '/wordx/js/drawtool.js', '/wordx/js/outline.js', '/wordx/js/autocorrect.js', '/wordx/js/rulers.js', '/wordx/js/omml.js', '/wordx/js/mailmerge.js', '/wordx/js/find.js', '/wordx/js/spell.js', '/wordx/js/htmlio.js', '/wordx/js/markdown.js', '/wordx/js/mdio.js', '/wordx/js/rtf.js', '/wordx/js/docx-read.js', '/wordx/js/docx-write.js'],
+      skipLegacyScripts: ['/common/search.js', '/wordx/js/ribbon.js', '/wordx/js/templates.js', '/wordx/js/portions.js', '/wordx/js/drawtool.js', '/wordx/js/outline.js', '/wordx/js/autocorrect.js', '/wordx/js/rulers.js', '/wordx/js/omml.js', '/wordx/js/mailmerge.js', '/wordx/js/find.js', '/wordx/js/spell.js', '/wordx/js/htmlio.js', '/wordx/js/markdown.js', '/wordx/js/mdio.js', '/wordx/js/rtf.js', '/wordx/js/docx-read.js', '/wordx/js/docx-write.js', '/wordx/js/fields.js', '/wordx/js/commands.js', '/wordx/js/ops.js', '/wordx/js/dmodel.js', '/wordx/js/drawing.js', '/wordx/js/preserve-drawing.js', '/wordx/js/preserve.js'],
       ...(allowedRemoteOrigins ? { allowedRemoteOrigins } : {}), ...(onOpenUrl ? { onOpenUrl } : {}),
       ...(draftStore ? { draftStore } : {}),
       ...(onDraftSaved ? { onDraftSaved } : {}),

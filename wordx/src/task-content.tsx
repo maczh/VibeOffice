@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { OfficeDialog } from '@vibeoffice/core';
+import { AppearanceFields, OfficeDialog } from '@vibeoffice/core';
 import { WordxAutocompleteTip } from './autocomplete-tip.js';
 
 type HelpEntry = [string, string];
@@ -1623,8 +1623,7 @@ function OptionsGeneralDialogBody({ L }: { L: WordxRuntime }) {
   const [state, setState] = useState<OptionsGeneralState>(adapter?.reactOptionsGeneralCatalog?.() || { options: [], unit: 'in', units: [], look: 'classic', looks: [], language: 'auto', languages: [] });
   const change = (key: string, value: boolean | string) => { const next = adapter?.reactOptionsGeneralSet?.(key, value); if (next) setState(next); };
   return <div className="col" id="react-wordx-options-general-body">
-    {state.looks.length > 0 && <label htmlFor="react-wordx-options-look">{tr(L,'Theme:')}<select id="react-wordx-options-look" value={state.look} onChange={(event)=>change('look',event.currentTarget.value)}>{state.looks.map((item)=><option key={item.id} value={item.id}>{tr(L,item.name)}</option>)}</select></label>}
-    {state.languages.length > 0 && <label htmlFor="react-wordx-options-language">{tr(L,'Language:')}<select id="react-wordx-options-language" value={state.language} onChange={(event)=>change('language',event.currentTarget.value)}>{state.languages.map((item)=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
+    <AppearanceFields look={state.look} looks={state.looks.map((item) => ({ value: item.id, label: tr(L, item.name) }))} language={state.language} languages={state.languages.map((item) => ({ value: item.id, label: item.name }))} onLookChange={(value) => change('look', value)} onLanguageChange={(value) => change('language', value)} translate={(value) => tr(L, value)} lookId="react-wordx-options-look" languageId="react-wordx-options-language" />
     {state.options.map((item)=>{const label={bgRepag:'Background repagination',blueBg:'Blue background, white text',sound:'Provide feedback with sound'}[item.key]||item.key;return <label key={item.key}><input type="checkbox" data-option-key={item.key} checked={item.checked} onChange={(event)=>change(item.key,event.currentTarget.checked)}/>{tr(L,label)}</label>;})}
     <label htmlFor="react-wordx-options-unit">{tr(L,'Measurement units:')}<select id="react-wordx-options-unit" value={state.unit} onChange={(event)=>change('unit',event.currentTarget.value)}>{state.units.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label>
   </div>;
