@@ -20,6 +20,7 @@ export interface DirectHostOptions {
   configureRuntime?: (runtime: Window) => void;
   skipLegacyScripts?: readonly string[];
   beforeLegacyScript?: (runtime: Window, script: URL) => void;
+  shellOwnedByReact?: boolean;
 }
 
 /** Context passed to host save callbacks so Save As never silently becomes an in-place remote overwrite. */
@@ -117,7 +118,7 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
         }).catch((error: unknown) => { if (live()) console.warn(`${options.editor} draft list:`, error); });
       },
     };
-    const cleanupDocument = await mountLegacyEngineDocument(source, { host, signal, directHost: runtime, ...(options.skipLegacyScripts ? { skipLegacyScripts: options.skipLegacyScripts } : {}), ...(options.beforeLegacyScript ? { beforeLegacyScript: options.beforeLegacyScript } : {}) });
+    const cleanupDocument = await mountLegacyEngineDocument(source, { host, signal, directHost: runtime, ...(options.skipLegacyScripts ? { skipLegacyScripts: options.skipLegacyScripts } : {}), ...(options.beforeLegacyScript ? { beforeLegacyScript: options.beforeLegacyScript } : {}), ...(options.shellOwnedByReact ? { shellOwnedByReact: true } : {}) });
     const root = host.querySelector<HTMLElement>('[data-vibeoffice-engine-root]');
     const runtimeWindow = view as Window & { L?: { app?: { mount?: (element: HTMLElement) => void | (() => void) | Promise<void | (() => void)>; newDocument?: () => void; newWorkbook?: () => void; newPresentation?: () => void }; ui?: { exec?(id: string): unknown; searchResults?(query: string, layout: string): unknown[]; searchRemember?(id: string): void } } };
     if (!root || !runtimeWindow.L?.app?.mount) { cleanupDocument(); throw new Error(`The ${options.editor} runtime does not expose a direct mount API`); }

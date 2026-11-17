@@ -29,6 +29,11 @@
   });
   /* PowerPoint's Font Size list (Grow / Shrink Font step through it) */
   L.SIZE_LIST = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96];
+  function onNextFrame(callback) {
+    let removeCleanup = () => {};
+    const frame = requestAnimationFrame(() => { removeCleanup(); callback(); });
+    removeCleanup = L.addMountCleanup(() => cancelAnimationFrame(frame));
+  }
 
   const DEFAULT_OPTS = {
     startupPane: true, layoutPaneOnNew: true, paneFollows: true, statusBar: true, ruler: false, showPopup: true, showPopbar: true, endBlack: true,
@@ -43,6 +48,7 @@
     opts: L.clone(DEFAULT_OPTS),
     lastFill: 'accent1', lastLineColor: 'tx1', lastFontColor: '#FF0000',
   }));
+  A.onMountFrame = onNextFrame;
 
   /* ================= options ================= */
   A.loadOpts = () => {
@@ -447,9 +453,9 @@
     L.$('#split-notes').hidden = v === 'master';
     if (v === 'master') { E.view = 'master'; E.masterKind = 'slide'; E.buildMaster(); E.sel = []; }
     else E.view = 'normal';
-    if (v === 'sorter') { A.slideSel = new Set([E.idx]); requestAnimationFrame(() => { L.panes.sorter.render(); L.panes.sorter.el.focus({ preventScroll: true }); }); }
-    if (v === 'notes') requestAnimationFrame(() => L.panes.notesView.render());
-    if (v === 'preview') requestAnimationFrame(() => L.panes.preview.render());
+    if (v === 'sorter') { A.slideSel = new Set([E.idx]); onNextFrame(() => { L.panes.sorter.render(); L.panes.sorter.el.focus({ preventScroll: true }); }); }
+    if (v === 'notes') onNextFrame(() => L.panes.notesView.render());
+    if (v === 'preview') onNextFrame(() => L.panes.preview.render());
     if (v === 'normal' || v === 'master') { L.panes.left.render(); E.render(); L.panes.notes.render(); }
     A.updateToolbars();
     A.updateStatus();
@@ -500,7 +506,7 @@
   /** the desktop app keeps one presentation per window: a new one there opens in a window of its own; true then */
   const elsewhere = (start) => {
     if (!(window.VO && VO.oneDocument) || pristine()) return false;
-    VO.go(VO.url(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'pptx' : 'lectern', start)).catch((e) => ui.msg(String(e), { icon: 'error' }));
+    VO.go(VO.url('pptx', start)).catch((e) => ui.msg(String(e), { icon: 'error' }));
     return true;
   };
   A.newPresentation = async function () {
@@ -1942,10 +1948,18 @@ addEventListener('resize',fit);fit();show(0);`;
       else A.pasteText(c.text || '');
     } else A.pasteItem(c);
   };
-  let pendingClip = null;
+  let pendingClip = null, pendingClipTimer = 0, removePendingClipCleanup = () => {};
+  function clearPendingClipTimer() {
+    clearTimeout(pendingClipTimer);
+    pendingClipTimer = 0;
+    const remove = removePendingClipCleanup;
+    removePendingClipCleanup = () => {};
+    remove();
+  }
   function inNativeText(t) { return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
   function onClipEvent(e, op) {
     const prepared = typeof pendingClip === 'object' ? pendingClip : null;
+    clearPendingClipTimer();
     pendingClip = null;
     if (L.show.active || ui.dialogOpen()) return;
     const t = document.activeElement;
@@ -1955,6 +1969,7 @@ addEventListener('resize',fit);fit();show(0);`;
     if (c) { e.preventDefault(); try { e.clipboardData.setData('text/plain', c.text || ''); e.clipboardData.setData('application/x-pptx', JSON.stringify(L.preserve.clipboard(c))); } catch (er) { e.clipboardData.setData('application/x-pptx', c.id); } }
   }
   function handlePaste(e) {
+    clearPendingClipTimer();
     pendingClip = null;
     if (L.show.active || ui.dialogOpen()) return;
     if (TE.active()) return; /* text editor handles its own paste */
@@ -2038,8 +2053,16 @@ addEventListener('resize',fit);fit();show(0);`;
     }
     if (k === 'Ctrl+C' || k === 'Ctrl+X' || k === 'Ctrl+V' || k === 'Ctrl+Insert' || k === 'Shift+Delete' || k === 'Shift+Insert') {
       const op = /C$|Insert$/.test(k) && !/Shift\+Insert/.test(k) ? 'copy' : /X$|Shift\+Delete/.test(k) ? 'cut' : 'paste';
+      clearPendingClipTimer();
       pendingClip = op;
-      setTimeout(() => { if (pendingClip === op) { pendingClip = null; if (op === 'paste') A.paste(); else A.cmdClipboard(op); } }, 60);
+      pendingClipTimer = setTimeout(() => {
+        pendingClipTimer = 0;
+        const remove = removePendingClipCleanup;
+        removePendingClipCleanup = () => {};
+        remove();
+        if (pendingClip === op) { pendingClip = null; if (op === 'paste') A.paste(); else A.cmdClipboard(op); }
+      }, 60);
+      removePendingClipCleanup = L.addMountCleanup(() => { clearTimeout(pendingClipTimer); pendingClipTimer = 0; pendingClip = null; removePendingClipCleanup = () => {}; });
       return;
     }
     if (cmd) { e.preventDefault(); ui.exec(cmd); return; }
@@ -2387,7 +2410,13 @@ addEventListener('resize',fit);fit();show(0);`;
       ui.refresh();
     });
     L.bus.on('slide-changed-silent', () => { L.panes.notes.render(); A.updateStatus(); L.panes.task.refresh('slide'); });
-    const thumbSoon = L.debounce((i) => { L.panes.left.refreshThumb(i); if (A.view === 'sorter') L.panes.sorter.render(); }, 350);
+    let thumbTimer = 0, thumbIndex = 0;
+    const thumbSoon = (i) => {
+      thumbIndex = i;
+      clearTimeout(thumbTimer);
+      thumbTimer = setTimeout(() => { thumbTimer = 0; L.panes.left.refreshThumb(thumbIndex); if (A.view === 'sorter') L.panes.sorter.render(); }, 350);
+    };
+    L.addMountCleanup(() => { clearTimeout(thumbTimer); thumbTimer = 0; });
     L.bus.on('slide-modified', (i) => { if (E.view === 'master') { L.panes.left.render(); return; } thumbSoon(i); if (window.VO) VO.changed(L.pres); if (L.panes.left.tab === 'outline' && !TE.active()) L.panes.left.render(); });
     L.bus.on('slides-changed', (o) => {
       if (E.idx >= L.pres.slides.length) E.idx = Math.max(0, L.pres.slides.length - 1);
@@ -2405,13 +2434,19 @@ addEventListener('resize',fit);fit();show(0);`;
     L.bus.on('edit-end', () => { ui.refresh(); });
     A.reactBeforeUnload = (e) => { if (L.hist.dirty) { e.preventDefault(); e.returnValue = ''; } };
     if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'beforeunload', A.reactBeforeUnload);
-    A.reactResize = L.debounce(() => { if (A.view === 'sorter') L.panes.sorter.render(); if (A.view === 'notes') L.panes.notesView.render(); if (A.view === 'preview') L.panes.preview.render(); L.panes.left.render(); }, 250);
+    let resizeTimer = 0;
+    A.reactResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { resizeTimer = 0; if (A.view === 'sorter') L.panes.sorter.render(); if (A.view === 'notes') L.panes.notesView.render(); if (A.view === 'preview') L.panes.preview.render(); L.panes.left.render(); }, 250);
+    };
+    L.addMountCleanup(() => { clearTimeout(resizeTimer); resizeTimer = 0; });
     if (!(window.VO && VO.reactDirectHost)) L.addMountListener(window, 'resize', A.reactResize);
     A.outlineDirty = () => {};
   }
 
   /* ================= init ================= */
   A.init = async function () {
+    L.addMountCleanup(() => { clearTimeout(statusTimer); statusTimer = 0; });
     A.loadOpts();
     TE.mount();
     if (window.VO) VO.setIcon(L.icons.app(32));
@@ -2461,7 +2496,7 @@ addEventListener('resize',fit);fit();show(0);`;
     A.applyOpts();
     E.layout();
     ui.refresh();
-    if (window.VO) VO.attach(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'pptx' : 'lectern', {
+    if (window.VO) VO.attach('pptx', {
       async open(f, o) {
         await A.openFile(f);
         /* a presentation a page made (desktop app): never saved */

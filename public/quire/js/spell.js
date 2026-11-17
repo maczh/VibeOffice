@@ -162,7 +162,19 @@
   /* ================= underlines while typing ================= */
   const HL = typeof CSS !== 'undefined' && CSS.highlights && typeof Highlight === 'function';
   let spellHL = null, gramHL = null;
-  if (HL) { spellHL = new Highlight(); gramHL = new Highlight(); CSS.highlights.set('wordx-spell', spellHL); CSS.highlights.set('wordx-grammar', gramHL); }
+  const highlightNames = ['wordx-spell', 'wordx-grammar'];
+  if (HL) { spellHL = new Highlight(); gramHL = new Highlight(); CSS.highlights.set(highlightNames[0], spellHL); CSS.highlights.set(highlightNames[1], gramHL); }
+  const clearHighlights = () => {
+    spellHL && spellHL.clear(); gramHL && gramHL.clear();
+    if (!HL) return;
+    if (CSS.highlights.get(highlightNames[0]) === spellHL) CSS.highlights.delete(highlightNames[0]);
+    if (CSS.highlights.get(highlightNames[1]) === gramHL) CSS.highlights.delete(highlightNames[1]);
+  };
+  const ensureHighlights = () => {
+    if (!HL) return;
+    if (CSS.highlights.get(highlightNames[0]) !== spellHL) CSS.highlights.set(highlightNames[0], spellHL);
+    if (CSS.highlights.get(highlightNames[1]) !== gramHL) CSS.highlights.set(highlightNames[1], gramHL);
+  };
   SP.ignoredOnce = new Set(); /* "p.id:a:word" */
   /* Underlines are off in every document until asked for (the status bar icon, or the Options checkbox
      "Hide spelling and grammar errors in this document"): opening a file shows it without red and green
@@ -171,8 +183,22 @@
     get: () => !(doc() && doc().proofOn),
     set: (v) => { const d = doc(); if (!d) return; d.proofOn = !v; SP.refreshSoon(0); L.bus.emit('proof-state'); },
   });
-  let timer = 0;
-  SP.refreshSoon = function (ms) { clearTimeout(timer); timer = setTimeout(SP.refresh, ms == null ? 350 : ms); };
+  let timer = 0, removeTimerCleanup = () => {}, removeHighlightCleanup = () => {};
+  SP.refreshSoon = function (ms) {
+    if (timer) clearTimeout(timer);
+    removeTimerCleanup(); removeTimerCleanup = () => {};
+    removeHighlightCleanup();
+    removeHighlightCleanup = L.addMountCleanup ? L.addMountCleanup(clearHighlights) : () => {};
+    timer = setTimeout(() => {
+      timer = 0;
+      removeTimerCleanup(); removeTimerCleanup = () => {};
+      SP.refresh();
+    }, ms == null ? 350 : ms);
+    const scheduled = timer;
+    removeTimerCleanup = L.addMountCleanup ? L.addMountCleanup(() => {
+      if (timer === scheduled) { clearTimeout(scheduled); timer = 0; }
+    }) : () => {};
+  };
   /** text of one rendered paragraph fragment with a map back to text nodes */
   function fragText(frag) {
     const nodes = [];
@@ -203,6 +229,7 @@
   }
   SP.refresh = function () {
     if (!HL || !LY.root) return;
+    ensureHighlights();
     spellHL.clear(); gramHL.clear();
     if (!opt('spell', true) || SP.hidden) return;
     const d = doc();
@@ -243,7 +270,10 @@
         if (rg && !bad.some((r) => r.compareBoundaryPoints(Range.START_TO_END, rg) > 0 && r.compareBoundaryPoints(Range.END_TO_START, rg) < 0)) gramHL.add(rg);
       }
     }
-    for (const list of need) if (!LEX.failed[list]) LEX.load(list).then(() => SP.refreshSoon(0)).catch(() => {});
+    const mountSignal = L.mountSignal ? L.mountSignal() : null;
+    for (const list of need) if (!LEX.failed[list]) LEX.load(list).then(() => {
+      if (!mountSignal || !mountSignal.aborted) SP.refreshSoon(0);
+    }).catch(() => {});
   };
   SP.reactLayoutChanged = () => SP.refreshSoon();
   SP.reactDocumentLoaded = () => { SP.ignoredOnce.clear(); SP.refreshSoon(100); };
@@ -315,9 +345,18 @@
     const ordered = paras.slice(from).concat(paras.slice(0, from));
     const lists = new Set(ordered.map(SP.paraList).filter(Boolean));
     if (!lists.size) { ui.msg('The text is not marked as English, so it was not checked. Use Tools ▸ Language ▸ Set Language to mark it.', { icon: 'info', title: 'Spelling and Grammar' }); return; }
+    const mountSignal = L.mountSignal ? L.mountSignal() : null;
     L.ui.busy(true, 'Loading the dictionary...');
+    const removeBusyCleanup = L.addMountCleanup ? L.addMountCleanup(() => L.ui.busy(false)) : () => {};
     try { for (const l of lists) await LEX.load(l); }
-    catch (e) { L.ui.busy(false); ui.msg(L.t('The dictionary could not be loaded ({0}). Wordx needs to be served from a web server, not opened as a local file, for spelling to work.', e.message || e), { icon: 'warn', title: 'Spelling and Grammar' }); return; }
+    catch (e) {
+      removeBusyCleanup();
+      if (mountSignal && mountSignal.aborted) return;
+      L.ui.busy(false);
+      ui.msg(L.t('The dictionary could not be loaded ({0}). Wordx needs to be served from a web server, not opened as a local file, for spelling to work.', e.message || e), { icon: 'warn', title: 'Spelling and Grammar' }); return;
+    }
+    removeBusyCleanup();
+    if (mountSignal && mountSignal.aborted) return;
     L.ui.busy(false);
     const withGrammar = opt('grammar', true);
     const issues = [];

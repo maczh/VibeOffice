@@ -7,7 +7,7 @@
   const ui = L.ui;
   const G = () => L.grid;
 
-  /* original application icon: a green ledger sheet with a bound spine */
+  /* original application icon: a green workbook sheet with a bound spine */
   L.icons.app = function (size) {
     const sz = size || 16;
     return `<svg class="appico" width="${sz}" height="${sz}" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5h8l3 3v10h-11z" fill="#fff" stroke="#1e6b2e"/><path d="M11.5 1.5v3h3" fill="#d8eedc" stroke="#1e6b2e"/><rect x="1.5" y="4.5" width="7" height="8" fill="#2f8f45" stroke="#1a5a28"/><path d="M3.3 6.3v4.4h3.2" fill="none" stroke="#fff" stroke-width="1.4"/><path d="M10 7.5h3M10 9.5h3M10 11.5h3M9.5 6.5v6" stroke="#7aa886"/></svg>`;
@@ -69,7 +69,7 @@
   let untitled = 0;
   A.newWorkbook = function () {
     /* the desktop app: one workbook per window, a new one in a window of its own */
-    if (window.VO && VO.oneDocument && A.books.length && !pristine()) return VO.go(VO.url(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'excelx' : 'ledger', { new: true })).catch((e) => A.error(e));
+    if (window.VO && VO.oneDocument && A.books.length && !pristine()) return VO.go(VO.url('excelx', { new: true })).catch((e) => A.error(e));
     untitled++;
     A.addBook(A.blankWorkbook(), 'Book' + untitled, { type: 'xlsx', untitled: true });
   };
@@ -464,6 +464,7 @@
     ], { x: e.clientX, y: e.clientY });
   }
   A.renameSheetInline = function (i) {
+    if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) { L.bus.emit('sheet-tab-rename', i); return; }
     const w = wb();
     i = i == null ? w.active : i;
     const s = w.sheets[i];
@@ -807,7 +808,8 @@
     };
     const sameRange = (a, rg) => { if (a.sheet && a.sheet.toLowerCase() !== sh().name.toLowerCase()) return false; if (a.t === 'ref') return rg.r1 === a.r && rg.r2 === a.r && rg.c1 === a.c && rg.c2 === a.c; return rg.r1 === Math.min(a.r1, a.r2) && rg.r2 === Math.max(a.r1, a.r2) && rg.c1 === Math.min(a.c1, a.c2) && rg.c2 === Math.max(a.c1, a.c2); };
     L.bus.on('selection', show); L.bus.on('sheet', show); L.bus.on('book', show); L.bus.on('changed', show);
-    bindNameBox(nb);
+    const reactHost = !!(window.VO && window.VO.reactDirectHost && window.VO.reactDirectHost.root && window.VO.reactDirectHost.root.isConnected);
+    bindNameBox(nb, reactHost);
     A.nameBoxInitialized = true;
     A.attachReactNameBox = (input) => {
       if (!input?.isConnected) return () => {};
@@ -822,7 +824,11 @@
         nb = null;
         A.nameBox = null;
         A.nameBoxReactOwned = false;
-        if (previous?.isConnected) { bindNameBox(previous, false); show(); }
+        if (previous?.isConnected) {
+          const reactHost = !!(window.VO && window.VO.reactDirectHost && window.VO.reactDirectHost.root && window.VO.reactDirectHost.root.isConnected);
+          bindNameBox(previous, reactHost);
+          show();
+        }
       };
     };
     A.reactNameBoxOpenMenu = function () {
@@ -831,7 +837,7 @@
       const tables = wb().tables.map((t) => t.name);
       ui.openMenu(names.length || tables.length ? names.map((n) => ({ label: n.name.replace(/&/g, '&&'), raw: true, run: () => A.goToRef(n.name) })).concat(tables.map((t) => ({ label: t.replace(/&/g, '&&'), raw: true, run: () => A.goToRef(t) }))) : [{ label: '(no names)', disabled: true }], { left: r.left, bottom: r.bottom });
     };
-    L.$('#namebox-dd').addEventListener('pointerdown', (e) => { e.preventDefault(); A.reactNameBoxOpenMenu(); });
+    if (!reactHost) L.$('#namebox-dd').addEventListener('pointerdown', (e) => { e.preventDefault(); A.reactNameBoxOpenMenu(); });
   }
   /** select a reference typed in the Name Box or Go To: A1, A1:B5, Sheet2!C3, a name or a table */
   A.goToRef = function (t) {
@@ -1588,7 +1594,7 @@
     ui.refresh();
     G().focus();
     L.bus.emit('app-ready');
-    if (window.VO) VO.attach(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'excelx' : 'ledger', {
+    if (window.VO) VO.attach('excelx', {
       async open(f, o) {
         await A.openFiles([f]);
         /* an unsaved version: the changes are not saved yet, and a never-saved workbook still needs Save As */

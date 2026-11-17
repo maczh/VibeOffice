@@ -15,7 +15,7 @@
   const { h } = L;
   const ui = L.ui;
   const MATCH = root.VO && root.VO.commandMatcher;
-  if (!MATCH) throw new Error('The command search requires the shared command matcher');
+  if (!MATCH) throw new Error('SEARCH_MATCHER_REQUIRED');
   const MAX = MATCH.maxResults, RECENT = MATCH.maxRecent;
 
   const norm = (s) => ui.stripAmp(String(s || '')).replace(/(\.\.\.|…)$/, '').trim();

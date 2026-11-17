@@ -389,7 +389,9 @@
       pos: 0, step: 0, steps: [], running: null, timer: 0, ink: {}, pen: null, penColor: sh.penColor || '#FF0000', history: [],
       noAnim: !!sh.noAnim, loop: !!sh.loop || !!sh.kiosk, kiosk: !!sh.kiosk, useTimings: sh.useTimings !== false, rehearse: !!opts.rehearse, preview: opts.preview != null,
       slideStart: performance.now(), times: {}, paused: false, ended: false, gotoBuf: '', blank: null, idle: 0,
+      disposing: false,
     };
+    const showState = st;
     removeMountCleanup = L.addMountCleanup ? L.addMountCleanup(() => { void S.end({ dispose: true }); }) : () => {};
     let startIdx = opts.from != null ? st.order.indexOf(opts.from) : 0;
     if (startIdx < 0) startIdx = 0;
@@ -408,7 +410,12 @@
       document.addEventListener('keydown', onKey, true);
     }
     if (!S.reactMounted && !st.preview && root.requestFullscreen) root.requestFullscreen().catch(() => { /* fullscreen is optional */ });
-    try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then((l) => { st.wake = l; }).catch(() => {}); } catch (e) { /* ignore */ }
+    try {
+      if (navigator.wakeLock) navigator.wakeLock.request('screen').then((lock) => {
+        if (st !== showState || showState.disposing) { void lock.release(); return; }
+        showState.wake = lock;
+      }).catch(() => {});
+    } catch (e) { /* ignore */ }
     root.focus();
     showSlide(startIdx, { transition: true });
     idleCursor();
@@ -549,18 +556,48 @@
     opts = opts || {};
     const el = L.render.slide(L.pres, slide, { mode: 'show' });
     host.appendChild(el);
-    requestAnimationFrame(() => {
+    let active = true, frame = 0, timer = 0, controller = null, removeCleanup = () => {};
+    const dispose = () => {
+      if (!active) return;
+      active = false;
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      controller && controller.cancel();
+      el.remove();
+      removeCleanup();
+      removeCleanup = () => {};
+    };
+    const finish = () => {
+      if (!active) return;
+      active = false;
+      removeCleanup();
+      removeCleanup = () => {};
+      if (opts.done) opts.done();
+    };
+    const later = (callback, delay) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { timer = 0; if (active) callback(); }, delay);
+    };
+    removeCleanup = L.addMountCleanup(dispose);
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      if (!active) return;
       let steps = compile(slide, el, false);
       applyState(steps, 0);
       if (opts.only) {
         let found = null;
         steps.forEach((s, i) => s.items.forEach((it) => { if (it.a.id === opts.only && !found) found = { i, it }; }));
-        if (!found) { if (opts.done) setTimeout(opts.done, 300); return; }
+        if (!found) { later(finish, 300); return; }
         applyState(steps, found.i);
         steps = [{ items: [Object.assign({}, found.it, { start: 0, end: found.it.end - found.it.start })] }];
       }
       let i = 0;
-      const next = () => { if (i >= steps.length) { if (opts.done) setTimeout(opts.done, 700); return; } const s = steps[i++]; playStep(s, () => setTimeout(next, 250)); };
+      const next = () => {
+        if (!active) return;
+        if (i >= steps.length) { later(finish, 700); return; }
+        const s = steps[i++];
+        controller = playStep(s, () => later(next, 250));
+      };
       next();
     });
   };
@@ -756,11 +793,16 @@
 
   S.end = async function (options) {
     if (!S.active) return;
+    const state = st;
+    if (!state) return;
+    state.disposing = true;
     cancelAnimationFrame(raf);
     if (st.running && st.running.cancel) st.running.cancel();
     if (st.inTransition && st.inTransition.finish) { const tr0 = st.inTransition; st.inTransition = false; void tr0; }
     clearInterval(st.rTimer);
     clearTimeout(st.timer);
+    clearTimeout(st._idle);
+    st._idle = 0;
     if (st.rehearse && !st.ended) recordTime(st.pos);
     if (!S.reactMounted) {
       document.removeEventListener('keydown', onKey, true);
@@ -783,7 +825,6 @@
     if (!reactUnmountRequested) root.remove();
     root = null; layer = null;
     S.active = false;
-    const state = st;
     st = null;
     L.ui.closeMenus();
     const hasInk = Object.values(inkData).some((a) => a && a.length);

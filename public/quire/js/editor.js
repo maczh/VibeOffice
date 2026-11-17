@@ -625,7 +625,11 @@
     if (document.activeElement !== host) { try { host.focus({ preventScroll: true }); } catch (e) { host.focus(); } }
     E.restoreDom(true);
   };
-  E.refocus = () => setTimeout(() => E.focus(), 0);
+  E.refocus = () => {
+    let removeCleanup = () => {};
+    const timer = setTimeout(() => { removeCleanup(); E.focus(); }, 0);
+    removeCleanup = L.addMountCleanup(() => clearTimeout(timer));
+  };
   E.textSave = () => {};
 
   /* ---------- table cell selection highlighting ---------- */

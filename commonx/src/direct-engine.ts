@@ -1,3 +1,5 @@
+import { installReactBrushService } from './brush.js';
+
 export interface DirectEngineDocument {
   host: HTMLElement;
   signal: AbortSignal;
@@ -5,6 +7,12 @@ export interface DirectEngineDocument {
   directHost?: Record<string, unknown> & { editor?: 'wordx' | 'excelx' | 'pptx' };
   skipLegacyScripts?: readonly string[];
   beforeLegacyScript?: (runtime: Window, script: URL) => void;
+  shellOwnedByReact?: boolean;
+}
+
+interface EditorRuntimeManifest {
+  styles: Array<{ href?: string; css?: string; media?: string }>;
+  scripts: string[];
 }
 
 const loadedScripts = new WeakMap<Window, Map<string, Promise<void>>>();
@@ -119,8 +127,8 @@ function scopedStylesheet(document: Document, source: string, sourceUrl: URL, me
   } finally { parser.remove(); }
 }
 
-/** Load the existing static editor shell and ordered classic modules into the React-owned host document. */
-export async function mountLegacyEngineDocument(url: string | URL, { host, signal, fetch: fetcher, directHost = {}, skipLegacyScripts = [], beforeLegacyScript }: DirectEngineDocument): Promise<() => void> {
+/** Load editor styles and ordered classic modules, using either the legacy shell or a package-owned React shell. */
+export async function mountLegacyEngineDocument(url: string | URL, { host, signal, fetch: fetcher, directHost = {}, skipLegacyScripts = [], beforeLegacyScript, shellOwnedByReact = false }: DirectEngineDocument): Promise<() => void> {
   const document = host.ownerDocument;
   const view = document.defaultView;
   if (!view) throw new Error('The editor host document has no window');
@@ -138,18 +146,40 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
     mountingWindows.delete(view);
   };
   try {
-  const response = await request(source, { signal });
-  if (!response.ok) throw new Error(`Could not load editor shell (${response.status})`);
-  const markup = await response.text();
+  let scriptUrls: string[];
+  let stylesheetEntries: Array<{ href?: string; css?: string; media?: string }>;
+  let parsed: Document | undefined;
+  if (shellOwnedByReact) {
+    const manifestUrl = new URL(`${source.pathname.replace(/\/+$/, '')}/runtime.json`, source);
+    const response = await request(manifestUrl, { signal });
+    if (!response.ok) throw new Error(`Could not load editor runtime manifest (${response.status})`);
+    const manifest = await response.json() as EditorRuntimeManifest;
+    if (!Array.isArray(manifest.scripts) || !Array.isArray(manifest.styles)) throw new TypeError('The editor runtime manifest is invalid');
+    scriptUrls = manifest.scripts;
+    stylesheetEntries = manifest.styles;
+  } else {
+    const response = await request(source, { signal });
+    if (!response.ok) throw new Error(`Could not load editor shell (${response.status})`);
+    const markup = await response.text();
+    if (signal.aborted) throw abortError();
+    const Parser = view.DOMParser;
+    parsed = new Parser().parseFromString(markup, 'text/html');
+    scriptUrls = Array.from(parsed.querySelectorAll('script[src]'), (script) => script.getAttribute('src') || '');
+    stylesheetEntries = Array.from(parsed.head.querySelectorAll('link[rel="stylesheet"][href], style'), (node) => ({
+      ...(node instanceof view.HTMLLinkElement ? { href: node.getAttribute('href') || '' } : { css: node.textContent || '' }),
+      media: node.getAttribute('media') || '',
+    }));
+  }
   if (signal.aborted) throw abortError();
-
-  const Parser = view.DOMParser;
-  const parsed = new Parser().parseFromString(markup, 'text/html');
-  const scripts = Array.from(parsed.querySelectorAll('script[src]'));
   const styles: HTMLElement[] = [];
-  const root = document.createElement('div');
-  root.className = 'vibeoffice-legacy-root';
-  root.dataset.vibeofficeEngineRoot = '';
+  const root = shellOwnedByReact
+    ? host.querySelector<HTMLElement>('.vibeoffice-legacy-root[data-vibeoffice-engine-root][data-vibeoffice-react-shell]')
+    : document.createElement('div');
+  if (!root) throw new Error('The React editor shell is missing its engine root');
+  if (!shellOwnedByReact) {
+    root.className = 'vibeoffice-legacy-root';
+    root.dataset.vibeofficeEngineRoot = '';
+  }
   const runtimeWindow = view as Window & {
     __VIBE_OFFICE_DIRECT_HOST__?: Record<string, unknown> & { root?: HTMLElement | null };
     L?: { mountDomRoot?: (element: HTMLElement) => () => void; APP_ID?: string; APP_NAME?: string; APP?: string };
@@ -157,6 +187,7 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   const directRuntime = runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ || {};
   if (directRuntime.root?.isConnected) throw new Error('Only one VibeOffice editor can be mounted in a host document at a time');
   let restoreDomRoot: (() => void) | undefined;
+  let restoreBrushService: (() => void) | undefined;
   const cleanup = () => {
     releaseReservation();
     if (runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ === directRuntime && directRuntime.root === root) {
@@ -165,29 +196,30 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
     }
     restoreDomRoot?.();
     restoreDomRoot = undefined;
+    restoreBrushService?.();
+    restoreBrushService = undefined;
     styles.forEach((style) => style.remove());
-    root.remove();
+    if (!shellOwnedByReact) root.remove();
   };
-  host.append(root);
+  if (!shellOwnedByReact) host.append(root);
 
   try {
-    for (const node of Array.from(parsed.head.querySelectorAll('link[rel="stylesheet"][href], style'))) {
-      if (node instanceof view.HTMLLinkElement && node.disabled) continue;
-      const stylesheetUrl = node instanceof view.HTMLLinkElement ? new URL(node.getAttribute('href') || '', source) : source;
+    for (const entry of stylesheetEntries) {
+      const stylesheetUrl = new URL(entry.href || source.href, source);
       assertSameOrigin(stylesheetUrl, base);
-      const css = node instanceof view.HTMLLinkElement
+      const css = entry.href
         ? await request(stylesheetUrl, { signal }).then(async (stylesheet) => {
           if (!stylesheet.ok) throw new Error(`Could not load editor stylesheet (${stylesheet.status})`);
           return stylesheet.text();
         })
-        : node.textContent || '';
-      const scoped = scopedStylesheet(document, css, stylesheetUrl, node.getAttribute('media') || '', root);
+        : entry.css || '';
+      const scoped = scopedStylesheet(document, css, stylesheetUrl, entry.media || '', root);
       root.appendChild(scoped);
       styles.push(scoped);
     }
   } catch (error) { cleanup(); throw error; }
-  parsed.body.querySelectorAll('script').forEach((script) => script.remove());
-  for (const element of Array.from(parsed.body.children)) {
+  parsed?.body.querySelectorAll('script').forEach((script) => script.remove());
+  for (const element of shellOwnedByReact || !parsed ? [] : Array.from(parsed.body.children)) {
     const copy = element.cloneNode(true) as HTMLElement;
     for (const asset of [copy, ...Array.from(copy.querySelectorAll<HTMLElement>('[src], [href], [poster]'))]) {
       for (const attribute of ['src', 'href', 'poster']) {
@@ -206,15 +238,16 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   directRuntime.loadedLegacyScripts = loadedScripts;
   runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ = directRuntime;
   try {
-    for (const script of scripts) {
+    for (const script of scriptUrls) {
       if (signal.aborted) throw abortError();
-      const scriptUrl = new URL(script.getAttribute('src') || '', source);
+      const scriptUrl = new URL(script, source);
       assertSameOrigin(scriptUrl, base);
       beforeLegacyScript?.(runtimeWindow, scriptUrl);
       if (signal.aborted) throw abortError();
       if (skipLegacyScripts.some((path) => scriptUrl.pathname.endsWith(path))) continue;
       loadedScripts.push(scriptUrl.pathname);
       await loadScript(document, scriptUrl, signal);
+      if (shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ui.js')) restoreBrushService = installReactBrushService(runtimeWindow);
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L?.mountDomRoot) {
         restoreDomRoot = runtimeWindow.L.mountDomRoot(root);
         const editor = directHost.editor;

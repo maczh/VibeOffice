@@ -7,7 +7,7 @@ import { createRemoteFileCallbacks, useVibeOffice, VibeOfficeProvider } from '@v
 import type { RemoteFile, RemoteStorageProvider } from '@vibeoffice/core';
 
 type EditorId = 'wordx' | 'excelx' | 'pptx';
-const ENGINE = { wordx: { url: '/wordx/' }, excelx: { url: '/excelx/' }, pptx: { url: '/pptx/' } } as const;
+const ENGINE = { wordx: { url: '/wordx/?new' }, excelx: { url: '/excelx/?new' }, pptx: { url: '/pptx/?new' } } as const;
 
 function HostFixture() {
   const office = useVibeOffice();
@@ -47,6 +47,8 @@ function HostFixture() {
     document.documentElement.dataset.layout = look === 'paper2016' ? 'ribbon' : 'bars';
     window.dispatchEvent(new Event('vo-look'));
   };
+  const renderErrorCase = new URLSearchParams(window.location.search).has('error-boundary');
+  const failingLayer = renderErrorCase ? () => <FailingHostLayer /> : undefined;
 
   return (
     <main className="fixture">
@@ -71,12 +73,16 @@ function HostFixture() {
         <output aria-label="Editor title">{editorTitle}</output>
       </header>
       <section className="fixture-editors">
-        {editor === 'wordx' && <WordxEditor key="wordx" engine={ENGINE.wordx} onEngineReady={onEngineReady} onTitleChange={setEditorTitle} onOpenFile={remote.onOpenFile} onSaveFile={remote.onSaveFile} />}
+        {editor === 'wordx' && <WordxEditor key="wordx" engine={ENGINE.wordx} onEngineReady={onEngineReady} onTitleChange={setEditorTitle} onOpenFile={remote.onOpenFile} onSaveFile={remote.onSaveFile} {...(renderErrorCase ? { appLayers: failingLayer, onRenderError: (error: Error) => setProviderStatus(error.message), renderError: () => <div role="alert" data-host-render-fallback="true">Editor layer unavailable</div> } : {})} />}
         {editor === 'excelx' && <ExcelxEditor key="excelx" engine={ENGINE.excelx} onEngineReady={onEngineReady} onTitleChange={setEditorTitle} onOpenFile={remote.onOpenFile} onSaveFile={remote.onSaveFile} />}
         {editor === 'pptx' && <PptxEditor key="pptx" engine={ENGINE.pptx} onEngineReady={onEngineReady} onTitleChange={setEditorTitle} onOpenFile={remote.onOpenFile} onSaveFile={remote.onSaveFile} />}
       </section>
     </main>
   );
+}
+
+function FailingHostLayer(): never {
+  throw new Error('Host-provided React layer failed');
 }
 
 const root = document.getElementById('root');

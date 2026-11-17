@@ -11,7 +11,7 @@ import { createDirectEngineBridge, createIndexedDbDraftStore, openLocalDocument,
 import { IDBFactory } from 'fake-indexeddb';
 import { createRemoteFileCallbacks, createUrlReadProvider, createWebDavProvider, remoteConflict } from '@vibeoffice/core';
 import { reactCsp } from '../../tools/vite/react-csp.mjs';
-import { legacyRuntime, reactTemplates } from '../../tools/vite/legacy-runtime.mjs';
+import { editorRuntime, legacyRuntime, reactTemplates } from '../../tools/vite/legacy-runtime.mjs';
 
 const editors = [
   { component: WordxEditor, label: 'Wordx editor', id: 'wordx' },
@@ -79,6 +79,15 @@ test('the Vite host runtime leaves React package source routes to Vite when no l
     (error) => error ? reject(error) : resolve(true),
   ));
   assert.equal(forwarded, true, 'the React source alias can resolve instead of receiving a legacy-runtime 500');
+});
+
+test('React editor runtime manifests preserve ordered classic scripts and recover styles from generated legacy HTML', () => {
+  const manifest = JSON.parse(editorRuntime('<html><head><link rel="stylesheet" href="../common/ui.css"><style media="screen">.shell{display:flex}</style></head><div id="app"></div><script src="../common/core.js"></script><script src="js/app.js"></script></html>'));
+  assert.deepEqual(manifest.styles, [
+    { href: '../common/ui.css', media: '' },
+    { css: '.shell{display:flex}', media: 'screen' },
+  ]);
+  assert.deepEqual(manifest.scripts, ['../common/core.js', 'js/app.js']);
 });
 
 test('Excelx package stylesheet includes shared and feature-specific React dialog styles', () => {

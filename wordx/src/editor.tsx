@@ -16,6 +16,14 @@ import { installWordxRulers } from './rulers.js';
 import { installWordxOmml } from './omml.js';
 import { installWordxMailMerge } from './mail-merge.js';
 import { installWordxFind } from './find.js';
+import { installWordxProofing } from './proofing.js';
+import { installWordxMarkdown } from './markdown.js';
+import { installWordxMarkdownIo } from './markdown-io.js';
+import { installWordxHtmlIo } from './html-io.js';
+import { installWordxRtf } from './rtf-io.js';
+import { installWordxDocxRead } from './docx-read.js';
+import { installWordxDocxWrite } from './docx-write.js';
+import { WordxEngineShell } from './engine-shell.js';
 
 export interface WordxEngineControls {
   restoreDraft(draft: LocalDraft<Blob>): void;
@@ -46,13 +54,14 @@ export function WordxEditor({ services, mountEngine, engine, draftStore, onDraft
     if (!engine) return undefined;
     return createDirectEngineBridge({
       editor: 'wordx', engine, title: 'Wordx editor',
+      shellOwnedByReact: true,
       accept: {
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx', '.docm', '.dotx', '.dotm'],
         'text/plain': ['.txt', '.md', '.markdown', '.rtf', '.html', '.htm', '.zip'],
       },
-      beforeLegacyScript: (runtime, script) => { if (script.pathname.endsWith('/common/search.js')) installCommandSearchService(runtime); },
+      beforeLegacyScript: (runtime, script) => { if (script.pathname.endsWith('/common/search.js')) installCommandSearchService(runtime); if (script.pathname.endsWith('/wordx/js/docx-read.js')) installWordxDocxRead(runtime); if (script.pathname.endsWith('/wordx/js/docx-write.js')) installWordxDocxWrite(runtime); if (script.pathname.endsWith('/wordx/js/htmlio.js')) installWordxHtmlIo(runtime); if (script.pathname.endsWith('/wordx/js/rtf.js')) installWordxRtf(runtime); if (script.pathname.endsWith('/wordx/js/spell.js')) installWordxProofing(runtime); if (script.pathname.endsWith('/wordx/js/markdown.js')) installWordxMarkdown(runtime); if (script.pathname.endsWith('/wordx/js/mdio.js')) installWordxMarkdownIo(runtime); },
       configureRuntime: (runtime) => { installWordxRibbonSpec(runtime); installWordxTemplates(runtime); installWordxLineBoxes(runtime); installWordxDrawTool(runtime); installWordxOutline(runtime); installWordxAutoCorrect(runtime); installWordxRulers(runtime); installWordxOmml(runtime); installWordxMailMerge(runtime); installWordxFind(runtime); },
-      skipLegacyScripts: ['/common/search.js', '/wordx/js/ribbon.js', '/wordx/js/templates.js', '/wordx/js/portions.js', '/wordx/js/drawtool.js', '/wordx/js/outline.js', '/wordx/js/autocorrect.js', '/wordx/js/rulers.js', '/wordx/js/omml.js', '/wordx/js/mailmerge.js', '/wordx/js/find.js'],
+      skipLegacyScripts: ['/common/search.js', '/wordx/js/ribbon.js', '/wordx/js/templates.js', '/wordx/js/portions.js', '/wordx/js/drawtool.js', '/wordx/js/outline.js', '/wordx/js/autocorrect.js', '/wordx/js/rulers.js', '/wordx/js/omml.js', '/wordx/js/mailmerge.js', '/wordx/js/find.js', '/wordx/js/spell.js', '/wordx/js/htmlio.js', '/wordx/js/markdown.js', '/wordx/js/mdio.js', '/wordx/js/rtf.js', '/wordx/js/docx-read.js', '/wordx/js/docx-write.js'],
       ...(allowedRemoteOrigins ? { allowedRemoteOrigins } : {}), ...(onOpenUrl ? { onOpenUrl } : {}),
       ...(draftStore ? { draftStore } : {}),
       ...(onDraftSaved ? { onDraftSaved } : {}),
@@ -63,5 +72,6 @@ export function WordxEditor({ services, mountEngine, engine, draftStore, onDraft
       ...(initialFile ? { initialFile } : {}), ...(initialDocument ? { initialDocument } : {}),
     });
   }, [mountEngine, engine, draftStore, onDraftSaved, onTitleChange, onDraftsAvailable, onEngineReady, onOpenFile, allowedRemoteOrigins, onOpenUrl, onSaveFile, initialFile, initialDocument]);
-  return <VibeOfficeProvider {...(services ? { services } : {})}><EngineEditorFrame {...props} appName="Wordx" editor="wordx" {...(mount ? { mount } : {})} appLayers={(host) => <><WordxListBoxLayer host={host} /><WordxMenuContentLayer host={host} /><WordxTaskContentLayer host={host} />{props.appLayers?.(host)}</>} /></VibeOfficeProvider>;
+  const reactEngineShell = Boolean(engine && !mountEngine);
+  return <VibeOfficeProvider {...(services ? { services } : {})}><EngineEditorFrame {...props} appName="Wordx" editor="wordx" {...(mount ? { mount } : {})} preserveHostChildrenOnUnmount={reactEngineShell} appLayers={(host) => <><WordxListBoxLayer host={host} /><WordxMenuContentLayer host={host} /><WordxTaskContentLayer host={host} />{props.appLayers?.(host)}</>}>{reactEngineShell ? <><WordxEngineShell />{props.children}</> : props.children}</EngineEditorFrame></VibeOfficeProvider>;
 }

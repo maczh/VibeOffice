@@ -1,9 +1,9 @@
-/* VibeOffice — core utilities, shared by Quire, Ledger and Lectern.
+/* VibeOffice — shared core utilities.
  * Shared namespace, DOM helpers, units, colors, events, file I/O, media store, PDF writer.
  * Every other script attaches itself to window.L. Each page names its app on its <html> (no inline script:
  * the pages' Content-Security-Policy):
- *   <html lang="en" data-app="quire" data-app-name="Quire">
- * APP_ID keeps each app's saved settings apart ('quire.…', L.store); APP_NAME and APP appear in messages.
+ *   <html lang="en" data-app="editor" data-app-name="Editor">
+ * APP_ID keeps each app's saved settings separate in L.store; APP_NAME and APP appear in messages.
  */
 (function (root) {
   'use strict';
@@ -141,6 +141,11 @@
     signal.addEventListener('abort', dispose, { once: true });
     return () => signal.removeEventListener('abort', dispose);
   };
+  /** Read the active editor mount's cancellation signal for async work that cannot itself be cancelled. */
+  L.mountSignal = function () {
+    const scope = [...domRoots].reverse().find((candidate) => candidate.active);
+    return scope ? scope.controller.signal : null;
+  };
   L.svgNS = 'http://www.w3.org/2000/svg';
   L.s = function s(tag, attrs, ...kids) {
     const el = document.createElementNS(L.svgNS, tag);
@@ -162,7 +167,33 @@
   L.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   L.round = (v, d) => { const m = Math.pow(10, d == null ? 2 : d); return Math.round(v * m) / m; };
   L.debounce = (fn, ms) => { let t; return function (...a) { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); }; };
-  L.rafThrottle = (fn) => { let q = false, args; return function (...a) { args = a; if (q) return; q = true; requestAnimationFrame(() => { q = false; fn.apply(this, args); }); }; };
+  L.rafThrottle = (fn) => {
+    let frame = 0, args, context, scheduled = false, scope = null, cancelOnDispose = null;
+    const cancel = () => {
+      if (!scheduled) return;
+      scheduled = false;
+      cancelAnimationFrame(frame);
+      frame = 0;
+      if (scope && cancelOnDispose) scope.controller.signal.removeEventListener('abort', cancelOnDispose);
+      scope = null; cancelOnDispose = null;
+    };
+    return function (...a) {
+      args = a; context = this;
+      if (scheduled) return;
+      scheduled = true;
+      scope = [...domRoots].reverse().find((candidate) => candidate.active) || null;
+      const signal = scope && scope.controller.signal;
+      cancelOnDispose = signal ? cancel : null;
+      if (signal) signal.addEventListener('abort', cancelOnDispose, { once: true });
+      frame = requestAnimationFrame(() => {
+        const run = scheduled;
+        scheduled = false; frame = 0;
+        if (signal && cancelOnDispose) signal.removeEventListener('abort', cancelOnDispose);
+        scope = null; cancelOnDispose = null;
+        if (run && !(signal && signal.aborted)) fn.apply(context, args);
+      });
+    };
+  };
   L.esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   L.xesc = (s) => String(s == null ? '' : s)
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '')
@@ -878,7 +909,7 @@
   L.addRecentFont = function (name) {
     if (name) L.store.set('recentFonts', [name].concat(L.store.get('recentFonts', []).filter((f) => f !== name)).slice(0, 10));
   };
-  /* the Font Size box of Word and Excel; Lectern sets PowerPoint's list in its app.js */
+  /* the Font Size box of Word and Excel; the presentation editor sets PowerPoint's list in its app.js */
   L.SIZE_LIST = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
 
   /* Wingdings / Symbol bullet glyphs mapped to Unicode so imported documents look right */

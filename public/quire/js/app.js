@@ -552,6 +552,7 @@
 
   /* ================= status bar ================= */
   let statusTimer = 0;
+  let removeStatusTimerCleanup = () => {};
   function buildStatus() {
     const sb = L.$('#statusbar');
     const direct = window.VO && VO.reactDirectHost;
@@ -607,7 +608,24 @@
     if (direct) sb.append(A.sb.msg);
     else sb.append(A.sb.page, A.sb.sec, A.sb.pages, A.sb.at, A.sb.ln, A.sb.col, A.sb.rec, A.sb.trk, A.sb.ext, A.sb.ovr, A.sb.lang, A.sb.spell, A.sb.msg);
   }
-  A.status = (msg, ms) => { if (!A.sb) return; const text = L.t(msg); if (ui.reactStatus(text, ms || 4000)) return; A.sb.msg.textContent = text; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sb.msg.textContent = ''; }, ms || 4000); };
+  A.status = (msg, ms) => {
+    if (!A.sb) return;
+    const text = L.t(msg);
+    if (ui.reactStatus(text, ms || 4000)) return;
+    A.sb.msg.textContent = text;
+    removeStatusTimerCleanup();
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => {
+      removeStatusTimerCleanup();
+      statusTimer = 0;
+      A.sb.msg.textContent = '';
+    }, ms || 4000);
+    removeStatusTimerCleanup = L.addMountCleanup(() => {
+      clearTimeout(statusTimer);
+      statusTimer = 0;
+      removeStatusTimerCleanup = () => {};
+    });
+  };
   A.updateStatus = L.debounce(function () {
     if (!A.sb) return;
     const d = doc();
@@ -883,7 +901,7 @@
   const blank = () => D.applyLocale(D.newDoc(), L.locale && L.locale.get());
   A.newDocument = async function (opts) {
     /* the desktop app: a blank document in a window of its own (one with content goes through loadDoc) */
-    if (!opts && !pristine() && window.VO && VO.oneDocument) return VO.go(VO.url(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'wordx' : 'quire', { new: true })).catch((e) => ui.msg(String(e), { icon: 'error' }));
+    if (!opts && !pristine() && window.VO && VO.oneDocument) return VO.go(VO.url('wordx', { new: true })).catch((e) => ui.msg(String(e), { icon: 'error' }));
     A.untitled++;
     const d = opts && opts.modern ? D.newDoc({ modern: true }) : blank();
     if (opts && opts.build) opts.build(d);
@@ -1595,7 +1613,7 @@
     A.applyOpts();
     if (A.opts.docMap) A.toggleDocMap(true);
     ui.refresh();
-    if (window.VO) VO.attach(window.__VIBE_OFFICE_DIRECT_HOST__ ? 'wordx' : 'quire', {
+    if (window.VO) VO.attach('wordx', {
       async open(f, o) {
         await A.openFile(f);
         /* a document a page made (desktop app): never saved */

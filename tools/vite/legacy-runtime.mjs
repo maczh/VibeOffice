@@ -32,6 +32,26 @@ function reactManifest(source) {
   return JSON.stringify(manifest, null, 2);
 }
 
+/** Extract the classic runtime's ordered assets at build/dev-server time, not in the React host. */
+export function editorRuntime(source) {
+  // Some generated legacy pages intentionally omit closing head/body tags; the browser still
+  // recovers their styles. Scan document-order style assets rather than relying on a head close.
+  const styles = [];
+  for (const match of source.matchAll(/<link\b[^>]*>|<style\b([^>]*)>([\s\S]*?)<\/style\s*>/gi)) {
+    const tag = match[0];
+    if (/^<link\b/i.test(tag)) {
+      if (!/\brel\s*=\s*(["'])stylesheet\1/i.test(tag)) continue;
+      const href = tag.match(/\bhref\s*=\s*(["'])(.*?)\1/i)?.[2];
+      if (!href) continue;
+      styles.push({ href, media: tag.match(/\bmedia\s*=\s*(["'])(.*?)\1/i)?.[2] || '' });
+    } else {
+      styles.push({ css: match[2] || '', media: match[1]?.match(/\bmedia\s*=\s*(["'])(.*?)\1/i)?.[2] || '' });
+    }
+  }
+  const scripts = [...source.matchAll(/<script\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1[^>]*>/gi)].map((match) => match[2]);
+  return JSON.stringify({ styles, scripts }, null, 2);
+}
+
 /** Rebrand generated template metadata and preview URLs for the React package routes. */
 export function reactTemplates(source) {
   const templates = JSON.parse(source);
@@ -71,6 +91,15 @@ export function legacyRuntime(app) {
         const route = [...roots].find(([prefix]) => prefix.startsWith('/') && (pathname === prefix || pathname.startsWith(prefix + '/')));
         if (!route) return next();
         const [prefix, root] = route;
+        if (apps.includes(prefix.slice(1)) && pathname === `${prefix}/runtime.json`) {
+          readFile(path.join(root, 'index.html'), 'utf8').then((html) => {
+            response.statusCode = 200;
+            response.setHeader('Content-Type', MIME.get('.json'));
+            response.setHeader('Cache-Control', 'no-store');
+            response.end(editorRuntime(html));
+          }).catch((error) => error?.code === 'ENOENT' ? next() : next(error));
+          return;
+        }
         const file = prefix === '/manifest.webmanifest' || prefix === '/sw.js' ? root : path.resolve(root, '.' + pathname.slice(prefix.length));
         if (file !== root && !file.startsWith(root + path.sep)) return next();
         stat(file).then((info) => info.isDirectory() ? path.join(file, 'index.html') : file)
@@ -89,6 +118,10 @@ export function legacyRuntime(app) {
       const output = path.resolve(options.dir);
       for (const folder of [...apps.map((name) => [legacyFolders[name], name]), ['common', 'common'], ['fonts', 'fonts'], ['icons', 'icons']]) {
         await cp(path.join(publicRoot, folder[0]), path.join(output, folder[1]), { recursive: true });
+      }
+      for (const name of apps) {
+        const html = await readFile(path.join(publicRoot, legacyFolders[name], 'index.html'), 'utf8');
+        await writeFile(path.join(output, name, 'runtime.json'), editorRuntime(html));
       }
       await writeFile(path.join(output, 'common', 'templates.json'), reactTemplates(await readFile(path.join(publicRoot, 'common', 'templates.json'), 'utf8')));
       const manifest = reactManifest(await readFile(path.join(publicRoot, 'manifest.webmanifest'), 'utf8'));

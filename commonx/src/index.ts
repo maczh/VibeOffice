@@ -15,6 +15,8 @@ export { BusyOverlay } from './busy-overlay.js';
 export type { BusyRequest } from './busy-overlay.js';
 export { EditorTooltip } from './tooltip.js';
 export { EditorFocusBehavior } from './focus-behavior.js';
+export { EditorBrushLayer, installReactBrushService } from './brush.js';
+export type { EditorBrush } from './brush.js';
 export { EditorStatusMessage } from './status-message.js';
 export { EditorComboLayer } from './combo.js';
 export { EditorSelectLayer } from './select.js';

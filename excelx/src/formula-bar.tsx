@@ -36,9 +36,11 @@ export function ExcelxFormulaBarLayer({ host }: { host: HTMLElement }) {
   const [buttonMount, setButtonMount] = useState<HTMLElement | null>(null);
   const [nameMount, setNameMount] = useState<HTMLElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const valueFrame = useRef<number | null>(null);
   const [value, setValue] = useState('');
   const [editing, setEditing] = useState(false);
   const [multi, setMulti] = useState(false);
+  useEffect(() => () => { if (valueFrame.current !== null) cancelAnimationFrame(valueFrame.current); }, []);
   useEffect(() => {
     let adapter: HTMLTextAreaElement | null = null;
     let adapters: HTMLElement[] = [];
@@ -63,14 +65,12 @@ export function ExcelxFormulaBarLayer({ host }: { host: HTMLElement }) {
       const nativeControls = host.querySelector<HTMLElement>('#fb-buttons');
       const nameSlot = host.querySelector<HTMLElement>('#react-namebox');
       const nameAdapter = host.querySelector<HTMLElement>('#namebox');
-      const nameButton = host.querySelector<HTMLElement>('#namebox-dd');
       ownedSlots = [slot, controls, ...(nameSlot ? [nameSlot] : [])];
-      adapters = [nextAdapter, ...(nativeControls ? [nativeControls] : []), ...(nameAdapter ? [nameAdapter] : []), ...(nameButton ? [nameButton] : [])];
+      adapters = [nextAdapter, ...(nativeControls ? [nativeControls] : []), ...(nameAdapter ? [nameAdapter] : [])];
       ownedSlots.forEach((element) => element.classList.add('vibeoffice-react-owned'));
       adapters.forEach((element) => element.classList.add('fb-engine-adapter'));
       nativeControls?.setAttribute('aria-hidden', 'true');
       nameAdapter?.setAttribute('aria-hidden', 'true');
-      nameButton?.setAttribute('aria-hidden', 'true');
       if (nameSlot) setNameMount(nameSlot);
       const L = runtime();
       offs = ['selection', 'changed', 'mode'].map((event) => L?.bus?.on(event, sync)).filter((off): off is () => void => !!off);
@@ -80,7 +80,7 @@ export function ExcelxFormulaBarLayer({ host }: { host: HTMLElement }) {
     const observer = new MutationObserver(() => { attach(); sync(); });
     observer.observe(host, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     attach();
-    return () => { offs.forEach((off) => off()); observer.disconnect(); adapter?.removeEventListener('input', sync); ownedSlots.forEach((element) => element.classList.remove('vibeoffice-react-owned')); adapters.forEach((element) => element.classList.remove('fb-engine-adapter')); [host.querySelector('#fb-buttons'), host.querySelector('#namebox'), host.querySelector('#namebox-dd')].forEach((element) => element?.removeAttribute('aria-hidden')); };
+    return () => { offs.forEach((off) => off()); observer.disconnect(); adapter?.removeEventListener('input', sync); ownedSlots.forEach((element) => element.classList.remove('vibeoffice-react-owned')); adapters.forEach((element) => element.classList.remove('fb-engine-adapter')); [host.querySelector('#fb-buttons'), host.querySelector('#namebox')].forEach((element) => element?.removeAttribute('aria-hidden')); };
   }, [host]);
   useEffect(() => {
     if (!mount) return;
@@ -110,7 +110,7 @@ export function ExcelxFormulaBarLayer({ host }: { host: HTMLElement }) {
       <button type="button" aria-label="Insert Function" title="Insert Function" onPointerDown={(event) => { event.preventDefault(); runtime()?.ui?.exec('insertFunction'); }}><svg width="18" height="14" viewBox="0 0 18 14" aria-hidden="true"><text x="1" y="11" fontFamily="Times New Roman,Tinos,serif" fontStyle="italic" fontSize="13" fill="#1a3f8a">f</text><text x="6" y="11" fontFamily="Times New Roman,Tinos,serif" fontStyle="italic" fontSize="11" fill="#1a3f8a">x</text></svg></button>
     </div>, buttonMount, 'excelx-formula-bar-controls')}
     {createPortal(
-      <textarea ref={inputRef} className={`fb-input${multi ? ' multi' : ''}`} rows={1} aria-label="Formula Bar" spellCheck={false} autoComplete="off" value={value} onFocus={() => editor?.reactBarFocus?.()} onChange={(event) => setValue(event.currentTarget.value)} onInput={() => editor?.reactBarInput?.()} onKeyDown={(event) => { editor?.reactBarKeyDown?.(event.nativeEvent); const input = event.currentTarget; requestAnimationFrame(() => setValue(input.value)); }} onPointerDown={() => editor?.reactBarPointerDown?.()} onDoubleClick={(event) => { editor?.reactBarDoubleClick?.(); setMulti(event.currentTarget.classList.contains('multi')); }} />
+      <textarea ref={inputRef} className={`fb-input${multi ? ' multi' : ''}`} rows={1} aria-label="Formula Bar" spellCheck={false} autoComplete="off" value={value} onFocus={() => editor?.reactBarFocus?.()} onChange={(event) => setValue(event.currentTarget.value)} onInput={() => editor?.reactBarInput?.()} onKeyDown={(event) => { editor?.reactBarKeyDown?.(event.nativeEvent); const input = event.currentTarget; if (valueFrame.current !== null) cancelAnimationFrame(valueFrame.current); valueFrame.current = requestAnimationFrame(() => { valueFrame.current = null; if (input.isConnected) setValue(input.value); }); }} onPointerDown={() => editor?.reactBarPointerDown?.()} onDoubleClick={(event) => { editor?.reactBarDoubleClick?.(); setMulti(event.currentTarget.classList.contains('multi')); }} />
     , mount, 'excelx-formula-bar-input')}
     {nameMount && <ExcelxNameBoxLayer host={host} mount={nameMount} />}
   </>;
@@ -119,6 +119,8 @@ export function ExcelxFormulaBarLayer({ host }: { host: HTMLElement }) {
 function ExcelxNameBoxLayer({ host, mount }: { host: HTMLElement; mount: HTMLElement }) {
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const valueFrame = useRef<number | null>(null);
+  useEffect(() => () => { if (valueFrame.current !== null) cancelAnimationFrame(valueFrame.current); }, []);
   useEffect(() => {
     const adapter = host.querySelector<HTMLInputElement>('#namebox');
     if (!adapter) return;
@@ -145,11 +147,10 @@ function ExcelxNameBoxLayer({ host, mount }: { host: HTMLElement; mount: HTMLEle
     return () => { disposed = true; window.clearTimeout(timer); detach?.(); };
   }, [mount]);
   const adapter = host.querySelector<HTMLInputElement>('#namebox');
-  const button = host.querySelector<HTMLButtonElement>('#namebox-dd');
-  if (!adapter || !button) return null;
+  if (!adapter) return null;
   const update = (input: HTMLInputElement) => setValue(input.value);
   return createPortal(<>
-    <input ref={inputRef} aria-label="Name Box" autoComplete="off" spellCheck={false} value={value} onChange={(event) => update(event.currentTarget)} onFocus={(event) => runtime()?.app?.reactNameBoxFocus?.(event.currentTarget)} onKeyDown={(event) => { const input = event.currentTarget; runtime()?.app?.reactNameBoxKeyDown?.(input, event.nativeEvent); requestAnimationFrame(() => setValue(input.value)); }} />
+    <input ref={inputRef} aria-label="Name Box" autoComplete="off" spellCheck={false} value={value} onChange={(event) => update(event.currentTarget)} onFocus={(event) => runtime()?.app?.reactNameBoxFocus?.(event.currentTarget)} onKeyDown={(event) => { const input = event.currentTarget; runtime()?.app?.reactNameBoxKeyDown?.(input, event.nativeEvent); if (valueFrame.current !== null) cancelAnimationFrame(valueFrame.current); valueFrame.current = requestAnimationFrame(() => { valueFrame.current = null; if (input.isConnected) setValue(input.value); }); }} />
     <button type="button" aria-label="Names" title="Names" onPointerDown={(event) => { event.preventDefault(); runtime()?.app?.reactNameBoxOpenMenu?.(); }}><span className="dd-arrow" /></button>
   </>, mount, 'excelx-name-box');
 }

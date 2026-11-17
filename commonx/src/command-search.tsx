@@ -48,10 +48,15 @@ export function CommandSearch() {
   const office = useVibeOffice();
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const blurTimer = useRef<number | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CommandResult[]>([]);
   const [active, setActive] = useState(-1);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => () => { if (blurTimer.current !== null) window.clearTimeout(blurTimer.current); }, []);
+
+  const cancelBlurClose = () => { if (blurTimer.current !== null) { window.clearTimeout(blurTimer.current); blurTimer.current = null; } };
 
   useEffect(() => {
     const focusSearch = (event: globalThis.KeyboardEvent) => {
@@ -117,12 +122,12 @@ export function CommandSearch() {
     if (event.key === 'ArrowDown' && results.length) { event.preventDefault(); moveActive(1); }
     else if (event.key === 'ArrowUp' && results.length) { event.preventDefault(); moveActive(-1); }
     else if (event.key === 'Enter') { event.preventDefault(); run(active < 0 ? results.findIndex((result) => result.enabled) : active); }
-    else if (event.key === 'Escape') { setOpen(false); setQuery(''); setResults([]); }
+    else if (event.key === 'Escape') { cancelBlurClose(); setOpen(false); setQuery(''); setResults([]); }
   };
 
   const activeResultId = active >= 0 && results[active]?.enabled ? `${id}-option-${active}` : undefined;
   return <div className="vibe-command-search">
-    <input ref={inputRef} id={id} type="search" role="combobox" aria-label={office.translate('Search commands')} aria-expanded={open && results.length > 0} aria-controls={`${id}-results`} aria-activedescendant={open ? activeResultId : undefined} aria-autocomplete="list" placeholder={office.translate('Search commands')} value={query} onChange={onChange} onFocus={() => { setOpen(true); search(query); }} onBlur={() => window.setTimeout(() => setOpen(false), 100)} onKeyDown={onKeyDown} />
+    <input ref={inputRef} id={id} type="search" role="combobox" aria-label={office.translate('Search commands')} aria-expanded={open && results.length > 0} aria-controls={`${id}-results`} aria-activedescendant={open ? activeResultId : undefined} aria-autocomplete="list" placeholder={office.translate('Search commands')} value={query} onChange={onChange} onFocus={() => { cancelBlurClose(); setOpen(true); search(query); }} onBlur={() => { cancelBlurClose(); blurTimer.current = window.setTimeout(() => { blurTimer.current = null; setOpen(false); }, 100); }} onKeyDown={onKeyDown} />
     {open && results.length > 0 && <ul id={`${id}-results`} className="vibe-command-search__results" role="listbox">{results.map((result, index) => <li id={`${id}-option-${index}`} key={`${result.id || result.label}-${index}`} role="option" aria-selected={index === active && result.enabled} aria-disabled={!result.enabled}><button type="button" tabIndex={-1} disabled={!result.enabled} onMouseDown={(event) => event.preventDefault()} onClick={() => run(index)}><span>{highlightedLabel(result.label, query)}</span>{result.where && <small>{result.where}</small>}</button></li>)}</ul>}
   </div>;
 }

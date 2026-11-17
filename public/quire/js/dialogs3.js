@@ -737,6 +737,7 @@
     fill();
     from.addEventListener('input', () => { const m = ac.list(); if (m.has(from.value)) to.value = m.get(from.value); });
     const mainRoot = h('div', { id: 'react-wordx-autocorrect-main-root' });
+    if (direct) mainRoot.dataset.initialTab = tab === 'autotext' ? '2' : tab === 'format' ? '1' : '0';
     const mainKeys = ['acButtons','twoCaps','capSentence','capCells','capDays','capsLock','autocorrect','autoComplete'];
     let selectedEntry = '';
     G.reactAutoCorrectMainCatalog = () => ({ options: Object.fromEntries(mainKeys.map((key) => [key, o[key] !== false])), entries: Array.from(ac.list().entries()).sort((a,b)=>a[0].localeCompare(b[0])), selected: selectedEntry });
@@ -778,12 +779,12 @@
     const formatOptions = () => Object.fromEntries(formatKeys.map((key) => [key, key === 'autoHeadings' ? !!o[key] : o[key] !== false]));
     G.reactAutoCorrectFormatCatalog = () => ({ options: formatOptions() });
     G.reactAutoCorrectFormatAction = (key, enabled) => { if (formatKeys.includes(key)) { o[key] = !!enabled; A().saveOpts(); } return G.reactAutoCorrectFormatCatalog(); };
-    const tabs = ui.tabs([
+    const tabs = direct ? null : ui.tabs([
       { label: '&AutoCorrect', body: direct ? h('div', { class: 'col' }, mainRoot) : h('div', { class: 'col' }, chk('acButtons', 'Show Auto&Correct Options buttons'), chk('twoCaps', 'Correct TWo INitial &CApitals'), chk('capSentence', 'Capitalize first letter of &sentences'), chk('capCells', 'Capitalize first letter of table &cells'), chk('capDays', 'Capitalize &names of days'), chk('capsLock', 'Correct accidental usage of cAPS &LOCK key'), ui.button('&Exceptions...', exc, { class: 'btn small' }), chk('autocorrect', 'Replace &text as you type'), G.row(G.f('&Replace:', from), G.f('&With:', to)), list, h('div', { class: 'tp-btns' }, ui.button('&Add', () => { if (!from.value) return; ac.setEntry(from.value, to.value); fill(); }, { class: 'btn small' }), ui.button('&Delete', () => { if (!from.value) return; ac.setEntry(from.value, null); fill(); from.value = ''; to.value = ''; }, { class: 'btn small' }))) },
       { label: 'AutoFormat As You T&ype', body: direct ? h('div', { class: 'col' }, formatRoot) : h('div', { class: 'col' }, ui.group('Replace as you type', chk('smartQuotes', L.N('"&Straight quotes" with “smart quotes”')), chk('ordinals', '&Ordinals (1st) with superscript'), chk('fractions', '&Fractions (1/2) with fraction character (½)'), chk('dashes', '&Hyphens (--) with dash (—)'), chk('autoFormat', L.N('*&Bold* and _italic_ with real formatting')), chk('autoUrl', '&Internet and network paths with hyperlinks')), ui.group('Apply as you type', chk('autoBullets', 'Automatic b&ulleted lists'), chk('autoBorders', 'Border &lines'), chk('autoTables', '&Tables'), chk('autoNumbers', 'Automatic &numbered lists'), chk('autoHeadings', 'Built-in Heading st&yles', false))) },
       { label: 'Auto&Text', body: direct ? h('div', { class: 'col' }, autoTextRoot) : h('div', { class: 'col' }, chk('autoComplete', 'Show &AutoComplete suggestions'), h('label', { for: 'at-name', text: 'Enter AutoText entries here:' }), atName, atList, h('div', { class: 'cd-cap', text: 'Preview' }), atPv, h('div', { class: 'tp-btns' }, ui.button('&Add', () => { const t = E.sel && !E.collapsed() ? O.textRange(...E.range(), '\n') : ''; if (!t) { ui.msg('Select the text you want to store as AutoText first.', { icon: 'info' }); return; } const n = atName.value.trim() || t.slice(0, 32); ac.addAutoText(n, t); atList.setItems(L.store.get('autoText', []).map((x) => x.name)); }, { class: 'btn small' }), ui.button('&Delete', () => { ac.deleteAutoText(atName.value); atList.setItems(L.store.get('autoText', []).map((x) => x.name)); atPv.textContent = ''; }, { class: 'btn small' }), ui.button('&Insert', () => { const e = L.store.get('autoText', []).find((x) => x.name === atName.value); if (e) E.insertTextAt(e.text, L.N('AutoText')); }, { class: 'btn small' }))) },
     ], tab === 'autotext' ? 2 : tab === 'format' ? 1 : 0);
-    ui.dialog({ title: 'AutoCorrect: English (U.S.)', width: 460, body: tabs, buttons: [{ label: 'OK', primary: true }, { label: 'Cancel' }] });
+    ui.dialog({ title: 'AutoCorrect: English (U.S.)', width: 460, body: direct ? mainRoot : tabs, buttons: [{ label: 'OK', primary: true }, { label: 'Cancel' }] });
   };
 
   /* ================= Customize ================= */

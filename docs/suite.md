@@ -32,7 +32,7 @@ Installed (display mode standalone) or in the desktop app, app pages open in a n
 
 ## Windows
 
-No page draws a title bar of its own: the browser tab, or the system title bar of the installed app, shows `document.title` (`<document> - Quire`). Each app sets its own icon as the page icon with `VO.setIcon(L.icons.app(32))`.
+No page draws a title bar of its own: the browser tab, or the system title bar of the installed app, shows the document name with the active editor name (for example, `<document> - Wordx`). Each app sets its own icon as the page icon with `VO.setIcon(L.icons.app(32))`.
 
 ## The host: `VO.host`
 
@@ -107,7 +107,7 @@ One copy of everything the three apps share; a change here is a change in every 
 
 What each app provides:
 
-- its name on its page's `<html>`: `data-app="quire" data-app-name="Quire"`, which `core.js` reads as `L.APP_ID` and `L.APP_NAME` (no inline script: Security). `APP_ID` prefixes the app's settings (`quire.…`, `L.store`; Settings), so it must never change.
+- its name on its page's `<html>`: React-host pages use `data-app="wordx"` (or `excelx`/`pptx`) and the corresponding display name; classic compatibility pages still use their historical `data-app` values. `core.js` reads these as `L.APP_ID` and `L.APP_NAME` (no inline script: Security). The React package owns its storage namespace; legacy namespaces are retained only by the classic compatibility runtime.
 - in its `app.js`, at load: `L.icons.app` (its icon), `ui.hooks = { beforeExec, refocus, commitEdit }` (its editor around commands, toolbar boxes and dialogs); PPTX also `ui.schemeColors` / `ui.currentDesign` (theme colours in colour menus) and PowerPoint's `L.SIZE_LIST`.
 - a spelling UI sets `L.spell.refreshSoon` if it draws underlines (Wordx).
 

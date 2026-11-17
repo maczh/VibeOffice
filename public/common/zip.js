@@ -1,4 +1,4 @@
-/* VibeOffice — ZIP container engine (read + write), no dependencies; shared by Quire, Ledger and Lectern.
+/* VibeOffice — shared ZIP container engine (read + write), no dependencies.
  * Uses the browser's Compression Streams when present and ships a small pure-JS inflater, so Office
  * Open XML packages open in any modern browser (and in Node, for the tests).
  *

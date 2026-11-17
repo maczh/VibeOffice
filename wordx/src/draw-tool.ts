@@ -7,6 +7,22 @@ export function installWordxDrawTool(runtime: Window): void {
   const DT = (L.drawtool = { active: null });
   const doc = () => D.doc;
   const A = () => L.app;
+  let selectTimer = 0, removeSelectCleanup = () => {};
+  function scheduleShapeSelection(callback: () => void) {
+    removeSelectCleanup();
+    clearTimeout(selectTimer);
+    selectTimer = window.setTimeout(() => {
+      selectTimer = 0;
+      removeSelectCleanup();
+      removeSelectCleanup = () => {};
+      callback();
+    }, 30);
+    removeSelectCleanup = L.addMountCleanup(() => {
+      clearTimeout(selectTimer);
+      selectTimer = 0;
+      removeSelectCleanup = () => {};
+    });
+  }
 
   DT.start = function (opts) {
     L.ui.dragCancel();   /* a tool switch ends a drag in progress */
@@ -57,11 +73,11 @@ export function installWordxDrawTool(runtime: Window): void {
       if (it.tb) tbPara = it.tb.blocks[0];
       return D.pos(anc.p, anc.o);
     });
-    setTimeout(() => {
+    scheduleShapeSelection(() => {
       if (tbPara) { D.reindex(doc()); E.setSel(D.pos(tbPara, 0)); E.focus(); return; }
       const wrap = Array.from(LY.root.querySelectorAll('.flt')).find((x) => x._item === it || (+x.dataset.pid === anc.p.id && +x.dataset.o === anc.o));
       if (wrap) L.drawing.select(wrap, { p: anc.p, o: anc.o });
-    }, 30);
+    });
   }
   DT.reactBegin = function (e) {
     const opts = DT.active;

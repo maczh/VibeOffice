@@ -17,13 +17,14 @@ export function PptxBackgroundDialog() {
   const paletteId = `${useId().replaceAll(':', '')}-background-colors`;
   const pickerRef = useRef<HTMLButtonElement>(null);
   const paletteItems = useRef<Array<HTMLButtonElement | null>>([]);
+  const focusFrame = useRef<number | null>(null);
   useEffect(() => {
     const refresh = () => {
       const next = runtime()?.dlg?.reactBackgroundCatalog?.() || null;
       setCatalog(next ? { ...next } : null);
     };
     const off = runtime()?.bus?.on('pptx-background-dialog', refresh);
-    return () => off?.();
+    return () => { off?.(); if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); };
   }, []);
   useLayoutEffect(() => {
     if (!paletteOpen) return;
@@ -33,7 +34,7 @@ export function PptxBackgroundDialog() {
   if (!catalog) return null;
   const t = (message: string) => runtime()?.t?.(message) || message;
   const action = (name: string, value?: boolean) => runtime()?.dlg?.reactBackgroundAction?.(name, value);
-  const closePalette = () => { setPaletteOpen(false); window.requestAnimationFrame(() => pickerRef.current?.focus()); };
+  const closePalette = () => { setPaletteOpen(false); if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); focusFrame.current = window.requestAnimationFrame(() => { focusFrame.current = null; if (pickerRef.current?.isConnected) pickerRef.current.focus(); }); };
   const chooseColor = (value: string) => { runtime()?.dlg?.reactBackgroundColor?.(value); closePalette(); };
   const paletteItemCount = catalog.colors.length + 2;
   const onPaletteKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {

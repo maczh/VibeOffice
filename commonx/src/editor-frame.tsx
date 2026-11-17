@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type HTMLAttributes, type ReactNode } from 'react';
+import { Component, useCallback, useEffect, useRef, useState, type FormEvent, type HTMLAttributes, type ReactNode } from 'react';
 import { AboutDialog, type AboutRequest } from './about-dialog.js';
 import { MessageDialog, type MessageRequest } from './message-dialog.js';
 import { Toast, type ToastRequest } from './toast.js';
@@ -28,6 +28,7 @@ import { OfficeDialog } from './dialog.js';
 import { ChartEditorDialog } from './chart-editor-dialog.js';
 import { ScoutAssistant } from './scout-assistant.js';
 import { EditorDragLayer } from './drag.js';
+import { EditorBrushLayer } from './brush.js';
 import './editor.css';
 
 export type EditorKind = 'wordx' | 'excelx' | 'pptx';
@@ -54,9 +55,15 @@ export interface EngineRuntimeOptions {
 
 export interface EngineEditorFrameProps extends EditorFrameProps {
   mount?: EditorMount;
+  /** Retain React-owned engine-root children for React to reconcile during unmount. */
+  preserveHostChildrenOnUnmount?: boolean;
   onMountError?: (error: unknown) => void;
   /** App-owned React layers that consume requests from the mounted engine. */
   appLayers?: (host: HTMLElement) => ReactNode;
+  /** Called when an app-owned React layer throws while rendering or handling an update. */
+  onRenderError?: (error: Error) => void;
+  /** Host-localized fallback rendered in place of failed app-owned React layers. */
+  renderError?: ReactNode | ((error: Error) => ReactNode);
 }
 
 export interface AppearanceControlsProps {
@@ -87,7 +94,7 @@ export function settleEditorMount(
 }
 
 /** Bridge for legacy engines that manage their own DOM, without letting them replace React's outer host. */
-export function EngineEditorFrame({ mount, onMountError, appLayers, children, ...props }: EngineEditorFrameProps) {
+export function EngineEditorFrame({ mount, onMountError, onRenderError, renderError, appLayers, preserveHostChildrenOnUnmount = false, children, ...props }: EngineEditorFrameProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [engineHost, setEngineHost] = useState<HTMLDivElement | null>(null);
   const bindHost = useCallback((host: HTMLDivElement | null) => {
@@ -120,11 +127,36 @@ export function EngineEditorFrame({ mount, onMountError, appLayers, children, ..
       mountScope?.dispose();
       if (typeof uiCleanup === 'function') uiCleanup();
       else engineWindow?.L?.ui?.unmount?.(host);
-      host.replaceChildren();
+      if (!preserveHostChildrenOnUnmount) host.replaceChildren();
     };
-  }, [mount, onMountError, props.editor]);
+  }, [mount, onMountError, props.editor, preserveHostChildrenOnUnmount]);
 
-  return <EditorFrame {...props}><EditorChrome appName={props.appName} /><div className="vibe-editor__engine" ref={bindHost}>{children}</div>{engineHost && <><EditorFocusBehavior host={engineHost} /><EditorDragLayer host={engineHost} /><EditorTooltip host={engineHost} /><MenuLayer host={engineHost} /><EditorRibbon host={engineHost} /><EditorToolbarLayer host={engineHost} /><EditorStatusMessage host={engineHost} /><EditorComboLayer host={engineHost} /><EditorSelectLayer host={engineHost} /><EditorSpinLayer host={engineHost} /><EditorChoiceLayer host={engineHost} /><EditorTabsLayer host={engineHost} /><EditorButtonLayer host={engineHost} /><EditorUiContentLayer host={engineHost} /><ChartEditorDialog /><ScoutAssistant host={engineHost} />{appLayers?.(engineHost)}</>}</EditorFrame>;
+  return <EditorFrame {...props}><EditorChrome appName={props.appName} /><div className="vibe-editor__engine" ref={bindHost}>{children}</div>{engineHost && <><EditorFocusBehavior host={engineHost} /><EditorDragLayer host={engineHost} /><EditorBrushLayer host={engineHost} /><EditorTooltip host={engineHost} /><MenuLayer host={engineHost} /><EditorRibbon host={engineHost} /><EditorToolbarLayer host={engineHost} /><EditorStatusMessage host={engineHost} /><EditorComboLayer host={engineHost} /><EditorSelectLayer host={engineHost} /><EditorSpinLayer host={engineHost} /><EditorChoiceLayer host={engineHost} /><EditorTabsLayer host={engineHost} /><EditorButtonLayer host={engineHost} /><EditorUiContentLayer host={engineHost} /><ChartEditorDialog /><ScoutAssistant host={engineHost} />{appLayers && <EditorRenderBoundary {...(renderError !== undefined ? { fallback: renderError } : {})} {...(onRenderError ? { onError: onRenderError } : {})}>{appLayers(engineHost)}</EditorRenderBoundary>}</>}</EditorFrame>;
+}
+
+interface EditorRenderBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode | ((error: Error) => ReactNode);
+  onError?: (error: Error) => void;
+}
+
+class EditorRenderBoundary extends Component<EditorRenderBoundaryProps, { error: Error | null }> {
+  override state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  override componentDidCatch(error: Error) {
+    if (this.props.onError) this.props.onError(error);
+    else console.error('VibeOffice app React layer failed:', error);
+  }
+
+  override render() {
+    if (!this.state.error) return this.props.children;
+    const { fallback } = this.props;
+    return typeof fallback === 'function' ? fallback(this.state.error) : fallback ?? null;
+  }
 }
 
 function EditorChrome({ appName }: { appName: string }) {

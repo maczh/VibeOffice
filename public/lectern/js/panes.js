@@ -731,7 +731,7 @@
       const q = h('input', { type: 'text', id: 'gs-search', placeholder: 'Search help', style: 'flex:1;min-width:0' });
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { P.helpQuery = q.value; TP.show('help'); } });
       b.append(
-        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: window.VO ? VO.editionName(window.VO.oneDocument ? 'Lectern' : 'PPTX') : 'PPTX', translate: 'no', style: 'color:var(--pane-ink)' })),
+        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: window.VO ? VO.editionName('PPTX') : 'PPTX', translate: 'no', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
         sec(L.N('Open'), link('open', L.N('Open a presentation (.pptx)...'), () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample()), ...(window.VO?.host.kind === 'desktop' ? [VO.recentLinks(4)] : [])),
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => TP.show('help')), link('design', 'Apply a design template', () => TP.show('design')), link('animation', 'Animate your slides', () => TP.show('customAnim'))));
@@ -1179,7 +1179,7 @@
       });
       list.appendChild(li);
     }
-    setTimeout(() => { const on = list.querySelector('.li.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }, 0);
+    (L.app.onMountFrame || ((callback) => setTimeout(callback, 0)))(() => { const on = list.querySelector('.li.on'); if (on?.isConnected) on.scrollIntoView({ block: 'nearest' }); });
     const spd = ui.select([['slow', 'Slow'], ['med', 'Medium'], ['fast', 'Fast']], tr.spd || 'fast', (v) => L.app.setTransition((s) => { s.trans.spd = v; delete s.trans.dur; }));
     const snd = ui.select([['', '[No Sound]']], '', null, { disabled: true });
     const onClick = ui.check('On mouse click', tr.click !== false, (v) => L.app.setTransition((s) => { s.trans.click = v; }));
@@ -1202,7 +1202,9 @@
     const ov = h('div', { style: `position:absolute;left:${host.style.left};top:${host.style.top};width:${host.style.width};height:${host.style.height};overflow:hidden;z-index:4;pointer-events:none` });
     ed.canvas.appendChild(ov);
     L.show.previewTransition(ov, L.pres, ed.slide(), L.pres.slides[ed.idx - 1]);
-    setTimeout(() => ov.remove(), L.anim.transDur(ed.slide().trans) + 400);
+    let removeCleanup = () => {};
+    const timer = setTimeout(() => { removeCleanup(); ov.remove(); }, L.anim.transDur(ed.slide().trans) + 400);
+    removeCleanup = L.addMountCleanup(() => { clearTimeout(timer); ov.remove(); });
   };
   P.reactTransitionCatalog = function () {
     const slide = E().slide(), trans = slide?.trans || {};

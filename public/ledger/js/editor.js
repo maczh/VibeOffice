@@ -42,15 +42,19 @@
   E.init = function () {
     defaultFormulaBar = L.$('#fbinput');
     const preferred = preferredReactFormulaBar?.isConnected;
-    bindFormulaBar(preferred ? preferredReactFormulaBar : defaultFormulaBar, !!preferred);
+    if (preferred && defaultFormulaBar && defaultFormulaBar !== preferredReactFormulaBar) defaultFormulaBar.classList.add('fb-engine-adapter');
+    const reactHost = !!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected);
+    bindFormulaBar(preferred ? preferredReactFormulaBar : defaultFormulaBar, !!preferred || reactHost);
     fbwrap = L.$('#fbar');
     cell = G().input;
-    L.$('#fb-cancel').addEventListener('pointerdown', (e) => { e.preventDefault(); E.cancel(); });
-    L.$('#fb-enter').addEventListener('pointerdown', (e) => { e.preventDefault(); E.commit({ stay: true }); });
-    L.$('#fb-cancel').innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13"><path d="M2 2l9 9M11 2l-9 9" stroke="#c0281a" stroke-width="2.2"/></svg>';
-    L.$('#fb-enter').innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13"><path d="M1.5 7l3.5 3.5L11.5 2.5" fill="none" stroke="#1b8a2a" stroke-width="2.2"/></svg>';
-    L.$('#fb-fx').innerHTML = '<svg width="18" height="14" viewBox="0 0 18 14"><text x="1" y="11" font-family="Times New Roman,Tinos,serif" font-style="italic" font-size="13" fill="#1a3f8a">f</text><text x="6" y="11" font-family="Times New Roman,Tinos,serif" font-style="italic" font-size="11" fill="#1a3f8a">x</text></svg>';
-    L.$('#fb-fx').addEventListener('pointerdown', (e) => { e.preventDefault(); L.ui.exec('insertFunction'); });
+    if (!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected)) {
+      L.$('#fb-cancel').addEventListener('pointerdown', (e) => { e.preventDefault(); E.cancel(); });
+      L.$('#fb-enter').addEventListener('pointerdown', (e) => { e.preventDefault(); E.commit({ stay: true }); });
+      L.$('#fb-cancel').innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13"><path d="M2 2l9 9M11 2l-9 9" stroke="#c0281a" stroke-width="2.2"/></svg>';
+      L.$('#fb-enter').innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13"><path d="M1.5 7l3.5 3.5L11.5 2.5" fill="none" stroke="#1b8a2a" stroke-width="2.2"/></svg>';
+      L.$('#fb-fx').innerHTML = '<svg width="18" height="14" viewBox="0 0 18 14"><text x="1" y="11" font-family="Times New Roman,Tinos,serif" font-style="italic" font-size="13" fill="#1a3f8a">f</text><text x="6" y="11" font-family="Times New Roman,Tinos,serif" font-style="italic" font-size="11" fill="#1a3f8a">x</text></svg>';
+      L.$('#fb-fx').addEventListener('pointerdown', (e) => { e.preventDefault(); L.ui.exec('insertFunction'); });
+    }
     /* the cell and the bar are two views of one edit: the one with the keyboard is what the edit reads (it copies to the other) */
     cell.addEventListener('pointerdown', (e) => { if (E.active) { e.stopPropagation(); surface = cell; } });
     cell.addEventListener('focus', () => { if (E.active) surface = cell; });
@@ -70,6 +74,8 @@
     if (E.initialized) {
       if (surface === previous) surface = element;
       if (previous) element.value = previous.value;
+      /* Hide the engine fallback before publishing the React-owned input as active. */
+      if (defaultFormulaBar && defaultFormulaBar !== element) defaultFormulaBar.classList.add('fb-engine-adapter');
       bindFormulaBar(element, true);
     }
     let attached = true;
@@ -81,8 +87,10 @@
       const fallback = defaultFormulaBar?.isConnected ? defaultFormulaBar : previous;
       if (!fallback?.isConnected) return;
       if (E.active && surface === element) surface = fallback;
+      if (fallback === defaultFormulaBar) fallback.classList.remove('fb-engine-adapter');
       fallback.value = element.value;
-      bindFormulaBar(fallback, false);
+      const reactHost = !!(root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected);
+      bindFormulaBar(fallback, reactHost);
       E.show();
     };
   };

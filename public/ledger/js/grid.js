@@ -66,6 +66,12 @@
         return () => {
           for (const [type, handler] of Object.entries(handlers)) (type === 'keydown' || type === 'input' || type === 'compositionstart' || type === 'copy' || type === 'cut' || type === 'paste' ? inp : wrap).removeEventListener(type, handler);
           resizeObserver.disconnect();
+          if (raf) { cancelAnimationFrame(raf); raf = 0; }
+          dirty = false;
+          vbar.destroy(); hbar.destroy();
+          vbar = hbar = null;
+          clearTimeout(hoverTimer); hoverTimer = null; hoverCm = null;
+          clearLinkHoldTimer();
           G.reactInteractionMounted = false;
         };
       };
@@ -201,12 +207,19 @@
       this.pos = 0; this.page = 10; this.total = 100; this.min = 0;
       this.spacer = h('i');
       el.appendChild(this.spacer);
-      el.addEventListener('scroll', () => {
+      this.handleScroll = () => {
         if (this.quiet) { this.quiet = false; return; }        // our own set(), not the user
         const p = Math.round(this.fromScroll());
         if (p !== this.pos) this.onScroll(p, p < this.pos ? 'up' : 'down');
-      });
-      el.addEventListener('pointerup', () => G.focus());
+      };
+      this.handlePointerUp = () => G.focus();
+      el.addEventListener('scroll', this.handleScroll);
+      el.addEventListener('pointerup', this.handlePointerUp);
+    }
+    destroy() {
+      this.el.removeEventListener('scroll', this.handleScroll);
+      this.el.removeEventListener('pointerup', this.handlePointerUp);
+      this.spacer.remove();
     }
     len() { return this.v ? this.el.clientHeight : this.el.clientWidth; }
     /** the row (column) the current scroll offset stands for */
@@ -388,6 +401,13 @@
 
   /* ------------------------------------------------------------ mouse */
   let drag = null;
+  let linkHoldTimer = 0, removeLinkHoldCleanup = () => {};
+  function clearLinkHoldTimer() {
+    clearTimeout(linkHoldTimer);
+    linkHoldTimer = 0;
+    removeLinkHoldCleanup();
+    removeLinkHoldCleanup = () => {};
+  }
   const pt = (e) => { const r = wrap.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
   /** what is under the pointer (adds resize / fill / border zones) */
   function zone(p) {
@@ -524,7 +544,16 @@
         beginDrag(e, d);
         /* on a hyperlink, holding the button a second selects the cell instead of following it (as Excel: the
            pointer turns back into the cell cross) */
-        if (link) setTimeout(() => { if (drag === d) { d.held = true; setCursor('cur-cell'); } }, 1000);
+        if (link) {
+          clearLinkHoldTimer();
+          linkHoldTimer = setTimeout(() => {
+            linkHoldTimer = 0;
+            removeLinkHoldCleanup();
+            removeLinkHoldCleanup = () => {};
+            if (drag === d) { d.held = true; setCursor('cur-cell'); }
+          }, 1000);
+          removeLinkHoldCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(clearLinkHoldTimer) : () => {};
+        }
         /* data validation drop-down button */
         G.syncObjects();
         return;
@@ -562,6 +591,7 @@
   /** what every end of a drag clears: the auto-scroll timer, the guide line, the tip */
   function stopDrag() {
     clearInterval(autoTimer);
+    clearLinkHoldTimer();
     if (guide) guide.hidden = true;
     if (tipEl) tipEl.hidden = true;
     const d = drag;

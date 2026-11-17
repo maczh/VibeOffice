@@ -1,4 +1,4 @@
-/* VibeOffice — the chrome shared by Quire, Ledger and Lectern: window layout, menus, toolbars, task panes,
+/* VibeOffice — shared editor chrome: window layout, menus, toolbars, task panes,
  * dialogs, form controls, status bar. Colours, fonts and shadows come from the look settings in looks.css,
  * loaded first; each app's own CSS comes after this file and wins. */
 [hidden] { display: none !important; }

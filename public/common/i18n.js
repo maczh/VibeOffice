@@ -28,6 +28,8 @@
       the "|" that ends the text; other text with a "|" is shown whole, as text that is the user's can reach VO.t again
       (a file name A|B.docx filled into a message, "Revenue | Expenses") */
   const plain = (s) => s.replace(/(\S)\|[A-Za-z][A-Za-z -]*$/, '$1');
+  /* Locale catalogs are also consumed by the out-of-scope desktop app; keep them unchanged and brand only web UI. */
+  const webBrand = (s) => window.__VO_HOST__ && window.__TAURI_INTERNALS__ ? s : s.replace(/\bQuire\b/g, 'Wordx').replace(/\bLedger\b/g, 'Excelx').replace(/\bLectern\b/g, 'PPTX');
 
   let dict = null;
   /* in the pseudo-locale, the text asked for that the catalog lacks (tools/i18n.mjs harvest reads it) */
@@ -37,8 +39,8 @@
     const has = (k) => dict && Object.prototype.hasOwnProperty.call(dict, k) && typeof dict[k] === 'string' && dict[k];
     const base = plain(s);
     let out = base;
-    if (lang === 'qps') { if (!dict || Object.prototype.hasOwnProperty.call(dict, s)) out = pseudo(base); else if (/[A-Za-z]{2}/.test(s) && s[0] !== '[') missed.add(s); }
-    else out = [s, base].map((k) => has(k) && marks(dict[k]) === marks(base) && dict[k]).find(Boolean) || base;
+    if (lang === 'qps') { if (!dict || Object.prototype.hasOwnProperty.call(dict, s)) out = pseudo(webBrand(base)); else if (/[A-Za-z]{2}/.test(s) && s[0] !== '[') missed.add(s); }
+    else out = webBrand([s, base].map((k) => has(k) && marks(dict[k]) === marks(base) && dict[k]).find(Boolean) || base);
     return args.length ? out.replace(/\{(\d+)\}/g, (m, i) => (args[i] != null ? String(args[i]) : m)) : out;
   };
 
@@ -68,7 +70,7 @@
   /** UI text kept in a table and translated where it is shown (VO.t then): marks it for the catalog, returns it as is */
   VO.N = (s) => s;
 
-  /* the page's own HTML (the Start Center's text, Ledger's formula bar): its text and the attributes the UI shows,
+  /* the page's own HTML (the Start Center's text, a spreadsheet formula bar): its text and the attributes the UI shows,
      translated once, before the app builds the rest of its UI with VO.t (tools/i18n.mjs gathers the same text) */
   const ATTRS = ['title', 'placeholder', 'aria-label', 'data-tip', 'alt'];
   const translateTree = (top) => {

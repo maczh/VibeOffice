@@ -43,6 +43,7 @@ test('Start Center opens on Create File without Recent Files', async () => {
 test('Wordx: type, a menu, a dialog, Undo', async () => {
   const t = await open('quire', { look: 'classic' });
   try {
+    assert.equal(await t.evaluate("new URL(VO.url('wordx')).pathname"), '/quire/', 'the branded Wordx ID resolves to the classic compatibility route');
     await t.evaluate(`(async () => { const { D } = L, d = D.newDoc(); d.main.blocks = [D.para([D.text('Plain text.')])]; L.app.loadDoc(d, 'Smoke'); await new Promise((r) => setTimeout(r, 400)); })()`);
     const text = () => t.evaluate(`L.D.plainText(L.D.doc.main.blocks[0])`);
     const end = await t.evaluate(`(() => { const m = L.layout.posToDom(L.D.pos(L.D.doc.main.blocks[0], 11)), r = document.createRange(); r.setStart(m.node, m.offset); r.collapse(true);
@@ -62,6 +63,7 @@ test('Wordx: type, a menu, a dialog, Undo', async () => {
 test('Excelx: type, a menu, a dialog with a drop-down, Undo', async () => {
   const t = await open('ledger', { look: 'classic' });
   try {
+    assert.equal(await t.evaluate("new URL(VO.url('excelx')).pathname"), '/ledger/', 'the branded Excelx ID resolves to the classic compatibility route');
     const cell = (r, c) => t.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(${r}, ${c}); return { x: Math.round(w.left + b.x + b.w / 2), y: Math.round(w.top + b.y + b.h / 2) }; })()`);
     const value = (r, c) => t.evaluate(`L.editor.cellText(L.grid.sheet(), ${r}, ${c})`);
     await t.click(await cell(20, 2));
@@ -88,6 +90,7 @@ test('Excelx: type, a menu, a dialog with a drop-down, Undo', async () => {
 test('PPTX: type, a menu, a dialog, Undo', async () => {
   const t = await open('lectern', { look: 'classic' });
   try {
+    assert.equal(await t.evaluate("new URL(VO.url('pptx')).pathname"), '/lectern/', 'the branded PPTX ID resolves to the classic compatibility route');
     await t.evaluate(`(async () => { const E = L.ed, M = L.model; if (L.te.active()) L.te.end(); E.goto(0);
       const slide = L.pres.slides[0], b = M.newTextBox(L.pres, slide, 100, 100, 500, 40, true); b.id = 'boxA'; b.tx.ps = [{ lvl: 0, pp: {}, rs: [{ t: 'Plain text.' }] }];
       slide.shapes = [b]; E.sel = []; E.render(); L.panes.left.render(); await new Promise((r) => setTimeout(r, 300)); })()`);

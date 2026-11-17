@@ -52,9 +52,13 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
         onClose();
         const anchor = request.anchor as (Element & { focus?: () => void }) | undefined;
         if (typeof anchor?.focus === 'function') {
-          window.requestAnimationFrame(() => {
+          let removeCleanup = () => {};
+          const frame = window.requestAnimationFrame(() => {
+            removeCleanup();
             if (anchor.isConnected) anchor.focus?.();
           });
+          const runtime = (window as Window & { L?: { addMountCleanup?: (cleanup: () => void) => () => void } }).L;
+          removeCleanup = runtime?.addMountCleanup?.(() => window.cancelAnimationFrame(frame)) || (() => {});
         }
         return;
       }

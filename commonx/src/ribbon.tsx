@@ -210,8 +210,20 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
   const [foldedOpen, setFoldedOpen] = useState<{ key: string; left: number; top: number; anchor: HTMLButtonElement } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const groupsRef = useRef<HTMLDivElement>(null);
+  const focusFrame = useRef<number | null>(null);
+  const peekTimer = useRef<number | null>(null);
   const engineRoot = host.querySelector<HTMLElement>('.vibeoffice-legacy-root[data-vibeoffice-engine-root]');
   const target = engineRoot?.querySelector<HTMLElement>('.cmdbars');
+
+  useEffect(() => () => {
+    if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+    if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
+  }, [host]);
+
+  const deferPeekClose = () => {
+    if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
+    peekTimer.current = window.setTimeout(() => { peekTimer.current = null; setPeek(false); }, 0);
+  };
 
   const select = useCallback((id: string) => setSelected(id), []);
   const toggleCollapse = useCallback((value?: boolean) => {
@@ -299,7 +311,8 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
       event.preventDefault();
       event.stopPropagation();
       setFoldedOpen(null);
-      requestAnimationFrame(() => { if (foldedOpen.anchor.isConnected) foldedOpen.anchor.focus(); });
+      if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+      focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; if (foldedOpen.anchor.isConnected) foldedOpen.anchor.focus(); });
     };
     document.addEventListener('pointerdown', onPointerDown, true);
     document.addEventListener('keydown', onKeyDown, true);
@@ -325,7 +338,7 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
       </div>
       <button type="button" className="rb-pin" aria-label={office.t('Collapse the Ribbon (Ctrl+F1)')} data-tip="Collapse the Ribbon (Ctrl+F1)" onClick={() => toggleCollapse()}><svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d={collapsed ? 'M1 1l4 4 4-4' : 'M1 5l4-4 4 4'} fill="none" stroke="currentColor" strokeWidth="1.4" /></svg></button>
     </div>
-    <div className="rb-panelwrap">{collapsed && !peek ? null : <div className="rb-panel" ref={panelRef} onClick={(event) => { if (peek && (event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) setTimeout(() => setPeek(false), 0); }}><div className="rb-groups" ref={groupsRef} role="tabpanel">{groups.map((group) => <RibbonGroup key={group.id} group={group} spec={spec} refresh={refresh} folded={foldedGroups.includes(group.id)} open={foldedOpen?.key === group.id} onOpen={(key, anchor) => { const rect = anchor.getBoundingClientRect(); setFoldedOpen({ key, left: Math.max(2, Math.min(rect.left, window.innerWidth - 320)), top: rect.bottom, anchor }); }} />)}</div></div>}</div>
-    {foldedOpen && groupsRef.current && groups.find((group) => group.id === foldedOpen.key) && createPortal(<div className="rb-pop rb-group" data-react-ribbon-pop="true" style={{ left: foldedOpen.left, top: foldedOpen.top }} onClick={(event) => { if ((event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) setTimeout(() => setFoldedOpen(null), 0); }}><RibbonGroupContents group={groups.find((group) => group.id === foldedOpen.key)!} spec={spec} refresh={refresh} /></div>, engineRoot || target)}
+    <div className="rb-panelwrap">{collapsed && !peek ? null : <div className="rb-panel" ref={panelRef} onClick={(event) => { if (peek && (event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) deferPeekClose(); }}><div className="rb-groups" ref={groupsRef} role="tabpanel">{groups.map((group) => <RibbonGroup key={group.id} group={group} spec={spec} refresh={refresh} folded={foldedGroups.includes(group.id)} open={foldedOpen?.key === group.id} onOpen={(key, anchor) => { const rect = anchor.getBoundingClientRect(); setFoldedOpen({ key, left: Math.max(2, Math.min(rect.left, window.innerWidth - 320)), top: rect.bottom, anchor }); }} />)}</div></div>}</div>
+    {foldedOpen && groupsRef.current && groups.find((group) => group.id === foldedOpen.key) && createPortal(<div className="rb-pop rb-group" data-react-ribbon-pop="true" style={{ left: foldedOpen.left, top: foldedOpen.top }} onClick={(event) => { if ((event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) deferPeekClose(); }}><RibbonGroupContents group={groups.find((group) => group.id === foldedOpen.key)!} spec={spec} refresh={refresh} /></div>, engineRoot || target)}
   </div>, target);
 }

@@ -5,9 +5,16 @@
   const M = L.model, LY = L.layout, O = L.ops, F = L.formula, C = L.calc, NF = L.numfmt;
   const CL = (L.clip = {});
   const G = () => L.grid;
-  let clip = null, marqueeTimer = null;
+  let clip = null, marqueeTimer = null, removeMarqueeCleanup = () => {};
   CL.get = () => clip;
-  CL.clearMarquee = () => { clip = clip && !clip.cut ? Object.assign(clip, { live: false }) : null; G().state.marquee = null; clearInterval(marqueeTimer); G().paint(); };
+  function stopMarqueeTimer() {
+    clearInterval(marqueeTimer);
+    marqueeTimer = null;
+    const remove = removeMarqueeCleanup;
+    removeMarqueeCleanup = () => {};
+    remove();
+  }
+  CL.clearMarquee = () => { clip = clip && !clip.cut ? Object.assign(clip, { live: false }) : null; G().state.marquee = null; stopMarqueeTimer(); G().paint(); };
 
   /* ------------------------------------------------------------ copy */
   /** snapshot of a range (values, formulas, styles, merges, comments) */
@@ -118,8 +125,14 @@
       try { e.clipboardData.setData('text/html', asHTML(sh, rg, id)); } catch (err) { /* ignore */ }
     } else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(clip.text).catch(() => {});
     g.state.marquee = { sh, ranges: [rg], phase: 0 };
-    clearInterval(marqueeTimer);
-    marqueeTimer = setInterval(() => { if (!g.state.marquee) { clearInterval(marqueeTimer); return; } g.state.marquee.phase = (g.state.marquee.phase + 2) % 8; g.paint(); }, 120);
+    stopMarqueeTimer();
+    marqueeTimer = setInterval(() => { if (!g.state.marquee) { stopMarqueeTimer(); return; } g.state.marquee.phase = (g.state.marquee.phase + 2) % 8; g.paint(); }, 120);
+    removeMarqueeCleanup = L.addMountCleanup ? L.addMountCleanup(() => {
+      clearInterval(marqueeTimer);
+      marqueeTimer = null;
+      if (g.state) g.state.marquee = null;
+      removeMarqueeCleanup = () => {};
+    }) : () => {};
     L.bus.emit('clipboard', clip);
     if (L.app.addOfficeClip) L.app.addOfficeClip(clip);
     L.app.status(L.t('Select destination and press ENTER or choose Paste'));

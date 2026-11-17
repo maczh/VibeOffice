@@ -394,7 +394,12 @@
     else E.render();
     E.touched();
   };
-  E.touched = L.debounce(() => { L.bus.emit('slide-modified', E.idx); }, 120);
+  let touchedTimer = 0;
+  L.addMountCleanup(() => { clearTimeout(touchedTimer); touchedTimer = 0; });
+  E.touched = () => {
+    clearTimeout(touchedTimer);
+    touchedTimer = setTimeout(() => { touchedTimer = 0; L.bus.emit('slide-modified', E.idx); }, 120);
+  };
   E.touchNow = () => L.bus.emit('slide-modified', E.idx);
 
   /* ---------- pointer interaction ---------- */

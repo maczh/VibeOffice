@@ -76,6 +76,7 @@ export function MenuLayer({ host }: MenuLayerProps) {
   const [menuBar, setMenuBar] = useState<ReactMenuBarRequest | null>(null);
   const [activeBar, setActiveBar] = useState<number | null>(null);
   const panelRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const dialogs = useRef(new Set<LegacyDialogMountRequest>());
   const activeHost = useCallback((active: boolean) => {
     const direct = (window as Window & { VO?: { reactDirectHost?: { menuOpen?: boolean; menuBarApi?: { active: number | null } } } }).VO?.reactDirectHost;
     if (direct) direct.menuOpen = active;
@@ -112,7 +113,12 @@ export function MenuLayer({ host }: MenuLayerProps) {
       if (!request || request.host !== host || request.api) return;
       const engineRoot = host.querySelector<HTMLElement>('.vibeoffice-legacy-root[data-vibeoffice-engine-root]');
       if (!engineRoot) return;
-      try { attachLegacyDialog(engineRoot, request); }
+      try {
+        attachLegacyDialog(engineRoot, request);
+        dialogs.current.add(request);
+        const unmount = request.unmount;
+        request.unmount = () => { dialogs.current.delete(request); unmount?.(); };
+      }
       catch (error) { console.error('VibeOffice React dialog failed to mount:', error); }
     };
     host.addEventListener('vibeoffice-react-menu', open);
@@ -124,12 +130,15 @@ export function MenuLayer({ host }: MenuLayerProps) {
       host.removeEventListener('vibeoffice-react-close-menus', closeEvent);
       host.removeEventListener('vibeoffice-react-menu-bar', barEvent);
       host.removeEventListener('vibeoffice-react-dialog', dialogEvent);
-      setMenuBar(null);
+      for (const request of dialogs.current) request.close(null);
+      dialogs.current.clear();
       activeHost(false);
+      const direct = (window as Window & { VO?: { reactDirectHost?: { menuBarApi?: { active: number | null } } } }).VO?.reactDirectHost;
+      if (direct?.menuBarApi) direct.menuBarApi.active = null;
     };
   }, [activeHost, close, host]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!stack.length) return;
     const outside = (event: PointerEvent) => {
       const target = event.target;

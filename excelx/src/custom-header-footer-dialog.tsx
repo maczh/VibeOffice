@@ -15,10 +15,11 @@ export function ExcelxCustomHeaderFooterDialog() {
   const [font, setFont] = useState({ name: 'Arial', style: 'Regular', size: '10' });
   const areas = useRef<Partial<Record<keyof Sections, HTMLTextAreaElement | null>>>({});
   const selection = useRef<Record<keyof Sections, [number, number]>>({ l: [0, 0], c: [0, 0], r: [0, 0] });
+  const focusFrame = useRef<number | null>(null);
   useEffect(() => {
     const refresh = () => { const next = runtime()?.dlg?.reactCustomHFCatalog?.() || null; setCatalog(next); if (next) { setSections(next.sections); setActive('c'); setFontOpen(false); } };
     const off = runtime()?.bus?.on('excelx-custom-hf-dialog', refresh);
-    return () => { off?.(); runtime()?.dlg?.reactCustomHFClose?.(); };
+    return () => { off?.(); if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); runtime()?.dlg?.reactCustomHFClose?.(); };
   }, []);
   if (!catalog) return null;
   const t = (message: string) => runtime()?.t?.(message) || message;
@@ -29,7 +30,8 @@ export function ExcelxCustomHeaderFooterDialog() {
     const next = { ...sections, [active]: value.slice(0, start) + token + value.slice(end) };
     selection.current[active] = [start + token.length, start + token.length];
     setSections(next);
-    requestAnimationFrame(() => { const input = areas.current[active]; input?.focus(); input?.setSelectionRange(start + token.length, start + token.length); });
+    if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; const input = areas.current[active]; if (!input?.isConnected) return; input.focus(); input.setSelectionRange(start + token.length, start + token.length); });
   };
   const formatFont = () => { const size = Number.parseInt(font.size, 10) || 10; insert(`&"${font.name},${font.style}"&${size}`); setFontOpen(false); };
   return <><OfficeDialog title={t(catalog.kind)} className="excelx-custom-hf-dialog" style={{ width: 'min(94vw, 600px)' }} onRequestClose={close}>

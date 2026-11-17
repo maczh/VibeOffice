@@ -43,20 +43,23 @@
   VO.reactReady = false;
 
   /* ------------------------------------------------------------ apps */
-  VO.APPS = {
-    quire: { name: 'Wordx', kind: 'Document', ext: ['docx', 'docm', 'dotx', 'dotm', 'doc', 'rtf', 'htm', 'html', 'txt', 'md', 'markdown', 'zip'] },
-    ledger: { name: 'Excelx', kind: 'Spreadsheet', ext: ['xlsx', 'xlsm', 'xltx', 'xltm', 'xls', 'csv', 'tsv', 'prn', 'xml'] },
-    lectern: { name: 'PPTX', kind: 'Presentation', ext: ['pptx', 'pptm', 'ppsx', 'ppsm', 'potx', 'potm', 'ppt'] },
+  const appCatalog = {
+    wordx: { name: 'Wordx', kind: 'Document', ext: ['docx', 'docm', 'dotx', 'dotm', 'doc', 'rtf', 'htm', 'html', 'txt', 'md', 'markdown', 'zip'] },
+    excelx: { name: 'Excelx', kind: 'Spreadsheet', ext: ['xlsx', 'xlsm', 'xltx', 'xltm', 'xls', 'csv', 'tsv', 'prn', 'xml'] },
+    pptx: { name: 'PPTX', kind: 'Presentation', ext: ['pptx', 'pptm', 'ppsx', 'ppsm', 'potx', 'potm', 'ppt'] },
   };
+  /* Classic pages keep their historical route IDs; the React product exposes only branded IDs. */
+  VO.APPS = reactHost ? appCatalog : { quire: appCatalog.wordx, ledger: appCatalog.excelx, lectern: appCatalog.pptx };
   const reactAppIds = { quire: 'wordx', ledger: 'excelx', lectern: 'pptx' };
-  for (const [legacy, id] of Object.entries(reactAppIds)) Object.defineProperty(VO.APPS, id, { value: VO.APPS[legacy], enumerable: false });
+  const classicAppIds = { wordx: 'quire', excelx: 'ledger', pptx: 'lectern' };
+  const routeAppId = (app) => reactHost ? reactAppIds[app] || app : classicAppIds[app] || app;
   VO.ext = (name) => (/\.([^./\\]+)$/.exec(name || '') || ['', ''])[1].toLowerCase();
   /** the app for a file name, or null */
   VO.appFor = (name) => { const e = VO.ext(name), app = Object.keys(VO.APPS).find((a) => VO.APPS[a].ext.includes(e)) || null; return reactHost && app ? reactAppIds[app] || app : app; };
   VO.accept = () => Object.values(VO.APPS).flatMap((a) => a.ext.map((e) => '.' + e)).join(',');
   /** React hosts use package routes; classic and desktop pages retain their established paths. */
   VO.url = (app, params) => {
-    if (reactHost) app = reactAppIds[app] || app;
+    app = routeAppId(app);
     const qs = Object.keys(params || {}).map((k) => (params[k] === true ? k : k + '=' + encodeURIComponent(params[k]))).join('&');
     return new URL(app + '/', BASE).href + (qs ? '?' + qs : '');
   };
@@ -186,8 +189,8 @@
     },
   };
 
-  /** an app's name with this edition's, for Help ▸ About and Getting Started, in English in every language: Quire Web Edition, Quire
-   *  Windows Edition, Quire macOS Edition (DMG) or (App Store), Quire Linux Edition */
+  /** an app's name with this edition's, for Help ▸ About and Getting Started: <app> Web Edition, <app> Windows Edition,
+   *  <app> macOS Edition (DMG) or (App Store), or <app> Linux Edition */
   VO.editionName = (app) => {
     if (!native) return app + ' Web Edition';
     const system = { windows: 'Windows', macos: 'macOS', linux: 'Linux' }[native.platform] || native.platform;
@@ -525,7 +528,7 @@
    *  pristine() -> whether the document is an untouched blank (a file opened goes into this window, else into a
    *  new one), close() -> false when the user cancels closing (the "Save changes?" question) */
   VO.attach = async (app, hooks) => {
-    if (reactHost) app = reactAppIds[app] || app;
+    app = routeAppId(app);
     current = { app, hooks: hooks || {} };
     if (!native && !reactHost) VO.recent.refresh();
     readWindows();
@@ -640,7 +643,7 @@
   /** File ▸ New… inside an app: Blank and the app's templates with their previews (the Start Center's
    *  Create File gallery, common/templates.json), in the app's own dialog. create(id): id '' is Blank. */
   VO.newDialog = async (app, create) => {
-    if (reactHost) app = reactAppIds[app] || app;
+    app = routeAppId(app);
     const ui = window.L && window.L.ui;
     /* the desktop app: a new document in a window of its own */
     const pick = (id) => (native ? VO.go(VO.url(app, id ? { template: id } : { new: true })).catch(say) : create(id));

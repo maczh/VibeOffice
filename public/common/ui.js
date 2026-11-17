@@ -55,7 +55,7 @@
         shared.offs.forEach((off) => off());
         windowMounts.delete(win);
       }
-      for (const [element, owner] of layerRoots) if (owner === host) { element.remove(); layerRoots.delete(element); }
+      for (const [element, owner] of layerRoots) if (owner === host) { clearTimeout(element._t); clearTimeout(element._focusTimer); element.remove(); layerRoots.delete(element); }
       uninstallLegacyUi();
       tipEl = null; tipTarget = null; clearTimeout(tipTimer);
       ui.closeMenus();
@@ -672,6 +672,7 @@
       overlay.classList.add('modeless');
       dlg.addEventListener('keydown', (e) => { entry.keys(e); e.stopPropagation(); });   // keys stay in a modeless dialog
     } else dlgStack.push(entry);
+    let focusTimer = 0;
     entry.keys = (e) => {
       if (e.key === 'Escape') { e.preventDefault(); const ci = (opts.buttons || []).findIndex((b) => b.cancel || /^cancel$|^close$/i.test(plainAmp(b.label))); if (ci >= 0) btns[ci].click(); else close(null); return true; }
       if (e.key === 'Enter' && !e.shiftKey && !(e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.isContentEditable || e.target.tagName === 'SELECT'))) {
@@ -688,6 +689,8 @@
       return false;
     };
     function close(i) {
+      clearTimeout(focusTimer);
+      focusTimer = overlay._focusTimer = 0;
       const k = dlgStack.indexOf(entry);
       if (k >= 0) dlgStack.splice(k, 1);
       overlay.remove();
@@ -702,7 +705,8 @@
         if (prevRange && prevRange.startContainer.isConnected && prevRange.endContainer.isConnected) { const s = window.getSelection(); s.removeAllRanges(); s.addRange(prevRange); }
       } else ui.hooks.refocus();
     }
-    setTimeout(() => {
+    focusTimer = overlay._focusTimer = setTimeout(() => {
+      focusTimer = overlay._focusTimer = 0;
       const first = opts.focus ? (typeof opts.focus === 'string' ? L.$(opts.focus, dlg) : opts.focus) : L.$('input:not([type=checkbox]):not([type=radio]),select,textarea', body) || btns.find((b, i) => opts.buttons && opts.buttons[i] && opts.buttons[i].primary) || btns[0];
       if (first) { first.focus(); if (first.select && first.tagName === 'INPUT') first.select(); }
     }, 0);
@@ -986,10 +990,9 @@
         if (head.__reactSelect) head.__reactSelect(i);
         else if (tabs[i].onShow) tabs[i].onShow();
       }
-      tabs.forEach((tab) => bodies.appendChild(tab.body));
       const el = h('div', { class: 'tabs', 'data-react-tabs-id': id }, head, bodies);
       el.select = sel;
-      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-tabs', { detail: { target: head, tabs, active: initial, select: sel }, bubbles: true }));
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-tabs', { detail: { target: head, bodyHost: bodies, tabs, active: initial, select: sel }, bubbles: true }));
       sel(initial);
       return el;
     }
@@ -1012,14 +1015,34 @@
   ui.field = (label, ctl, o) => {
     const id = ctl.dataset && (ctl.dataset.reactSelectId || ctl.dataset.reactSpinId) || ctl.id || (ctl.input && ctl.input.id) || (ctl.querySelector && ctl.querySelector('input,select') && ctl.querySelector('input,select').id);
     const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
-    const fieldLabel = h('label', { for: id || null, ...(directRoot && directRoot.isConnected ? {} : { html: ampHTML(label) }) });
-    if (directRoot && directRoot.isConnected) directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-ui-content', { detail: { target: fieldLabel, options: { html: ampHTML(label), id: 'field-label-' + (++ctlId) } }, bubbles: true }));
+    if (directRoot && directRoot.isConnected) {
+      const slotId = 'react-ui-field-' + (++ctlId);
+      const field = h('div', { class: 'field' + (o && o.cls ? ' ' + o.cls : ''), 'data-react-ui-id': slotId });
+      field.append(ctl);
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-ui-structure', { detail: { kind: 'field', target: field, labelHtml: ampHTML(label), labelFor: id || null, control: ctl }, bubbles: true }));
+      return field;
+    }
+    const fieldLabel = h('label', { for: id || null, html: ampHTML(label) });
     return h('div', { class: 'field' + (o && o.cls ? ' ' + o.cls : '') }, fieldLabel, ctl);
   };
   ui.group = (title, ...kids) => {
     const directRoot = root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root;
-    const legend = h('legend', directRoot && directRoot.isConnected ? {} : { html: ampHTML(title) });
-    if (directRoot && directRoot.isConnected) directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-ui-content', { detail: { target: legend, options: { html: ampHTML(title), id: 'group-legend-' + (++ctlId) } }, bubbles: true }));
+    if (directRoot && directRoot.isConnected) {
+      const slotId = 'react-ui-group-' + (++ctlId);
+      const group = h('fieldset', { class: 'grp', 'data-react-ui-id': slotId });
+      const children = [];
+      const collect = (items) => items.forEach((child) => {
+        if (child == null || child === false) return;
+        if (Array.isArray(child)) { collect(child); return; }
+        if (child instanceof root.Node) children.push(child);
+        else children.push(document.createTextNode(typeof child === 'string' ? (L.t ? L.t(child) : child) : String(child)));
+      });
+      collect(kids);
+      group.append(...children);
+      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-ui-structure', { detail: { kind: 'group', target: group, legendHtml: ampHTML(title), children }, bubbles: true }));
+      return group;
+    }
+    const legend = h('legend', { html: ampHTML(title) });
     return h('fieldset', { class: 'grp' }, legend, ...kids);
   };
   /** Tools ▸ Options ▸ General ▸ Theme: the suite's look (common/looks.css). { el, apply() }; apply on OK
@@ -1291,7 +1314,7 @@
   ui.drag = function (e, o) {
     if (e.button != null && e.button !== 0) return null;
     const directHost = root.VO && root.VO.reactDirectHost;
-    if (directHost && typeof directHost.startDrag === 'function') return directHost.startDrag(e, o, () => { if (liveBrush) liveBrush.stop(); });
+    if (directHost && typeof directHost.startDrag === 'function') return directHost.startDrag(e, o, () => { ui.brushOn()?.stop(); });
     if (liveDrag) liveDrag.end(false, null, 'new');
     const d = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, data: {} };
     const id = e.pointerId, threshold = o.threshold == null ? 4 : o.threshold;
@@ -1329,7 +1352,7 @@
         ev.preventDefault(); ev.stopImmediatePropagation();
         /* Ctrl+Z (or Y) in the middle of a drag undoes the drag, not what came before it */
         if ((ev.ctrlKey || ev.metaKey) && /^[zy]$/i.test(ev.key)) { end(false, null, 'undo'); return; }
-        if (ev.key === 'Escape') { end(false, null, 'esc'); if (liveBrush) liveBrush.stop(); }
+        if (ev.key === 'Escape') { end(false, null, 'esc'); ui.brushOn()?.stop(); }
         /* any other key waits for the release: an edit in the middle of a drag would come between its start and the
            step it records */
       },

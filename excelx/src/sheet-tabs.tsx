@@ -16,7 +16,7 @@ interface SheetsApi {
   selectAllSheets?(): void;
   ungroupSheets?(): void;
 }
-interface SheetRuntime { app?: SheetsApi; dlg?: { insertSheetDlg?(): void; moveCopySheet?(): void; tabColor?(): void }; grid?: { paint(): void }; ui?: { openMenu(items: unknown[], at: { x: number; y: number }): void }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string, ...args: unknown[]): string }
+interface SheetRuntime { app?: SheetsApi; dlg?: { insertSheetDlg?(): void; moveCopySheet?(): void; tabColor?(): void }; grid?: { paint(): void }; ui?: { openMenu(items: unknown[], at: { x: number; y: number }): void }; bus?: { on(event: string, listener: (index?: number) => void): () => void }; t?(message: string, ...args: unknown[]): string }
 interface Gesture { pointerId: number; from: number; startX: number; moved: boolean; target: number | null }
 interface ResizeGesture { pointerId: number; startX: number; startWidth: number; before: string }
 function runtime(): SheetRuntime | undefined { return (window as Window & { L?: SheetRuntime }).L; }
@@ -32,9 +32,11 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
   const [drag, setDrag] = useState<{ from: number; target: number | null } | null>(null);
   const gesture = useRef<Gesture | null>(null);
   const resizeGesture = useRef<ResizeGesture | null>(null);
+  const focusFrame = useRef<number | null>(null);
   const [resizing, setResizing] = useState(false);
   useEffect(() => {
     let off: (() => void) | undefined;
+    let offRename: (() => void) | undefined;
     let attached: HTMLElement | null = null;
     let previousRole: string | null = null;
     let previousLabel: string | null = null;
@@ -51,13 +53,21 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
       setSplitMount(host.querySelector<HTMLElement>('#tabsplit'));
       off?.();
       off = runtime()?.bus?.on('sheet-tabs', () => setTabs(runtime()?.app?.sheetTabs?.() || []));
+      offRename?.();
+      offRename = runtime()?.bus?.on('sheet-tab-rename', (index) => {
+        const tab = runtime()?.app?.sheetTabs?.().find((item) => item.index === index);
+        if (!tab) return;
+        setRenaming(tab.index);
+        setNameDraft(tab.name);
+      });
       setTabs(runtime()?.app?.sheetTabs?.() || []);
     };
     const observer = new MutationObserver(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
-      observer.disconnect(); off?.();
+      observer.disconnect(); off?.(); offRename?.();
+      if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
       if (attached) {
         if (previousRole === null) attached.removeAttribute('role'); else attached.setAttribute('role', previousRole);
         if (previousLabel === null) attached.removeAttribute('aria-label'); else attached.setAttribute('aria-label', previousLabel);
@@ -118,7 +128,8 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
       const next = tabs[destination];
       if (!next) return;
       runtime()?.app?.activateSheet(next.index);
-      requestAnimationFrame(() => mount?.querySelector<HTMLElement>(`[data-sheet-index="${next.index}"]`)?.focus());
+      if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+      focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; mount?.querySelector<HTMLElement>(`[data-sheet-index="${next.index}"]`)?.focus(); });
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       runtime()?.app?.activateSheet(tab.index);

@@ -861,10 +861,12 @@ function NewAddressListDialogBody({ L }: { L: WordxRuntime }) {
   const [rows, setRows] = useState(() => catalog.rows.map((row) => row.slice()));
   const [current, setCurrent] = useState(0);
   const firstInput = useRef<HTMLInputElement>(null);
+  const focusTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (focusTimer.current !== null) window.clearTimeout(focusTimer.current); }, []);
   const updateRows = (next: string[][]) => { setRows(next); L.mailmerge?.reactAddressListSetRows?.(next); };
   const updateCell = (column: number, value: string) => updateRows(rows.map((row, index) => index === current ? row.map((cell, cellIndex) => cellIndex === column ? value : cell) : row));
   const navigate = (index: number) => setCurrent(Math.max(0, Math.min(rows.length - 1, index)));
-  const add = () => { const next = [...rows, catalog.fields.map(() => '')]; updateRows(next); setCurrent(next.length - 1); window.setTimeout(() => firstInput.current?.focus(), 0); };
+  const add = () => { const next = [...rows, catalog.fields.map(() => '')]; updateRows(next); setCurrent(next.length - 1); if (focusTimer.current !== null) window.clearTimeout(focusTimer.current); focusTimer.current = window.setTimeout(() => { focusTimer.current = null; if (firstInput.current?.isConnected) firstInput.current.focus(); }, 0); };
   const remove = () => { if (rows.length <= 1) return; const next = rows.filter((_, index) => index !== current); updateRows(next); setCurrent(Math.min(current, next.length - 1)); };
   return <div className="col">
     <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '3px 8px', maxHeight: 300, overflow: 'auto', paddingRight: 4 }} translate="no">
@@ -1815,6 +1817,24 @@ function AutoCorrectExceptionsDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 type AutoCorrectMainState={options:Record<string,boolean>;entries:Array<[string,string]>;selected:string};
+function AutoCorrectDialogBody({ L, initialTab = 0 }: { L: WordxRuntime; initialTab?: number }) {
+  const [tab, setTab] = useState(initialTab);
+  const tabs = ['AutoCorrect', 'AutoFormat As You Type', 'AutoText'];
+  const panelIds = tabs.map((_, index) => `react-wordx-autocorrect-panel-${index}`);
+  return <div className="col" id="react-wordx-autocorrect-dialog">
+    <div className="tabs-head" role="tablist" aria-label={tr(L, 'AutoCorrect settings')}>
+      {tabs.map((label, index) => <button key={label} type="button" role="tab" id={`react-wordx-autocorrect-tab-${index}`} aria-selected={tab === index} aria-controls={panelIds[index]} tabIndex={tab === index ? 0 : -1} className={`tab${tab === index ? ' on' : ''}`} onClick={() => setTab(index)} onKeyDown={(event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
+        setTab(next);
+        requestAnimationFrame(() => document.getElementById(`react-wordx-autocorrect-tab-${next}`)?.focus());
+      }}>{tr(L, label)}</button>)}
+    </div>
+    {[<AutoCorrectMainDialogBody key="main" L={L} />, <AutoCorrectFormatDialogBody key="format" L={L} />, <AutoTextDialogBody key="autotext" L={L} />].map((body, index) => <div key={panelIds[index]} id={panelIds[index]} role="tabpanel" aria-labelledby={`react-wordx-autocorrect-tab-${index}`} hidden={tab !== index}>{body}</div>)}
+  </div>;
+}
+
 function AutoCorrectMainDialogBody({ L }: { L: WordxRuntime }) {
   const adapter=L.dlg as (typeof L.dlg & {reactAutoCorrectMainCatalog?():AutoCorrectMainState;reactAutoCorrectMainAction?(action:string,value?:any):AutoCorrectMainState})|undefined;
   const [state,setState]=useState<AutoCorrectMainState>(adapter?.reactAutoCorrectMainCatalog?.()||{options:{},entries:[],selected:''});
@@ -2167,13 +2187,16 @@ function EquationDialogBody({ L }: { L: WordxRuntime }) {
   const [value, setValue] = useState('');
   const symbols = '±×÷≠≈≤≥∞√∛∑∏∫∂∆∇πθαβγδλμσφωΩ→⇒∈∉⊂⊃∪∩∀∃¬∧∨²³⁴ⁿ₀₁₂ᵢ½';
   const input = useRef<HTMLTextAreaElement>(null);
+  const focusFrame = useRef<number | null>(null);
+  useEffect(() => () => { if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); }, []);
   const insertSymbol = (symbol: string) => {
     const node = input.current;
     const start = node?.selectionStart ?? value.length;
     const end = node?.selectionEnd ?? start;
     const next = value.slice(0, start) + symbol + value.slice(end);
     setValue(next);
-    requestAnimationFrame(() => { node?.focus(); node?.setSelectionRange(start + symbol.length, start + symbol.length); });
+    if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; if (!node?.isConnected) return; node.focus(); node.setSelectionRange(start + symbol.length, start + symbol.length); });
   };
   return <div className="col">
     <div className="sym-recent" style={{ gridTemplateColumns: 'repeat(16,26px)' }}>{[...symbols].map((symbol, index) => <button key={`${symbol}-${index}`} type="button" onClick={() => insertSymbol(symbol)}>{symbol}</button>)}</div>
@@ -2304,6 +2327,8 @@ function FormulaDialogBody({ L }: { L: WordxRuntime }) {
   const [selectedFunction, setSelectedFunction] = useState('');
   const [bookmark, setBookmark] = useState('');
   const input = useRef<HTMLInputElement>(null);
+  const focusFrame = useRef<number | null>(null);
+  useEffect(() => () => { if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); }, []);
   const addFunction = (name: string) => {
     if (!name) return;
     const node = input.current;
@@ -2312,7 +2337,8 @@ function FormulaDialogBody({ L }: { L: WordxRuntime }) {
     const next = formula.slice(0, start) + `${name}()` + formula.slice(end);
     setFormula(next);
     setSelectedFunction('');
-    requestAnimationFrame(() => { node?.focus(); node?.setSelectionRange(start + name.length + 1, start + name.length + 1); });
+    if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; if (!node?.isConnected) return; node.focus(); node.setSelectionRange(start + name.length + 1, start + name.length + 1); });
   };
   const addBookmark = (name: string) => { if (name) setFormula((current) => current + name); setBookmark(''); input.current?.focus(); };
   return <div className="col">
@@ -3095,7 +3121,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   const formatObjectAdvancedDialog = formatObjectAdvancedMount ? createPortal(<FormatObjectAdvancedDialogBody key="wordx-format-object-advanced-dialog" L={L} />, formatObjectAdvancedMount) : null;
   const formatObjectTextBoxDialog = formatObjectTextBoxMount ? createPortal(<FormatObjectTextBoxDialogBody key="wordx-format-object-textbox-dialog" L={L} />, formatObjectTextBoxMount) : null;
   const formatObjectPictureDialog = formatObjectPictureMount ? createPortal(<FormatObjectPictureDialogBody key="wordx-format-object-picture-dialog" L={L} />, formatObjectPictureMount) : null;
-  const autoCorrectExceptionsDialog = <>{fontMount ? createPortal(<FontDialogBody key="wordx-font-dialog" L={L} />, fontMount) : null}{autoCorrectExceptionsMount ? createPortal(<AutoCorrectExceptionsDialogBody key="wordx-autocorrect-exceptions-dialog" L={L} />, autoCorrectExceptionsMount) : null}{autoCorrectMainMount ? createPortal(<AutoCorrectMainDialogBody key="wordx-autocorrect-main-dialog" L={L} />, autoCorrectMainMount) : null}{autoTextMount ? createPortal(<AutoTextDialogBody key="wordx-autotext-dialog" L={L} />, autoTextMount) : null}{autoCorrectFormatMount ? createPortal(<AutoCorrectFormatDialogBody key="wordx-autocorrect-format-dialog" L={L} />, autoCorrectFormatMount) : null}</>;
+  const autoCorrectExceptionsDialog = <>{fontMount ? createPortal(<FontDialogBody key="wordx-font-dialog" L={L} />, fontMount) : null}{autoCorrectExceptionsMount ? createPortal(<AutoCorrectExceptionsDialogBody key="wordx-autocorrect-exceptions-dialog" L={L} />, autoCorrectExceptionsMount) : null}{autoCorrectMainMount ? createPortal(<AutoCorrectDialogBody key="wordx-autocorrect-dialog" L={L} initialTab={Number(autoCorrectMainMount.dataset.initialTab) || 0} />, autoCorrectMainMount) : null}{autoTextMount ? createPortal(<AutoTextDialogBody key="wordx-autotext-dialog" L={L} />, autoTextMount) : null}{autoCorrectFormatMount ? createPortal(<AutoCorrectFormatDialogBody key="wordx-autocorrect-format-dialog" L={L} />, autoCorrectFormatMount) : null}</>;
   const customizeDialog = customizeMount ? createPortal(<CustomizeDialogBody key="wordx-customize-dialog" L={L} />, customizeMount) : null;
   const drawingGridDialog = drawingGridMount ? createPortal(<DrawingGridDialogBody key="wordx-drawing-grid-dialog" L={L} />, drawingGridMount) : null;
   const autoFormatDialog = autoFormatMount ? createPortal(<AutoFormatDialogBody key="wordx-autoformat-dialog" L={L} />, autoFormatMount) : null;

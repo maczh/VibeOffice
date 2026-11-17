@@ -56,7 +56,7 @@
   --tab-line-2: #7a96c6; --tab2-a: #fdfdfd; --tab2-b: #e8eef9; --ol-ico-bar: #cfdcf3; --dd-line: #556; --sel-ink-2: #dfe8ff;
   --thumb-line: #a3a3a3; --thumb-on: #3d6ec9; --thumb-sel: #8fb0e6; --page-shadow: #59657c; --preview-canvas-3: #8b96a8;
   --card-line-2: #c9c9c9; --sample-line-2: #9a9a9a; --ink-7: #777;
-  /* Ledger's row and column headers and cell selection (drawn on a canvas) */
+  /* Spreadsheet row and column headers and cell selection (drawn on a canvas) */
   --hdr-a: #FFFFFF; --hdr-b: #E4ECF7; --hdr-line: #9EB6CE; --hdr-ink: #000000;
   --hdr-sel-a: #FFE7A2; --hdr-sel-b: #F8C55E; --hdr-sel-line: #D7A43C; --hdr-all-a: #FFD58D; --hdr-all-b: #F5B54A;
   --cell-sel: rgba(49, 74, 160, 0.20); --cell-sel-border: #000000;

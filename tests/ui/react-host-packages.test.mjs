@@ -24,13 +24,19 @@ test('an external React host wires its remote provider into direct editor Open a
   const server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--config', 'tests/vite/host.vite.config.ts', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, stdio: 'ignore' });
   process.env.BASE = base;
   process.env.CDP ||= 'http://127.0.0.1:9223';
-  let page, mountPage;
+  let page, mountPage, errorPage;
   try {
     for (let attempt = 0; attempt < 80 && !await fetch(`${base}/tests/vite/host-fixture.html`).then((response) => response.ok).catch(() => false); attempt++) await new Promise((resolve) => setTimeout(resolve, 100));
     page = await openPage(undefined, { url: `${base}/tests/vite/host-fixture.html?lang=qps`, ready: "document.readyState === 'complete'", timeout: 20000, bypassServiceWorker: true });
     const ready = await page.evaluate(`new Promise((resolve) => { const end=Date.now()+20000; const poll=()=>{const open=[...document.querySelectorAll('button')].find((button)=>button.textContent.includes('Open host-provider sample')); open && !open.disabled ? resolve(true) : Date.now()>end ? resolve(false) : setTimeout(poll,50);}; poll(); })`);
     assert.equal(ready, true, `host fixture readiness: ${JSON.stringify({ body: await page.evaluate('document.body.innerText.slice(0,400)'), errors: page.errors })}`);
     assert.equal(await page.evaluate('document.title'), 'VibeOffice host fixture', 'mounting Wordx does not overwrite the embedding page title');
+    const wordxShell = await page.evaluate("(() => ({roots:[...document.querySelectorAll('.vibe-editor__engine > .vibeoffice-legacy-root')].map((root)=>({owner:root.dataset.vibeofficeReactShell,html:root.innerHTML.slice(0,100)})),app:document.querySelector('.vibe-editor__engine > .vibeoffice-legacy-root > #app')?.outerHTML.slice(0,300)}))()");
+    assert.equal(wordxShell.roots.length, 1, `Wordx host has one shell root: ${JSON.stringify(wordxShell)}`);
+    assert.equal(wordxShell.roots[0].owner, 'wordx', `Wordx shell root is React-owned: ${JSON.stringify(wordxShell)}`);
+    assert.match(wordxShell.app || '', /id="app" class="app"/, 'the React shell contains the engine app mount node');
+    const runtimeAssets = await page.evaluate("performance.getEntriesByType('resource').map(({name})=>new URL(name).pathname).filter((pathname)=>pathname==='/wordx/runtime.json'||pathname==='/wordx/'||pathname==='/wordx/index.html')");
+    assert.deepEqual(runtimeAssets, ['/wordx/runtime.json'], 'React-mounted editors fetch build-generated runtime metadata instead of parsing the legacy HTML shell');
     assert.deepEqual(await page.evaluate('({ id: L.APP_ID, name: L.APP_NAME, app: L.APP })'), { id: 'wordx', name: 'Wordx', app: 'Wordx' }, 'Wordx engine identity is independent of the embedding document metadata');
     assert.deepEqual(await page.evaluate("({ language: VO.i18n.lang, editorLanguage: VO.reactDirectHost.root.lang, hostLanguage: document.documentElement.lang, hostText: document.querySelector('#host-language-sentinel').textContent })"), { language: 'qps', editorLanguage: 'qps-ploc', hostLanguage: 'en', hostText: 'Create File' }, 'pseudo-localization is scoped to the mounted editor and does not rewrite the embedding host DOM');
     assert.match(await page.evaluate("document.querySelector('[aria-label=\"Editor title\"]')?.textContent || ''"), /Wordx/, 'Wordx reports its document title through the host callback');
@@ -65,10 +71,14 @@ test('an external React host wires its remote provider into direct editor Open a
     await page.evaluate("[...document.querySelectorAll('button')].find((button)=>button.textContent.includes('Save through host provider'))?.click()");
     const saved = await page.evaluate(`new Promise((resolve) => { const end=Date.now()+10000; const poll=()=>{const text=document.querySelector('[aria-label="Host provider status"]')?.textContent||''; text==='Saved sample.txt at revision 2' ? resolve(text) : Date.now()>end ? resolve(false) : setTimeout(poll,50);}; poll(); })`);
     assert.equal(saved, 'Saved sample.txt at revision 2', 'the opened revision reaches the host provider on Save');
+    await page.evaluate('performance.setResourceTimingBufferSize(5000)');
     for (const [app, title, revision] of [['excelx', 'Excelx editor', 3], ['pptx', 'PPTX editor', 4]]) {
       await page.evaluate(`(() => {const select=document.querySelectorAll('select')[1];select.value=${JSON.stringify(app)};select.dispatchEvent(new Event('change',{bubbles:true}))})()`);
       const mounted = await page.evaluate(`new Promise((resolve) => {const end=Date.now()+15000;const poll=()=>{const ready=document.querySelector('.vibe-editor')?.getAttribute('aria-label')===${JSON.stringify(title)}&&![...document.querySelectorAll('button')].find((button)=>button.textContent.includes('Open host-provider sample'))?.disabled;ready?resolve(true):Date.now()>end?resolve(false):setTimeout(poll,50)};poll()})`);
       assert.equal(mounted, true, `${title} mounts independently in the external host`);
+      assert.equal(await page.evaluate("document.querySelector('.vibe-editor__engine > .vibeoffice-legacy-root')?.dataset.vibeofficeReactShell || ''"), app, `${title} engine shell is owned by its React package`);
+      const appRuntimeAssets = await page.evaluate(`performance.getEntriesByType('resource').map(({name})=>new URL(name).pathname).filter((pathname)=>pathname==='/${app}/runtime.json'||pathname==='/${app}/'||pathname==='/${app}/index.html')`);
+      assert.deepEqual(appRuntimeAssets, [`/${app}/runtime.json`], `${title} loads its generated runtime manifest and not its legacy HTML entry`);
       const expectedName = app === 'excelx' ? 'Excelx' : 'PPTX';
       assert.deepEqual(await page.evaluate('({ id: L.APP_ID, name: L.APP_NAME, app: L.APP })'), { id: app, name: expectedName, app: expectedName }, `${title} refreshes the engine identity when the host switches packages`);
       assert.equal(await page.evaluate('document.title'), 'VibeOffice host fixture', `${title} leaves the external host title unchanged`);
@@ -82,6 +92,10 @@ test('an external React host wires its remote provider into direct editor Open a
     }
     assert.deepEqual(page.errors, []);
 
+    errorPage = await openPage(undefined, { url: `${base}/tests/vite/host-fixture.html?error-boundary=1`, ready: "document.readyState === 'complete'", timeout: 20000, bypassServiceWorker: true });
+    const renderFailure = await errorPage.evaluate(`new Promise((resolve) => { const end=Date.now()+2500; const poll=()=>{const fallback=document.querySelector('[data-host-render-fallback]');const error=document.querySelector('[aria-label="Host provider status"]')?.textContent;const editor=document.querySelector('.vibe-editor');fallback&&error==='Host-provided React layer failed'&&editor?resolve({fallback:fallback.textContent,role:fallback.getAttribute('role'),editor:editor.getAttribute('aria-label'),error}):Date.now()>end?resolve(false):setTimeout(poll,50)};poll(); })`);
+    assert.deepEqual(renderFailure, { fallback: 'Editor layer unavailable', role: 'alert', editor: 'Wordx editor', error: 'Host-provided React layer failed' }, 'a host-provided React layer failure is isolated, reported with its original error, and rendered accessibly without removing the editor');
+
     mountPage = await openPage(undefined, { url: `${base}/tests/vite/engine-mount-fixture.html`, ready: "typeof window.mountEngineFixture === 'function'", timeout: 10000, bypassServiceWorker: true });
     const mountOwnership = await mountPage.evaluate("(async()=>{const host=document.querySelector('#engine-host'),dispose=await window.mountEngineFixture(host);const mounted={before:!!host.querySelector('#host-before'),shell:host.textContent.includes('Mounted engine shell'),root:!!host.querySelector('[data-vibeoffice-engine-root]')};const after=document.createElement('span');after.id='host-after';host.append(after);dispose();return {...mounted,after:host.contains(after),before:!!host.querySelector('#host-before'),rootRemoved:!host.querySelector('[data-vibeoffice-engine-root]'),hostConnected:host.isConnected}})()");
     assert.deepEqual(mountOwnership, { before: true, shell: true, root: true, after: true, rootRemoved: true, hostConnected: true }, 'mount and disposal preserve host-owned content and remove only the editor root');
@@ -92,6 +106,7 @@ test('an external React host wires its remote provider into direct editor Open a
     assert.deepEqual(mountPage.errors, []);
   } finally {
     if (mountPage) await mountPage.close();
+    if (errorPage) await errorPage.close();
     if (page) await page.close();
     server.kill();
     if (previousBase === undefined) delete process.env.BASE; else process.env.BASE = previousBase;

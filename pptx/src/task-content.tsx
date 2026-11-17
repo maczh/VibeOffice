@@ -394,7 +394,9 @@ function IntelliArtTextPane({ L, mount, revision }: { L: TaskContentRuntime; mou
   const catalog = L.diagram?.reactTextPaneCatalog?.() || { available: false, rows: [], layouts: [], colors: [], styles: [] };
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const inputs = useRef(new Map<string, HTMLInputElement>());
+  const focusFrame = useRef<number | null>(null);
   const signature = JSON.stringify(catalog.rows);
+  useEffect(() => () => { if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); }, []);
   useEffect(() => {
     setDrafts(Object.fromEntries(catalog.rows.map((row) => [row.id, row.text])));
   }, [revision, signature]);
@@ -416,7 +418,7 @@ function IntelliArtTextPane({ L, mount, revision }: { L: TaskContentRuntime; mou
     <div className="sa-pane" role="tree" aria-label={translate(L, 'IntelliArt text')}>
       {catalog.rows.map((row) => <div className="sa-line" role="treeitem" key={row.id}>
         <span className="sa-bul" aria-hidden="true" style={{ marginLeft: row.level * 16 }}>•</span>
-        <input ref={(element) => { if (element) inputs.current.set(row.id, element); else inputs.current.delete(row.id); }} type="text" className="sa-row" value={drafts[row.id] ?? row.text} placeholder="[Text]" aria-label={L.t?.('Item, level {0}', row.level + 1) || `Item, level ${row.level + 1}`} data-item={row.id} style={{ marginLeft: row.level * 16 }} onFocus={() => L.diagram?.reactTextFocus?.(row.id)} onChange={(event) => { const value = event.currentTarget.value; setDrafts((previous) => ({ ...previous, [row.id]: value })); L.diagram?.reactTextChange?.(row.id, value); }} onKeyDown={(event) => { if (structurallyNavigating(event.nativeEvent)) { L.diagram?.reactTextKey?.(event.nativeEvent, row.id, event.currentTarget); const nextId = L.diagram?.reactTextPaneCatalog?.().focusId; if (nextId) requestAnimationFrame(() => { const next = inputs.current.get(nextId); next?.focus(); next?.setSelectionRange(next.value.length, next.value.length); }); } }} />
+        <input ref={(element) => { if (element) inputs.current.set(row.id, element); else inputs.current.delete(row.id); }} type="text" className="sa-row" value={drafts[row.id] ?? row.text} placeholder="[Text]" aria-label={L.t?.('Item, level {0}', row.level + 1) || `Item, level ${row.level + 1}`} data-item={row.id} style={{ marginLeft: row.level * 16 }} onFocus={() => L.diagram?.reactTextFocus?.(row.id)} onChange={(event) => { const value = event.currentTarget.value; setDrafts((previous) => ({ ...previous, [row.id]: value })); L.diagram?.reactTextChange?.(row.id, value); }} onKeyDown={(event) => { if (structurallyNavigating(event.nativeEvent)) { L.diagram?.reactTextKey?.(event.nativeEvent, row.id, event.currentTarget); const nextId = L.diagram?.reactTextPaneCatalog?.().focusId; if (nextId) { if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; const next = inputs.current.get(nextId); if (!next?.isConnected) return; next.focus(); next.setSelectionRange(next.value.length, next.value.length); }); } } }} />
       </div>)}
     </div>
     <div className="tp-note">{translate(L, 'Enter adds an item, Tab and Shift+Tab move it in and out a level, Alt+Shift+↑/↓ move it.')}</div>

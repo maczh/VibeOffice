@@ -27,9 +27,9 @@ test('text that can\'t be translated yet doesn\'t grow (tmp/i18n/untranslatable.
 });
 
 /** common/i18n.js in a page whose UI language is lang, with dictionary dict */
-async function page(lang, dict) {
+async function page(lang, dict, desktop = false) {
   const html = { getAttribute: () => (lang === 'qps' ? 'qps-ploc' : lang) };
-  const context = { window: {}, URL, NodeFilter: { SHOW_TEXT: 4, SHOW_ELEMENT: 1 }, localStorage: { getItem: () => null, setItem() {} },
+  const context = { window: desktop ? { __VO_HOST__: {}, __TAURI_INTERNALS__: {} } : {}, URL, NodeFilter: { SHOW_TEXT: 4, SHOW_ELEMENT: 1 }, localStorage: { getItem: () => null, setItem() {} },
     document: { documentElement: html, currentScript: { src: 'http://127.0.0.1/common/i18n.js' }, readyState: 'complete', createTreeWalker: () => ({ currentNode: null, nextNode: () => null }) },
     fetch: async (url) => ({ ok: true, json: async () => (String(url).endsWith('/' + (lang === 'qps' ? 'en' : lang) + '.json') ? dict : null) }) };
   context.window.window = context.window;
@@ -74,6 +74,21 @@ test('English fetches nothing and changes nothing', async () => {
   assert.equal(VO.t('&File'), '&File');
   assert.equal(VO.t('Slide {0} of {1}', 1, 2), 'Slide 1 of 2');
   assert.equal(VO.t('Line|chart'), 'Line', 'a context is not shown');
+});
+
+test('web translation display uses current product brands without changing desktop catalog text', async () => {
+  const dict = { 'Welcome to Quire': 'Bienvenue dans Quire', 'Ledger Web Edition': 'Ledger édition Web', 'Lectern': 'Lectern' };
+  const web = await page('fr', dict);
+  assert.equal(web.t('Welcome to Quire'), 'Bienvenue dans Wordx');
+  assert.equal(web.t('Ledger Web Edition'), 'Excelx édition Web');
+  assert.equal(web.t('Lectern'), 'PPTX');
+  assert.equal(web.t('File: {0}', 'Quire.docx'), 'File: Quire.docx', 'user-provided values are not rewritten as product branding');
+  const desktop = await page('fr', dict, true);
+  assert.equal(desktop.t('Welcome to Quire'), 'Bienvenue dans Quire');
+  assert.equal(desktop.t('Ledger Web Edition'), 'Ledger édition Web');
+  assert.equal(desktop.t('Lectern'), 'Lectern');
+  const pseudo = await page('qps', { 'Welcome to Quire': {} });
+  assert.equal(pseudo.t('Welcome to Quire'), '[Wélçómé tó Wórdx ······]');
 });
 
 test('the pseudo-locale changes the catalog\'s strings only, keeping placeholders and access keys', async () => {

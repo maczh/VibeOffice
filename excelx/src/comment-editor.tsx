@@ -13,14 +13,15 @@ export function ExcelxCommentEditor() {
   valueRef.current = value;
   const finishRef = useRef<(save: boolean) => void>(() => {});
   useEffect(() => {
+    let focusFrame: number | null = null;
     const refresh = () => {
       const next = runtime()?.dlg?.reactCommentCatalog?.() || null;
       setCatalog(next);
-      if (next) { setValue(next.initialText); requestAnimationFrame(() => area.current?.focus()); }
+      if (next) { setValue(next.initialText); if (focusFrame !== null) cancelAnimationFrame(focusFrame); focusFrame = requestAnimationFrame(() => { focusFrame = null; if (area.current?.isConnected) area.current.focus(); }); }
     };
     const off = runtime()?.bus?.on('excelx-comment-editor', refresh);
     refresh();
-    return () => off?.();
+    return () => { off?.(); if (focusFrame !== null) cancelAnimationFrame(focusFrame); };
   }, []);
   useEffect(() => {
     if (!catalog) return;
