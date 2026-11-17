@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types",
+    "rootDir": ".."
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "../voffice-shared/src/**/*.ts",
+    "../voffice-shared/src/**/*.vue"
+  ]
+}

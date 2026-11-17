@@ -1,0 +1,37 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@voffice/shared": [
+        "../voffice-shared/src/index.ts"
+      ],
+      "@voffice/shared/*": [
+        "../voffice-shared/src/*"
+      ],
+      "@voffice/vword": [
+        "../vword/src/index.ts"
+      ],
+      "@voffice/vexcel": [
+        "../vexcel/src/index.ts"
+      ],
+      "@voffice/vpptx": [
+        "../vpptx/src/index.ts"
+      ],
+      "@voffice/shared/styles": [
+        "../voffice-shared/src/styles/index.css"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "../vword/src/**/*.ts",
+    "../vword/src/**/*.vue",
+    "../vexcel/src/**/*.ts",
+    "../vexcel/src/**/*.vue",
+    "../vpptx/src/**/*.ts",
+    "../vpptx/src/**/*.vue",
+    "../voffice-shared/src/**/*.ts",
+    "../voffice-shared/src/**/*.vue"
+  ]
+}

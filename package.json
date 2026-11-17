@@ -1,0 +1,31 @@
+{
+  "name": "voffice-vue",
+  "private": true,
+  "version": "1.0.0",
+  "description": "VibeOffice rewritten as Vite + Vue 3 components: vword, vexcel, vpptx",
+  "type": "module",
+  "workspaces": [
+    "voffice-shared",
+    "vword",
+    "vexcel",
+    "vpptx",
+    "playground"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w playground",
+    "dev:word": "npm run dev -w vword",
+    "dev:excel": "npm run dev -w vexcel",
+    "dev:pptx": "npm run dev -w vpptx",
+    "build": "npm run build -w voffice-shared && npm run build -w vword && npm run build -w vexcel && npm run build -w vpptx && npm run build -w playground",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "vue": "^3.5.45"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.11",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.8",
+    "vue-tsc": "^3.3.14"
+  }
+}

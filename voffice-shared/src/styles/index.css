@@ -1,0 +1,9 @@
+/* VibeOffice Vue chrome styles: the suite's looks and shared chrome CSS, unchanged.
+ * Import once in the host app: import '@voffice/shared/styles' */
+@import './looks.css';
+@import './ui.css';
+
+/* the component root carries the look (data-look / data-layout), so several components
+   with different looks can share one page; the original pages put these on <html> */
+.vo-app { height: 100%; }
+.vo-app .app { height: 100%; }

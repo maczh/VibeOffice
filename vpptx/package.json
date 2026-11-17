@@ -1,0 +1,35 @@
+{
+  "name": "@voffice/vpptx",
+  "version": "1.0.0",
+  "description": "VibeOffice vpptx — Vue 3 office component (Vite library)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/vpptx/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/vpptx/src/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles": "./dist/vpptx.css",
+    "./engine": {
+      "types": "./dist/types/vpptx/src/engine.d.ts",
+      "import": "./dist/engine.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && vue-tsc --declaration --emitDeclarationOnly -p tsconfig.build.json",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@voffice/shared": "1.0.0"
+  }
+}
