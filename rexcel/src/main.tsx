@@ -1,0 +1,1 @@
+import { StrictMode } from 'react'; import { createRoot } from 'react-dom/client'; import RExcel from './index'; import '@voffice/react-shared/styles'; createRoot(document.getElementById('root')!).render(<StrictMode><RExcel /></StrictMode>)

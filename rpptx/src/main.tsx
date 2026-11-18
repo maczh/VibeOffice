@@ -1,0 +1,1 @@
+import { StrictMode } from 'react'; import { createRoot } from 'react-dom/client'; import RPptx from './index'; import '@voffice/react-shared/styles'; createRoot(document.getElementById('root')!).render(<StrictMode><RPptx /></StrictMode>)
