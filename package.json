@@ -2,39 +2,33 @@
   "name": "voffice",
   "private": true,
   "version": "1.0.0",
-  "description": "VibeOffice component packages: React rword, rexcel and rpptx; legacy Vue packages remain available",
+  "description": "VibeOffice React component packages: RWord, RExcel and RPptx",
   "type": "module",
   "workspaces": [
-    "voffice-shared",
     "rshared",
     "rword",
     "rexcel",
     "rpptx",
-    "vword",
-    "vexcel",
-    "vpptx",
-    "playground"
+    "rplayground"
   ],
   "scripts": {
-    "dev": "npm run dev -w playground",
-    "dev:word": "npm run dev -w vword",
-    "dev:excel": "npm run dev -w vexcel",
-    "dev:pptx": "npm run dev -w vpptx",
-    "build": "npm run build -w rshared && npm run build -w rword && npm run build -w rexcel && npm run build -w rpptx",
-    "typecheck": "tsc --noEmit -p tsconfig.react.json"
+    "dev": "npm run dev -w rplayground",
+    "dev:react": "npm run dev -w rplayground",
+    "build": "npm run build -w rshared && npm run build -w rword && npm run build -w rexcel && npm run build -w rpptx && npm run build -w rplayground",
+    "build:react": "npm run build",
+    "typecheck": "tsc --noEmit -p tsconfig.react.json",
+    "test:react": "npm run build && node --test tests/react-packages.test.mjs tests/react-office-roundtrip.test.mjs",
+    "test:react-common": "node --test tests/react-packages.test.mjs tests/react-office-roundtrip.test.mjs"
   },
   "dependencies": {
-    "vue": "^3.5.45",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.11",
     "@vitejs/plugin-react": "^5.0.4",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "typescript": "^6.0.3",
-    "vite": "^8.3.8",
-    "vue-tsc": "^3.3.14"
+    "vite": "^8.3.8"
   }
 }

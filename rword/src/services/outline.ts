@@ -1,0 +1,4 @@
+import type { Block, Doc, Para } from '../engine/model'
+export interface OutlineNode { id: string; title: string; level: number; block: Para; children: OutlineNode[] }
+export function outline(doc: Doc): OutlineNode[] { const roots: OutlineNode[] = []; const stack: OutlineNode[] = []; for (const block of doc.blocks) { if (block.kind !== 'p') continue; const level = headingLevel(block); if (!level) continue; const node: OutlineNode = { id: block.id, title: block.runs.map(run => run.text ?? '').join('').trim() || '(blank)', level, block, children: [] }; while (stack.length && stack[stack.length - 1].level >= level) stack.pop(); (stack[stack.length - 1]?.children ?? roots).push(node); stack.push(node) } return roots }
+export function headingLevel(block: Block): number { if (block.kind !== 'p') return 0; const style = block.pPr?.style ?? ''; const match = /^Heading([1-9])$/i.exec(style); return match ? Number(match[1]) : 0 }

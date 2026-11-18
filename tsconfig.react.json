@@ -4,7 +4,7 @@
     "jsx": "react-jsx", "strict": true, "isolatedModules": true,
     "skipLibCheck": true, "noEmit": true, "esModuleInterop": true,
     "allowSyntheticDefaultImports": true, "types": ["vite/client"],
-    "baseUrl": ".", "ignoreDeprecations": "6.0", "paths": { "@voffice/react-shared": ["rshared/src/index.ts"], "@voffice/react-shared/styles": ["rshared/src/style.css"] }
+    "baseUrl": ".", "ignoreDeprecations": "6.0", "paths": { "@voffice/react-shared": ["rshared/src/index.ts"], "@voffice/react-shared/styles": ["rshared/src/style.css"], "@voffice/rword": ["rword/src/index.tsx"], "@voffice/rexcel": ["rexcel/src/index.tsx"], "@voffice/rpptx": ["rpptx/src/index.tsx"] }
   },
-  "include": ["rshared/src", "rword/src", "rexcel/src", "rpptx/src"]
+  "include": ["rshared/src", "rword/src", "rexcel/src", "rpptx/src", "rplayground/src"]
 }

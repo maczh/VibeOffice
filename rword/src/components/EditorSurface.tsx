@@ -1,0 +1,3 @@
+import { useRef } from 'react'
+export interface EditorSurfaceProps { value: string; readOnly?: boolean; onChange: (value: string) => void; onContextMenu?: (x: number, y: number) => void }
+export function EditorSurface({ value, readOnly, onChange, onContextMenu }: EditorSurfaceProps) { const ref = useRef<HTMLTextAreaElement>(null); return <main className="vo-editor"><textarea ref={ref} readOnly={readOnly} value={value} onChange={event => onChange(event.target.value)} onContextMenu={event => { event.preventDefault(); onContextMenu?.(event.clientX, event.clientY) }} aria-label="Document editor" /></main> }

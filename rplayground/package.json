@@ -1,0 +1,1 @@
+{"name":"@voffice/react-playground","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"vite","build":"vite build"},"dependencies":{"@voffice/react-shared":"1.0.0","@voffice/rword":"1.0.0","@voffice/rexcel":"1.0.0","@voffice/rpptx":"1.0.0","react":"^19.1.0","react-dom":"^19.1.0"}}

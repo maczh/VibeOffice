@@ -1,5 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 export * from './office-core';
+export * from './chrome';
+export * from './common';
 export interface WebDavSource {
     kind: 'webdav';
     url: string;

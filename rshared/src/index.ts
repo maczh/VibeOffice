@@ -1,5 +1,11 @@
 import { Component, createElement, type ReactNode, type ErrorInfo } from 'react'
+import { getS3, putS3 } from './online/s3'
+import { getWebDav, putWebDav } from './online/webdav'
+import { getHttp, postFile } from './online/http'
+import type { S3Source as CoreS3Source, WebDavSource as CoreWebDavSource, HttpSource as CoreHttpSource, HttpPostTarget as CorePostTarget } from './online/types'
 export * from './office-core'
+export * from './chrome'
+export * from './common'
 
 export interface WebDavSource { kind: 'webdav'; url: string; username?: string; password?: string; token?: string }
 export interface S3Source { kind: 's3'; endpoint: string; bucket: string; key: string; region?: string; accessKeyId: string; secretAccessKey: string; sessionToken?: string; forcePathStyle?: boolean }
@@ -15,17 +21,19 @@ export interface OfficeProps { src?: OpenInput; fileName?: string; readonly?: bo
 export function nameFromUrl(url: string): string { try { return decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || 'document') } catch { return 'document' } }
 function headers(s: WebDavSource): Record<string,string> { if (s.token) return { Authorization: `Bearer ${s.token}` }; if (s.username != null) return { Authorization: `Basic ${btoa(unescape(encodeURIComponent(`${s.username}:${s.password ?? ''}`)))}` }; return {} }
 export async function fetchOnline(source: OnlineSource): Promise<OnlineFile> {
-  const h = source.kind === 'webdav' ? headers(source) : source.kind === 'http' ? source.headers : undefined
-  const url = source.kind === 's3' ? `${source.endpoint.replace(/\/$/, '')}/${source.forcePathStyle ? `${source.bucket}/` : ''}${source.key}` : source.url
-  const res = await fetch(url, { headers: h }); if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`)
-  return { blob: await res.blob(), name: nameFromUrl(url) }
+  if (source.kind === 's3') return getS3(source as CoreS3Source)
+  if (source.kind === 'webdav') return getWebDav(source as CoreWebDavSource)
+  if (source.kind === 'http') return getHttp(source as CoreHttpSource)
+  const res = await fetch(source.url); if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`)
+  return { blob: await res.blob(), name: nameFromUrl(source.url) }
 }
 export async function saveOnline(target: SaveTarget, blob: Blob | Promise<Blob>, name: string): Promise<void> {
   blob = await blob
-  if (target.kind === 'post') { const form = new FormData(); Object.entries(target.fields ?? {}).forEach(([k,v]) => form.append(k,v)); form.append(target.field ?? 'file', blob, name); const r = await fetch(target.url, { method:'POST', headers:target.headers, body:form }); if (!r.ok) throw new Error(`Upload failed: ${r.status} ${r.statusText}`); return }
-  const url = target.kind === 's3' ? `${target.endpoint.replace(/\/$/, '')}/${target.forcePathStyle ? `${target.bucket}/` : ''}${target.key}` : target.kind === 'presigned' ? target.putUrl : target.url
-  if (!url) throw new Error('The online source is read-only')
-  const r = await fetch(url, { method: target.kind === 'webdav' ? 'PUT' : 'PUT', headers: target.kind === 'webdav' ? headers(target) : undefined, body: blob }); if (!r.ok) throw new Error(`Upload failed: ${r.status} ${r.statusText}`)
+  if (target.kind === 'post') return postFile(target as CorePostTarget, blob, name)
+  if (target.kind === 's3') return putS3(target as CoreS3Source, blob)
+  if (target.kind === 'webdav') return putWebDav(target as CoreWebDavSource, blob)
+  if (!target.putUrl) throw new Error('The online source is read-only')
+  const r = await fetch(target.putUrl, { method: 'PUT', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob }); if (!r.ok) throw new Error(`Upload failed: ${r.status} ${r.statusText}`)
 }
 export function downloadBlob(blob: Blob, name: string): void { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 0) }
 export class ErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> { state = { error: null as Error | null }; static getDerivedStateFromError(error: Error) { return { error } }; componentDidCatch(error: Error, info: ErrorInfo) { console.error(error, info) }; render() { return this.state.error ? createElement('div', { role:'alert', className:'vo-error' }, this.state.error.message) : this.props.children } }

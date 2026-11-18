@@ -1,0 +1,3 @@
+import type { RPr } from '../engine'
+export interface FormattingPanelProps { onApply?: (style: RPr) => void; onClose?: () => void }
+export function FormattingPanel({ onApply, onClose }: FormattingPanelProps) { return <aside className="vo-task-pane" aria-label="Formatting"><header><strong>Formatting</strong><button type="button" onClick={onClose}>×</button></header><div className="vo-task-body"><button type="button" onClick={() => onApply?.({ bold: true })}>Bold</button><button type="button" onClick={() => onApply?.({ italic: true })}>Italic</button><button type="button" onClick={() => onApply?.({ underline: true })}>Underline</button><button type="button" onClick={() => onApply?.({})}>Clear formatting</button></div></aside> }

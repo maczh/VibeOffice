@@ -1,0 +1,5 @@
+import type { Para, RPr } from '../engine/model'
+export function replaceRange(text: string, start: number, end: number, replacement: string): string { return text.slice(0, start) + replacement + text.slice(end) }
+export function toggleCase(text: string, mode: 'upper' | 'lower' | 'title'): string { if (mode === 'upper') return text.toUpperCase(); if (mode === 'lower') return text.toLowerCase(); return text.toLowerCase().replace(/(^|\s)(\p{L})/gu, (_, prefix, first) => prefix + first.toUpperCase()) }
+export function splitParagraph(paragraph: Para, offset: number): [Para, Para] { const runs = paragraph.runs; let before = '', after = '', seen = 0; for (const run of runs) { const value = run.text ?? ''; const take = Math.max(0, Math.min(value.length, offset - seen)); before += value.slice(0, take); after += value.slice(take); seen += value.length } return [{ ...paragraph, id: `${paragraph.id}-a`, runs: before ? [{ text: before }] : [] }, { ...paragraph, id: `${paragraph.id}-b`, runs: after ? [{ text: after }] : [] }] }
+export function applyRunStyle(text: string, style: RPr): { text: string; rPr: RPr } { return { text, rPr: { ...style } } }

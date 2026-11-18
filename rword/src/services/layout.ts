@@ -1,0 +1,4 @@
+import type { Block, Doc } from '../engine/model'
+export interface PageSlice { page: number; blocks: Block[]; height: number }
+export function paginateBlocks(doc: Doc, blockHeights: ReadonlyMap<string, number>, pageHeight = 720): PageSlice[] { const pages: PageSlice[] = []; let page: PageSlice = { page: 1, blocks: [], height: 0 }; for (const block of doc.blocks) { const height = blockHeights.get(block.id) ?? 24; if (page.blocks.length && page.height + height > pageHeight) { pages.push(page); page = { page: page.page + 1, blocks: [], height: 0 } } page.blocks.push(block); page.height += height } if (page.blocks.length || !pages.length) pages.push(page); return pages }
+export function pageCount(doc: Doc, heights: ReadonlyMap<string, number>, pageHeight?: number): number { return paginateBlocks(doc, heights, pageHeight).length }

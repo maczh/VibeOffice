@@ -1,0 +1,3 @@
+const DEFAULTS: Record<string, string> = { '(c)': '©', '(r)': '®', '(tm)': '™', '...': '…', ':-)': '🙂', ':-(': '🙁', '-->': '→', '<--': '←', '1/2': '½', '1/4': '¼', '3/4': '¾' }
+export function autocorrectWord(word: string, entries: Record<string, string> = DEFAULTS): string { const direct = entries[word] ?? entries[word.toLowerCase()]; if (!direct) return word; if (/^\p{Lu}/u.test(word)) return direct[0].toUpperCase() + direct.slice(1); if (word === word.toUpperCase() && word.length > 1) return direct.toUpperCase(); return direct }
+export function autoFormatText(text: string, entries?: Record<string, string>): string { return text.replace(/\S+/g, token => autocorrectWord(token, entries)) }
