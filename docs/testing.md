@@ -119,7 +119,7 @@ another tab and back. Two runs at once each need a Chromium of their own: `CDP=h
 - `painter.test.mjs`: the Format Painter in each app (docs/suite.md, Brushes): it paints the dragged text, cells or
   object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in PPTX
   the text being edited stays edited, and text in another box can be painted.
-- `quire.test.mjs`, `ledger.test.mjs`, `lectern.test.mjs`: each app's mouse, selection, drag and focus behaviour. A
+- `wordx.test.mjs`, `excelx.test.mjs`, `pptx.test.mjs`: each app's mouse, selection, drag and focus behaviour. A
   test named after an item of todos/UI_MOUSE_LOGIC_IMPROVE.md (Q1…, S1…, P1…) checks what Office does there and is
   marked `todo` until the item is fixed: it runs and is reported, but doesn't fail the run. The fix takes the mark off,
   so the test becomes its regression test, and the todo count in the summary is what is left of the plan.
@@ -129,7 +129,7 @@ they also run against older code, and a fix's test must fail there. `node tools/
 arguments>]` extracts `public/` as it was at REV into `tmp/older/<commit>/`, serves it on a port of its own and runs
 today's tests against it (`BASE`); REV is `HEAD` while `public/` has uncommitted changes, else `HEAD~1`. For example
 `node tools/older.mjs 1035247~1 -- tests/ui/painter.test.mjs` (the Format Painter before its fix: all three fail), or
-`node tools/older.mjs -- --test-name-pattern '^Q1 ' tests/ui/quire.test.mjs` for a fix not committed yet.
+`node tools/older.mjs -- --test-name-pattern '^Q1 ' tests/ui/wordx.test.mjs` for a fix not committed yet.
 
 ## SmartArt
 

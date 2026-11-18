@@ -62,7 +62,7 @@ test('Excelx React task-pane search inputs have accessible names', { timeout: 30
     const preinitSubscription = await page.evaluate("(() => { L.bus.emit('__preinit-mount-scope-probe'); return window.__preinitBusCalls; })()");
     assert.equal(preinitSubscription, 1, 'a bus subscription installed after the runtime-ready event survives A.mount adopting the runtime DOM root');
     const directHostAppReadyListeners = await page.evaluate("({ directHost: !!VO.reactDirectHost, gridLoaded: window.__VIBE_OFFICE_DIRECT_HOST__?.loadedLegacyScripts?.some((path) => path.endsWith('/js/grid.js')), listeners: window.__legacyBusSubscriptionCount('app-ready') })");
-    assert.deepEqual(directHostAppReadyListeners, { directHost: true, gridLoaded: true, listeners: 0 }, 'Excelx direct-host does not retain a script-evaluation app-ready subscription for a classic-only pointer listener');
+    assert.deepEqual(directHostAppReadyListeners, { directHost: true, gridLoaded: false, listeners: 0 }, 'Excelx direct-host installs the package-owned grid without loading the classic module or retaining its classic-only app-ready pointer-listener subscription');
     const helpCatalog = await page.evaluate("(() => { const catalog = L.reactModules?.excelxHelpContent; return { packageOwned: !!catalog, topics: catalog?.topics.length, keys: catalog?.keys.length, legacyAdapter: typeof L.panes?.reactHelpData }; })()");
     assert.deepEqual(helpCatalog, { packageOwned: true, topics: 15, keys: 54, legacyAdapter: 'undefined' }, 'the Excelx package owns the Help and keyboard-shortcut catalog without a legacy React bridge');
     await page.evaluate("L.app.toggleTask(true); L.panes.task.show('getting-started')");

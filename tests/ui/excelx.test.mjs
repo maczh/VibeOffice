@@ -1,5 +1,5 @@
-// Ledger with real mouse and keyboard input (tests/lib/input.mjs). A test named after an audit item (S1…) checks what
-// Excel does there and stays `todo` until the item is fixed (todos/UI_MOUSE_LOGIC_IMPROVE.md, Audit › Ledger); taking
+// Excelx with real mouse and keyboard input (tests/lib/input.mjs). A test named after an audit item (S1…) checks what
+// Excel does there and stays `todo` until the item is fixed (todos/UI_MOUSE_LOGIC_IMPROVE.md, Excelx audit); taking
 // the mark off is part of the fix. Each test has its own tab, so a failing one leaves nothing behind.
 //
 //   node --test --test-concurrency=1 tests/ui/*.test.mjs
@@ -8,8 +8,8 @@ import assert from 'node:assert/strict';
 import { open, pause } from '../lib/input.mjs';
 
 /* ---------------------------------------------------------------- helpers */
-/** a new tab on Ledger */
-const ledger = () => open('ledger');
+/** a new tab on Excelx */
+const excelx = () => open('ledger');
 /** [row, col] of an A1 reference */
 const rc = (ref) => { const m = /^([A-Z]+)(\d+)$/.exec(ref); let c = 0; for (const ch of m[1]) c = c * 26 + ch.charCodeAt(0) - 64; return [+m[2] - 1, c - 1]; };
 /** centre and box of a cell on screen (its sheet must be the one shown) */
@@ -38,7 +38,7 @@ const shape = (u) => u.evaluate(`(() => { const e = document.querySelector('#gla
 const drawRect = async (u, from, to) => { await u.evaluate(`L.ui.exec('insertShape')`); await u.drag(await pt(u, from), await pt(u, to), 6); };
 
 test('Excelx Getting Started offers open/create actions without Recent Files', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const result = await u.evaluate(`(() => { L.panes.task.show('getting-started'); const body=document.querySelector('#taskpane > .tp-body'), menu=L.ui.menus.find((item)=>String(item.label).includes('File')), items=typeof menu.items==='function'?menu.items():menu.items; return {visible:!document.querySelector('#taskpane').hidden, text:body.textContent, recentLinks:body.querySelectorAll('a[href*="recent"], .recent-file, [data-recent-file]').length, fileMenuHasRecent:items.some((item)=>/recent/i.test(typeof item==='string'?item:item.label||''))}; })()`);
     assert.ok(result.visible && result.text.includes('Open') && result.text.includes('Create a new workbook') && !/Recent Files/i.test(result.text) && result.recentLinks === 0 && !result.fileMenuHasRecent, `Excelx Getting Started and File menu omit Recent Files: ${JSON.stringify(result)}`);
@@ -46,7 +46,7 @@ test('Excelx Getting Started offers open/create actions without Recent Files', a
 });
 
 test('classic Excelx retains Help topics and keyboard shortcuts without the React package catalog', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const result = await u.evaluate(`(() => {
       const packageCatalog = L.reactModules?.excelxHelpContent;
@@ -56,7 +56,7 @@ test('classic Excelx retains Help topics and keyboard shortcuts without the Reac
       const shortcuts = document.querySelectorAll('#taskpane .kbd-table tr').length;
       return { packageCatalog: !!packageCatalog, reactBridge: typeof L.panes.reactHelpData, topics, shortcuts };
     })()`);
-    assert.deepEqual(result, { packageCatalog: false, reactBridge: 'undefined', topics: 15, shortcuts: 54 }, 'classic Ledger still renders its built-in Help and shortcut catalogs');
+    assert.deepEqual(result, { packageCatalog: false, reactBridge: 'undefined', topics: 15, shortcuts: 54 }, 'the legacy-compatible page still renders its built-in Help and shortcut catalogs');
   } finally { await u.close(); }
 });
 
@@ -114,7 +114,7 @@ test('Excelx circular-reference subscription and pending warning belong to its m
 });
 
 test('Excelx HTML clipboard metadata uses the rebranded protocol', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const html = await u.evaluate(`(() => { const data={values:{},setData(type,value){this.values[type]=value}}; L.clip.copy({clipboardData:data},false); return data.values['text/html'] || ''; })()`);
     assert.match(html, /name="excelx-clip"/, 'copied tables carry the Excelx clipboard marker');
@@ -134,7 +134,7 @@ const wheel = async (u, p, dx, dy) => { await u.send('Input.dispatchMouseEvent',
 const where = async (u, ref) => { const p = await pt(u, ref); return { x: p.x, y: p.y }; };
 
 test('classic Excelx page keeps the native formula bar, Name Box, sheet tabs, and navigation fallback', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const controls = await u.evaluate(`(() => {
       const visible = (element) => { const r=element.getBoundingClientRect(); return r.width>20 && r.height>8 && getComputedStyle(element).display!=='none'; };
@@ -145,7 +145,7 @@ test('classic Excelx page keeps the native formula bar, Name Box, sheet tabs, an
 });
 
 test('AutoFilter popover removes its outside-pointer listener when the editor mount is disposed', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const result = await u.evaluate(`(async () => {
       const s = L.grid.sheet(), oldFilter = s.autoFilter, originalFocus = L.grid.focus;
@@ -169,7 +169,7 @@ test('AutoFilter popover removes its outside-pointer listener when the editor mo
 });
 
 test('Comment editor removes its outside-pointer listener when the editor mount is disposed', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const result = await u.evaluate(`(async () => {
       const scope = L.createMountScope(document.body), originalFocus = L.grid.focus;
@@ -190,7 +190,7 @@ test('Comment editor removes its outside-pointer listener when the editor mount 
 });
 
 test('Alt+Down pick list removes its outside-pointer listener when the editor mount is disposed', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const result = await u.evaluate(`(async () => {
       const scope = L.createMountScope(document.body);
@@ -208,7 +208,7 @@ test('Alt+Down pick list removes its outside-pointer listener when the editor mo
 });
 
 test('Print Preview closes and removes its document key listener when the editor mount is disposed', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const result = await u.evaluate(`(async () => {
       const scope = L.createMountScope(document.body), originalFocus = L.grid.focus, originalPages = L.print.allPages;
@@ -228,7 +228,7 @@ test('Print Preview closes and removes its document key listener when the editor
 });
 
 test('Touch long-press timer cannot open a context menu after the editor mount is disposed', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const result = await u.evaluate(`(async () => {
       const scope = L.createMountScope(document.body), originalContextMenu = L.app.contextMenu;
@@ -247,7 +247,7 @@ test('Touch long-press timer cannot open a context menu after the editor mount i
 
 /* ---------------------------------------------------------------- S1: point mode in Edit mode */
 test('S1a After F2, a click on a cell where the formula expects an operand inserts its reference', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await enter(u, 'A1', '=1');
     await u.click(await pt(u, 'A1'));
@@ -262,7 +262,7 @@ test('S1a After F2, a click on a cell where the formula expects an operand inser
 });
 
 test('S1b After a double-click, dragging over cells in a formula inserts the range', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.dblclick(await pt(u, 'B5'));
     await u.type('=SUM(');
@@ -276,7 +276,7 @@ test('S1b After a double-click, dragging over cells in a formula inserts the ran
 });
 
 test('S1c Typing = in the formula bar and clicking a cell inserts its reference', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'D6'));
     const bar = await u.el('#fbinput');
@@ -292,7 +292,7 @@ test('S1c Typing = in the formula bar and clicking a cell inserts its reference'
 
 /* ---------------------------------------------------------------- S2: Shift+Arrow grows from the active cell */
 test('S2a Shift+Arrow extends from the active cell after the keyboard moved it', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'A1'));
     await u.key('ArrowDown', { shift: true });
@@ -306,7 +306,7 @@ test('S2a Shift+Arrow extends from the active cell after the keyboard moved it',
 });
 
 test('S2b Shift+Arrow extends from a clicked cell, not from where an earlier drag ended', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.drag(await pt(u, 'B2'), await pt(u, 'D5'), 6);
     await u.click(await pt(u, 'F10'));
@@ -317,7 +317,7 @@ test('S2b Shift+Arrow extends from a clicked cell, not from where an earlier dra
 });
 
 test('S2c Shift+Right after a click on a column header adds the next column', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.drag(await pt(u, 'B2'), await pt(u, 'D5'), 6);
     await u.click(await colHeader(u, 'H1'));
@@ -333,7 +333,7 @@ for (const [id, how, go] of [
   ['R4b', 'Find Next', async (u) => { await u.key('f', { ctrl: true }); await pause(300); await u.type('needle'); await u.key('Enter'); await pause(200); await u.esc(); }],
 ]) {
   test(`${id} With a shape selected, ${how} selects the cell, and Delete clears the cell, not the shape`, async () => {
-    const u = await ledger();
+    const u = await excelx();
     try {
       await enter(u, 'D5', 'needle');
       await drawRect(u, 'G3', 'I8');
@@ -352,7 +352,7 @@ for (const [id, how, go] of [
 
 /* ---------------------------------------------------------------- S3: formula bar, then back into the cell */
 test('S3 Typing in the cell after a visit to the formula bar is kept', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await enter(u, 'A5', 'abc');
     await u.dblclick(await pt(u, 'A5'));
@@ -371,7 +371,7 @@ test('S3 Typing in the cell after a visit to the formula bar is kept', async () 
 
 /* ---------------------------------------------------------------- S4: a shape's text, then a cell */
 test('S4 After editing a shape\'s text, a click on a cell selects the cell and typing goes there', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await drawRect(u, 'E5', 'G10');
     await u.dblclick(await shape(u));
@@ -388,7 +388,7 @@ test('S4 After editing a shape\'s text, a click on a cell selects the cell and t
 
 /* ---------------------------------------------------------------- S5: the selection never leaves the cell being edited */
 test('S5a A right-click on another cell while typing enters the typing first, as a click does', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'A1'));
     await u.type('abc');
@@ -402,7 +402,7 @@ test('S5a A right-click on another cell while typing enters the typing first, as
 });
 
 test('S5b Going to a cell with the Name Box while typing enters the typing first', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'A2'));
     await u.type('hello');
@@ -418,7 +418,7 @@ test('S5b Going to a cell with the Name Box while typing enters the typing first
 
 /* ---------------------------------------------------------------- S6: a reference to another sheet */
 test('S6 Enter after pointing at another sheet goes back to the formula\'s sheet', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'A1'));
     await u.type('=');
@@ -434,7 +434,7 @@ test('S6 Enter after pointing at another sheet goes back to the formula\'s sheet
 
 /* ---------------------------------------------------------------- S7: drag-and-drop onto data */
 test('S7 Dropping a cell onto a cell with data asks before replacing it', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await enter(u, 'A1', 'src');
     await enter(u, 'C1', 'keep me');
@@ -453,7 +453,7 @@ test('S7 Dropping a cell onto a cell with data asks before replacing it', async 
 });
 
 test('Dropping a cell onto empty cells moves it without asking', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await enter(u, 'A1', 'src');
     await u.click(await pt(u, 'A1'));
@@ -466,7 +466,7 @@ test('Dropping a cell onto empty cells moves it without asking', async () => {
 });
 
 test('Esc while an AutoShape is dragged out draws nothing and ends the tool; the next drag selects cells', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.evaluate(`L.ui.exec('insertShape')`);
     const a = await pt(u, 'C3'), b = await pt(u, 'E8');
@@ -481,7 +481,7 @@ test('Esc while an AutoShape is dragged out draws nothing and ends the tool; the
 
 /* ---------------------------------------------------------------- S8: rename a sheet in its tab */
 test('S8 A double-click on a sheet tab renames it in place', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.dblclick(await tab(u, 'Sheet2'));
     assert.equal(await u.evaluate(`!!document.querySelector('#tabs input')`), true, 'the tab turns into a box with its name');
@@ -495,7 +495,7 @@ test('S8 A double-click on a sheet tab renames it in place', async () => {
 /* ---------------------------------------------------------------- S9: header drags that auto-scroll */
 for (const [id, what, from, edge, axis] of [['S9a', 'column', 'C1', 'right', 'c'], ['S9b', 'row', 'A3', 'bottom', 'r']]) {
   test(`${id} Holding a ${what}-header drag past the ${edge} edge selects the ${what}s it scrolls to`, async () => {
-    const u = await ledger();
+    const u = await excelx();
     try {
       const geo = await u.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), f = L.grid.frame(), m = f.panes[f.panes.length - 1];
         return { right: Math.round(w.left + m.x + m.w - 1), bottom: Math.round(w.top + m.y + m.h - 1) }; })()`);
@@ -519,7 +519,7 @@ for (const [id, what, from, edge, axis] of [['S9a', 'column', 'C1', 'right', 'c'
 
 /* ---------------------------------------------------------------- S10: Pick From List with the keyboard */
 test('S10a Alt+Down, then the arrow keys and Enter, enter an entry from the list', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     for (const [ref, v] of [['A1', 'apple'], ['A2', 'banana'], ['A3', 'cherry']]) await enter(u, ref, v);
     await u.click(await pt(u, 'A4'));
@@ -535,7 +535,7 @@ test('S10a Alt+Down, then the arrow keys and Enter, enter an entry from the list
 });
 
 test('S10b Esc closes the Alt+Down list and leaves the cell as it was', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     for (const [ref, v] of [['A1', 'apple'], ['A2', 'banana']]) await enter(u, ref, v);
     await u.click(await pt(u, 'A3'));
@@ -549,7 +549,7 @@ test('S10b Esc closes the Alt+Down list and leaves the cell as it was', async ()
 
 /* (Ctrl+PageDown and Ctrl+PageUp never reach a page in a Chrome tab, which switches tabs with them) */
 test('A sheet tab\'s context menu closed with Esc: the arrow keys still move on the sheet', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'B2'));
     await u.rightClick(await tab(u, 'Sheet1'));
@@ -569,7 +569,7 @@ for (const [id, what, where0] of [
   ['S11d', 'a sheet-tab scroll arrow', (u) => u.el('#tabnav button')],
 ]) {
   test(`${id} After a click on ${what}, the arrow keys and Delete still work on the sheet`, async () => {
-    const u = await ledger();
+    const u = await excelx();
     try {
       await enter(u, 'C4', 'data');
       await u.click(await pt(u, 'C3'));
@@ -587,7 +587,7 @@ for (const [id, what, where0] of [
 
 /* ---------------------------------------------------------------- S12: a release the page never saw */
 test('S12a A cell drag whose release was lost does not follow the pointer any more', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const b3 = await pt(u, 'B3'), d6 = await pt(u, 'D6'), f12 = await pt(u, 'F12');
     await u.press(b3);
@@ -601,7 +601,7 @@ test('S12a A cell drag whose release was lost does not follow the pointer any mo
 });
 
 test('S12b A fill-handle drag whose release was lost leaves nothing behind', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await enter(u, 'A1', '1');
     await u.click(await pt(u, 'A1'));
@@ -618,7 +618,7 @@ test('S12b A fill-handle drag whose release was lost leaves nothing behind', asy
 });
 
 test('S12c A shape move whose release was lost is cancelled, not dropped by the next click', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await drawRect(u, 'E5', 'G10');
     const s0 = await shape(u);
@@ -635,7 +635,7 @@ test('S12c A shape move whose release was lost is cancelled, not dropped by the 
 });
 
 test('An edit recorded in the middle of a shape move ends the move first: the move records nothing', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await drawRect(u, 'E5', 'G10');
     const s0 = await shape(u), to = { x: s0.x + 60, y: s0.y + 40 };
@@ -656,7 +656,7 @@ test('An edit recorded in the middle of a shape move ends the move first: the mo
 
 /* ---------------------------------------------------------------- S13: frozen panes */
 test('S13a A drag within the frozen rows does not scroll the rows below them', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'C3'));
     await u.evaluate(`L.ui.exec('freezePanes')`);
@@ -676,7 +676,7 @@ test('S13a A drag within the frozen rows does not scroll the rows below them', a
 });
 
 test('S13b A drag within the frozen columns does not scroll the columns beside them', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'C3'));
     await u.evaluate(`L.ui.exec('freezePanes')`);
@@ -698,7 +698,7 @@ test('S13b A drag within the frozen columns does not scroll the columns beside t
 
 /* ---------------------------------------------------------------- S14 */
 test('S14a Holding the button down on a hyperlink selects the cell without following the link', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     // a link from A1 to Sheet3!B2 (Insert ▸ Hyperlink, Place in This Document)
     await u.evaluate(`(() => { const sh = L.grid.sheet(); L.ops.enter(sh, 0, 0, 'Go to Sheet3'); sh.links.push({ ref: { r1: 0, c1: 0, r2: 0, c2: 0 }, location: 'Sheet3!B2' }); L.grid.paint(true); })()`);
@@ -714,7 +714,7 @@ test('S14a Holding the button down on a hyperlink selects the cell without follo
 });
 
 test('S14b Shift+click while pointing in a formula extends the reference to a range', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.click(await pt(u, 'A10'));
     await u.type('=');
@@ -727,7 +727,7 @@ test('S14b Shift+click while pointing in a formula extends the reference to a ra
 });
 
 test('S14c Esc during a fill-handle drag cancels the fill', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await enter(u, 'A4', '1');
     await u.click(await pt(u, 'A4'));
@@ -742,7 +742,7 @@ test('S14c Esc during a fill-handle drag cancels the fill', async () => {
 });
 
 test('S14d The right button pressed during a left-button drag opens no shortcut menu', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     const b10 = await pt(u, 'B10'), d14 = await pt(u, 'D14'), e16 = await pt(u, 'E16');
     await u.press(b10);
@@ -758,7 +758,7 @@ test('S14d The right button pressed during a left-button drag opens no shortcut 
 });
 
 test('A drop-down inside a dialog opens above it: Format Cells ▸ Patterns ▸ Pattern picks a pattern', async () => {
-  const u = await ledger();
+  const u = await excelx();
   const centre = (sel) => u.evaluate(`(() => { const e = [...document.querySelectorAll(${JSON.stringify(sel)})].find((x) => x.offsetParent); if (!e) return null; const r = e.getBoundingClientRect();
     return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), top: document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === e }; })()`);
   try {
@@ -777,7 +777,7 @@ test('A drop-down inside a dialog opens above it: Format Cells ▸ Patterns ▸ 
 });
 
 test('Save As ▸ Tools opens its menu under the button, above the dialog', async () => {
-  const u = await ledger();
+  const u = await excelx();
   try {
     await u.evaluate(`void L.dlg.saveAs()`); await pause(300);
     const b = await u.evaluate(`(() => { const e = [...document.querySelectorAll('.dlg button')].find((x) => x.textContent.trim() === 'Tools'); const r = e.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), l: r.left, b: r.bottom }; })()`);

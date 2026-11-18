@@ -7,6 +7,7 @@ type HelpEntry = [string, string];
 interface ClipArtItem { id: string; name: string; svg: string }
 interface ClipboardItem { index: number; text: string; table: boolean }
 interface WordxRuntime {
+  addMountCleanup?(cleanup: () => void): () => void;
   spell?: { reactSpellCatalog?(): { kind: string; label: string; before: string; word: string; after: string; suggestions: string[]; language: string; grammar: boolean; showExplain: boolean; canChangeAll: boolean; canAuto: boolean } | null; reactSpellChoose?(value: string): void; reactSpellAction?(action: string, value?: unknown): void; reactLayoutChanged?(): void; reactDocumentLoaded?(): void; reactScroll?(): void; reactAttachRoot?(root: HTMLElement | null | undefined): void };
   preserve?: { reactControlCatalog?(): { name: string; type: string; value: string; choices: Array<{ value: string; text: string }> } | null; reactControlSetValue?(value: string): void };
   mailmerge?: {
@@ -1818,8 +1819,16 @@ function AutoCorrectExceptionsDialogBody({ L }: { L: WordxRuntime }) {
 type AutoCorrectMainState={options:Record<string,boolean>;entries:Array<[string,string]>;selected:string};
 function AutoCorrectDialogBody({ L, initialTab = 0 }: { L: WordxRuntime; initialTab?: number }) {
   const [tab, setTab] = useState(initialTab);
+  const focusFrame = useRef<number | null>(null);
+  const removeFocusCleanup = useRef<() => void>(() => {});
   const tabs = ['AutoCorrect', 'AutoFormat As You Type', 'AutoText'];
   const panelIds = tabs.map((_, index) => `react-wordx-autocorrect-panel-${index}`);
+  useEffect(() => () => {
+    if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = null;
+    removeFocusCleanup.current();
+    removeFocusCleanup.current = () => {};
+  }, []);
   return <div className="col" id="react-wordx-autocorrect-dialog">
     <div className="tabs-head" role="tablist" aria-label={tr(L, 'AutoCorrect settings')}>
       {tabs.map((label, index) => <button key={label} type="button" role="tab" id={`react-wordx-autocorrect-tab-${index}`} aria-selected={tab === index} aria-controls={panelIds[index]} tabIndex={tab === index ? 0 : -1} className={`tab${tab === index ? ' on' : ''}`} onClick={() => setTab(index)} onKeyDown={(event) => {
@@ -1827,7 +1836,21 @@ function AutoCorrectDialogBody({ L, initialTab = 0 }: { L: WordxRuntime; initial
         event.preventDefault();
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
         setTab(next);
-        requestAnimationFrame(() => document.getElementById(`react-wordx-autocorrect-tab-${next}`)?.focus());
+        if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+        removeFocusCleanup.current();
+        const frame = requestAnimationFrame(() => {
+          if (focusFrame.current !== frame) return;
+          focusFrame.current = null;
+          removeFocusCleanup.current();
+          removeFocusCleanup.current = () => {};
+          document.getElementById(`react-wordx-autocorrect-tab-${next}`)?.focus();
+        });
+        focusFrame.current = frame;
+        removeFocusCleanup.current = L.addMountCleanup?.(() => {
+          cancelAnimationFrame(frame);
+          if (focusFrame.current === frame) focusFrame.current = null;
+          removeFocusCleanup.current = () => {};
+        }) || (() => {});
       }}>{tr(L, label)}</button>)}
     </div>
     {[<AutoCorrectMainDialogBody key="main" L={L} />, <AutoCorrectFormatDialogBody key="format" L={L} />, <AutoTextDialogBody key="autotext" L={L} />].map((body, index) => <div key={panelIds[index]} id={panelIds[index]} role="tabpanel" aria-labelledby={`react-wordx-autocorrect-tab-${index}`} hidden={tab !== index}>{body}</div>)}

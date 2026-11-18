@@ -616,7 +616,9 @@ export function installWordxCommands(runtime: Window): void {
     if (!c) return;
     const it = { t: 'chart', w: 360, h: 216, chart: c };
     E.edit('Insert Chart', () => O.insertItem(E.deleteSelection(), it));
-    setTimeout(() => { const os = A.selectItemAt(E.sel.f.p, E.sel.f.o - 1); if (os) A.editChart(); }, 30);
+    let timer;
+    const removeCleanup = L.addMountCleanup(() => clearTimeout(timer));
+    timer = setTimeout(() => { removeCleanup(); const os = A.selectItemAt(E.sel.f.p, E.sel.f.o - 1); if (os) A.editChart(); }, 30);
   };
   A.selectItemAt = function (p, o) {
     const f = LY.fragFor(p, o);

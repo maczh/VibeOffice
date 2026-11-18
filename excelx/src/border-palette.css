@@ -1,0 +1,6 @@
+.excelx-border-palette { position: fixed; z-index: 1510; width: max-content; padding: 5px; background: var(--surface); color: var(--ink); border: 1px solid var(--ink); box-shadow: 2px 2px 3px var(--shadow-c); }
+.excelx-border-palette__grid { display: grid; grid-template-columns: repeat(4, 24px); gap: 2px; }
+.excelx-border-palette button { width: 24px; height: 24px; padding: 2px; }
+.excelx-border-palette button:hover, .excelx-border-palette button:focus-visible { background: var(--sel); color: var(--sel-ink); }
+.excelx-border-palette button span, .excelx-border-palette button svg { display: block; width: 16px; height: 16px; }
+.excelx-border-palette .excelx-border-palette__draw { width: 100%; height: auto; margin-top: 4px; padding: 3px 6px; white-space: nowrap; }

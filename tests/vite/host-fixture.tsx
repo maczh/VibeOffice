@@ -6,6 +6,8 @@ import { PptxEditor } from '@vibeoffice/pptx';
 import { createRemoteFileCallbacks, useVibeOffice, VibeOfficeProvider } from '@vibeoffice/core';
 import type { RemoteFile, RemoteStorageProvider } from '@vibeoffice/core';
 
+performance.setResourceTimingBufferSize(5000);
+
 type EditorId = 'wordx' | 'excelx' | 'pptx';
 const ENGINE = { wordx: { url: '/wordx/?new' }, excelx: { url: '/excelx/?new' }, pptx: { url: '/pptx/?new' } } as const;
 

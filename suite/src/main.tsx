@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
+import { initializeSharedRuntime } from '@vibeoffice/core';
 import { AppearanceControls, createUrlReadProvider, createWebDavProvider, OfficeDialog, saveLocalDocument, VibeOfficeProvider, useVibeOffice } from '@vibeoffice/core';
 import { createIndexedDbDraftStore } from '@vibeoffice/core';
 import type { LocalDocument, LocalDraft, RemoteFile, RemoteStorageProvider, SaveFileOperation } from '@vibeoffice/core';
@@ -11,6 +12,7 @@ import '@vibeoffice/excelx/style.css';
 import '@vibeoffice/pptx/style.css';
 import './style.css';
 
+initializeSharedRuntime();
 const mark = (message: string) => window.VO?.N?.(message) ?? message;
 
 type AppId = 'wordx' | 'excelx' | 'pptx';

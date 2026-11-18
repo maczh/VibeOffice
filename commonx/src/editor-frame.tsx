@@ -13,6 +13,7 @@ import { ColorMenu, type ColorMenuRequest } from './color-menu.js';
 import { MoreColorsDialog, type MoreColorsRequest } from './more-colors-dialog.js';
 import { MenuLayer } from './menu-layer.js';
 import { useVibeOffice } from './react-bridge.js';
+import { AppearanceFields } from './appearance-fields.js';
 import { CommandSearch } from './command-search.js';
 import { EditorRibbon } from './ribbon.js';
 import { EditorToolbarLayer } from './toolbar.js';
@@ -74,10 +75,17 @@ export interface AppearanceControlsProps {
 /** Shared look and language selectors used by the Start Center and every editor package. */
 export function AppearanceControls({ onLookChange, onLanguageChange }: AppearanceControlsProps) {
   const office = useVibeOffice();
-  return <>
-    <label>{office.translate('Look')} <select aria-label={office.translate('Look')} value={office.look} onChange={(event) => { const look = event.currentTarget.value as typeof office.look; office.setLook(look); onLookChange?.(look); }}>{office.looks.map((look) => <option key={look.id} value={look.id}>{office.translate(look.name)}</option>)}</select></label>
-    <label>{office.translate('Language')} <select aria-label={office.translate('Language')} value={office.language} onChange={(event) => { const language = event.currentTarget.value as typeof office.language; office.setLanguage(language); onLanguageChange?.(language); }}>{office.languages.map((language) => <option key={language.id} value={language.id}>{office.translate(language.name)}</option>)}</select></label>
-  </>;
+  return <AppearanceFields
+    look={office.look}
+    looks={office.looks.map(({ id, name }) => ({ value: id, label: office.translate(name) }))}
+    language={office.language}
+    languages={office.languages.map(({ id, name }) => ({ value: id, label: office.translate(name) }))}
+    onLookChange={(value) => { const look = value as typeof office.look; office.setLook(look); onLookChange?.(look); }}
+    onLanguageChange={(value) => { const language = value as typeof office.language; office.setLanguage(language); onLanguageChange?.(language); }}
+    translate={office.translate}
+    lookLabel="Look"
+    languageLabel="Language"
+  />;
 }
 
 /** Settle async mounts without leaking resources or producing unhandled rejections after unmount. */

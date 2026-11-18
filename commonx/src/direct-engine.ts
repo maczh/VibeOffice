@@ -183,6 +183,7 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   const runtimeWindow = view as Window & {
     __VIBE_OFFICE_DIRECT_HOST__?: Record<string, unknown> & { root?: HTMLElement | null };
     L?: { mountDomRoot?: (element: HTMLElement) => () => void; APP_ID?: string; APP_NAME?: string; APP?: string };
+    VO?: { t?: (value: string, ...args: unknown[]) => string; N?: (value: string) => string };
   };
   const directRuntime = runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ || {};
   if (directRuntime.root?.isConnected) throw new Error('Only one VibeOffice editor can be mounted in a host document at a time');
@@ -247,6 +248,9 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
       if (skipLegacyScripts.some((path) => scriptUrl.pathname.endsWith(path))) continue;
       loadedScripts.push(scriptUrl.pathname);
       await loadScript(document, scriptUrl, signal);
+      if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L && runtimeWindow.VO?.t) {
+        Object.assign(runtimeWindow.L, { t: runtimeWindow.VO.t, N: runtimeWindow.VO.N });
+      }
       if (shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ui.js')) restoreBrushService = installReactBrushService(runtimeWindow);
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L?.mountDomRoot) {
         restoreDomRoot = runtimeWindow.L.mountDomRoot(root);

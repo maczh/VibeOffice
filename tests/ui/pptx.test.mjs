@@ -1,20 +1,20 @@
-// Lectern with real mouse and keyboard input (tests/lib/input.mjs). A test named after an audit item (P1…) checks
-// what PowerPoint does there and stays `todo` until the item is fixed (todos/UI_MOUSE_LOGIC_IMPROVE.md, Audit,
-// Lectern); taking the mark off is part of the fix. Each test has its own tab, so a failure leaves nothing behind.
+// PPTX with real mouse and keyboard input (tests/lib/input.mjs). A test named after an audit item (P1…) checks
+// what PowerPoint does there and stays `todo` until the item is fixed (todos/UI_MOUSE_LOGIC_IMPROVE.md, PPTX audit);
+// taking the mark off is part of the fix. Each test has its own tab, so a failure leaves nothing behind.
 // The deck is built through the model (setup); everything the user does is real input.
 //
-//   node --test --test-concurrency=1 tests/ui/lectern.test.mjs
+//   node --test --test-concurrency=1 tests/ui/pptx.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { open, pause } from '../lib/input.mjs';
 
-/** a tab on Lectern for one test */
-async function lectern(fn) {
+/** a tab on PPTX for one test */
+async function pptx(fn) {
   const u = await open('lectern');
   try { await fn(u); } finally { await u.close(); }
 }
 
-test('PPTX Getting Started offers open/create actions without Recent Files', () => lectern(async (u) => {
+test('PPTX Getting Started offers open/create actions without Recent Files', () => pptx(async (u) => {
   const result = await u.evaluate(`(() => { L.panes.task.show('getting-started'); const body=document.querySelector('#taskpane > .tp-body'), menu=L.ui.menus.find((item)=>String(item.label).includes('File')), items=typeof menu.items==='function'?menu.items():menu.items; return {visible:!document.querySelector('#taskpane').hidden, brand:body.querySelector('.tp-row b')?.textContent, text:body.textContent, recentLinks:body.querySelectorAll('a[href*="recent"], .recent-file, [data-recent-file]').length, fileMenuHasRecent:items.some((item)=>/recent/i.test(typeof item==='string'?item:item.label||''))}; })()`);
   assert.match(result.brand, /^PPTX\b/, `classic Getting Started uses the active PPTX brand: ${JSON.stringify(result)}`);
   assert.ok(result.visible && result.text.includes('Open') && result.text.includes('Create a new presentation') && !/Recent Files/i.test(result.text) && result.recentLinks === 0 && !result.fileMenuHasRecent, `PPTX Getting Started and File menu omit Recent Files: ${JSON.stringify(result)}`);
@@ -23,7 +23,7 @@ test('PPTX Getting Started offers open/create actions without Recent Files', () 
   await u.esc();
 }));
 
-test('classic PPTX AutoContent Wizard still creates the selected presentation', () => lectern(async (u) => {
+test('classic PPTX AutoContent Wizard still creates the selected presentation', () => pptx(async (u) => {
   const dialog = await u.evaluate(`(() => { L.hist.dirty=false; L.app.autoContent(); const root=document.querySelector('.dlg'); const type=root.querySelector('#ac-type'); type.value='Status Report'; type.dispatchEvent(new Event('change',{bubbles:true})); const title=root.querySelector('#ac-title'); title.value='Classic Status'; title.dispatchEvent(new Event('input',{bubbles:true})); const footer=root.querySelector('#ac-footer'); footer.value='Internal'; footer.dispatchEvent(new Event('input',{bubbles:true})); root.querySelectorAll('input[type=checkbox]')[1].click(); const finish=[...root.querySelectorAll('.dlg-foot .btn')].find((button)=>/finish/i.test(button.textContent)); const rect=finish.getBoundingClientRect(); return { x:rect.left+rect.width/2, y:rect.top+rect.height/2, title:root.querySelector('.dlg-ttl')?.textContent }; })()`);
   assert.equal(dialog.title, 'AutoContent Wizard');
   await u.click(dialog);
@@ -48,7 +48,7 @@ const setup = (u, shapes, slides = 1) => u.evaluate(`(async () => {
   await new Promise((r) => setTimeout(r, 400));
 })()`);
 
-test('PPTX clipboard transports Office objects with the rebranded MIME type', () => lectern(async (u) => {
+test('PPTX clipboard transports Office objects with the rebranded MIME type', () => pptx(async (u) => {
   await setup(u, ['rect(1, 100, 100, 160, 90, "Copy me")']);
   const result = await u.evaluate(`(() => { const data=new DataTransfer(),event=new ClipboardEvent('copy',{clipboardData:data,bubbles:true,cancelable:true}); L.ed.sel=[L.pres.slides[0].shapes[0].id]; L.app.focusArea='editor'; L.domHost().dispatchEvent(event); return {prevented:event.defaultPrevented,newType:data.types.includes('application/x-pptx'),oldType:data.types.includes('application/x-lectern'),payload:data.getData('application/x-pptx')}; })()`);
   assert.equal(result.prevented, true);
@@ -73,7 +73,7 @@ const order = (u) => u.evaluate(`L.pres.slides.map((s) => s.notes).join(',')`);
 const text = (u, id) => u.evaluate(`L.ed.shape('${id}') ? L.txt.paraText(L.ed.shape('${id}').tx.ps[0]) : null`);
 const geo = (u, id) => u.evaluate(`(s => s && [s.x, s.y, s.w, s.h].map((v) => Math.round(v)))(L.ed.shape('${id}'))`);
 const count = (u) => u.evaluate(`L.ed.slide().shapes.length`);
-test('classic PPTX page keeps the legacy speaker-notes editor visible', () => lectern(async (u) => {
+test('classic PPTX page keeps the legacy speaker-notes editor visible', () => pptx(async (u) => {
   const notes = await u.evaluate(`(() => { const editor=L.panes.notes.ed, slot=document.querySelector('#react-notes-root'); const box=editor.getBoundingClientRect(); return {visible:box.width>100 && box.height>20 && getComputedStyle(editor).display!=='none', reactSlotHidden:getComputedStyle(slot).display==='none', text:editor.textContent}; })()`);
   assert.ok(notes.visible && notes.reactSlotHidden, `classic PPTX notes remain visible when no React package is mounted; observed ${JSON.stringify(notes)}`);
   const paneAdapters = await u.evaluate(`(() => ({
@@ -133,7 +133,7 @@ const OK_TEXT = 'Alpha Q gamma delta epsilon';
 
 /* ---------- Phase 1: data loss and wrong edits ---------- */
 
-test('P1 After a thumbnail click, a click on a shape takes the keyboard: Delete deletes the shape', () => lectern(async (u) => {
+test('P1 After a thumbnail click, a click on a shape takes the keyboard: Delete deletes the shape', () => pptx(async (u) => {
   await setup(u, RECT, 2);
   await u.click(await thumb(u, 0));
   await u.click(await shapeBox(u, 'rectR'));
@@ -145,7 +145,7 @@ test('P1 After a thumbnail click, a click on a shape takes the keyboard: Delete 
 }));
 
 for (const [id, cmd, prop, value] of [['P2a', 'bold', 'b', true], ['P2b', 'alignCenter', 'algn', 'ctr']]) {
-  test(`${id} ${cmd === 'bold' ? 'Bold' : 'Center'} on a dragged range of table cells formats those cells only`, () => lectern(async (u) => {
+  test(`${id} ${cmd === 'bold' ? 'Bold' : 'Center'} on a dragged range of table cells formats those cells only`, () => pptx(async (u) => {
     await setup(u, `table('tbl', 100, 150)`);
     await u.click(await cell(u, 'tbl', 0, 0));
     await u.drag(await cell(u, 'tbl', 0, 0), await cell(u, 'tbl', 1, 1), 10);
@@ -157,7 +157,7 @@ for (const [id, cmd, prop, value] of [['P2a', 'bold', 'b', true], ['P2b', 'align
   }));
 }
 
-test('a range of table cells stays selected after formatting: a second command formats the same cells', () => lectern(async (u) => {
+test('a range of table cells stays selected after formatting: a second command formats the same cells', () => pptx(async (u) => {
   await setup(u, `table('tbl', 100, 150)`);
   await u.click(await cell(u, 'tbl', 0, 0));
   await u.drag(await cell(u, 'tbl', 0, 0), await cell(u, 'tbl', 1, 1), 10);
@@ -170,7 +170,7 @@ test('a range of table cells stays selected after formatting: a second command f
 
 /* ---------- Phase 2: one drag lifecycle ---------- */
 
-test('P5a Esc during a move cancels it: the shape stays where it was', () => lectern(async (u) => {
+test('P5a Esc during a move cancels it: the shape stays where it was', () => pptx(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR');
   await u.press(c); await u.glide(c, { x: c.x + 80, y: c.y + 40 }, 6);
@@ -180,7 +180,7 @@ test('P5a Esc during a move cancels it: the shape stays where it was', () => lec
   u.clean();
 }));
 
-test('P5b Esc during a resize cancels it: the shape keeps its size', () => lectern(async (u) => {
+test('P5b Esc during a resize cancels it: the shape keeps its size', () => pptx(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR');
   await u.click(c);
@@ -192,7 +192,7 @@ test('P5b Esc during a resize cancels it: the shape keeps its size', () => lecte
   u.clean();
 }));
 
-test('P5c Esc while dragging out a rectangle draws nothing', () => lectern(async (u) => {
+test('P5c Esc while dragging out a rectangle draws nothing', () => pptx(async (u) => {
   await setup(u, RECT);
   await u.click(await u.button('drawRect'));
   const a = await slidePt(u, 500, 100), b = await slidePt(u, 650, 200);
@@ -204,7 +204,7 @@ test('P5c Esc while dragging out a rectangle draws nothing', () => lectern(async
   u.clean();
 }));
 
-test('R1 a key pressed in the middle of a resize waits: the resize is one undo step, and two Undos bring back the original', () => lectern(async (u) => {
+test('R1 a key pressed in the middle of a resize waits: the resize is one undo step, and two Undos bring back the original', () => pptx(async (u) => {
   await setup(u, RECT);
   const before = await geo(u, 'rectR');
   await u.click(await shapeBox(u, 'rectR'));
@@ -222,7 +222,7 @@ test('R1 a key pressed in the middle of a resize waits: the resize is one undo s
   u.clean();
 }));
 
-test('Ctrl+Z in the middle of a resize undoes the resize, not the move before it; Ctrl+Y brings back nothing uncommitted', () => lectern(async (u) => {
+test('Ctrl+Z in the middle of a resize undoes the resize, not the move before it; Ctrl+Y brings back nothing uncommitted', () => pptx(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR');
   await u.drag(c, { x: c.x + 40, y: c.y }, 6);
@@ -238,7 +238,7 @@ test('Ctrl+Z in the middle of a resize undoes the resize, not the move before it
   u.clean();
 }));
 
-test('P5d Esc during a scribble draws nothing, without an error', () => lectern(async (u) => {
+test('P5d Esc during a scribble draws nothing, without an error', () => pptx(async (u) => {
   await setup(u, RECT);
   await lineTool(u, 'Scribble');
   const a = await slidePt(u, 400, 300), b = await slidePt(u, 520, 380);
@@ -250,7 +250,7 @@ test('P5d Esc during a scribble draws nothing, without an error', () => lectern(
   u.clean();
 }));
 
-test('P5e Esc while dragging a thumbnail cancels the reorder', () => lectern(async (u) => {
+test('P5e Esc while dragging a thumbnail cancels the reorder', () => pptx(async (u) => {
   await setup(u, '', 3);
   const a = await thumb(u, 0), c = await thumb(u, 2);
   await u.press(a); await u.glide(a, { x: a.x, y: c.b + 10 }, 10);
@@ -260,7 +260,7 @@ test('P5e Esc while dragging a thumbnail cancels the reorder', () => lectern(asy
   u.clean();
 }));
 
-test('P5f A right-click during a move cancels it, as Esc does, and opens no menu', () => lectern(async (u) => {
+test('P5f A right-click during a move cancels it, as Esc does, and opens no menu', () => pptx(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR'), b = { x: c.x + 70, y: c.y + 50 };
   await u.press(c); await u.glide(c, b, 6);
@@ -272,7 +272,7 @@ test('P5f A right-click during a move cancels it, as Esc does, and opens no menu
   u.clean();
 }));
 
-test('P10 Another drawing tool abandons an unfinished freeform: the next freeform has only its own points', () => lectern(async (u) => {
+test('P10 Another drawing tool abandons an unfinished freeform: the next freeform has only its own points', () => pptx(async (u) => {
   await setup(u, '');
   await lineTool(u, 'Freeform');
   await u.click(await slidePt(u, 100, 100));
@@ -290,7 +290,7 @@ test('P10 Another drawing tool abandons an unfinished freeform: the next freefor
   u.clean();
 }));
 
-test('P14 A move whose release is lost (let go in another tab) does not follow the pointer afterwards', () => lectern(async (u) => {
+test('P14 A move whose release is lost (let go in another tab) does not follow the pointer afterwards', () => pptx(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR'), b = { x: c.x + 70, y: c.y + 40 };
   await u.press(c); await u.glide(c, b, 6);
@@ -310,7 +310,7 @@ for (const [id, how, show] of [
   ['P7c', 'the context menu\'s Font…, Cancel', async (u) => { await u.rightClick(await at(u, 'boxA', 8)); await u.pick('Font'); return 'cancel'; }],
   ['P7d', 'the Hyperlink button, Cancel', async (u) => { await u.click(await u.button('hyperlink')); return 'cancel'; }],
 ]) {
-  test(`${id} After ${how}, the text selection is kept and typing replaces it`, () => lectern(async (u) => {
+  test(`${id} After ${how}, the text selection is kept and typing replaces it`, () => pptx(async (u) => {
     await setup(u, BOXES);
     await editBeta(u);
     const close = await show(u);
@@ -324,7 +324,7 @@ for (const [id, how, show] of [
   }));
 }
 
-test('With the Slides pane holding the keyboard, Format ▸ Background… closed with Esc gives it back: Delete deletes the slide', () => lectern(async (u) => {
+test('With the Slides pane holding the keyboard, Format ▸ Background… closed with Esc gives it back: Delete deletes the slide', () => pptx(async (u) => {
   await setup(u, '', 3);
   await u.click(await thumb(u, 0));
   await u.menu('Format', 'Background');
@@ -335,7 +335,7 @@ test('With the Slides pane holding the keyboard, Format ▸ Background… closed
   u.clean();
 }));
 
-test('Editing the speaker notes, Print (Ctrl+P) closed with Esc gives the keyboard back to the notes, the caret where it was', () => lectern(async (u) => {
+test('Editing the speaker notes, Print (Ctrl+P) closed with Esc gives the keyboard back to the notes, the caret where it was', () => pptx(async (u) => {
   await setup(u, '');
   await u.click(await u.el('.notes-in'));
   await u.key('End');
@@ -353,7 +353,7 @@ test('Editing the speaker notes, Print (Ctrl+P) closed with Esc gives the keyboa
 
 /* ---------- Phase 4: one owner per piece of state ---------- */
 
-test('P3 Editing text, a click on the current slide\'s thumbnail ends the edit: Delete then deletes the slide', () => lectern(async (u) => {
+test('P3 Editing text, a click on the current slide\'s thumbnail ends the edit: Delete then deletes the slide', () => pptx(async (u) => {
   await setup(u, BOXES, 2);
   await editBeta(u);
   await u.click(await thumb(u, 0));
@@ -363,7 +363,7 @@ test('P3 Editing text, a click on the current slide\'s thumbnail ends the edit: 
   u.clean();
 }));
 
-test('After an edit on the slide, the thumbnail\'s star previews the transition on the thumbnail shown', () => lectern(async (u) => {
+test('After an edit on the slide, the thumbnail\'s star previews the transition on the thumbnail shown', () => pptx(async (u) => {
   await setup(u, RECT);
   await u.evaluate(`(() => { L.ed.slide().trans = { type: 'fade', spd: 'slow', click: true }; L.panes.left.render();
     const play = L.show.previewTransition; L.show.previewTransition = function (host, ...a) { window.__previewOn = host.isConnected; return play(host, ...a); }; })()`);
@@ -375,7 +375,7 @@ test('After an edit on the slide, the thumbnail\'s star previews the transition 
   u.clean();
 }));
 
-test('A selected diagram\'s frame: its edge shows the move cursor, a click there keeps it selected and a drag moves it', () => lectern(async (u) => {
+test('A selected diagram\'s frame: its edge shows the move cursor, a click there keeps it selected and a drag moves it', () => pptx(async (u) => {
   await setup(u, '');
   await u.evaluate(`L.diagram.insert(L.smartart.LAYOUTS[0].id)`); await pause(400);
   const id = await u.evaluate(`L.ed.slide().shapes[0].id`);
@@ -393,7 +393,7 @@ test('A selected diagram\'s frame: its edge shows the move cursor, a click there
   u.clean();
 }));
 
-test('P4a In the Slides pane, Delete twice deletes two slides', () => lectern(async (u) => {
+test('P4a In the Slides pane, Delete twice deletes two slides', () => pptx(async (u) => {
   await setup(u, '', 4);
   await u.click(await thumb(u, 0));
   await u.key('Delete');
@@ -403,7 +403,7 @@ test('P4a In the Slides pane, Delete twice deletes two slides', () => lectern(as
   u.clean();
 }));
 
-test('P4b After dragging a thumbnail to another place, Delete deletes the moved slide', () => lectern(async (u) => {
+test('P4b After dragging a thumbnail to another place, Delete deletes the moved slide', () => pptx(async (u) => {
   await setup(u, '', 3);
   const a = await thumb(u, 0), c = await thumb(u, 2);
   await u.drag(a, { x: a.x, y: c.b + 10 }, 10);
@@ -413,7 +413,7 @@ test('P4b After dragging a thumbnail to another place, Delete deletes the moved 
   u.clean();
 }));
 
-test('P6a Shift+click on a text box adds it to the selection, without editing it', () => lectern(async (u) => {
+test('P6a Shift+click on a text box adds it to the selection, without editing it', () => pptx(async (u) => {
   await setup(u, BOXES);
   await u.click(await at(u, 'boxA', 3));
   await u.esc();
@@ -423,7 +423,7 @@ test('P6a Shift+click on a text box adds it to the selection, without editing it
   u.clean();
 }));
 
-test('P6b Ctrl+click on a text box adds it to the selection, without editing it', () => lectern(async (u) => {
+test('P6b Ctrl+click on a text box adds it to the selection, without editing it', () => pptx(async (u) => {
   await setup(u, `${BOXES}, ${RECT}`);
   await u.click(await shapeBox(u, 'rectR'));
   assert.deepEqual(await state(u), { editing: null, sel: ['rectR'] }, 'setup: the rectangle selected');
@@ -432,7 +432,7 @@ test('P6b Ctrl+click on a text box adds it to the selection, without editing it'
   u.clean();
 }));
 
-test('P8 Dragging across the cells of a table selects cells; the table does not move', () => lectern(async (u) => {
+test('P8 Dragging across the cells of a table selects cells; the table does not move', () => pptx(async (u) => {
   await setup(u, `table('tbl', 100, 150)`);
   await u.drag(await cell(u, 'tbl', 0, 0), await cell(u, 'tbl', 1, 2), 10);
   assert.deepEqual((await geo(u, 'tbl')).slice(0, 2), [100, 150], 'the table stays where it was');
@@ -442,7 +442,7 @@ test('P8 Dragging across the cells of a table selects cells; the table does not 
   u.clean();
 }));
 
-test('P9 A click into one cell clears the highlight of a selected range of cells', () => lectern(async (u) => {
+test('P9 A click into one cell clears the highlight of a selected range of cells', () => pptx(async (u) => {
   await setup(u, `table('tbl', 100, 150)`);
   const highlights = () => u.evaluate(`document.querySelectorAll('.cell-sel').length`);
   await u.click(await cell(u, 'tbl', 0, 0));
@@ -453,7 +453,7 @@ test('P9 A click into one cell clears the highlight of a selected range of cells
   u.clean();
 }));
 
-test('P11 Editing text, a click on the hatched border selects the box as an object: Delete deletes it', () => lectern(async (u) => {
+test('P11 Editing text, a click on the hatched border selects the box as an object: Delete deletes it', () => pptx(async (u) => {
   await setup(u, BOXES);
   await u.click(await at(u, 'boxA', 3));
   const ring = await u.el('.edit-ring');
@@ -475,7 +475,7 @@ async function zoomAndScroll(u) {
   };
 }
 
-test('P12a Dragging the scroll bar keeps the selection', () => lectern(async (u) => {
+test('P12a Dragging the scroll bar keeps the selection', () => pptx(async (u) => {
   await setup(u, `rect('rectR', 30, 30, 100, 60)`);
   const scroll = await zoomAndScroll(u);
   await u.click(await shapeBox(u, 'rectR'));
@@ -485,7 +485,7 @@ test('P12a Dragging the scroll bar keeps the selection', () => lectern(async (u)
   u.clean();
 }));
 
-test('P12b Dragging the scroll bar keeps text editing', () => lectern(async (u) => {
+test('P12b Dragging the scroll bar keeps text editing', () => pptx(async (u) => {
   await setup(u, `box('boxA', 30, 30, 'Alpha beta gamma delta epsilon')`);
   const scroll = await zoomAndScroll(u);
   await u.click(await at(u, 'boxA', 3));
@@ -495,7 +495,7 @@ test('P12b Dragging the scroll bar keeps text editing', () => lectern(async (u) 
   u.clean();
 }));
 
-test('P13 A double-click on a word in an unselected AutoShape selects the word', () => lectern(async (u) => {
+test('P13 A double-click on a word in an unselected AutoShape selects the word', () => pptx(async (u) => {
   await setup(u, `rect('rectT', 80, 120, 420, 100, 'Alpha beta gamma delta')`);
   await u.dblclick(await at(u, 'rectT', 8));
   assert.equal((await state(u)).editing, 'rectT', 'its text is edited');
@@ -503,7 +503,7 @@ test('P13 A double-click on a word in an unselected AutoShape selects the word',
   u.clean();
 }));
 
-test('P4c A thumbnail drawn again after an edit keeps its elements, so a press on it in the meantime keeps its click', () => lectern(async (u) => {
+test('P4c A thumbnail drawn again after an edit keeps its elements, so a press on it in the meantime keeps its click', () => pptx(async (u) => {
   await setup(u, BOXES, 2);
   await u.evaluate(`window.__frame = document.querySelector('.th[data-i="0"] .th-frame')`);
   await u.click(await at(u, 'boxA', 3));
@@ -514,7 +514,7 @@ test('P4c A thumbnail drawn again after an edit keeps its elements, so a press o
   u.clean();
 }));
 
-test('A history step recorded in the middle of a drag cancels the drag first: the shape is back, one step to undo', () => lectern(async (u) => {
+test('A history step recorded in the middle of a drag cancels the drag first: the shape is back, one step to undo', () => pptx(async (u) => {
   await setup(u, RECT);
   await u.click(await shapeBox(u, 'rectR'));
   const b = await shapeBox(u, 'rectR');
@@ -531,7 +531,7 @@ test('A history step recorded in the middle of a drag cancels the drag first: th
 
 /* ---------- Phase 5: the rest ---------- */
 
-test('P15 "Click to add first slide" in an empty presentation adds a slide', () => lectern(async (u) => {
+test('P15 "Click to add first slide" in an empty presentation adds a slide', () => pptx(async (u) => {
   await u.evaluate(`(() => { L.pres.slides.length = 0; L.ed.goto(0); L.panes.left.render(); })()`);
   await pause(300);
   await u.click(await u.el('.ed-empty'));
@@ -539,7 +539,7 @@ test('P15 "Click to add first slide" in an empty presentation adds a slide', () 
   u.clean();
 }));
 
-test('A thumbnail dragged and let go over the slide moves no slide', () => lectern(async (u) => {
+test('A thumbnail dragged and let go over the slide moves no slide', () => pptx(async (u) => {
   await setup(u, '', 3);
   const a = await thumb(u, 0), mid = await slidePt(u, 480, 270);
   await u.drag(a, mid, 10);
@@ -548,7 +548,7 @@ test('A thumbnail dragged and let go over the slide moves no slide', () => lecte
   u.clean();
 }));
 
-test('Typing over a range of table cells goes into the first cell and ends the range; Delete empties the range, one Undo brings it back', () => lectern(async (u) => {
+test('Typing over a range of table cells goes into the first cell and ends the range; Delete empties the range, one Undo brings it back', () => pptx(async (u) => {
   await setup(u, `table('tbl', 100, 150)`);
   const cellText = (r, c) => u.evaluate(`L.txt.paraText(L.ed.shape('tbl').tbl.rows[${r}].cells[${c}].tx.ps[0])`);
   await u.click(await cell(u, 'tbl', 0, 0));
@@ -572,7 +572,7 @@ test('Typing over a range of table cells goes into the first cell and ends the r
   u.clean();
 }));
 
-test('Slide show: the pen let go in another tab draws nothing after it', () => lectern(async (u) => {
+test('Slide show: the pen let go in another tab draws nothing after it', () => pptx(async (u) => {
   await setup(u, '', 2);
   await u.key('F5'); await pause(800);
   await u.key('p', { ctrl: true }); await pause(200);

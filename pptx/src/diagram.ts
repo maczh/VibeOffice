@@ -259,7 +259,7 @@ export function installPptxDiagram(runtime: Window): void {
     E().render(); E().touched();
     DG.showPane(true);
     /* with the ribbon, SmartArt Tools ▸ Design opens, as in PowerPoint */
-    if (L.ribbonUI && L.ribbonUI.built && L.ribbonUI.built()) { ui.refresh(); setTimeout(() => L.ribbonUI.select('smartartDesign'), 60); }
+    if (L.ribbonUI && L.ribbonUI.built && L.ribbonUI.built()) { ui.refresh(); L.app.onMountTimeout(() => L.ribbonUI.select('smartartDesign'), 60); }
   };
 
   /** items from outline lines: '\t' before a line makes it a sub-item of the line above */

@@ -19,6 +19,28 @@ const editors = [
   { component: PptxEditor, label: 'PPTX editor', id: 'pptx' },
 ];
 
+test('shared package declares every React runtime it imports as a peer dependency', () => {
+  const metadata = JSON.parse(readFileSync(new URL('../../commonx/package.json', import.meta.url), 'utf8'));
+  assert.equal(metadata.peerDependencies.react, '^19.0.0');
+  assert.equal(metadata.peerDependencies['react-dom'], '^19.0.0');
+  assert.match(readFileSync(new URL('../../commonx/src/legacy-dialog.tsx', import.meta.url), 'utf8'), /from 'react-dom\/client'/);
+});
+
+test('quick checks and testing docs use the branded app UI suite paths', () => {
+  const quick = readFileSync(new URL('../../tools/quick.mjs', import.meta.url), 'utf8');
+  const docs = readFileSync(new URL('../../docs/testing.md', import.meta.url), 'utf8');
+  for (const app of ['wordx', 'excelx', 'pptx']) {
+    const path = `tests/ui/${app}.test.mjs`;
+    assert.match(quick, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(docs, new RegExp(`${app}\\.test\\.mjs`));
+    assert.ok(readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8').length > 0, `${path} exists`);
+  }
+  for (const oldPath of ['quire', 'ledger', 'lectern']) {
+    assert.doesNotMatch(quick, new RegExp(`tests/ui/${oldPath}\\.test\\.mjs`));
+    assert.doesNotMatch(docs, new RegExp(`${oldPath}\\.test\\.mjs`));
+  }
+});
+
 test('a host can mount each editor package through its public React export', () => {
   for (const { component, label, id } of editors) {
     const html = renderToStaticMarkup(createElement(component, { className: 'host-embed', services: { translate: (message) => message } }));
@@ -88,6 +110,16 @@ test('React editor runtime manifests preserve ordered classic scripts and recove
     { css: '.shell{display:flex}', media: 'screen' },
   ]);
   assert.deepEqual(manifest.scripts, ['../common/core.js', 'js/app.js']);
+});
+
+test('React entries initialize shared appearance services from the package instead of classic script tags', () => {
+  for (const page of ['wordx/index.html', 'excelx/index.html', 'pptx/index.html', 'suite/index.html']) {
+    const html = readFileSync(new URL(`../../${page}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(html, /<script\b[^>]*src=["'][^"']*\/common\/(?:look|lang|i18n)\.js["']/i, `${page} must bootstrap shared services from the React package`);
+  }
+  const runtime = readFileSync(new URL('../../commonx/src/runtime-services.ts', import.meta.url), 'utf8');
+  assert.match(runtime, /export function initializeSharedRuntime/);
+  assert.match(runtime, /export function installSharedRuntimeService/);
 });
 
 test('Excelx package stylesheet includes shared and feature-specific React dialog styles', () => {

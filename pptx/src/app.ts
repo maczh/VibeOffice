@@ -34,6 +34,11 @@ export function installPptxApp(runtime: Window): void {
     const frame = requestAnimationFrame(() => { removeCleanup(); callback(); });
     removeCleanup = L.addMountCleanup(() => cancelAnimationFrame(frame));
   }
+  function onMountTimeout(callback, delay) {
+    let removeCleanup = () => {};
+    const timer = setTimeout(() => { removeCleanup(); callback(); }, delay);
+    removeCleanup = L.addMountCleanup(() => clearTimeout(timer));
+  }
 
   const DEFAULT_OPTS = {
     startupPane: true, layoutPaneOnNew: true, paneFollows: true, statusBar: true, ruler: false, showPopup: true, showPopbar: true, endBlack: true,
@@ -49,6 +54,7 @@ export function installPptxApp(runtime: Window): void {
     lastFill: 'accent1', lastLineColor: 'tx1', lastFontColor: '#FF0000',
   }));
   A.onMountFrame = onNextFrame;
+  A.onMountTimeout = onMountTimeout;
 
   /* ================= options ================= */
   A.loadOpts = () => {

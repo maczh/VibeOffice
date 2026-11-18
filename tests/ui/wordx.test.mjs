@@ -1,4 +1,4 @@
-// Quire with real mouse and keyboard input (tests/lib/input.mjs). A test named after an audit item (Q1…) checks what
+// Wordx with real mouse and keyboard input (tests/lib/input.mjs). A test named after an audit item (Q1…) checks what
 // Word does there and stays `todo` until the item is fixed (todos/UI_MOUSE_LOGIC_IMPROVE.md); the rest must pass.
 //
 //   node --test --test-concurrency=1 tests/ui/*.test.mjs
@@ -6,12 +6,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { open, pause } from '../lib/input.mjs';
 
-/* ---------- the audit (todos/UI_MOUSE_LOGIC_IMPROVE.md, Audit › Quire): one test per item, each in a tab of its own,
+/* ---------- the audit (todos/UI_MOUSE_LOGIC_IMPROVE.md, Wordx audit): one test per item, each in a tab of its own,
    so a failing one leaves no dialog, menu or focus behind ---------- */
 
-/** fn(u) in a new Quire tab on a document made by `build` (page code; D, and d the new document, in scope; it may
+/** fn(u) in a new Wordx tab on a document made by `build` (page code; D, and d the new document, in scope; it may
     await), the caret at the start; then no browser errors */
-async function inQuire(build, fn, opts) {
+async function inWordx(build, fn, opts) {
   const u = await open('quire', opts);
   try {
     await u.evaluate(`(async () => {
@@ -98,7 +98,7 @@ test('the default Wordx sample and author metadata use the rebranded product nam
   } finally { await u.close(); }
 });
 
-test('the highlighter marks the whole drag, as one undo step', () => inQuire(PARAS(TEXT), async (u) => {
+test('the highlighter marks the whole drag, as one undo step', () => inWordx(PARAS(TEXT), async (u) => {
   await u.click(await u.button('highlightBtn'));
   assert.equal(await u.painting(), true, 'the Highlight button with no selection arms the highlighter');
   const undo0 = await undoSteps(u);
@@ -110,7 +110,7 @@ test('the highlighter marks the whole drag, as one undo step', () => inQuire(PAR
 }, { look: 'classic' }));
 
 for (const leave of ['a click into text', 'Esc']) {
-  test(`a drawn shape's handles go after ${leave}, and a click selects it again`, () => inQuire(PARAS(TEXT), async (u) => {
+  test(`a drawn shape's handles go after ${leave}, and a click selects it again`, () => inWordx(PARAS(TEXT), async (u) => {
     await u.click(await u.button('drawRect'));
     const corner = await atB(u, 1, 10);
     await u.drag({ x: corner.x + 300, y: corner.y + 40 }, { x: corner.x + 400, y: corner.y + 120 }, 4);
@@ -125,7 +125,7 @@ for (const leave of ['a click into text', 'Esc']) {
 /* ---------- the audit items ---------- */
 
 const FIND = ['Alpha beta gamma.', 'Second beta paragraph.', 'Third beta paragraph.'];
-test('Q1 Find Next keeps the keyboard in the Find box: a second Enter finds the next match and never edits the text', () => inQuire(PARAS(FIND), async (u) => {
+test('Q1 Find Next keeps the keyboard in the Find box: a second Enter finds the next match and never edits the text', () => inWordx(PARAS(FIND), async (u) => {
   await u.key('f', { ctrl: true }); await pause(300);
   await u.type('beta');
   await u.key('Enter'); await u.key('Enter');
@@ -137,7 +137,7 @@ test('Q1 Find Next keeps the keyboard in the Find box: a second Enter finds the 
   assert.equal((await body(u))[1], 'Second X paragraph.', 'after the box closes, typing replaces the found text');
 }));
 
-test('Find and Replace: Replace goes one match at a time and keeps the keyboard; typing after Esc replaces the next match', () => inQuire(PARAS(FIND), async (u) => {
+test('Find and Replace: Replace goes one match at a time and keeps the keyboard; typing after Esc replaces the next match', () => inWordx(PARAS(FIND), async (u) => {
   await u.key('h', { ctrl: true }); await pause(300);
   await u.type('beta');
   await u.click(await u.el('#fr-repl')); await u.type('X');
@@ -150,7 +150,7 @@ test('Find and Replace: Replace goes one match at a time and keeps the keyboard;
   assert.equal((await body(u))[2], 'Third Y paragraph.', 'typing replaces the match found next');
 }));
 
-test('R2 Find after a floating shape was selected: the found word is the selection, typing replaces it, the shape stays', () => inQuire(PARAS(FIND) + SHAPE(2), async (u) => {
+test('R2 Find after a floating shape was selected: the found word is the selection, typing replaces it, the shape stays', () => inWordx(PARAS(FIND) + SHAPE(2), async (u) => {
   const text = await body(u);
   await u.click(await u.el('#pages .flt'));
   const shape0 = await u.el('#pages .flt');
@@ -164,7 +164,7 @@ test('R2 Find after a floating shape was selected: the found word is the selecti
   assert.ok(near(await u.el('#pages .flt'), shape0), 'and where it was');
 }));
 
-test('R3 after a press let go in another window, moving the caret into a template placeholder still selects it', () => inQuire(PLACEHOLDER, async (u) => {
+test('R3 after a press let go in another window, moving the caret into a template placeholder still selects it', () => inWordx(PLACEHOLDER, async (u) => {
   await u.press(await atB(u, 0, 2));
   await u.releaseInOtherTab();
   let s = '';
@@ -172,7 +172,7 @@ test('R3 after a press let go in another window, moving the caret into a templat
   assert.equal(s, '[Click here and type name]', 'the whole placeholder is selected');
 }));
 
-test('R3b a text selection let go in another window paints nothing, and the painter stays on', () => inQuire(PARAS(TEXT), async (u) => {
+test('R3b a text selection let go in another window paints nothing, and the painter stays on', () => inWordx(PARAS(TEXT), async (u) => {
   await u.click(await atB(u, 0, 2));
   await u.click(await u.button('painter'));
   await u.press(await atB(u, 1, 7)); await u.glide(await atB(u, 1, 7), await atB(u, 1, 16), 5);
@@ -184,7 +184,7 @@ test('R3b a text selection let go in another window paints nothing, and the pain
 }, { look: 'classic' }));
 
 const SHAPE_DOC = ['First paragraph of ordinary text for clicking.', 'Second paragraph of ordinary text.', 'Third paragraph.'];
-test('Q2 Enter or Tab on a selected floating shape keeps the shape and leaves the text alone', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('Q2 Enter or Tab on a selected floating shape keeps the shape and leaves the text alone', () => inWordx(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   const text = await body(u);   // the shape's anchor is a character of block 1
   for (const k of ['Enter', 'Tab']) {
     await u.click(await atB(u, 0, 5));
@@ -197,7 +197,7 @@ test('Q2 Enter or Tab on a selected floating shape keeps the shape and leaves th
 
 const PLACEHOLDER = `d.main.blocks = [D.para([D.text('Dear '), D.item('fb', { fid: 'f1', instr: ' MACROBUTTON  DoFieldClick [Click here and type name] ' }), D.item('fs', { fid: 'f1' }),
   D.text('[Click here and type name]'), D.item('fe', { fid: 'f1' }), D.text(', thank you for the long letter you sent.')]), D.para([D.text('Second paragraph.')])];`;
-test('Q3 a drag that starts inside a template placeholder selects from there, and never moves the placeholder', () => inQuire(PLACEHOLDER, async (u) => {
+test('Q3 a drag that starts inside a template placeholder selects from there, and never moves the placeholder', () => inWordx(PLACEHOLDER, async (u) => {
   const before = await body(u), undo0 = await undoSteps(u);
   await u.click(await atB(u, 1, 3));
   await u.drag(await atB(u, 0, 15), await atB(u, 0, 45));   // from "[Click he|re" to "thank you fo|r"
@@ -206,7 +206,7 @@ test('Q3 a drag that starts inside a template placeholder selects from there, an
   assert.match(await selected(u), /, thank you/, 'the selection runs from the placeholder to where the mouse was let go');
 }));
 
-test('a click on a template placeholder selects all of it, and typing replaces it', () => inQuire(PLACEHOLDER, async (u) => {
+test('a click on a template placeholder selects all of it, and typing replaces it', () => inWordx(PLACEHOLDER, async (u) => {
   await u.click(await atB(u, 0, 12));
   assert.equal(await selected(u), '[Click here and type name]', 'the whole placeholder is selected');
   await u.type('Ann');
@@ -214,7 +214,7 @@ test('a click on a template placeholder selects all of it, and typing replaces i
 }));
 
 const DND = ['Alpha beta gamma delta.', 'Second paragraph of ordinary text.', 'Third paragraph.'];
-test('Q4 after a text drag dropped outside the document, text dragged in from the font box is inserted and nothing else moves', () => inQuire(PARAS(DND), async (u) => {
+test('Q4 after a text drag dropped outside the document, text dragged in from the font box is inserted and nothing else moves', () => inWordx(PARAS(DND), async (u) => {
   await u.drag(await atB(u, 0, 6), await atB(u, 0, 10), 4);         // select "beta"
   await u.drag(await atB(u, 0, 7), await u.el('#statusbar'), 10);   // drop it on the status bar: nothing happens
   assert.equal((await body(u))[0], DND[0], 'a drop outside the document changes nothing');
@@ -227,7 +227,7 @@ test('Q4 after a text drag dropped outside the document, text dragged in from th
   assert.ok(name && text[2].includes(name), `the name "${name}" is in the third paragraph: "${text[2]}"`);
 }));
 
-test('Q5 a word moved forward in its paragraph: typing next goes at the moved word', () => inQuire(PARAS(['Alpha beta gamma delta epsilon zeta eta theta.', 'Second paragraph.']), async (u) => {
+test('Q5 a word moved forward in its paragraph: typing next goes at the moved word', () => inWordx(PARAS(['Alpha beta gamma delta epsilon zeta eta theta.', 'Second paragraph.']), async (u) => {
   await u.drag(await atB(u, 0, 6), await atB(u, 0, 11), 4);    // "beta "
   await u.drag(await atB(u, 0, 7), await atB(u, 0, 23), 10);   // dropped before "epsilon"
   assert.equal((await body(u))[0], 'Alpha gamma delta beta epsilon zeta eta theta.', 'moved');
@@ -237,7 +237,7 @@ test('Q5 a word moved forward in its paragraph: typing next goes at the moved wo
 }));
 /** the text of block b as it shows with Track Changes: deleted runs left out */
 const shown = (u, b) => u.evaluate(`L.D.doc.main.blocks[${b}].runs.filter((r) => !(r.rPr && r.rPr.del)).map((r) => r.text || '').join('')`);
-test('Q5 tracked: a word moved forward in its paragraph lands at the drop caret (the deleted source stays in place)', () => inQuire(PARAS(['Alpha beta gamma delta epsilon zeta eta theta.', 'Second paragraph.']) + 'd.settings.track = true;', async (u) => {
+test('Q5 tracked: a word moved forward in its paragraph lands at the drop caret (the deleted source stays in place)', () => inWordx(PARAS(['Alpha beta gamma delta epsilon zeta eta theta.', 'Second paragraph.']) + 'd.settings.track = true;', async (u) => {
   await u.drag(await atB(u, 0, 6), await atB(u, 0, 11), 4);    // "beta "
   await u.drag(await atB(u, 0, 7), await atB(u, 0, 23), 10);   // dropped before "epsilon"
   assert.equal(await shown(u, 0), 'Alpha gamma delta beta epsilon zeta eta theta.');
@@ -246,7 +246,7 @@ test('Q5 tracked: a word moved forward in its paragraph lands at the drop caret 
 const FOCUS = ['First paragraph of text.', 'Second paragraph of ordinary text.', 'Third paragraph.'];
 const FOCUS_Z = ['First paragraph of text.', 'Second Z of ordinary text.', 'Third paragraph.'];
 for (const [id, close, how] of [['Q6a', 'Escape', 'Esc'], ['Q6b', 'Enter', 'Enter (OK)']]) {
-  test(`${id} the Font dialog (Ctrl+D) closed with ${how}: the selection is kept and typing replaces it`, () => inQuire(PARAS(FOCUS), async (u) => {
+  test(`${id} the Font dialog (Ctrl+D) closed with ${how}: the selection is kept and typing replaces it`, () => inWordx(PARAS(FOCUS), async (u) => {
     await u.drag(await atB(u, 1, 7), await atB(u, 1, 16), 6);   // "paragraph"
     await u.key('d', { ctrl: true }); await pause(300);
     assert.ok(await u.el('.dlg'), 'the Font dialog is open');
@@ -255,7 +255,7 @@ for (const [id, close, how] of [['Q6a', 'Escape', 'Esc'], ['Q6b', 'Enter', 'Ente
     assert.deepEqual(await body(u), FOCUS_Z);
   }));
 }
-test('Q6c View ▸ Ruler chosen with the mouse: typing still goes to the document, replacing the selection', () => inQuire(PARAS(FOCUS), async (u) => {
+test('Q6c View ▸ Ruler chosen with the mouse: typing still goes to the document, replacing the selection', () => inWordx(PARAS(FOCUS), async (u) => {
   await u.drag(await atB(u, 1, 7), await atB(u, 1, 16), 6);
   try {
     await u.menu('View', 'Ruler');
@@ -265,7 +265,7 @@ test('Q6c View ▸ Ruler chosen with the mouse: typing still goes to the documen
     await u.evaluate(`if (!L.app.opts.ruler) { L.app.opts.ruler = true; L.app.saveOpts(); L.app.updateRulers(); }`);
   }
 }, { look: 'classic' }));
-test('Q6d Format ▸ Paragraph… from the menu bar, closed with Esc: typing replaces the selection', () => inQuire(PARAS(FOCUS), async (u) => {
+test('Q6d Format ▸ Paragraph… from the menu bar, closed with Esc: typing replaces the selection', () => inWordx(PARAS(FOCUS), async (u) => {
   await u.drag(await atB(u, 1, 7), await atB(u, 1, 16), 6);
   await u.menu('Format', 'Paragraph');
   assert.ok(await u.el('.dlg'), 'the Paragraph dialog is open');
@@ -283,7 +283,7 @@ const toPage = (u, i) => u.evaluate(`(async () => { document.querySelectorAll('#
 /** the body block the text of page i starts with */
 const firstOnPage = (u, i) => u.evaluate(`L.D.doc.main.blocks.indexOf(L.D.byId(L.D.doc, +document.querySelectorAll('#pages .pg')[${i}].querySelector('.pg-body .p').dataset.pid))`);
 
-test('Q7 while the header is edited, a click on the dimmed body text leaves the body alone (Enter, Delete, Backspace, letters)', () => inQuire(PARAS(SHORT) + HEADER, async (u) => {
+test('Q7 while the header is edited, a click on the dimmed body text leaves the body alone (Enter, Delete, Backspace, letters)', () => inWordx(PARAS(SHORT) + HEADER, async (u) => {
   const h = await hdrBox(u, 0);
   await u.dblclick({ x: h.r - 40, y: h.y });
   assert.ok(await editingHeader(u), 'editing the header');
@@ -293,7 +293,7 @@ test('Q7 while the header is edited, a click on the dimmed body text leaves the 
   assert.deepEqual(await body(u), SHORT, 'the body is not edited');
 }));
 
-test('Q8a a double-click on page 2\'s header opens it there: the view stays on page 2, the caret where double-clicked', () => inQuire(PARAS(LONG) + HEADER, async (u) => {
+test('Q8a a double-click on page 2\'s header opens it there: the view stays on page 2, the caret where double-clicked', () => inWordx(PARAS(LONG) + HEADER, async (u) => {
   await toPage(u, 1);
   const h = await hdrBox(u, 1);
   await u.dblclick({ x: h.r - 40, y: h.y });   // to the right of "Header text"
@@ -303,7 +303,7 @@ test('Q8a a double-click on page 2\'s header opens it there: the view stays on p
   await u.type('H');
   assert.equal(await u.evaluate(`L.D.ptext(L.D.doc.hf.h1.blocks[0])`), 'Header textH', 'typing goes where the double-click was');
 }));
-test('Q8b Esc closes the header and the caret is back where it was in the body', () => inQuire(PARAS(LONG) + HEADER, async (u) => {
+test('Q8b Esc closes the header and the caret is back where it was in the body', () => inWordx(PARAS(LONG) + HEADER, async (u) => {
   await toPage(u, 1);
   const n = (await firstOnPage(u, 1)) + 3;
   await u.click(await atB(u, n, 4));
@@ -315,7 +315,7 @@ test('Q8b Esc closes the header and the caret is back where it was in the body',
   await u.type('Z');
   assert.equal((await body(u))[n], `ParaZgraph ${n} with some words.`);
 }));
-test('Q8c a double-click on the body closes the header, with the caret where double-clicked', () => inQuire(PARAS(SHORT) + HEADER, async (u) => {
+test('Q8c a double-click on the body closes the header, with the caret where double-clicked', () => inWordx(PARAS(SHORT) + HEADER, async (u) => {
   const h = await hdrBox(u, 0);
   await u.dblclick({ x: h.r - 40, y: h.y });
   assert.ok(await editingHeader(u), 'editing the header');
@@ -325,7 +325,7 @@ test('Q8c a double-click on the body closes the header, with the caret where dou
   await u.type('Z');
   assert.equal((await body(u))[3], 'Paragraph 3 with some words.Z');
 }));
-test('Q8d a double-click in the top margin opens the (empty) header for editing', () => inQuire(PARAS(SHORT), async (u) => {
+test('Q8d a double-click in the top margin opens the (empty) header for editing', () => inWordx(PARAS(SHORT), async (u) => {
   const m = await u.evaluate(`(() => { const p = document.querySelector('#pages .pg'), pr = p.getBoundingClientRect(), b = p.querySelector('.pg-body').getBoundingClientRect(); return { x: b.left + 100, y: (pr.top + b.top) / 2 }; })()`);
   await u.dblclick(m);
   assert.ok(await editingHeader(u), 'editing the header');
@@ -334,7 +334,7 @@ test('Q8d a double-click in the top margin opens the (empty) header for editing'
   assert.deepEqual(await body(u), SHORT, 'the body is not edited');
 }));
 
-test('Q9 a right-click in a table cell, the caret outside the table: the first menu already has the table commands', () => inQuire(PARAS(['First paragraph of text.', 'Second paragraph.']) + TABLE(1), async (u) => {
+test('Q9 a right-click in a table cell, the caret outside the table: the first menu already has the table commands', () => inWordx(PARAS(['First paragraph of text.', 'Second paragraph.']) + TABLE(1), async (u) => {
   await u.click(await atB(u, 0, 3));
   await u.rightClick(await pointIn(u, 'B[1].rows[0].cells[0].blocks[0]', 3));
   assert.ok((await u.menuItems()).includes('Table Properties...'), `the menu: ${(await u.menuItems()).join(', ')}`);
@@ -342,7 +342,7 @@ test('Q9 a right-click in a table cell, the caret outside the table: the first m
 }));
 
 const PIC = ['First paragraph of text.', 'Picture here and text after it.', 'Third paragraph with words.'];
-test('Q10 a right-click on a picture, selected or not, selects it (handles shown) and offers Picture…', () => inQuire(PARAS(PIC) + PICTURE(1, 5), async (u) => {
+test('Q10 a right-click on a picture, selected or not, selects it (handles shown) and offers Picture…', () => inWordx(PARAS(PIC) + PICTURE(1, 5), async (u) => {
   const handles = () => u.evaluate(`document.querySelectorAll('.obj-handles').length`);
   const pic = await u.el('#pages .img');
   await u.click(pic);
@@ -358,7 +358,7 @@ test('Q10 a right-click on a picture, selected or not, selects it (handles shown
   await u.esc();
 }));
 
-test('Q11 Ctrl+click selects the sentence clicked, so typing replaces it', () => inQuire(PARAS(['First sentence here. Second sentence follows. Third one ends it.', 'Another paragraph.']), async (u) => {
+test('Q11 Ctrl+click selects the sentence clicked, so typing replaces it', () => inWordx(PARAS(['First sentence here. Second sentence follows. Third one ends it.', 'Another paragraph.']), async (u) => {
   await u.click(await atB(u, 0, 3));
   await u.click(await atB(u, 0, 50), { ctrl: true });   // in "Third one ends it."
   await u.type('X');
@@ -367,25 +367,25 @@ test('Q11 Ctrl+click selects the sentence clicked, so typing replaces it', () =>
 
 const ALPHA = 'Alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega.';
 const SELBAR = [`${ALPHA} ${ALPHA} ${ALPHA}`, 'Second paragraph here. It has two sentences.', 'Third paragraph text.'];
-test('Q12a a drag down the selection bar selects whole lines, down to the line at the pointer', () => inQuire(PARAS(SELBAR), async (u) => {
+test('Q12a a drag down the selection bar selects whole lines, down to the line at the pointer', () => inWordx(PARAS(SELBAR), async (u) => {
   await u.drag(await margin(u, 0, 0), await margin(u, 1, 0), 10);
   const s = await selected(u);
   assert.ok(s.startsWith('Alpha beta') && s.includes('It has two sentences.'), `selected: "${s.slice(0, 30)}…${s.slice(-30)}"`);
 }));
-test('Q12b Shift+click in the selection bar extends the selection to that line', () => inQuire(PARAS(SELBAR), async (u) => {
+test('Q12b Shift+click in the selection bar extends the selection to that line', () => inWordx(PARAS(SELBAR), async (u) => {
   await u.click(await atB(u, 2, 5));
   await u.click(await margin(u, 0, 0), { shift: true });
   const s = await selected(u);
   assert.ok(s.startsWith('Alpha beta') && s.includes('Second paragraph here') && s.endsWith('Third'), `selected: "${s.slice(0, 30)}…${s.slice(-30)}"`);
 }));
-test('Q12c a triple-click in the selection bar selects the whole document', () => inQuire(PARAS(SELBAR), async (u) => {
+test('Q12c a triple-click in the selection bar selects the whole document', () => inWordx(PARAS(SELBAR), async (u) => {
   await u.clicks(await margin(u, 1, 0), 3);
   const s = await selected(u);
   assert.ok(s.startsWith('Alpha beta') && s.includes('Third paragraph text.'), `selected: "${s.slice(0, 30)}…${s.slice(-30)}"`);
 }));
 
 test('Q13 a click that doesn\'t move on an indent marker, a tab stop or the rotate handle changes nothing',
-  () => inQuire(PARAS(SHAPE_DOC) + `d.main.blocks[0].pPr = { ind: { l: 25, fl: 0 }, tabs: [{ pos: 100, al: 'left' }] };` + SHAPE(1), async (u) => {
+  () => inWordx(PARAS(SHAPE_DOC) + `d.main.blocks[0].pPr = { ind: { l: 25, fl: 0 }, tabs: [{ pos: 100, al: 'left' }] };` + SHAPE(1), async (u) => {
     await u.click(await atB(u, 0, 5));
     const pPr = () => u.evaluate(`JSON.stringify(L.D.doc.main.blocks[0].pPr)`);
     const before = await pPr(), undo0 = await undoSteps(u);
@@ -398,7 +398,7 @@ test('Q13 a click that doesn\'t move on an indent marker, a tab stop or the rota
     assert.equal(await undoSteps(u), undo0, 'nothing to undo after the rotate handle click');
   }));
 
-test('Q14a Esc while a shape is being drawn (button still down) cancels it: nothing is inserted', () => inQuire(PARAS(SHAPE_DOC), async (u) => {
+test('Q14a Esc while a shape is being drawn (button still down) cancels it: nothing is inserted', () => inWordx(PARAS(SHAPE_DOC), async (u) => {
   await u.click(await u.button('drawRect'));
   const a = await atB(u, 1, 10), from = { x: a.x + 300, y: a.y + 40 }, to = { x: a.x + 400, y: a.y + 120 };
   await u.press(from); await u.glide(from, to, 5);
@@ -408,7 +408,7 @@ test('Q14a Esc while a shape is being drawn (button still down) cancels it: noth
   assert.equal(await u.evaluate(`document.querySelectorAll('.draw-ghost').length`), 0, 'no outline left');
   assert.equal(await u.evaluate(`L.$('#scroller').classList.contains('drawing-mode')`), false, 'Esc also ends the tool');
 }, { look: 'classic' }));
-test('Q14b Esc while a shape is being moved cancels the move', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('Q14b Esc while a shape is being moved cancels the move', () => inWordx(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   const b0 = await u.el('#pages .flt > *'), to = { x: b0.x + 80, y: b0.y + 60 }, undo0 = await undoSteps(u);
   await u.press(b0); await u.glide(b0, to, 6);
   await u.esc();
@@ -416,7 +416,7 @@ test('Q14b Esc while a shape is being moved cancels the move', () => inQuire(PAR
   assert.ok(near(await u.el('#pages .flt > *'), b0), 'the shape is where it was');
   assert.equal(await undoSteps(u), undo0, 'nothing to undo');
 }));
-test('Q14c Esc while a picture is being resized cancels the resize', () => inQuire(PARAS(PIC) + PICTURE(1, 5), async (u) => {
+test('Q14c Esc while a picture is being resized cancels the resize', () => inWordx(PARAS(PIC) + PICTURE(1, 5), async (u) => {
   await u.click(await u.el('#pages .img'));
   const p0 = await u.el('#pages .img'), h = await u.el('.obj-handles .oh-se'), to = { x: h.x + 40, y: h.y + 30 };
   await u.press(h); await u.glide(h, to, 6);
@@ -426,14 +426,14 @@ test('Q14c Esc while a picture is being resized cancels the resize', () => inQui
   assert.deepEqual([Math.round(p1.r - p1.l), Math.round(p1.b - p1.t)], [Math.round(p0.r - p0.l), Math.round(p0.b - p0.t)], 'the picture keeps its size');
 }));
 
-test('Q15 a click on a floating shape ends the text selection: no text stays highlighted', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('Q15 a click on a floating shape ends the text selection: no text stays highlighted', () => inWordx(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   await u.drag(await atB(u, 0, 6), await atB(u, 0, 15), 6);
   assert.equal(await highlighted(u), 'paragraph', 'the word is selected');
   await u.click(await u.el('#pages .flt'));
   assert.ok(!(await highlighted(u)).includes('paragraph'), 'the word is no longer highlighted');
 }));
 
-test('Q16 a drag from a table cell down into the text selects whole rows, and Delete removes them', () => inQuire(PARAS(['First paragraph of text.', 'Second paragraph.', 'Third paragraph after the table.']) + TABLE(1), async (u) => {
+test('Q16 a drag from a table cell down into the text selects whole rows, and Delete removes them', () => inWordx(PARAS(['First paragraph of text.', 'Second paragraph.', 'Third paragraph after the table.']) + TABLE(1), async (u) => {
   await u.drag(await pointIn(u, 'B[1].rows[0].cells[0].blocks[0]', 2), await atB(u, 3, 5), 8);
   assert.equal(await u.evaluate(`document.querySelectorAll('#pages td.csel').length`), 4, 'every cell is highlighted');
   await u.key('Delete');
@@ -441,7 +441,7 @@ test('Q16 a drag from a table cell down into the text selects whole rows, and De
   assert.ok(!text.some(Array.isArray), 'the table is gone');
   assert.equal(text[0], 'First paragraph of text.');
 }));
-test('Q16 tracked: Delete over the rows and the text below marks them deleted, and Reject All brings everything back', () => inQuire(PARAS(['First paragraph of text.', 'Second paragraph.', 'Third paragraph after the table.']) + TABLE(1) + 'd.settings.track = true;', async (u) => {
+test('Q16 tracked: Delete over the rows and the text below marks them deleted, and Reject All brings everything back', () => inWordx(PARAS(['First paragraph of text.', 'Second paragraph.', 'Third paragraph after the table.']) + TABLE(1) + 'd.settings.track = true;', async (u) => {
   const before = await body(u);
   await u.drag(await pointIn(u, 'B[1].rows[0].cells[0].blocks[0]', 2), await atB(u, 3, 5), 8);
   await u.key('Delete');
@@ -456,7 +456,7 @@ const insertDiagram = async (u) => {
   await u.click(await u.el('.dlg .dlg-foot .btn.primary')); await pause(700);
   return u.evaluate(`[...document.querySelectorAll('#pages .shp.sgrp .shp')].map((e) => { const r = e.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), l: Math.round(r.left), t: Math.round(r.top), text: e.textContent.trim() }; })`);
 };
-test('A diagram\'s labels take a caret: a click on "Level 2" and typing edit that label, and the edit is saved', () => inQuire(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
+test('A diagram\'s labels take a caret: a click on "Level 2" and typing edit that label, and the edit is saved', () => inWordx(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
   await u.click(await atB(u, 0, 5));
   const kids = await insertDiagram(u);
   assert.deepEqual(kids.map((k) => k.text), ['Level 1', 'Level 2', 'Level 3'], 'setup: the pyramid');
@@ -470,7 +470,7 @@ test('A diagram\'s labels take a caret: a click on "Level 2" and typing edit tha
   assert.deepEqual(saved, ['Level 1', 'Level 2Z', 'Level 3'], 'saved and read back');
 }));
 
-test('The move cursor over a picture, shape or diagram (a drag moves it), the text cursor over its text', () => inQuire(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
+test('The move cursor over a picture, shape or diagram (a drag moves it), the text cursor over its text', () => inWordx(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
   await u.click(await atB(u, 0, 5));
   const kids = await insertDiagram(u);
   const cursorAt = (p) => u.evaluate(`getComputedStyle(document.elementFromPoint(${p.x}, ${p.y})).cursor`);
@@ -479,19 +479,19 @@ test('The move cursor over a picture, shape or diagram (a drag moves it), the te
   assert.equal(await cursorAt(label), 'text', 'on its text');
 }));
 
-test('Q17a with "Drag-and-drop text editing" off, a drag from selected text selects instead of moving', () => inQuire(PARAS(DND) + 'L.app.opts.dragDrop = false;', async (u) => {
+test('Q17a with "Drag-and-drop text editing" off, a drag from selected text selects instead of moving', () => inWordx(PARAS(DND) + 'L.app.opts.dragDrop = false;', async (u) => {
   await u.drag(await atB(u, 0, 6), await atB(u, 0, 10), 4);    // "beta"
   await u.drag(await atB(u, 0, 7), await atB(u, 2, 6), 10);    // from inside it to "Third |paragraph."
   assert.deepEqual(await body(u), DND, 'nothing moves');
   assert.ok((await selected(u)).endsWith('Third '), 'a new selection, to where the mouse was let go');
 }));
-test('Q17b an inline picture dragged to another place in the text moves there', () => inQuire(PARAS(PIC) + PICTURE(1, 5), async (u) => {
+test('Q17b an inline picture dragged to another place in the text moves there', () => inWordx(PARAS(PIC) + PICTURE(1, 5), async (u) => {
   const pic = await u.el('#pages .img');
   await u.click(pic);
   await u.drag(pic, await atB(u, 2, 6), 10);
   assert.equal(await u.evaluate(`L.D.doc.main.blocks.findIndex((b) => b.runs.some((r) => r.t === 'img'))`), 2, 'the picture is in the third paragraph');
 }));
-test('Q17c a right-click during a shape move cancels the move, and no menu opens', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('Q17c a right-click during a shape move cancels the move, and no menu opens', () => inWordx(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   const b0 = await u.el('#pages .flt > *'), to = { x: b0.x + 80, y: b0.y + 60 }, undo0 = await undoSteps(u);
   await u.press(b0); await u.glide(b0, to, 6);
   await u.press(to, { button: 'right' }); await u.release(to, { button: 'right' });
@@ -503,14 +503,14 @@ test('Q17c a right-click during a shape move cancels the move, and no menu opens
 
 /* the structure under the fixes (Phases 4 and 5): one way into and out of an object selection, the text press on
    ui.drag, and no edit in the middle of a drag */
-test('any text selection ends an object selection: Ctrl+Home after a floating shape is clicked, then typing goes to the text', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('any text selection ends an object selection: Ctrl+Home after a floating shape is clicked, then typing goes to the text', () => inWordx(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   await u.click(await u.el('#pages .flt'));
   await u.key('Home', { ctrl: true });
   await u.type('Z');
   assert.equal((await body(u))[0], 'Z' + SHAPE_DOC[0], 'typed at the start of the document');
   assert.deepEqual(await objectState(u), { handles: 0, outlined: 0, selected: false }, 'the shape is no longer selected');
 }));
-test('a right-click in the middle of a text selection ends it: the painter paints nothing and stays on, no menu opens', () => inQuire(PARAS(TEXT), async (u) => {
+test('a right-click in the middle of a text selection ends it: the painter paints nothing and stays on, no menu opens', () => inWordx(PARAS(TEXT), async (u) => {
   await u.click(await atB(u, 0, 2));
   await u.click(await u.button('painter'));
   const a = await atB(u, 1, 7), b = await atB(u, 1, 16);
@@ -522,7 +522,7 @@ test('a right-click in the middle of a text selection ends it: the painter paint
   assert.equal(await u.painting(), true, 'the painter is still on');
   await u.esc();
 }, { look: 'classic' }));
-test('an edit in the middle of a shape move ends the move first: the shape stays, the edit is the only step', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('an edit in the middle of a shape move ends the move first: the shape stays, the edit is the only step', () => inWordx(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   const b0 = await u.el('#pages .flt > *'), to = { x: b0.x + 80, y: b0.y + 60 }, undo0 = await undoSteps(u);
   await u.press(b0); await u.glide(b0, to, 6);
   await u.evaluate(`L.ed.edit('Typing', () => L.O.insertText(L.D.pos(L.D.doc.main.blocks[2], 0), 'Q', {}))`);   // as a timer or another window would
@@ -532,8 +532,8 @@ test('an edit in the middle of a shape move ends the move first: the shape stays
   assert.equal((await body(u))[2], 'Q' + SHAPE_DOC[2]);
 }));
 
-/* what Quire's drags still do on the shared drag lifecycle (ui.drag): each commits on release, as one undo step */
-test('drags on a shape move, resize and rotate it; a picture\'s handle resizes it', () => inQuire(PARAS(PIC) + PICTURE(1, 5) + SHAPE(2), async (u) => {
+/* what Wordx's drags still do on the shared drag lifecycle (ui.drag): each commits on release, as one undo step */
+test('drags on a shape move, resize and rotate it; a picture\'s handle resizes it', () => inWordx(PARAS(PIC) + PICTURE(1, 5) + SHAPE(2), async (u) => {
   const box = () => u.el('#pages .flt > *');
   const b0 = await box();
   await u.drag(b0, { x: b0.x + 60, y: b0.y + 40 });
@@ -557,7 +557,7 @@ test('drags on a shape move, resize and rotate it; a picture\'s handle resizes i
   assert.deepEqual(await undoLabels(u), ['Move Object', 'Resize Object', 'Rotate', 'Resize Picture']);
 }));
 
-test('the drawing tool: a drag draws the shape that size, a click puts one of the default size', () => inQuire(PARAS(SHAPE_DOC), async (u) => {
+test('the drawing tool: a drag draws the shape that size, a click puts one of the default size', () => inWordx(PARAS(SHAPE_DOC), async (u) => {
   const a = await atB(u, 1, 10);
   await u.click(await u.button('drawRect'));
   await u.drag({ x: a.x + 300, y: a.y + 40 }, { x: a.x + 400, y: a.y + 120 }, 5);
@@ -570,7 +570,7 @@ test('the drawing tool: a drag draws the shape that size, a click puts one of th
   assert.deepEqual(await undoLabels(u), ['Insert AutoShape', 'Insert AutoShape']);
 }, { look: 'classic' }));
 
-test('the ruler: a drag moves the left indent or a tab stop, a click sets a tab stop, a tab stop dragged off goes; Esc puts a marker back', () => inQuire(PARAS(SHAPE_DOC) + `d.main.blocks[0].pPr = { ind: { l: 18 }, tabs: [{ pos: 108, al: 'left' }] };`, async (u) => {
+test('the ruler: a drag moves the left indent or a tab stop, a click sets a tab stop, a tab stop dragged off goes; Esc puts a marker back', () => inWordx(PARAS(SHAPE_DOC) + `d.main.blocks[0].pPr = { ind: { l: 18 }, tabs: [{ pos: 108, al: 'left' }] };`, async (u) => {
   await u.click(await atB(u, 0, 5));
   const pPr = () => u.evaluate(`L.D.doc.main.blocks[0].pPr`);
   let m = await u.el('.rmark.ind-left');
@@ -595,7 +595,7 @@ test('the ruler: a drag moves the left indent or a tab stop, a click sets a tab 
   assert.deepEqual(await undoLabels(u), ['Left Indent', 'Move Tab', 'Clear Tab', 'Set Tab']);
 }));
 
-test('a table\'s column border: a drag sets the widths; a click or Esc leaves them', () => inQuire(PARAS(['First paragraph of text.', 'Second paragraph.']) + TABLE(1), async (u) => {
+test('a table\'s column border: a drag sets the widths; a click or Esc leaves them', () => inWordx(PARAS(['First paragraph of text.', 'Second paragraph.']) + TABLE(1), async (u) => {
   const grid = () => u.evaluate(`L.D.doc.main.blocks[1].grid`);
   const g0 = await grid();
   let td = await u.el('#pages td[data-cid]');
@@ -612,7 +612,7 @@ test('a table\'s column border: a drag sets the widths; a click or Esc leaves th
 }));
 
 
-test('the toolbar\'s Insert Table grid: a move over 2 × 3 and a click insert that table', () => inQuire(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
+test('the toolbar\'s Insert Table grid: a move over 2 × 3 and a click insert that table', () => inWordx(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
   await u.click(await u.el('.tb-drop[data-tip="Insert Table"]'));
   const cell = (k) => u.el(`.tgp-cells span:nth-child(${k})`);
   const a = await cell(1);
@@ -624,7 +624,7 @@ test('the toolbar\'s Insert Table grid: a move over 2 × 3 and a click insert th
   assert.deepEqual(tb, [[2, 3]]);
 }));
 
-test('PDF export draws a table as on screen: one line between cells, the columns as wide', () => inQuire(PARAS(['First paragraph.', 'Second paragraph.']) + 'd.main.blocks.splice(1, 0, D.simpleTable(2, 2, 432));', async (u) => {
+test('PDF export draws a table as on screen: one line between cells, the columns as wide', () => inWordx(PARAS(['First paragraph.', 'Second paragraph.']) + 'd.main.blocks.splice(1, 0, D.simpleTable(2, 2, 432));', async (u) => {
   // the page picture in the PDF, sampled along the middle of the table's first row: where its dark lines are
   const r = await u.evaluate(`(async () => {
     const pg = L.layout.pages[0].el, P = pg.getBoundingClientRect(), tds = [...pg.querySelectorAll('td')].slice(0, 2).map((e) => e.getBoundingClientRect());
@@ -642,7 +642,7 @@ test('PDF export draws a table as on screen: one line between cells, the columns
   assert.ok(Math.abs(r.lines[1] - r.w[0]) <= 2 && Math.abs(r.lines[2] - r.w[0] - r.w[1]) <= 2, `the lines where the screen has them (${r.lines}; cells ${r.w})`);
 }));
 
-test('AutoCorrect while typing: a typo, a contraction without its apostrophe, i, a loanword and (c)', () => inQuire(PARAS(['']), async (u) => {
+test('AutoCorrect while typing: a typo, a contraction without its apostrophe, i, a loanword and (c)', () => inWordx(PARAS(['']), async (u) => {
   await u.type('so i dont think teh cafe is (c) ');
   assert.equal(await u.evaluate('L.D.ptext(L.D.doc.main.blocks[0])'), "So I don't think the café is © ");
 }));

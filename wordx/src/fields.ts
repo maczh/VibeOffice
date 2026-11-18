@@ -795,7 +795,9 @@ export function installWordxFields(runtime: Window): void {
     });
     if (target) {
       D.reindex(d);
-      setTimeout(() => { E.setSel(D.pos(target, D.plen(target))); E.focus(); }, 0);
+      let timer;
+      const removeCleanup = L.addMountCleanup(() => clearTimeout(timer));
+      timer = setTimeout(() => { removeCleanup(); E.setSel(D.pos(target, D.plen(target))); E.focus(); }, 0);
     }
   };
   /** notes settings: {fmt, start, restart, pos} for footnotes or endnotes */
