@@ -21,4 +21,4 @@ return <RWord ref={ref} fileName="Letter.docx" onSave={(blob, name) => { /* pers
 
 Run a package with `npm run dev -w rword`, `npm run dev -w rexcel` or `npm run dev -w rpptx`. Build libraries with `npm run build -w rword` (and the matching package). Build all React workspaces with `npm run build`.
 
-The original `public/` implementation and the existing Vue packages remain untouched. The React packages are intentionally a separate migration track; the document engines and full Office-2003 UI still need to be ported into the three React packages before claiming feature parity with the legacy applications.
+The three React packages now call the existing framework-neutral DOCX/XLSX/PPTX readers and writers for real file open/save. The original `public/` implementation and the existing Vue packages remain untouched. The React packages are intentionally a separate migration track; the full Office-2003 UI and editing interactions still need to be ported into the three React packages before claiming feature parity with the legacy applications.
