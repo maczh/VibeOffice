@@ -42,7 +42,7 @@ async function save(kind) {
   D.doc = doc; D.resetHistory();
   const paragraphs = []; D.walk(doc.main, b => { if (b.t === 'p') paragraphs.push(b); });
   if (kind === 'accepted') D.tx('Accept', () => {
-    // the moved-to half accepted on its own, as Quire's review pane does for an insertion
+    // the moved-to half accepted on its own, as Wordx's review pane does for an insertion
     const p = paragraphs[2]; D.touch(p);
     for (const it of p.runs) if (it.rPr?.ins) delete it.rPr.ins;
     delete p.mark.ins;

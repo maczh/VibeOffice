@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { open, pause } from '../lib/input.mjs';
 
-/** t.clean()'s failure after `act` (a script run in a fresh Quire), or null */
+/** t.clean()'s failure after `act` (a script run in a fresh Wordx), or null */
 async function cleanAfter(act) {
   const t = await open('quire', { look: 'classic' });
   try {

@@ -581,6 +581,11 @@ export function installExcelxDrawing(runtime: Window): void {
   DR.autoShapesMenu = function (at) {
     const groups = L.geom ? L.geom.MENU : { 'Basic Shapes': ['rect', 'ellipse'] };
     ui.openMenu([{ label: '&Lines', sub: [{ label: 'Line', run: () => DR.startTool('line') }, { label: 'Arrow', run: () => DR.startTool('arrow') }] }].concat(Object.keys(groups).map((g) => ({ label: g, sub: [{ custom: (close) => {
+      if (root.VO && root.VO.reactDirectHost) {
+        DR.reactShapeMenuCatalog = () => groups[g].map((kind) => { const shape = L.geom && L.geom.get(kind); return { kind, label: shape && shape.label || kind, svg: L.geom ? L.geom.preview(kind, 20) : kind }; });
+        DR.reactShapeMenuAction = (kind) => { close(); DR.startTool(kind); };
+        return h('div', { id: 'react-excelx-shape-menu-root' });
+      }
       const grid = h('div', { class: 'shape-grid' });
       for (const k of groups[g]) { const nm = (L.geom && L.geom.get(k) && L.geom.get(k).label) || k; const b = h('button', { type: 'button', html: L.geom ? L.geom.preview(k, 20) : k, 'data-tip': nm, 'aria-label': nm }); b.addEventListener('click', () => { close(); DR.startTool(k); }); grid.appendChild(b); }
       return grid;

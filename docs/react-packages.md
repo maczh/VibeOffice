@@ -26,6 +26,8 @@ The shared React toolbar renders app-provided command, split and drop controls a
 
 The shared React Paper 2016 Ribbon preserves responsive group folding in narrow hosts: groups fold from the right, the folded group button opens its controls in a positioned React popup, outside click and Escape dismiss it, Escape restores focus, and ResizeObserver unfolds groups when the host widens. Classic Ribbon pages retain their existing fit behavior.
 
+The shared Ribbon now renders app font, size, and zoom combos directly as React controls from engine-provided combo models; Wordx also renders its style combo this way. Those controls no longer use the Ribbon's generic `make()` DOM slot. Their option catalogs, values, previews, validation, and editing callbacks remain engine-backed, and the classic Ribbon continues to use its original combo factories. Production React Suite verifies the direct React font control in Wordx, Excelx, and PPTX.
+
 In direct-host Wordx and PPTX mode, the bottom view-bar controls are rendered by the shared React toolbar layer into the existing view-bar container. Wordx's view-mode and previous/next browse commands plus browse-object menu retain their existing engine callbacks; Excelx has no equivalent view bar. Classic Wordx/PPTX pages still create their original DOM controls.
 
 In direct-host Wordx mode, split-view separator dragging/navigation from a cloned page and comment-balloon pointer highlighting are delegated through React effect listeners with unmount cleanup; the split and review engines still own sizing, page lookup and highlight state.
@@ -379,6 +381,8 @@ export function DocumentEditor() {
 ```
 
 The final host page must also load the shared look variables (`/common/looks.css`) before the editor stylesheet, and serve the selected engine assets plus `/common/`, `/fonts/`, and `/icons/` from the same origin. Standalone Vite entries include these shared look styles and runtime assets.
+
+The distributable packages are `@vibeoffice/core`, `@vibeoffice/wordx`, `@vibeoffice/excelx`, and `@vibeoffice/pptx`. Run `npm pack` from an editor package (or `npm publish` when intentionally releasing) to invoke its `prepack` build; the resulting archive contains `dist/` (ES modules, declarations, and CSS) plus `standalone/` (the generated editor runtime and its same-origin `/common/`, `/fonts/`, and `/icons/` assets). Publish/install `@vibeoffice/core` as well because it is a peer dependency of each editor. Serve each selected package's `standalone/` tree under a stable same-origin prefix, for example copy `node_modules/@vibeoffice/wordx/standalone/` to `public/office/wordx-runtime/`, then configure the component with `engine={{ url: '/office/wordx-runtime/wordx/?new' }}`. The `engine.url` points to the package's app route, not its `index.html`; the host page remains the consumer's own React application. Repeat with a distinct runtime prefix for Excelx/PPTX if the host embeds more than one package.
 
 `ExcelxEditor` and `PptxEditor` have equivalent APIs. The host may provide `onOpenFile`, `onSaveFile`, `onDraftSaved`, `onEngineReady`, and a `DraftStore`. The default local adapter uses the File System Access API when available and otherwise downloads saves. Crash drafts use a dedicated `vibeoffice-react-drafts` IndexedDB database; the legacy Recent Files database is not read or deleted in React-host mode.
 

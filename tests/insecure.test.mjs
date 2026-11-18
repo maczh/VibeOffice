@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 for (const f of ['xml', 'opc', 'sha', 'crypto']) require(`../public/common/${f}.js`);
 const { opc: K, officeCrypto: OC } = globalThis.L;
-globalThis.L.xml = globalThis.L.xmlTree;   // crypto.js's XML parser in Node, as on Ledger's page (ledger/js/xml.js)
+globalThis.L.xml = globalThis.L.xmlTree;   // crypto.js's XML parser in Node, as on Excelx's page (ledger/js/xml.js)
 const pub = path.join(path.dirname(new URL(import.meta.url).pathname), '../public');
 
 /** fn run with crypto as an http page has it: getRandomValues only */

@@ -79,7 +79,7 @@ const run = async kind => {
   return result;
 };
 
-test('an unedited save keeps the latent styles, what each style has that Quire doesn\'t model, and adds no style', async () => {
+test('an unedited save keeps latent styles, including properties Wordx does not model, and adds no style', async () => {
   const got = await run('unedited');
   assert.deepEqual(got.ids, ['Normal', 'Heading1', 'Heading2', 'DefaultParagraphFont', 'TableNormal', 'Rows', 'NoList'], 'the file\'s styles in its order, nothing added');
   assert.equal(got.latent, 5);

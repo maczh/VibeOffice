@@ -26,6 +26,24 @@ test('shared package declares every React runtime it imports as a peer dependenc
   assert.match(readFileSync(new URL('../../commonx/src/legacy-dialog.tsx', import.meta.url), 'utf8'), /from 'react-dom\/client'/);
 });
 
+test('editor packages can be packed with the shared peer and same-origin engine assets', () => {
+  const core = JSON.parse(readFileSync(new URL('../../commonx/package.json', import.meta.url), 'utf8'));
+  assert.notEqual(core.private, true, '@vibeoffice/core must be publishable because each editor declares it as a peer');
+  assert.deepEqual(core.files, ['dist']);
+  assert.equal(core.scripts.prepack, 'npm run build');
+  assert.equal(core.exports['./style.css'], './dist/index.css');
+  assert.ok(readFileSync(new URL('../../commonx/dist/index.css', import.meta.url), 'utf8').length > 0, '@vibeoffice/core stylesheet export points to the built shared styles');
+  for (const app of ['wordx', 'excelx', 'pptx']) {
+    const metadata = JSON.parse(readFileSync(new URL(`../../${app}/package.json`, import.meta.url), 'utf8'));
+    assert.ok(metadata.files.includes('dist'), `${app} ships its ESM component, declarations, and stylesheet`);
+    assert.ok(metadata.files.includes('standalone'), `${app} ships the same-origin static engine asset tree`);
+    assert.equal(metadata.scripts.prepack, 'npm run build && npm run build:app', `${app} builds package and engine assets before packing`);
+    assert.equal(metadata.peerDependencies['@vibeoffice/core'], core.version);
+    assert.equal(metadata.license, core.license);
+    assert.ok(readFileSync(new URL(`../../${app}/standalone/${app}/runtime.json`, import.meta.url), 'utf8').includes('../common/looks.css'), `${app} runtime manifest resolves shared assets from the standalone tree`);
+  }
+});
+
 test('quick checks and testing docs use the branded app UI suite paths', () => {
   const quick = readFileSync(new URL('../../tools/quick.mjs', import.meta.url), 'utf8');
   const docs = readFileSync(new URL('../../docs/testing.md', import.meta.url), 'utf8');

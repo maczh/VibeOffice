@@ -1,8 +1,8 @@
 // HTML we write from a document is a document of its own, opened from disk away from the suite's policy
 // (todos/HARDENING.md 3.2): a hostile document's font names, colours, notes and link addresses go into it as text,
 // never as markup, and the page carries its own policy (L.exportCSP). Each app's Save as Web Page, and the HTML
-// Quire and Ledger put on the clipboard, is parsed for markup the writer didn't make; the pages are then opened
-// in a tab, where nothing of the document's runs and Lectern's own script still does.
+// Wordx and Excelx put on the clipboard, is parsed for markup the writer didn't make; the pages are then opened
+// in a tab, where nothing of the document's runs and PPTX's own script still does.
 //
 //   node --test --test-concurrency=1 tests/hostile/export-html.test.mjs
 import { test, after } from 'node:test';
@@ -53,7 +53,7 @@ async function visit(page, name, html, probe = 'null', readyText = '') {
   throw new Error(`The exported HTML page did not load its document content at ${url}: ${JSON.stringify(state)}`);
 }
 
-test('Quire: Save as Web Page and copied HTML keep font names, colours and links as text', async () => {
+test('Wordx: Save as Web Page and copied HTML keep font names, colours and links as text', async () => {
   const page = await openPage('quire', { persistence: false, automated: true, bypassServiceWorker: true });
   try {
     await page.evaluate(`L.app.openFile(new File(['Some [Web](https://example.com/) and [Bad](https://example.com/bad) text\\n'], 'hostile.md'))`);
@@ -65,11 +65,11 @@ test('Quire: Save as Web Page and copied HTML keep font names, colours and links
     const clean = { handlers: [], pictures: 0, scripts: 0, scriptLinks: 0, fontAsText: true, text: 'Some Web and Bad text' };
     assert.deepEqual(await inspect(page, html), { ...clean, policy: "script-src 'none'" }, 'the web page');
     assert.deepEqual(await inspect(page, clip), { ...clean, policy: null }, 'the clipboard');
-    assert.equal((await visit(page, 'quire.htm', html, 'null', 'Some Web and Bad text')).title, 'hostile', 'opened, nothing of the document ran');
+    assert.equal((await visit(page, 'wordx.htm', html, 'null', 'Some Web and Bad text')).title, 'hostile', 'opened, nothing of the document ran');
   } finally { await page.close(); }
 });
 
-test('Ledger: Save as Web Page and copied HTML keep font names and link addresses as text', async () => {
+test('Excelx: Save as Web Page and copied HTML keep font names and link addresses as text', async () => {
   const page = await openPage('ledger', { persistence: false, automated: true, bypassServiceWorker: true });
   try {
     const x = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -85,11 +85,11 @@ test('Ledger: Save as Web Page and copied HTML keep font names and link addresse
     assert.deepEqual(await inspect(page, clip), { ...clean, policy: null }, 'the clipboard');
     assert.equal(await page.evaluate(`new DOMParser().parseFromString(${JSON.stringify(html)}, 'text/html').querySelector('a').getAttribute('href')`), LINK,
       'the address is the link\'s, whole');
-    assert.equal((await visit(page, 'ledger.htm', html, 'null', 'Linked')).title, 'hostile', 'opened, nothing of the document ran');
+    assert.equal((await visit(page, 'excelx.htm', html, 'null', 'Linked')).title, 'hostile', 'opened, nothing of the document ran');
   } finally { await page.close(); }
 });
 
-test('Lectern: Save as Web Page keeps notes as data, and its own script still runs under its policy', async () => {
+test('PPTX: Save as Web Page keeps notes as data, and its own script still runs under its policy', async () => {
   const page = await openPage('lectern', { persistence: false, automated: true, bypassServiceWorker: true });
   try {
     await page.evaluate(`(() => { L.pres.slides[0].notes = ${JSON.stringify(NOTE)}; L.pres.props.title = 'hostile'; })()`);
@@ -97,7 +97,7 @@ test('Lectern: Save as Web Page keeps notes as data, and its own script still ru
     const found = await inspect(page, html);
     assert.deepEqual({ handlers: found.handlers, scripts: found.scripts, hashed: /^script-src 'sha256-[\w+/]+=*'$/.test(found.policy) },
       { handlers: [], scripts: 1, hashed: true }, 'one script, ours, allowed by its hash');
-    assert.deepEqual(await visit(page, 'lectern.htm', html, `[typeof N === 'undefined' ? null : N[0], document.getElementById('num').textContent]`, '1 / 1'),
+    assert.deepEqual(await visit(page, 'pptx.htm', html, `[typeof N === 'undefined' ? null : N[0], document.getElementById('num').textContent]`, '1 / 1'),
       { title: 'hostile', probe: [NOTE, '1 / 1'] }, 'the note is the script\'s data; the page shows its slide');
   } finally { await page.close(); }
 });

@@ -32,16 +32,22 @@ export function installWordxLayout(runtime: Window): void {
 
   LY.mount = function (scroller) {
     LY.scroller = scroller;
-    LY.sizer = el('div', 'sizer');
-    LY.root = el('div', 'pages');
-    LY.root.id = 'pages';
-    LY.root.contentEditable = 'true';
-    LY.root.spellcheck = false;
-    LY.root.setAttribute('role', 'textbox');
-    LY.root.setAttribute('aria-multiline', 'true');
-    LY.root.setAttribute('aria-label', L.t('Document'));
-    LY.sizer.appendChild(LY.root);
-    scroller.appendChild(LY.sizer);
+    const reactSizer = scroller.querySelector(':scope > .sizer[data-react-owned="wordx-page-sizer"]');
+    const reactRoot = reactSizer?.querySelector(':scope > #pages.pages[data-react-owned="wordx-pages"]');
+    LY.sizer = reactSizer || el('div', 'sizer');
+    LY.root = reactRoot || el('div', 'pages');
+    if (reactRoot) {
+      if (LY.root.contentEditable !== 'true' || LY.root.getAttribute('role') !== 'textbox') throw new Error('The React Wordx page host is missing its editable textbox semantics');
+    } else {
+      LY.root.id = 'pages';
+      LY.root.contentEditable = 'true';
+      LY.root.spellcheck = false;
+      LY.root.setAttribute('role', 'textbox');
+      LY.root.setAttribute('aria-multiline', 'true');
+      LY.root.setAttribute('aria-label', L.t('Document'));
+      LY.sizer.appendChild(LY.root);
+      scroller.appendChild(LY.sizer);
+    }
   };
 
   /* ================= shared render context ================= */

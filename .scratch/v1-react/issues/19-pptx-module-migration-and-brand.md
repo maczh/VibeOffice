@@ -74,6 +74,8 @@
 
 ## Comments
 
+- 2026-11-18: Completed the PPTX portion of the browser text-mapping regression audit. Replaced a redundant TODO probe that reused pre-toolbar screen coordinates and double-counted the word offset with a production-browser interaction check that recalculates the clicked character from the rendered IntelliArt node after contextual-toolbar layout settles. Kept table-cell caret placement as its own check. `node --test tests/ui/textmap.test.mjs` passes all 9 tests (0 TODO), and the changed-file quick passes all 7 selected groups; this corrects a test-harness false positive and does not claim broader PPTX module migration or parity complete.
+
 - 2026-11-17 follow-up: PPTX IntelliArt's delayed Ribbon selection now uses a mount-owned timeout helper, and production React Suite verifies teardown cancels its pending 60 ms callback. Typecheck, PPTX/Suite builds, and React Suite pass; full PPTX UI/runtime migration remains in progress.
 
 - 2026-11-17 follow-up: Migrated the PPTX design/theme preservation and embedded-frame relationship services to `pptx/src/designs.ts` and `pptx/src/frames.ts`, installed them from the React package, and skipped both classic source scripts in React-host mode; classic standalone retains its fallback. The React Suite asserted both APIs and old-script absence (red before installation, green afterward), and each migrated implementation was mechanically compared with the original body. Typecheck, PPTX/Suite production builds, React Suite, final full quick (12/12: Node 140; host 4; host apps 2; host packages 1; React Suite 1; standalone 1; smoke 4; drag 48; focus 40; PPTX 43; Excelx 48; Wordx 54), and `git diff --check` pass. Most PPTX modules/UI remain in the legacy runtime; #19 remains in progress.

@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { open } from '../lib/input.mjs';
 
-test('Quire: paints the dragged text, a clicked word; locks on a double-click; keeps links', async () => {
+test('Wordx: paints the dragged text, a clicked word; locks on a double-click; keeps links', async () => {
   const q = await open('quire');
   try {
     /** screen point just inside the character at offset o of block b */
@@ -64,7 +64,7 @@ test('Quire: paints the dragged text, a clicked word; locks on a double-click; k
   } finally { await q.close(); }
 });
 
-test('Ledger: paints the dragged cells; locks on a double-click; Esc ends it', async () => {
+test('Excelx: paints the dragged cells; locks on a double-click; Esc ends it', async () => {
   const g = await open('ledger');
   try {
     const cell = (r, c) => g.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(${r}, ${c}); return { x: w.left + b.x + b.w / 2, y: w.top + b.y + b.h / 2 }; })()`);
@@ -90,7 +90,7 @@ test('Ledger: paints the dragged cells; locks on a double-click; Esc ends it', a
   } finally { await g.close(); }
 });
 
-test('Lectern: keeps text editing; paints dragged text, a clicked word, another box\'s text, a whole shape', async () => {
+test('PPTX: keeps text editing; paints dragged text, a clicked word, another box\'s text, a whole shape', async () => {
   const s = await open('lectern');
   try {
     await s.evaluate(`(async () => {
@@ -152,7 +152,7 @@ test('Lectern: keeps text editing; paints dragged text, a clicked word, another 
   } finally { await s.close(); }
 });
 
-test('Esc in the middle of a painting drag cancels it and puts the painter down (Ledger, Lectern)', async () => {
+test('Esc in the middle of a painting drag cancels it and puts the painter down (Excelx, PPTX)', async () => {
   const g = await open('ledger');
   try {
     const cell = (r, c) => g.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(${r}, ${c}); return { x: w.left + b.x + b.w / 2, y: w.top + b.y + b.h / 2 }; })()`);

@@ -1,4 +1,4 @@
-"""What does an open-and-save in Quire lose? Compare each original .docx with Quire's saved copy and count, per
+"""What does an open-and-save in Wordx lose? Compare each original .docx with Wordx's saved copy and count, per
 feature, the documents where the original has it and the saved copy has less (or none). Also compares the words
 of the whole document (body, headers, footers, notes, comments, text boxes) as an independent text check.
 Usage: python3 -I loss-audit.py corpusDir savedDir out.json"""

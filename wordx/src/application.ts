@@ -309,15 +309,20 @@ export function installWordxApplication(runtime: Window): void {
   /* the toolbars' boxes and menus, also used by the ribbon (js/ribbon.js): each call makes a new box */
   A.menus = { tableGrid: (r, more) => tableGridPicker(r, more), columns: (r, more) => columnsPicker(r, more), lineSpacing: (r) => lineSpacingMenu(r), borders: (r, b) => bordersDD(r, b), highlight: (r, b) => highlightDD(r, b), background: (r) => ui.openMenu(backgroundMenu(), r), fontColor: (r, b) => fontColorDD(r, b) };
   A.parts = {
-    style: (o) => ui.combo(Object.assign({
+    styleOptions: (o) => Object.assign({
       id: 'tb-style', width: 118, tip: 'Style', listCls: 'styles',
       options: () => A.styleOptions().map((s) => s.label),
       preview: (v) => { const s = A.styleOptions().find((x) => x.label === v); return s ? s.css : ''; },
       value: () => (E.sel ? styleState() : ''), onChange: (v) => A.applyStyleByName(v),
-    }, o)),
-    font: (o) => ui.combo(Object.assign({ id: 'tb-font', width: 136, tip: 'Font', options: () => A.fontOptions(), preview: (v) => `font-family:${L.fontStack(v)};font-size:13px`, note: L.fontNote, listCls: 'fonts', value: () => (A.typingEA() && E.uniformRun('fontEA')) || E.uniformRun('font') || '', onChange: (v) => A.setFont(v) }, o)),
-    size: (o) => ui.combo(Object.assign({ id: 'tb-size', width: 48, tip: 'Font Size', options: () => L.SIZE_LIST, value: () => { const v = E.uniformRun('sz'); return v ? String(L.round(v, 1)) : ''; }, onChange: (v) => A.setFontSize(parseFloat(v)) }, o)),
-    zoom: (o) => ui.combo(Object.assign({ id: 'tb-zoom', width: 74, tip: 'Zoom', options: () => ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%'].concat([L.N('Page Width'), L.N('Text Width'), L.N('Whole Page'), L.N('Two Pages')].map((v) => ({ value: v, label: L.t(v) }))), value: () => Math.round(LY.zoom * 100) + '%', onChange: (v) => A.zoomTo(v) }, o)),
+    }, o),
+    fontOptions: (o) => Object.assign({ id: 'tb-font', width: 136, tip: 'Font', options: () => A.fontOptions(), preview: (v) => `font-family:${L.fontStack(v)};font-size:13px`, note: L.fontNote, listCls: 'fonts', value: () => (A.typingEA() && E.uniformRun('fontEA')) || E.uniformRun('font') || '', onChange: (v) => A.setFont(v) }, o),
+    sizeOptions: (o) => Object.assign({ id: 'tb-size', width: 48, tip: 'Font Size', options: () => L.SIZE_LIST, value: () => { const v = E.uniformRun('sz'); return v ? String(L.round(v, 1)) : ''; }, onChange: (v) => A.setFontSize(parseFloat(v)) }, o),
+    zoomOptions: (o) => Object.assign({ id: 'tb-zoom', width: 74, tip: 'Zoom', options: () => ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%'].concat([L.N('Page Width'), L.N('Text Width'), L.N('Whole Page'), L.N('Two Pages')].map((v) => ({ value: v, label: L.t(v) }))), value: () => Math.round(LY.zoom * 100) + '%', onChange: (v) => A.zoomTo(v) }, o),
+    reactComboOptions: (name, o) => A.parts[`${name}Options`]?.(o) || null,
+    style: (o) => ui.combo(A.parts.styleOptions(o)),
+    font: (o) => ui.combo(A.parts.fontOptions(o)),
+    size: (o) => ui.combo(A.parts.sizeOptions(o)),
+    zoom: (o) => ui.combo(A.parts.zoomOptions(o)),
   };
   function buildToolbars() {
     const host = L.$('#toolbars');

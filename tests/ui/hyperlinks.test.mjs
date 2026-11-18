@@ -13,7 +13,7 @@ const dialog = async (t) => JSON.parse(await t.evaluate(`JSON.stringify({ url: d
   ran: document.title === 'ran' })`));
 const pages = async (t) => (await t.send('Target.getTargets')).targetInfos.filter((x) => x.type === 'page').length;
 
-test('Quire: Ctrl+click and Open Hyperlink show the address to copy, never open it', async () => {
+test('Wordx: Ctrl+click and Open Hyperlink show the address to copy, never open it', async () => {
   const t = await open('quire', { look: 'classic' });
   try {
     await t.evaluate(`L.app.openFile(new File([${JSON.stringify(`[Web](https://example.com/) and [Bad](${BAD})\n`)}], 'links.md'))`);
@@ -37,7 +37,7 @@ test('Quire: Ctrl+click and Open Hyperlink show the address to copy, never open 
   } finally { await t.close(); }
 });
 
-test('Ledger: Open Hyperlink shows a web, mail or file address to copy; a reference in the workbook still goes there', async () => {
+test('Excelx: Open Hyperlink shows a web, mail or file address to copy; a reference in the workbook still goes there', async () => {
   const t = await open('ledger', { look: 'classic' });
   try {
     for (const target of [BAD, 'mailto:someone@example.com', 'C:\\Reports\\Q3.xlsx']) {
@@ -51,7 +51,7 @@ test('Ledger: Open Hyperlink shows a web, mail or file address to copy; a refere
   } finally { await t.close(); }
 });
 
-test('Lectern: a link clicked in the slide show shows its address over the show, which goes on', async () => {
+test('PPTX: a link clicked in the slide show shows its address over the show, which goes on', async () => {
   const t = await open('lectern', { look: 'classic' });
   try {
     await t.evaluate(`(async () => { const E = L.ed, M = L.model; if (L.te.active()) L.te.end(); E.goto(0);

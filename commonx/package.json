@@ -1,8 +1,9 @@
 {
   "name": "@vibeoffice/core",
   "version": "0.1.0",
-  "private": true,
+  "license": "Apache-2.0",
   "type": "module",
+  "files": ["dist"],
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -11,11 +12,12 @@
         "default": "./dist/index.js"
       }
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/index.css"
   },
   "scripts": {
     "build": "vite build --config vite.config.ts && tsc -b --force",
-    "dev": "vite"
+    "dev": "vite",
+    "prepack": "npm run build"
   },
   "peerDependencies": {
     "react": "^19.0.0",

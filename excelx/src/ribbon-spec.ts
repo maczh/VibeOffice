@@ -1,6 +1,6 @@
 type RibbonItem = string | {
   cmd?: string; split?: string; drop?: string; size?: 'large' | 'medium' | 'small'; label?: string; icon?: string; tip?: string;
-  menu?: (rect: DOMRect, anchor?: HTMLElement) => unknown; row?: Array<RibbonItem | '|'>; sub?: RibbonItem[]; make?: () => HTMLElement;
+  menu?: (rect: DOMRect, anchor?: HTMLElement) => unknown; row?: Array<RibbonItem | '|'>; sub?: RibbonItem[]; make?: () => HTMLElement; combo?: string; id?: string; width?: number;
 };
 type RibbonGroup = { label: string; icon?: string; launcher?: string; items: Array<RibbonItem | '|'> };
 type RibbonTab = { id: string; label: string; groups: RibbonGroup[] };
@@ -30,7 +30,7 @@ interface ExcelxRibbonRuntime {
       };
     };
     ui?: { openMenu(items: unknown[], rect: DOMRect): unknown };
-    chartWizard?: { typeMenu(rect: DOMRect): unknown };
+    chartWizard?: { typeMenu(rect: DOMRect, anchor?: HTMLElement): unknown };
   };
 }
 
@@ -55,7 +55,7 @@ export function installExcelxRibbonSpec(runtime: Window): void {
       { id: 'home', label: '&Home', groups: [
         { label: 'Clipboard', launcher: 'officeClipboard', items: [{ split: 'paste', size: 'large', menu: open(['paste', 'pasteValues', 'pasteSpecial', 'pasteHyperlink']) }, 'cut', 'copy', 'formatPainter'] },
         { label: 'Font', icon: 'font', launcher: 'formatCells', items: [
-          { row: [{ make: () => L.app!.parts.font({ width: 132, id: 'rb-font' }) }, { make: () => L.app!.parts.size({ width: 44, id: 'rb-size' }) }] },
+          { row: [{ combo: 'font', width: 132, id: 'rb-font' }, { combo: 'size', width: 44, id: 'rb-size' }] },
           { row: ['bold', 'italic', 'underline', 'strike', '|', { split: 'bordersApply', menu: (r, b) => L.app!.menus.borders(r, b) }, { split: 'fillColorApply', menu: (r, b) => L.app!.menus.fill(r, b) }, { split: 'fontColorApply', menu: (r, b) => L.app!.menus.fontColor(r, b) }] }] },
         { label: 'Alignment', launcher: 'formatCells', items: [
           { row: ['alignLeft', 'alignCenter', 'alignRight', '|', 'decIndent', 'incIndent'] },
@@ -110,7 +110,7 @@ export function installExcelxRibbonSpec(runtime: Window): void {
       { id: 'view', label: 'Vie&w', groups: [
         { label: 'Workbook Views', items: [{ cmd: 'viewNormal', size: 'large', label: 'Normal' }, { cmd: 'viewPageBreak', size: 'large', label: 'Page Break Preview' }, 'fullScreen'] },
         { label: 'Show', items: ['formulaBar', { cmd: 'gridlinesView', label: 'Gridlines' }, { cmd: 'headingsView', label: 'Headings' }, 'statusBar', 'taskPane'] },
-        { label: 'Zoom', items: [{ cmd: 'zoomDlg', size: 'large', label: 'Zoom' }, { make: () => L.app!.parts.zoom({ width: 70, id: 'rb-zoom' }) }] },
+        { label: 'Zoom', items: [{ cmd: 'zoomDlg', size: 'large', label: 'Zoom' }, { combo: 'zoom', width: 70, id: 'rb-zoom' }] },
         { label: 'Window', items: [{ cmd: 'newWindow', size: 'large', label: 'New Window' }, 'arrangeWindows', { cmd: 'freezePanes', size: 'large', label: 'Freeze Panes' }, 'splitWindow'] },
         { label: 'Macros', items: [{ cmd: 'macros', size: 'large', label: 'Macros' }] },
       ] },

@@ -282,12 +282,12 @@ export function installExcelxCharts(runtime: Window): void {
   };
   CW.TYPES = TYPES;
   CW.typeIcon = typeIcon;
-  CW.typeMenu = function (at) {
+  CW.typeMenu = function (at, anchor) {
     const d = L.grid.selectedObject();
     const kinds = TYPES.flatMap((t) => t.subs.map((s) => s[0]));
     if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
       const rect = at && at.getBoundingClientRect ? at.getBoundingClientRect() : null;
-      reactTypeMenu = { selected: d, left: Math.max(2, Math.min(rect ? rect.left : at && at.x || 0, window.innerWidth - 310)), top: Math.max(2, Math.min(rect ? rect.bottom : at && at.y || 0, window.innerHeight - 430)), items: kinds.map((kind) => ({ kind, label: subName(kind), icon: typeIcon(kind) })) };
+      reactTypeMenu = { selected: d, anchor: anchor instanceof HTMLElement ? anchor : at instanceof HTMLElement ? at : null, left: Math.max(2, Math.min(rect ? rect.left : at && at.x || 0, window.innerWidth - 310)), top: Math.max(2, Math.min(rect ? rect.bottom : at && at.y || 0, window.innerHeight - 430)), items: kinds.map((kind) => ({ kind, label: subName(kind), icon: typeIcon(kind) })) };
       L.bus.emit('excelx-chart-type-menu');
       return;
     }

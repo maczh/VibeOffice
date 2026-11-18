@@ -1,5 +1,5 @@
 // A damaged body with two final section definitions: Word 2016 and LibreOffice lay out the last section with the last
-// one (tdf108849: page 2 landscape), so Quire shows and saves that one.
+// one (tdf108849: page 2 landscape), so Wordx shows and saves that one.
 // node --test tests/quire/final-section.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';

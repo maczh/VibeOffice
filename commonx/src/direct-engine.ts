@@ -17,6 +17,7 @@ interface EditorRuntimeManifest {
 
 const loadedScripts = new WeakMap<Window, Map<string, Promise<void>>>();
 const mountingWindows = new WeakSet<Window>();
+const engineNamespaces = new WeakSet<object>();
 
 function abortError(): DOMException {
   return new DOMException('The editor mount was cancelled', 'AbortError');
@@ -187,8 +188,21 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   };
   const directRuntime = runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ || {};
   if (directRuntime.root?.isConnected) throw new Error('Only one VibeOffice editor can be mounted in a host document at a time');
+  const hostEngineDescriptor = Object.getOwnPropertyDescriptor(runtimeWindow, 'L');
+  const hostEngineNamespace = runtimeWindow.L;
+  const preserveHostEngineNamespace = !!hostEngineDescriptor && !engineNamespaces.has(hostEngineNamespace as object);
+  if (preserveHostEngineNamespace) {
+    if (!hostEngineDescriptor.configurable && !('value' in hostEngineDescriptor && hostEngineDescriptor.writable)) {
+      throw new Error('The embedding window.L namespace cannot be isolated for the VibeOffice editor');
+    }
+    const isolatedDescriptor = 'value' in hostEngineDescriptor
+      ? { ...hostEngineDescriptor, value: undefined }
+      : { configurable: hostEngineDescriptor.configurable ?? false, enumerable: hostEngineDescriptor.enumerable ?? false, writable: true, value: undefined };
+    Object.defineProperty(runtimeWindow, 'L', isolatedDescriptor);
+  }
   let restoreDomRoot: (() => void) | undefined;
   let restoreBrushService: (() => void) | undefined;
+  let hostEngineNamespaceActive = preserveHostEngineNamespace;
   const cleanup = () => {
     releaseReservation();
     if (runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ === directRuntime && directRuntime.root === root) {
@@ -201,6 +215,10 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
     restoreBrushService = undefined;
     styles.forEach((style) => style.remove());
     if (!shellOwnedByReact) root.remove();
+    if (hostEngineNamespaceActive) {
+      hostEngineNamespaceActive = false;
+      Object.defineProperty(runtimeWindow, 'L', hostEngineDescriptor!);
+    }
   };
   if (!shellOwnedByReact) host.append(root);
 
@@ -251,6 +269,7 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L && runtimeWindow.VO?.t) {
         Object.assign(runtimeWindow.L, { t: runtimeWindow.VO.t, N: runtimeWindow.VO.N });
       }
+      if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L) engineNamespaces.add(runtimeWindow.L);
       if (shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ui.js')) restoreBrushService = installReactBrushService(runtimeWindow);
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L?.mountDomRoot) {
         restoreDomRoot = runtimeWindow.L.mountDomRoot(root);

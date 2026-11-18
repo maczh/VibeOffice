@@ -202,8 +202,9 @@ try {
 return JSON.stringify(out);
 `;
 
-for (const app of ['quire', 'ledger', 'lectern']) {
-  test(`${app}: Scout welcomes, has his menu, and draws nothing in the background or hidden`, () => {
+const APP_NAMES = { quire: 'Wordx', ledger: 'Excelx', lectern: 'PPTX' };
+for (const app of Object.keys(APP_NAMES)) {
+  test(`${APP_NAMES[app]}: Scout welcomes, has his menu, and draws nothing in the background or hidden`, () => {
     const out = execFileSync('node', [path.join(root, 'tools/shot.mjs'), app + '/', JSON.stringify([{ js: CHECK, wait: 200 }]), '--pre', path.join(root, 'tests/scout/clean.js')], { encoding: 'utf8', env });
     const line = out.split('\n').find((l) => l.startsWith('js -> '));
     assert.ok(line, out);

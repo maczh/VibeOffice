@@ -802,7 +802,6 @@ export function installWordxTables(runtime: Window): void {
       const field = (p, k) => { const t = D.plainText(p).trim(); if (k.field == null || k.field === 0) return t; const parts = t.split(sep); return (parts[k.field - 1] || '').trim(); };
       let list = paras.slice();
       const head = opts.header ? list.shift() : null;
-      list = list.filter((p) => true || p);
       list.sort((a, b) => { for (const k of keys) { const r = cmpBy(k.type, k.desc, opts.caseSensitive)(field(a, k), field(b, k)); if (r) return r; } return 0; });
       /* empty paragraphs sort to the top in Word */
       const empties = list.filter((p) => !D.plainText(p).trim()), full = list.filter((p) => D.plainText(p).trim());

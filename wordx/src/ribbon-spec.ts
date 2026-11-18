@@ -1,7 +1,7 @@
 type MenuAnchor = DOMRect | { left: number; bottom: number };
 type RibbonItem = string | {
   cmd?: string; split?: string; drop?: string; size?: 'large' | 'medium' | 'small'; label?: string; icon?: string; tip?: string;
-  menu?: (rect: MenuAnchor, anchor?: HTMLElement) => unknown; row?: Array<RibbonItem | '|'>; make?: () => HTMLElement;
+  menu?: (rect: MenuAnchor, anchor?: HTMLElement) => unknown; row?: Array<RibbonItem | '|'>; make?: () => HTMLElement; combo?: string; id?: string; width?: number;
 };
 type RibbonGroup = { label: string; icon?: string; launcher?: string; items: Array<RibbonItem | '|'> };
 type RibbonTab = { id: string; label: string; groups: RibbonGroup[] };
@@ -31,12 +31,12 @@ export function installWordxRibbonSpec(runtime: Window): void {
       { id: 'home', label: '&Home', groups: [
         { label: 'Clipboard', launcher: 'officeClipboard', items: [{ split: 'paste', size: 'large', menu: open(['paste', 'pasteSpecial', 'pasteHyperlink']) }, 'cut', 'copy', 'painter'] },
         { label: 'Font', icon: 'font', launcher: 'fontDlg', items: [
-          { row: [{ make: () => A().parts.font({ width: 128, id: 'rb-font' }) }, { make: () => A().parts.size({ width: 42, id: 'rb-size' }) }, 'growFont', 'shrinkFont', 'changeCase', 'clearFormats'] },
+          { row: [{ combo: 'font', width: 128, id: 'rb-font' }, { combo: 'size', width: 42, id: 'rb-size' }, 'growFont', 'shrinkFont', 'changeCase', 'clearFormats'] },
           { row: ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', '|', { split: 'highlightBtn', menu: (rect, anchor) => A().menus.highlight(rect, anchor) }, { split: 'fontColorBtn', menu: (rect, anchor) => A().menus.fontColor(rect, anchor) }] }] },
         { label: 'Paragraph', icon: 'paragraph', launcher: 'paragraphDlg', items: [
           { row: [{ split: 'bullets', menu: open(['bulletsDlg']) }, 'numbering', 'decIndent', 'incIndent', '|', 'sortDlg', 'showMarks'] },
           { row: ['alignLeft', 'alignCenter', 'alignRight', 'justify', '|', { drop: 'Line Spacing', icon: 'lineSpacing', menu: (rect) => A().menus.lineSpacing(rect) }, { split: 'borderBtn', menu: (rect, anchor) => A().menus.borders(rect, anchor) }] }] },
-        { label: 'Styles', launcher: 'stylesPane', items: [{ make: () => A().parts.style({ width: 150, id: 'rb-style' }) }, 'stylesPane', 'revealFormatting'] },
+        { label: 'Styles', launcher: 'stylesPane', items: [{ combo: 'style', width: 150, id: 'rb-style' }, 'stylesPane', 'revealFormatting'] },
         { label: 'Editing', items: ['find', 'replace', { drop: 'Select', icon: 'selectAll', menu: open(['selectAll', 'goTo']) }] },
       ] },
       { id: 'insert', label: '&Insert', groups: [
@@ -85,7 +85,7 @@ export function installWordxRibbonSpec(runtime: Window): void {
       { id: 'view', label: 'Vie&w', groups: [
         { label: 'Views', items: [{ cmd: 'viewReading', size: 'large', label: 'Read Mode' }, { cmd: 'viewPrint', size: 'large', label: 'Print Layout' }, { cmd: 'viewWeb', size: 'large', label: 'Web Layout' }, 'viewOutline', 'viewNormal'] },
         { label: 'Show', items: ['ruler', 'docMap', 'thumbnails', 'taskPane'] },
-        { label: 'Zoom', items: [{ cmd: 'zoomDlg', size: 'large', label: 'Zoom' }, { make: () => A().parts.zoom({ width: 90, id: 'rb-zoom' }) }, 'fullScreen'] },
+        { label: 'Zoom', items: [{ cmd: 'zoomDlg', size: 'large', label: 'Zoom' }, { combo: 'zoom', width: 90, id: 'rb-zoom' }, 'fullScreen'] },
         { label: 'Window', items: [{ cmd: 'newWindow', size: 'large', label: 'New Window' }, 'arrangeAll', 'splitWindow'] },
         { label: 'Macros', items: [{ cmd: 'macros', size: 'large', label: 'Macros' }] },
       ] },

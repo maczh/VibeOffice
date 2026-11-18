@@ -1,5 +1,5 @@
 // Every piece of editable text maps to the document, and a click on it puts the caret there (the class of fault
-// behind Quire's diagram labels that took no caret). Check 1 sweeps the page (tests/lib/textmap.mjs, no input);
+// behind Wordx's diagram labels that took no caret). Check 1 sweeps the page (tests/lib/textmap.mjs, no input);
 // check 2 clicks into text of each kind with real input: the caret is at the clicked character, and a letter typed
 // goes there. On generated documents with every kind of text; tools/textmap-corpus.mjs runs check 1 over a corpus.
 //
@@ -9,9 +9,9 @@ import assert from 'node:assert/strict';
 import { open, pause } from '../lib/input.mjs';
 import { SWEEP } from '../lib/textmap.mjs';
 
-/* ---------------------------------------------------------------- Quire */
+/* ---------------------------------------------------------------- Wordx */
 /** the welcome document with each diagram of the gallery, a floating text box and a shape with text */
-async function quireDoc() {
+async function wordxDoc() {
   const t = await open('quire', { look: 'classic' });
   await t.evaluate(`L.app.newDocument({ build: (d) => Object.assign(d, L.app.buildSample()) })`); await pause(400);
   for (const kind of ['Pyramid Diagram', 'Organization Chart', 'Cycle Diagram']) {
@@ -28,17 +28,17 @@ async function quireDoc() {
     await new Promise((r) => setTimeout(r, 500)); })()`);
   return t;
 }
-test('Quire, check 1: every editable text node maps to a paragraph of the document and back', { timeout: 300000 }, async () => {
-  const t = await quireDoc();
+test('Wordx, check 1: every editable text node maps to a paragraph of the document and back', { timeout: 300000 }, async () => {
+  const t = await wordxDoc();
   try {
-    const r = await t.evaluate(SWEEP.quire);
+    const r = await t.evaluate(SWEEP.wordx);
     for (const k of ['body', 'cell', 'group', 'textbox']) assert.ok(r.kinds[k] > 0, `setup: text of kind ${k}`);
     assert.deepEqual(r.findings, []);
     t.clean();
   } finally { await t.close(); }
 });
-test('Quire, check 2: a click in text of each kind puts the caret at the character, and typing goes there', { timeout: 300000 }, async () => {
-  const t = await quireDoc();
+test('Wordx, check 2: a click in text of each kind puts the caret at the character, and typing goes there', { timeout: 300000 }, async () => {
+  const t = await wordxDoc();
   try {
     /* the candidates as document positions: the page is drawn again after each click's Undo */
     const cands = await t.evaluate(`(() => { const by = {}, out = [];
@@ -75,9 +75,9 @@ test('Quire, check 2: a click in text of each kind puts the caret at the charact
   } finally { await t.close(); }
 });
 
-/* ---------------------------------------------------------------- Lectern */
+/* ---------------------------------------------------------------- PPTX */
 /** the sample deck (title, text boxes, groups, a table, a diagram) and a slide with a gallery diagram, its nodes named */
-async function lecternDeck() {
+async function pptxDeck() {
   const t = await open('lectern', { look: 'classic' });
   await t.evaluate(`L.app.loadSample()`); await pause(600);
   await t.evaluate(`(() => { L.ed.goto(L.pres.slides.length - 1); L.ui.exec('newSlide'); L.ed.goto(L.pres.slides.length - 1); L.diagram.insert(L.smartart.LAYOUTS[0].id);
@@ -85,10 +85,10 @@ async function lecternDeck() {
   await pause(400);
   return t;
 }
-test('Lectern, check 1: the text of every shape, cell and diagram node maps to its model and back while edited', async () => {
-  const t = await lecternDeck();
+test('PPTX, check 1: the text of every shape, cell and IntelliArt node maps to its model and back while edited', async () => {
+  const t = await pptxDeck();
   try {
-    const r = await t.evaluate(SWEEP.lectern);
+    const r = await t.evaluate(SWEEP.pptx);
     for (const k of ['placeholder', 'textbox', 'group', 'shape', 'cell', 'diagram']) assert.ok(r.kinds[k] > 0, `setup: text of kind ${k}`);
     assert.deepEqual(r.findings, []);
     t.clean();
@@ -96,7 +96,7 @@ test('Lectern, check 1: the text of every shape, cell and diagram node maps to i
 });
 /** click (spaced, not a double-click) at the middle of a word of each shape's text on slides until it is edited; per
     shape: the caret at the clicked character and a letter typed there; returns what went wrong, and the kinds seen */
-async function lecternClicks(t, kindsWanted) {
+async function pptxClicks(t, kindsWanted) {
   const bad = [], kinds = new Set();
   const nSlides = await t.evaluate('L.pres.slides.length');
   for (let si = 0; si < nSlides; si++) {
@@ -115,8 +115,26 @@ async function lecternClicks(t, kindsWanted) {
     for (const g of targets) {
       kinds.add(g.kind);
       await t.evaluate(`(() => { if (L.te.active()) L.te.end(); L.ed.select([]); })()`); await pause(700);
-      let clicks = 0;
-      while (clicks < 3) { await t.click(g); clicks++; await pause(650); if (await t.evaluate(`L.te.active() && L.te.target().sh.id === ${JSON.stringify(g.id)}`)) break; }
+      let clicks = 0, point = g;
+      while (clicks < 3) {
+        if (clicks) {
+          await t.evaluate(`if (L.te.active()) L.te.end()`);
+          point = await t.evaluate(`(() => {
+            const el = L.ed.elOf(${JSON.stringify(g.id)}), walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+            let node;
+            while ((node = walker.nextNode())) {
+              const start = node.data.indexOf(${JSON.stringify(g.word)});
+              if (start < 0) continue;
+              const range = document.createRange(); range.setStart(node, ${g.k}); range.setEnd(node, ${g.k + 1});
+              const rect = range.getBoundingClientRect(); return { x: rect.left + rect.width * 0.3, y: rect.top + rect.height / 2 };
+            }
+            return null;
+          })()`);
+          if (!point) break;
+        }
+        await t.click(point); clicks++; await pause(650);
+        if (await t.evaluate(`(() => { if (!L.te.active() || L.te.target().sh.id !== ${JSON.stringify(g.id)}) return false; const sel=L.te.getSel(), text=L.txt.paraText(L.te.target().tx.ps[sel.p0]); return Math.abs(sel.o0 - (text.indexOf(${JSON.stringify(g.word)}) + 2)) <= 1; })()`)) break;
+      }
       const st = await t.evaluate(`(() => { if (!L.te.active() || L.te.target().sh.id !== ${JSON.stringify(g.id)}) return null; const s = L.te.getSel(); return s && { s, text: L.txt.paraText(L.te.target().tx.ps[s.p0]) }; })()`);
       if (!st) { bad.push(`${g.kind} "${g.word}": not edited after ${clicks} clicks`); continue; }
       const at = st.text.indexOf(g.word) + 2;
@@ -129,37 +147,46 @@ async function lecternClicks(t, kindsWanted) {
   }
   return { bad, kinds: [...kinds].sort() };
 }
-test('Lectern, check 2: clicks into a placeholder, a text box, a shape and a group\'s shape put the caret at the character', async () => {
-  const t = await lecternDeck();
+test('PPTX, check 2: clicks into a placeholder, a text box, a shape and a group\'s shape put the caret at the character', async () => {
+  const t = await pptxDeck();
   try {
-    const r = await lecternClicks(t, ['placeholder', 'textbox', 'shape', 'group']);
+    const r = await pptxClicks(t, ['placeholder', 'textbox', 'shape', 'group']);
     assert.deepEqual(r.kinds, ['group', 'placeholder', 'shape', 'textbox'], 'setup');
     assert.deepEqual(r.bad, []);
     t.clean();
   } finally { await t.close(); }
 });
-test('Lectern, check 2: clicks into a table cell and a diagram\'s node put the caret at the character', { todo: 'T1: the slide moves when the Tables or Diagram toolbar comes' }, async () => {
-  const t = await lecternDeck();
+test('PPTX, check 3: clicks into an IntelliArt node put the caret at the character after the Diagram toolbar appears', async () => {
+  const t = await pptxDeck();
   try {
-    const r = await lecternClicks(t, ['cell', 'diagram']);
-    assert.deepEqual(r.kinds, ['cell', 'diagram'], 'setup');
+    const r = await pptxClicks(t, ['diagram']);
+    assert.deepEqual(r.kinds, ['diagram'], 'setup');
+    assert.deepEqual(r.bad, []);
+    t.clean();
+  } finally { await t.close(); }
+});
+test('PPTX, check 4: clicks into a table cell put the caret at the character after the Tables toolbar appears', async () => {
+  const t = await pptxDeck();
+  try {
+    const r = await pptxClicks(t, ['cell']);
+    assert.deepEqual(r.kinds, ['cell'], 'setup');
     assert.deepEqual(r.bad, []);
     t.clean();
   } finally { await t.close(); }
 });
 
-/* ---------------------------------------------------------------- Ledger */
-/** a Ledger text box holding "Hello wonderful world", not selected; the point of the "d" of "wonderful", and its edge */
-async function ledgerTextBox(t) {
+/* ---------------------------------------------------------------- Excelx */
+/** an Excelx text box holding "Hello wonderful world", not selected; the point of the "d" of "wonderful", and its edge */
+async function excelxTextBox(t) {
   await t.evaluate(`L.drawing.insertShape('textbox', { x: 300, y: 260, w: 260, h: 90 })`); await pause(400);
   await t.type('Hello wonderful world'); await t.esc(); await pause(150); await t.esc(); await pause(150);
   await t.click(await t.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(1, 1); return { x: w.left + b.x + 5, y: w.top + b.y + 5 }; })()`)); await pause(300);
   return t.evaluate(`(() => { const w = document.createTreeWalker(document.querySelector('#glayer'), NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) if (n.data.includes('wonderful')) { const k = n.data.indexOf('wonderful') + 3, r = document.createRange(); r.setStart(n, k); r.setEnd(n, k + 1); const b = r.getBoundingClientRect(), box = document.querySelector('#glayer .gobj').getBoundingClientRect(); return { x: b.left + 1, y: b.top + b.height / 2, edge: { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + 1) } }; } return null; })()`);
 }
-test('Ledger: a text box\'s edge shows the move cursor and a drag on it moves the box; a double-click selects the word', async () => {
+test('Excelx: a text box\'s edge shows the move cursor and a drag on it moves the box; a double-click selects the word', async () => {
   const t = await open('ledger', { look: 'classic' });
   try {
-    const p = await ledgerTextBox(t);
+    const p = await excelxTextBox(t);
     assert.equal(await t.evaluate(`getComputedStyle(document.elementFromPoint(${p.edge.x}, ${p.edge.y})).cursor`), 'move', 'the edge');
     const before = await t.evaluate(`JSON.stringify(L.grid.sheet().drawings[0].anchor)`);
     await t.drag(p.edge, { x: p.edge.x + 40, y: p.edge.y + 30 }, 6); await pause(200);
@@ -174,10 +201,10 @@ test('Ledger: a text box\'s edge shows the move cursor and a drag on it moves th
     t.clean();
   } finally { await t.close(); }
 });
-test('Ledger, check 2: a click on a text box\'s word puts the caret there, and typing goes there', async () => {
+test('Excelx, check 2: a click on a text box\'s word puts the caret there, and typing goes there', async () => {
   const t = await open('ledger', { look: 'classic' });
   try {
-    const p = await ledgerTextBox(t);
+    const p = await excelxTextBox(t);
     assert.equal(await t.evaluate(`getComputedStyle(document.elementFromPoint(${p.x}, ${p.y})).cursor`), 'text', 'the text cursor over the text');
     await t.click(p); await pause(300);
     await t.type('Q'); await t.esc(); await pause(200);
@@ -185,7 +212,7 @@ test('Ledger, check 2: a click on a text box\'s word puts the caret there, and t
     t.clean();
   } finally { await t.close(); }
 });
-test('Ledger: a click on the text of an AutoShape already selected puts the caret there; on one not selected it selects it', async () => {
+test('Excelx: a click on the text of an AutoShape already selected puts the caret there; on one not selected it selects it', async () => {
   const t = await open('ledger', { look: 'classic' });
   try {
     await t.evaluate(`L.drawing.insertShape('rect', { x: 300, y: 260, w: 260, h: 90 })`); await pause(400);

@@ -23,33 +23,33 @@ async function saved(app, lang, write, parts) {
     })()`);
   } finally { await page.close(); }
 }
-const quire = (lang) => saved('quire', lang, 'L.docx.write(L.D.doc)', ['word/document.xml', 'word/styles.xml', 'word/settings.xml', 'word/theme/theme1.xml']);
-const ledger = (lang) => saved('ledger', lang, 'L.xlsxWrite.write(L.app.books[L.app.cur].wb)', ['xl/styles.xml', 'xl/worksheets/sheet1.xml']);
-const lectern = (lang) => saved('lectern', lang, 'L.pptx.write(L.pres)', ['ppt/presentation.xml', 'ppt/theme/theme1.xml', 'ppt/slides/slide1.xml']);
+const wordx = (lang) => saved('quire', lang, 'L.docx.write(L.D.doc)', ['word/document.xml', 'word/styles.xml', 'word/settings.xml', 'word/theme/theme1.xml']);
+const excelx = (lang) => saved('ledger', lang, 'L.xlsxWrite.write(L.app.books[L.app.cur].wb)', ['xl/styles.xml', 'xl/worksheets/sheet1.xml']);
+const pptx = (lang) => saved('lectern', lang, 'L.pptx.write(L.pres)', ['ppt/presentation.xml', 'ppt/theme/theme1.xml', 'ppt/slides/slide1.xml']);
 
 for (const [lang, font, pitch, size, tab, charset, row, script, tag] of [
   ['zh-CN', '宋体', 312, 21, 420, 134, 13.5, 'Hans', 'zh-CN'],
   ['zh-Hant', '新細明體', 360, 24, 480, 136, 14.25, 'Hant', 'zh-HK'],   // a tag Word knows: it ignores zh-Hant
 ]) test('Chinese defaults survive saving in all three apps: ' + lang, async () => {
-  const q = await quire(lang), w = q['word/styles.xml'], set = q['word/settings.xml'];
+  const q = await wordx(lang), w = q['word/styles.xml'], set = q['word/settings.xml'];
   assert.match(q['word/document.xml'], /<w:pgSz w:w="11906" w:h="16838"/);
   assert.ok(q['word/document.xml'].includes('w:linePitch="' + pitch + '"'));
   assert.ok(w.includes('w:eastAsia="' + font + '"'));
   assert.ok(w.includes('<w:sz w:val="' + size + '"/>'));
   assert.ok(set.includes('<w:defaultTabStop w:val="' + tab + '"/>'));
   assert.ok(set.includes('w:eastAsia="' + tag + '"'));
-  const x = await ledger(lang);
+  const x = await excelx(lang);
   assert.ok(x['xl/styles.xml'].includes('<name val="' + font + '"/>'));
   assert.ok(x['xl/styles.xml'].includes('<charset val="' + charset + '"/>'));
   assert.ok(x['xl/worksheets/sheet1.xml'].includes('defaultRowHeight="' + row + '"'));
   assert.match(x['xl/worksheets/sheet1.xml'], /<pageSetup [^>]*paperSize="9"/);
-  const p = await lectern(lang);
+  const p = await pptx(lang);
   assert.ok(p['ppt/presentation.xml'].includes('lang="' + tag + '"'));
   assert.ok(p['ppt/theme/theme1.xml'].includes('script="' + script + '" typeface="' + font + '"'));
 });
 
-test('Quire, Japanese: A4, Office\'s margins, an 18pt line grid, Century with ＭＳ 明朝 10.5pt, headings in ＭＳ ゴシック, punctuation compressed', async () => {
-  const x = await quire('ja');
+test('Wordx, Japanese: A4, Office\'s margins, an 18pt line grid, Century with ＭＳ 明朝 10.5pt, headings in ＭＳ ゴシック, punctuation compressed', async () => {
+  const x = await wordx('ja');
   const doc = x['word/document.xml'], st = x['word/styles.xml'], set = x['word/settings.xml'];
   assert.match(doc, /<w:pgSz w:w="11906" w:h="16838"/);
   assert.match(doc, /<w:pgMar w:top="1985" w:right="1701" w:bottom="1701" w:left="1701" w:header="851" w:footer="992"/);
@@ -69,12 +69,12 @@ test('Quire, Japanese: A4, Office\'s margins, an 18pt line grid, Century with �
   assert.match(heading, /<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="ＭＳ ゴシック"/, 'headings in the theme\'s heading font, as Japanese Word\'s');
   const plain = st.match(/<w:style [^>]*w:styleId="PlainText".*?<\/w:style>/s);
   if (plain) assert.doesNotMatch(plain[0], /w:eastAsia=/, 'Courier New beside the body\'s ＭＳ 明朝, inherited');
-  const zh = (await quire('zh-CN'))['word/styles.xml'].match(/<w:style [^>]*w:styleId="Heading1".*?<\/w:style>/s)[0];
+  const zh = (await wordx('zh-CN'))['word/styles.xml'].match(/<w:style [^>]*w:styleId="Heading1".*?<\/w:style>/s)[0];
   assert.doesNotMatch(zh, /w:eastAsia=/, 'Chinese headings and text share 宋体');
 });
 
-test('Quire, French and German: A4, 2.5 cm margins (German 2 cm at the bottom), the text\'s language', async () => {
-  const fr = await quire('fr'), de = await quire('de');
+test('Wordx, French and German: A4, 2.5 cm margins (German 2 cm at the bottom), the text\'s language', async () => {
+  const fr = await wordx('fr'), de = await wordx('de');
   assert.match(fr['word/document.xml'], /<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708"/);
   assert.match(de['word/document.xml'], /<w:pgMar w:top="1417" w:right="1417" w:bottom="1134" w:left="1417" w:header="708" w:footer="708"/);
   assert.match(fr['word/styles.xml'], /<w:docDefaults>.*<w:lang w:val="fr-FR"\/>.*<\/w:docDefaults>/s);
@@ -82,15 +82,15 @@ test('Quire, French and German: A4, 2.5 cm margins (German 2 cm at the bottom), 
   assert.doesNotMatch(fr['word/document.xml'], /<w:docGrid w:type/);
 });
 
-test('Quire, English: the app\'s own Letter page, no grid', async () => {
-  const x = await quire('en');
+test('Wordx, English: the app\'s own Letter page, no grid', async () => {
+  const x = await wordx('en');
   assert.match(x['word/document.xml'], /<w:pgSz w:w="12240" w:h="15840"/);
   assert.doesNotMatch(x['word/document.xml'], /<w:docGrid w:type/);
   assert.match(x['word/settings.xml'], /<w:themeFontLang w:val="en-US"\/>/);
   assert.match(x['word/settings.xml'], /<w:characterSpacingControl w:val="doNotCompress"\/>/);
 });
 
-/** what Quire's Font box and status bar show in a new document with the UI in lang: blank, after Latin text,
+/** what Wordx's Font box and status bar show in a new document with the UI in lang: blank, after Latin text,
  *  after East Asian text; with ja, also the fonts of the text after choosing ＭＳ ゴシック, then Arial */
 async function shown(lang) {
   const page = await openPage('quire', { lang, persistence: false, automated: true });
@@ -113,7 +113,7 @@ async function shown(lang) {
   } finally { await page.close(); }
 }
 
-test('Quire, Japanese, Korean, Chinese: the Font box and status bar show the East Asian font and language, as that Word does with its keyboard', async () => {
+test('Wordx, Japanese, Korean, Chinese: the Font box and status bar show the East Asian font and language, as that Word does with its keyboard', async () => {
   const ja = await shown('ja');
   assert.deepEqual([ja.blank, ja.latin, ja.ea], [['ＭＳ 明朝', '日本語'], ['Century', '英語 (米国)'], ['ＭＳ 明朝', '日本語']],
     'blank: the UI\'s language stands in for the keyboard; then the text before the insertion point decides');
@@ -125,8 +125,8 @@ test('Quire, Japanese, Korean, Chinese: the Font box and status bar show the Eas
     'English: no East Asian font or language to show');
 });
 
-test('Ledger, Japanese and Korean: their Excel\'s default font on A4', async () => {
-  const ja = await ledger('ja'), ko = await ledger('ko');
+test('Excelx, Japanese and Korean: the spreadsheet default font on A4', async () => {
+  const ja = await excelx('ja'), ko = await excelx('ko');
   assert.match(ja['xl/styles.xml'], /<fonts[^>]*>\s*<font>.*?<name val="ＭＳ Ｐゴシック"\/>.*?<charset val="128"\/>/s);
   assert.match(ja['xl/styles.xml'], /<fonts[^>]*>\s*<font>\s*<sz val="11"\/>/s);
   assert.match(ko['xl/styles.xml'], /<fonts[^>]*>\s*<font>.*?<name val="맑은 고딕"\/>.*?<charset val="129"\/>/s);
@@ -134,11 +134,11 @@ test('Ledger, Japanese and Korean: their Excel\'s default font on A4', async () 
   assert.match(ja['xl/worksheets/sheet1.xml'], /<sheetFormatPr [^>]*defaultRowHeight="13.5"/);
 });
 
-test('Lectern, Japanese: text in Japanese, the theme\'s Japanese font', async () => {
-  const x = await lectern('ja');
+test('PPTX, Japanese: text in Japanese, the theme\'s Japanese font', async () => {
+  const x = await pptx('ja');
   assert.match(x['ppt/presentation.xml'], /<p:defaultTextStyle><a:defPPr><a:defRPr lang="ja-JP"\/>/);
   assert.match(x['ppt/theme/theme1.xml'], /<a:minorFont>.*<a:font script="Jpan" typeface="ＭＳ Ｐゴシック"\/>.*<\/a:minorFont>/s);
-  const en = await lectern('en');
+  const en = await pptx('en');
   assert.match(en['ppt/presentation.xml'], /<a:defRPr lang="en-US"\/>/);
   assert.doesNotMatch(en['ppt/theme/theme1.xml'], /script="Jpan"/);
 });

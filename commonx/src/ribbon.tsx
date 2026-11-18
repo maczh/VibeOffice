@@ -1,5 +1,6 @@
 import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { RibbonComboControl, type ComboOptions } from './combo.js';
 
 interface LegacyCommand {
   label?: string;
@@ -21,7 +22,9 @@ interface LegacyRibbonItem {
   split?: string;
   drop?: string;
   menu?: (...args: unknown[]) => unknown;
-  make?: () => HTMLElement;
+  combo?: string;
+  id?: string;
+  width?: number;
   row?: Array<LegacyRibbonItem | string>;
 }
 
@@ -52,6 +55,7 @@ interface LegacyRibbonUi {
 }
 
 interface LegacyRibbonRuntime {
+  app?: { parts?: { reactComboOptions?(name: string, options: { id: string; width: number }): ComboOptions | null } };
   ui: LegacyRibbonUi;
   icons: { get(name: string, size?: number): string };
   t(text: string): string;
@@ -64,29 +68,6 @@ interface LegacyRibbonRuntime {
 function runtime(): LegacyRibbonRuntime | undefined { return (window as Window & { L?: LegacyRibbonRuntime }).L; }
 function enabled(command: LegacyCommand | undefined): boolean { try { return !command?.enabled || !!command.enabled(); } catch { return false; } }
 function checked(command: LegacyCommand | undefined): boolean { try { return !!command?.checked?.(); } catch { return false; } }
-
-function LegacyControl({ item, size, spec }: { item: LegacyRibbonItem; size: LegacyRibbonItem['size']; spec: LegacyRibbonSpec }) {
-  const host = useMemo(() => document.createElement('span'), []);
-  useEffect(() => {
-    const office = runtime();
-    if (!office) return;
-    const value = typeof item === 'string' ? { cmd: item } : item;
-    const id = value.cmd;
-    const icon = value.icon || (id ? spec.icons?.[id] : undefined);
-    const label = size === 'small' ? '' : value.label ?? (id ? office.ui.stripAmp(office.ui.cmds[id]?.label || id).replace(/(\.\.\.|…)$/, '') : '');
-    let element: HTMLElement | null = null;
-    if (value.make) element = value.make();
-    if (!element) return;
-    element.classList.add(`rb-${size || 'medium'}`);
-    if (size === 'large' && icon) {
-      const svg = element.querySelector<SVGElement>('svg.ico');
-      if (svg) svg.outerHTML = office.icons.get(icon, 32);
-    }
-    host.replaceChildren(element);
-    return () => { element?.remove(); host.replaceChildren(); };
-  }, [host, item, size, spec]);
-  return <span className="vibeoffice-ribbon-control" style={{ display: 'contents' }} ref={(element) => { if (element && host.parentElement !== element) element.append(host); }} />;
-}
 
 /** Split and drop actions are React buttons; the legacy callback only supplies the existing menu model. */
 function RibbonMenuControl({ item, size, spec }: { item: LegacyRibbonItem; size: LegacyRibbonItem['size']; spec: LegacyRibbonSpec }) {
@@ -124,7 +105,10 @@ function RibbonItem({ value, size = 'medium', spec, refresh }: { value: LegacyRi
   if (!office) return null;
   const item: LegacyRibbonItem = typeof value === 'string' ? { cmd: value } : value;
   if (item.row) return <div className="rb-row">{item.row.map((child, index) => child === '|' ? <span key={`gap:${index}`} className="rb-gap" /> : <RibbonItem key={`item:${index}`} value={child} size="small" spec={spec} refresh={refresh} />)}</div>;
-  if (item.make) return <LegacyControl item={item} size={item.size || size} spec={spec} />;
+  if (item.combo) {
+    const combo = office.app?.parts?.reactComboOptions?.(item.combo, { id: item.id || 'ribbon-combo', width: item.width || 120 });
+    return combo ? <RibbonComboControl options={combo} size={item.size || size} refresh={refresh} /> : null;
+  }
   if (item.split || item.drop) return <RibbonMenuControl item={item} size={item.size || size} spec={spec} />;
   const id = item.cmd;
   if (!id) return null;
@@ -164,7 +148,7 @@ function RibbonGroupContents({ group, spec, refresh }: { group: LegacyRibbonGrou
     }
     column.items.push(value);
   }
-  const first = group.items.flatMap((value) => typeof value === 'object' && value.row ? value.row : [value]).find((value) => value !== '|' && !(typeof value === 'object' && value.make));
+  const first = group.items.flatMap((value) => typeof value === 'object' && value.row ? value.row : [value]).find((value) => value !== '|');
   const firstItem = typeof first === 'string' ? { cmd: first } : first;
   const firstId = firstItem?.cmd || firstItem?.split;
   const icon = group.icon || (firstId ? spec.icons?.[firstId] || office.ui.cmds[firstId]?.icon : undefined);
@@ -180,7 +164,7 @@ function RibbonGroupContents({ group, spec, refresh }: { group: LegacyRibbonGrou
 function RibbonGroup({ group, spec, refresh, folded, open, onOpen }: { group: LegacyRibbonGroup; spec: LegacyRibbonSpec; refresh: number; folded: boolean; open: boolean; onOpen(key: string, anchor: HTMLButtonElement): void }) {
   const office = runtime();
   if (!office) return null;
-  const first = group.items.flatMap((value) => typeof value === 'object' && value.row ? value.row : [value]).find((value) => value !== '|' && !(typeof value === 'object' && value.make));
+  const first = group.items.flatMap((value) => typeof value === 'object' && value.row ? value.row : [value]).find((value) => value !== '|');
   const firstItem = typeof first === 'string' ? { cmd: first } : first;
   const firstId = firstItem?.cmd || firstItem?.split;
   const icon = group.icon || (firstId ? spec.icons?.[firstId] || office.ui.cmds[firstId]?.icon : undefined);

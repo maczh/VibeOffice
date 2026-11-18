@@ -1,4 +1,4 @@
-// Markdown round trips in Quire, in the Chromium that tools/shot.mjs drives (CDP 127.0.0.1:9222).
+// Markdown round trips in Wordx, in the Chromium that tools/shot.mjs drives (CDP 127.0.0.1:9222).
 //
 //   node tests/quire/mdroundtrip.mjs DIR          every .md file in DIR (not checked in: download READMEs)
 //   node tests/quire/mdroundtrip.mjs --spec FILE  the examples of the CommonMark spec.json

@@ -1,6 +1,6 @@
 export type RibbonItem = string | {
   cmd?: string; arg?: unknown; size?: 'large' | 'medium' | 'small'; label?: string; icon?: string;
-  split?: string; drop?: string; tip?: string; menu?: (rect: unknown, anchor?: unknown) => unknown; make?: () => HTMLElement;
+  split?: string; drop?: string; tip?: string; menu?: (rect: unknown, anchor?: unknown) => unknown; make?: () => HTMLElement; combo?: string; id?: string; width?: number;
   row?: Array<RibbonItem | '|'>;
 };
 export type RibbonGroup = { label: string; icon?: string; launcher?: string; items: Array<RibbonItem | '|'> };
@@ -15,7 +15,7 @@ type RibbonRuntime = {
     ribbonSpec?: () => PptxRibbonSpec;
     app?: {
       inContext(id: string): boolean;
-      parts?: { font(options: { width: number; id: string }): HTMLElement; size(options: { width: number; id: string }): HTMLElement; zoom(options: { width: number; id: string }): HTMLElement };
+      parts?: { reactComboOptions?(name: string, options: { width: number; id: string }): unknown };
       menus?: {
         color(kind: string): (rect: unknown, anchor?: unknown) => unknown;
         autoShapes(rect: unknown): unknown; draw(rect: unknown): unknown; shadow(rect: unknown, anchor?: unknown): unknown;
@@ -52,7 +52,7 @@ export function installPptxRibbonSpec(runtime: Window): void {
         { label: 'Clipboard', launcher: 'officeClipboard', items: [{ split: 'paste', size: 'large', menu: open(['paste', 'pasteSpecial']) }, 'cut', { split: 'copy', menu: open(['copy', 'duplicate']) }, 'painter'] },
         { label: 'Slides', items: [{ split: 'newSlide', size: 'large', label: 'New Slide', menu: open(['newSlide', 'duplicateSlide', '-', 'slidesFromFiles', 'slidesFromOutline']) }, { cmd: 'slideLayout', label: 'Layout' }, 'duplicateSlide', 'deleteSlide'] },
         { label: 'Font', icon: 'font', launcher: 'fontDlg', items: [
-          { row: [{ make: () => root.L?.app?.parts?.font({ width: 130, id: 'rb-font' }) ?? document.createElement('span') }, { make: () => root.L?.app?.parts?.size({ width: 44, id: 'rb-size' }) ?? document.createElement('span') }, 'growFont', 'shrinkFont', 'changeCase'] },
+          { row: [{ combo: 'font', width: 130, id: 'rb-font' }, { combo: 'size', width: 44, id: 'rb-size' }, 'growFont', 'shrinkFont', 'changeCase'] },
           { row: ['bold', 'italic', 'underline', 'shadowText', 'subscript', 'superscript', '|', { split: 'fontColor', menu: (r: unknown, b: unknown) => root.L?.app?.menus?.color('font')(r, b) }] },
         ] },
         { label: 'Paragraph', icon: 'paragraph', launcher: 'bulletsDlg', items: [{ row: ['bullets', 'numbering', '|', 'promote', 'demote', '|', 'lineSpacing'] }, { row: ['alignLeft', 'alignCenter', 'alignRight', 'justify'] }] },
@@ -84,7 +84,7 @@ export function installPptxRibbonSpec(runtime: Window): void {
         { label: 'Presentation Views', items: [{ cmd: 'viewNormal', size: 'large', label: 'Normal' }, { cmd: 'viewSorter', size: 'large', label: 'Slide Sorter' }, { cmd: 'viewNotes', size: 'large', label: 'Notes Page' }] },
         { label: 'Master Views', items: [{ cmd: 'viewMaster', size: 'large', label: 'Slide Master' }] },
         { label: 'Show', items: ['ruler', 'showGrid', 'gridGuides', { cmd: 'speakerNotes', label: 'Notes' }, 'slidesPane', 'taskPane'] },
-        { label: 'Zoom', items: [{ cmd: 'zoomDlg', size: 'large', label: 'Zoom' }, { cmd: 'zoomFit', size: 'large', label: 'Fit to Window' }, { make: () => root.L?.app?.parts?.zoom({ width: 64, id: 'rb-zoom' }) ?? document.createElement('span') }] },
+        { label: 'Zoom', items: [{ cmd: 'zoomDlg', size: 'large', label: 'Zoom' }, { cmd: 'zoomFit', size: 'large', label: 'Fit to Window' }, { combo: 'zoom', width: 64, id: 'rb-zoom' }] },
         { label: 'Color/Grayscale', items: ['viewColor', 'viewGray', 'viewBW'] },
       ] },
     ],

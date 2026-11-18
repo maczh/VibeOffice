@@ -428,6 +428,7 @@ compatibility results are archived with the run history rather than mixed into c
 
 | File | What it does |
 | --- | --- |
+| `wordx/src/engine-shell.tsx`, `wordx/src/layout.ts` | React owns the editable `#pages` host and pagination sizer in the Vite editor; the document engine binds to those nodes and renders page content inside them, while classic startup retains its own fallback mount path |
 | `index.html` | Window chrome and page CSS, script order |
 | `../common/core.js`, `../common/zip.js` | Utilities, colour maths, storage, ZIP reader/writer, PDF writer, downloads |
 | `../common/xml.js`, `../common/opc.js`, `../common/opc-order.js` | Shared OOXML package graph, identity reservations, AlternateContent capture and schema-order merges |

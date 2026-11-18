@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 
 type ComboOption = string | number | { heading?: string; sep?: boolean; value?: unknown; label?: string; run?: () => unknown };
 type ComboNote = string | { text?: string; tip?: string } | null | undefined;
-interface ComboOptions {
+export interface ComboOptions {
   id: string;
   width?: number;
   tip?: string;
@@ -16,6 +16,7 @@ interface ComboOptions {
   listCls?: string;
 }
 interface ComboRequest { target: HTMLDivElement; options: ComboOptions }
+interface ComboControlRequest { target?: HTMLDivElement; options: ComboOptions }
 interface ComboRuntime {
   ui: {
     openMenu(items: unknown[], at: { left: number; bottom: number }, options?: { cls?: string }): void;
@@ -32,9 +33,10 @@ function cssStyle(text?: string): CSSProperties | undefined {
   return Object.fromEntries(Array.from({ length: declaration.length }, (_, index) => declaration.item(index)).map((property) => [property.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase()), declaration.getPropertyValue(property)])) as CSSProperties;
 }
 
-function ComboControl({ request, refresh }: { request: ComboRequest; refresh: number }) {
+function ComboControl({ request, refresh, className }: { request: ComboControlRequest; refresh: number; className?: string }) {
   const office = runtime();
   const { options, target } = request;
+  const boxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [focused, setFocused] = useState(false);
@@ -44,7 +46,8 @@ function ComboControl({ request, refresh }: { request: ComboRequest; refresh: nu
   const isEnabled = () => { try { return !options.enabled || !!options.enabled(); } catch { return false; } };
   const openList = () => {
     office.ui.hooks.commitEdit();
-    const rect = target.getBoundingClientRect();
+    const rect = (target || boxRef.current)?.getBoundingClientRect();
+    if (!rect) return;
     const items = options.options().map((option) => {
       if (typeof option === 'object' && option && 'heading' in option && option.heading) return { heading: option.heading };
       if (typeof option === 'object' && option && 'sep' in option && option.sep) return { sep: true };
@@ -67,14 +70,21 @@ function ComboControl({ request, refresh }: { request: ComboRequest; refresh: nu
     office.ui.openMenu(items, { left: rect.left, bottom: rect.bottom }, { cls: `combo-list${options.listCls ? ` ${options.listCls}` : ''}` });
   };
   const commit = () => { options.onChange(draft); setFocused(false); inputRef.current?.blur(); office.ui.hooks.refocus(); };
-  return createPortal(<>
+  const fields = <>
     <input ref={inputRef} type="text" className="combo-in" id={options.id} aria-label={options.tip || options.id} autoComplete="off" spellCheck={false} disabled={!isEnabled()} value={draft} onChange={(event) => setDraft(event.currentTarget.value)} onFocus={(event) => { setFocused(true); event.currentTarget.select(); office.ui.hooks.commitEdit(); }} onBlur={() => setFocused(false)} onKeyDown={(event) => {
       if (event.key === 'Enter') { event.preventDefault(); commit(); }
       if (event.key === 'Escape') { event.preventDefault(); setDraft(currentValue(options)); setFocused(false); inputRef.current?.blur(); office.ui.hooks.refocus(); }
       event.stopPropagation();
     }} />
     <button ref={buttonRef} className="combo-btn" type="button" tabIndex={-1} aria-label="Open list" onPointerDown={(event) => event.preventDefault()} onClick={openList}><span className="dd-arrow" /></button>
-  </>, target);
+  </>;
+  if (target) return createPortal(fields, target);
+  return <div ref={boxRef} className={`combo vibeoffice-react-combo${className ? ` ${className}` : ''}`} style={options.width ? { width: options.width } : undefined}>{fields}</div>;
+}
+
+/** Render an engine-backed combo directly in a React Ribbon without a legacy DOM placeholder. */
+export function RibbonComboControl({ options, size, refresh = 0 }: { options: ComboOptions; size?: 'large' | 'medium' | 'small'; refresh?: number }) {
+  return <ComboControl request={{ options }} refresh={refresh} className={`rb-${size || 'medium'}`} />;
 }
 
 /** React-owned editable combo controls; engine models retain option/value and edit callbacks. */
@@ -93,5 +103,5 @@ export function EditorComboLayer({ host }: { host: HTMLElement }) {
     const offRefresh = runtime()?.bus.on('ui-refresh', () => setRefresh((current) => current + 1));
     return () => { observer.disconnect(); host.removeEventListener('vibeoffice-react-combo', onCombo); offRefresh?.(); };
   }, [host]);
-  return <>{requests.map((request) => createPortal(<ComboControl request={request} refresh={refresh} />, request.target, request.target.id))}</>;
+  return <>{requests.map((request) => request.target ? <ComboControl key={request.target.id} request={request} refresh={refresh} /> : null)}</>;
 }

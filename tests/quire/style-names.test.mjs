@@ -48,7 +48,7 @@ async function roundTrip() {
   if (!D.useStyle) return { unedited };
   const doc = await read();
   const used = { heading: D.useStyle(doc, 'Heading1'), pageNumber: D.useStyle(doc, 'PageNumber'), toc: D.useStyle(doc, 'TOC1') };
-  // a command that sets a built-in by id without asking (the paragraph's look in Quire is the built-in's until reopened)
+  // a command that sets a built-in by id without asking (the paragraph's look in Wordx is the built-in's until reopened)
   const paragraphs = []; D.walk(doc.main, b => { if (b.t === 'p') paragraphs.push(b); });
   paragraphs[2].pPr.style = 'BodyText2';
   // built-ins the file doesn't define, put to use

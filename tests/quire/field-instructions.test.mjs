@@ -1,4 +1,4 @@
-// Synthetic field instructions through Quire's browser reader and writer.
+// Synthetic field instructions through Wordx's browser reader and writer.
 // node --test tests/quire/field-instructions.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';

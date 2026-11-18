@@ -1,8 +1,8 @@
-// Quire's lines against Word's: each line as tall as what is on it (public/quire/js/portions.js), checked on a real
+// Wordx's lines against Word's: each line as tall as what is on it (public/quire/js/portions.js), checked on a real
 // document Word laid out. The reference is Word's PDF of a Word-saved walkthrough (19 pages; tools/wordlines.py made
 // lines/walkthrough-word.json from it); the document itself stays out of the repository (its text is not ours to
 // publish): put it in ~/corpora/word-ref/fluent-walkthrough.docx, or name its folder in QUIRE_WORD_REF, else this
-// part is skipped. Pages must break where Word's do, and between two lines that follow each other in both, Quire's
+// part is skipped. Pages must break where Word's do, and between two lines that follow each other in both, Wordx's
 // distance must be Word's within BOUND points (a line too tall or too short shows as a step; tests/lib/lines.mjs).
 //   node --test tests/quire/lines.test.mjs        (REPORT=1 prints each page's steps)
 import { test } from 'node:test';

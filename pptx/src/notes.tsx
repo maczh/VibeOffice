@@ -40,6 +40,10 @@ export function PptxNotesLayer({ host }: { host: HTMLElement }) {
       const target = host.querySelector<HTMLElement>('#react-notes-root');
       const input = host.querySelector<HTMLDivElement>('#notes .notes-in');
       if (!target || !input || target === slot) return;
+      off?.();
+      slot?.classList.remove('vibeoffice-react-owned');
+      adapter?.classList.remove('notes-engine-adapter');
+      adapter?.removeAttribute('aria-hidden');
       slot = target; adapter = input;
       slot.classList.add('vibeoffice-react-owned');
       adapter.classList.add('notes-engine-adapter');

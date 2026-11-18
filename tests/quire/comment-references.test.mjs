@@ -1,4 +1,4 @@
-// A comment's reference run keeps its properties and ids, and its place after the other comments' marks: Quire wrote
+// A comment's reference run keeps its properties and ids, and its place after the other comments' marks: Wordx wrote
 // every reference right after its range's end as a plain CommentReference run, so Word 2016 placed the text after it
 // a fraction of a point differently (Comment035, Comment050; 505 of the corpus's 1,364 reference runs have ids, 325 more
 // properties, 232 come after other comments' marks, some right before their range's end).

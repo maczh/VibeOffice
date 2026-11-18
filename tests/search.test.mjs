@@ -29,6 +29,7 @@ const FIRST = {
 
 /* first results with no menu, toolbar or ribbon place (reached through a dialog) */
 const NOWHERE = { quire: ['bars:strikethrough'], ledger: [], lectern: [] };
+const APP_NAMES = { quire: 'Wordx', ledger: 'Excelx', lectern: 'PPTX' };
 
 const page = (cases) => `
 const out = {};
@@ -45,7 +46,7 @@ return JSON.stringify(out);
 `;
 
 for (const app of Object.keys(FIRST)) {
-  test(`${app}: everyday words find the command`, () => {
+  test(`${APP_NAMES[app]}: everyday words find the command`, () => {
     const out = execFileSync('node', [path.join(root, 'tools/shot.mjs'), app + '/', JSON.stringify([{ js: page(FIRST[app]) }])], { encoding: 'utf8' });
     const line = out.split('\n').find((l) => l.startsWith('js -> '));
     assert.ok(line, out);

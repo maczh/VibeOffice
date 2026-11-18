@@ -1,4 +1,4 @@
-// A row's and a cell's properties keep what Quire doesn't model (w:cnfStyle, w:wAfter, a row's w:tblCellSpacing, cell
+// A row's and a cell's properties keep what Wordx doesn't model (w:cnfStyle, w:wAfter, a row's w:tblCellSpacing, cell
 // revisions) and a cell's width as the file gives it (a percentage, auto) while the table's grid is unchanged; they were
 // rebuilt from the model, every width in twips. A row's exceptions (w:tblPrEx) and the columns' tracked change
 // (w:tblGridChange) are kept too; both were dropped.

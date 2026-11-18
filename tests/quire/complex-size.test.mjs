@@ -1,6 +1,6 @@
 // A run read with a size (w:sz) but no complex-script size (w:szCs) is saved without one: writing szCs = sz there
 // changed the size of Arabic, Hebrew and other complex-script text (27,025 times in 683 Word-authored files). Text
-// Quire formats itself still gets both, as Word writes them.
+// New Wordx formatting still writes both, as Word does.
 // node --test tests/quire/complex-size.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';

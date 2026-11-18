@@ -160,9 +160,9 @@ test('the service worker caches the published site, a version per page', { timeo
   assert.equal(await a.js('VO.VERSION'), V1);
   await a.go(site.origin + '/quire');   // a folder without its slash
   assert.equal(await a.js('location.pathname'), '/quire/');
-  await a.until('!!(window.L && L.app)', 'Quire offline');
+  await a.until('!!(window.L && L.app)', 'Wordx offline');
   await a.go(site.origin + '/quire/?new');   // a query is ignored
-  await a.until('!!(window.L && L.app)', 'Quire ?new offline');
+  await a.until('!!(window.L && L.app)', 'Wordx ?new offline');
   await a.go(site.origin + '/nowhere/');   // not a page of the site: the Start Center
   assert.equal(await a.js('location.pathname'), '/');
   site.offline = false;
