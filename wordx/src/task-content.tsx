@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AppearanceFields, OfficeDialog } from '@vibeoffice/core';
+import { AppearanceFields, DraftRecoveryPane, OfficeDialog } from '@vibeoffice/core';
 import { WordxAutocompleteTip } from './autocomplete-tip.js';
 
 type HelpEntry = [string, string];
@@ -3068,7 +3068,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   }, [host, L]);
   useLayoutEffect(() => {
     const body = host.querySelector<HTMLElement>('#taskpane > .tp-body');
-    body?.classList.toggle('react-pane-adapter', current === 'getting-started' || current === 'help' || current === 'search' || current === 'clipart' || current === 'new' || current === 'clipboard' || current === 'styles' || current === 'reveal' || current === 'protect' || current === 'research' || current === 'mailmerge');
+    body?.classList.toggle('react-pane-adapter', current === 'getting-started' || current === 'help' || current === 'search' || current === 'clipart' || current === 'new' || current === 'clipboard' || current === 'styles' || current === 'reveal' || current === 'protect' || current === 'research' || current === 'mailmerge' || current === 'recovery');
     return () => body?.classList.remove('react-pane-adapter');
   }, [host, current]);
   if (!L) return null;
@@ -3190,5 +3190,6 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   else if (current === 'new') pane = createPortal(<NewDocumentPane key="wordx-new" L={L} />, mount);
   else if (current === 'clipboard') pane = createPortal(<ClipboardPane key="wordx-clipboard" L={L} />, mount);
   else if (current === 'help') pane = createPortal(<HelpPane key="wordx-help" L={L} />, mount);
+  else if (current === 'recovery') pane = createPortal(<DraftRecoveryPane key="wordx-draft-recovery" host={host} editor="wordx" />, mount);
   return <><OutlineInteractionBridge L={L} />{dropHint}{pane}{docMap}{review}{reading}{preview}{taskHead}{status}{goto}{findInput}{replaceInput}{findAux}{findOptions}{findFormat}{findFormatSummary}{replaceFormatSummary}{findMore}{findActions}{sortDialog}{tableAutoFormatDialog}{tabsDialog}{paragraphDialog}{bordersDialog}{tablePropsDialog}{rulerTabSelector}{rulerCanvas}{verticalRulerCanvas}{rulerEvents}{verticalRulerEvents}{rulerMarkers}{verticalRulerMarkers}{changeCaseDialog}{textDirectionDialog}{themeDialog}{languageDialog}{dropCapDialog}{lineNumbersDialog}{columnsDialog}{pageSetupDialog}{captionDialog}{captionNumberingDialog}{watermarkDialog}{hyperlinkDialog}{symbolDialog}{bulletsDialog}{wordartDialog}{wordCountDialog}{summarizeDialog}{zoomDialog}{hyphenationDialog}{pasteSpecialDialog}{macrosDialog}{optionsViewDialog}{optionsGeneralDialog}{optionsEditDialog}{optionsPrintDialog}{optionsSaveDialog}{optionsTrackDialog}{optionsUserDialog}{optionsCompatDialog}{optionsSecurityDialog}{confirmPasswordDialog}{optionsSpellingDialog}{customDictionaryDialog}{formatObjectColorsDialog}{fillEffectsDialog}{formatObjectWebDialog}{formatObjectSizeDialog}{formatObjectLayoutDialog}{formatObjectAdvancedDialog}{formatObjectTextBoxDialog}{formatObjectPictureDialog}{autoCorrectExceptionsDialog}{customizeDialog}{drawingGridDialog}{autoFormatDialog}{autoFormatReviewDialog}{envelopesDialog}{indexTablesDialog}{letterWizardDialog}{organizerDialog}{templatesDialog}{propertiesDialog}{saveAsDialog}{templatePickerDialog}{printDialog}{bookmark}{object}{equation}{breakDialog}{dateTimeDialog}{pageNumbersDialog}{pageNumberFormatDialog}{cellOperationDialog}{insertTableDialog}{splitCellsDialog}{textToTableDialog}{tableToTextDialog}{formulaDialog}{crossRefDialog}{markEntryDialog}{fieldDialog}{footnoteDialog}{convertNotesDialog}{styleDialog}{diagramDialog}</>;
 }

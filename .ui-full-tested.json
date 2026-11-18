@@ -2,13 +2,11 @@
  "commit": "ebe91e54a5281255a0859d4bca74a718d2911f32",
  "dirty": true,
  "public": "5ae43acd918f9f113631b27f539a4b7bc9cdd8c9",
- "date": "2026-11-18T00:37:45.360Z",
- "minutes": 22.7,
+ "date": "2026-11-18T01:01:10.123Z",
+ "minutes": 22.8,
  "tests": 600,
- "pass": 598,
- "fail": 1,
+ "pass": 599,
+ "fail": 0,
  "todo": 1,
- "failures": [
-  "Excelx React task-pane search inputs have accessible names"
- ]
+ "failures": []
 }

@@ -1,5 +1,6 @@
 import { Children, createElement, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { DraftRecoveryPane } from '@vibeoffice/core';
 import type { PptxRibbonSpec, RibbonContext, RibbonItem } from './ribbon-spec.js';
 
 interface TaskContentRuntime {
@@ -61,10 +62,10 @@ export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
   }, [host]);
   useLayoutEffect(() => {
     const body = host.querySelector<HTMLElement>('#taskpane > .tp-body');
-    body?.classList.toggle('react-pane-adapter', !!toolContext || current === 'getting-started' || current === 'new' || current === 'help' || current === 'clipart' || current === 'design' || current === 'colors' || current === 'animSchemes' || current === 'layout' || current === 'transition' || current === 'customAnim' || current === 'clipboard' || current === 'diagramText');
+    body?.classList.toggle('react-pane-adapter', !!toolContext || current === 'getting-started' || current === 'new' || current === 'help' || current === 'clipart' || current === 'design' || current === 'colors' || current === 'animSchemes' || current === 'layout' || current === 'transition' || current === 'customAnim' || current === 'clipboard' || current === 'diagramText' || current === 'recovery');
     return () => body?.classList.remove('react-pane-adapter');
   }, [host, current, toolContext?.id]);
-  if (!mount || !L || !task || (!toolContext && !['getting-started', 'new', 'help', 'clipart', 'design', 'colors', 'animSchemes', 'layout', 'transition', 'customAnim', 'clipboard', 'diagramText'].includes(current || ''))) return null;
+  if (!mount || !L || !task || (!toolContext && !['getting-started', 'new', 'help', 'clipart', 'design', 'colors', 'animSchemes', 'layout', 'transition', 'customAnim', 'clipboard', 'diagramText', 'recovery'].includes(current || ''))) return null;
   const goToSearch = (query: string) => { if (L.panes) L.panes.helpQuery = query; task.show('help'); };
   const link = (icon: string, label: string, run: () => void) => <button className="tp-link" type="button" onClick={run}>
     {icon && <span dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} />}<span>{translate(L, label)}</span>
@@ -74,6 +75,7 @@ export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
   const editionName = (window as Window & { VO?: { editionName?(app: string): string } }).VO?.editionName?.('PPTX') || 'PPTX';
   if (toolContext) return <ContextualToolsPane L={L} mount={mount} context={toolContext} />;
   if (current === 'diagramText') return <IntelliArtTextPane L={L} mount={mount} revision={revision} />;
+  if (current === 'recovery') return <DraftRecoveryPane host={host} editor="pptx" />;
   if (current === 'help') return <HelpPane L={L} task={task} mount={mount} />;
   if (current === 'clipart') return <ClipArtPane L={L} mount={mount} />;
   if (current === 'design') return <DesignPane L={L} mount={mount} />;

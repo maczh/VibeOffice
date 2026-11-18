@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { DraftRecoveryPane } from '@vibeoffice/core';
 import { EXCELX_HELP } from './help-content.js';
 import { EXCELX_WORKBOOK_TEMPLATES } from './template-catalog.js';
 
@@ -57,7 +58,7 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
     let off: (() => void) | undefined;
     const hideLegacyContent = () => {
       if (!target || !slot) return;
-      const active = ['getting-started', 'new', 'help', 'keys', 'clipboard'].includes(runtime()?.panes?.task?.current || '');
+      const active = ['getting-started', 'new', 'help', 'keys', 'clipboard', 'recovery'].includes(runtime()?.panes?.task?.current || '');
       if (!active) {
         hiddenChildren.forEach((display, child) => { child.style.display = display; });
         hiddenChildren.clear();
@@ -155,7 +156,8 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
     <button className="tp-nav" type="button" aria-label={translate(L, 'Close task pane')} data-tip={translate(L, 'Close')} onClick={() => L.app?.toggleTask?.(false)} dangerouslySetInnerHTML={{ __html: L.icons?.get('close') || '×' }} />
   </div>, headMount) : null;
   const withHeader = (content: ReactNode | null) => <>{head}{content}</>;
-  if (!mount || !['getting-started', 'new', 'help', 'keys', 'clipboard'].includes(current || '')) return head;
+  if (!mount || !['getting-started', 'new', 'help', 'keys', 'clipboard', 'recovery'].includes(current || '')) return head;
+  if (current === 'recovery') return withHeader(createPortal(<DraftRecoveryPane host={host} editor="excelx" />, mount));
   if (current === 'help') {
     const data = EXCELX_HELP;
     const words = helpQuery.toLocaleLowerCase().split(/\s+/).filter(Boolean);

@@ -21,7 +21,7 @@ export function installWordxPanes(runtime: Window): void {
 
   /* ================= task pane shell ================= */
   const TP = (P.task = { stack: [], pos: -1, registry: {} });
-  const reactOwnedTaskPanes = new Set(['getting-started', 'help', 'search', 'clipart', 'new', 'clipboard', 'styles', 'reveal', 'protect', 'research', 'mailmerge']);
+  const reactOwnedTaskPanes = new Set(['getting-started', 'help', 'search', 'clipart', 'new', 'clipboard', 'styles', 'reveal', 'protect', 'research', 'mailmerge', 'recovery']);
   const isReactOwnedTaskPane = (id) => !!(window.VO?.reactDirectHost && reactOwnedTaskPanes.has(id));
   TP.mount = function (el) {
     TP.el = el;
@@ -52,9 +52,9 @@ export function installWordxPanes(runtime: Window): void {
       L.bus.on('doc-loaded', TP.reactRefreshLoaded);
     }
   };
-  TP.register = (p) => { if (p.id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__) return; TP.registry[p.id] = p; };
+  TP.register = (p) => { TP.registry[p.id] = p; };
   TP.show = function (id) {
-    if (!TP.registry[id] || (id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__)) return;
+    if (!TP.registry[id]) return;
     if (L.$('#taskpane').hidden) A().toggleTask(true);
     if (TP.stack[TP.pos] !== id) { TP.stack = TP.stack.slice(0, TP.pos + 1); TP.stack.push(id); TP.pos = TP.stack.length - 1; }
     TP.render();
@@ -65,13 +65,16 @@ export function installWordxPanes(runtime: Window): void {
     TP.current = id;
     const p = TP.registry[id];
     if (!p) return;
-    TP.title.firstChild.textContent = L.t(p.title);
-    TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
-    L.clear(TP.body);
-    if (!isReactOwnedTaskPane(id)) p.render(TP.body);
+    if (TP.title) TP.title.firstChild.textContent = L.t(p.title);
+    if (TP.back) TP.back.disabled = TP.pos <= 0;
+    if (TP.fwd) TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
+    if (TP.body) {
+      L.clear(TP.body);
+      if (!isReactOwnedTaskPane(id)) p.render(TP.body);
+    }
     L.bus.emit('wordx-task-render');
   };
-  const reactTaskPanes = () => Object.values(TP.registry).filter((pane) => !pane.hidden && !(window.VO?.reactDirectHost && pane.id === 'recovery'));
+  const reactTaskPanes = () => Object.values(TP.registry).filter((pane) => !pane.hidden);
   P.reactTaskShellState = () => ({ current: TP.current || '', title: TP.registry[TP.current]?.title || '', backDisabled: TP.pos <= 0, forwardDisabled: TP.pos >= TP.stack.length - 1, items: reactTaskPanes().map((pane) => ({ id: pane.id, title: pane.title, current: pane.id === TP.current })) });
   P.reactTaskShellAction = (action, anchor, value) => {
     if (action === 'back') return TP.go(TP.pos - 1);

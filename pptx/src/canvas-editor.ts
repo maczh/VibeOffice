@@ -22,17 +22,32 @@ export function installPptxEditor(runtime: Window): void {
   /* ---------- DOM ---------- */
   E.mount = function (container) {
     E.wrap = container;
-    E.scroller = h('div', { class: 'ed-scroll', tabindex: '-1', 'aria-label': 'Slide editing area' });
-    E.canvas = h('div', { class: 'ed-canvas' });
-    E.host = h('div', { class: 'ed-host' });
-    E.gridEl = h('div', { class: 'ed-grid', hidden: true });
-    E.overlay = h('div', { class: 'ed-overlay' });
-    E.rulerH = h('div', { class: 'ruler ruler-h', hidden: true });
-    E.rulerV = h('div', { class: 'ruler ruler-v', hidden: true });
-    E.empty = h('div', { class: 'ed-empty', hidden: true, text: 'Click to add first slide' });
-    E.canvas.append(E.host, E.gridEl, E.overlay);
-    E.scroller.append(E.canvas, E.empty);
-    container.append(E.rulerH, E.rulerV, E.scroller);
+    const reactSurface = window.__VIBE_OFFICE_DIRECT_HOST__ && container.querySelector(':scope > .ed-scroll[data-react-owned="pptx-canvas-surface"]');
+    if (reactSurface) {
+      E.surfaceOwnedByReact = true;
+      E.scroller = reactSurface;
+      E.canvas = reactSurface.querySelector(':scope > .ed-canvas');
+      E.host = E.canvas?.querySelector(':scope > .ed-host');
+      E.gridEl = E.canvas?.querySelector(':scope > .ed-grid');
+      E.overlay = E.canvas?.querySelector(':scope > .ed-overlay');
+      E.empty = reactSurface.querySelector(':scope > .ed-empty');
+      E.rulerH = container.querySelector(':scope > .ruler-h');
+      E.rulerV = container.querySelector(':scope > .ruler-v');
+      if (![E.canvas, E.host, E.gridEl, E.overlay, E.empty, E.rulerH, E.rulerV].every(Boolean)) throw new Error('The React PPTX canvas shell is incomplete');
+    } else {
+      E.surfaceOwnedByReact = false;
+      E.scroller = h('div', { class: 'ed-scroll', tabindex: '-1', 'aria-label': 'Slide editing area' });
+      E.canvas = h('div', { class: 'ed-canvas' });
+      E.host = h('div', { class: 'ed-host' });
+      E.gridEl = h('div', { class: 'ed-grid', hidden: true });
+      E.overlay = h('div', { class: 'ed-overlay' });
+      E.rulerH = h('div', { class: 'ruler ruler-h', hidden: true });
+      E.rulerV = h('div', { class: 'ruler ruler-v', hidden: true });
+      E.empty = h('div', { class: 'ed-empty', hidden: true, text: 'Click to add first slide' });
+      E.canvas.append(E.host, E.gridEl, E.overlay);
+      E.scroller.append(E.canvas, E.empty);
+      container.append(E.rulerH, E.rulerV, E.scroller);
+    }
     const onPointerDown = (e) => {
       if (e.button === 0) pressStart();
       try { onDown(e); } finally { if (!L.ui.dragging()) pressEnd(true); }
@@ -418,6 +433,7 @@ export function installPptxEditor(runtime: Window): void {
      started on, and a double-click's second press lands where the first did. The press ends with its drag (whichever
      way it ends) or, when it started none, at once. */
   let pressing = false, laterTimer = 0, later = null;
+  L.addMountCleanup(() => { clearTimeout(laterTimer); laterTimer = 0; later = null; pressing = false; });
   function pressStart() { pressing = true; clearTimeout(laterTimer); laterTimer = 0; }
   function pressEnd(clicked) {
     if (!pressing) return;

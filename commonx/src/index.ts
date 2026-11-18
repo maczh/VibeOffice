@@ -47,6 +47,8 @@ export { initializeSharedRuntime, installSharedRuntimeService } from './runtime-
 export { VibeOfficeProvider, useVibeOffice } from './react-bridge.js';
 export type { Choice, LanguageId, LookId, VibeOfficeProviderProps, VibeOfficeServiceOverrides, VibeOfficeServices } from './react-bridge.js';
 export { createIndexedDbDraftStore, openLocalDocument, saveLocalDocument } from './local-files.js';
+export { DraftRecoveryPane } from './draft-recovery.js';
+export type { DraftRecoveryUpdate } from './draft-recovery.js';
 export { resolveUnsavedChanges } from './local-files.js';
 export type { DraftStore, FilePickerWindow, LocalDocument, LocalDraft, UnsavedChangeActions, UnsavedChoice } from './local-files.js';
 export { createRemoteFileCallbacks, createUrlReadProvider, createWebDavProvider, remoteConflict } from './storage.js';

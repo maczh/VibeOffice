@@ -14,3 +14,6 @@
 - [x] Existing Recent Files data in browser storage is not automatically deleted or read by the new implementation.
 
 App-specific engine routing and wiring the confirmation guard are performed by the editor-core tickets; this ticket provides their local file/draft boundary.
+
+2026-11-18: Added the shared React Document Recovery pane to all three direct-host editors. It reads the active editor's local draft snapshot, restores through the existing engine callback, and removes/displays drafts through the dedicated store. The production React Suite browser test covers Wordx Restore/Discard rendering and verifies the Recent Files database remains unopened; ticket progress continues in app-migration and suite acceptance tickets.
+2026-11-18 verification: Saving or removing an engine draft now republishes the pane snapshot, and disposing an editor clears only its own cached recovery snapshot. Typecheck, all Core/app/Suite production builds, React Suite (1/1), and changed-file quick (8/8 groups) pass; `git diff --check` is clean.

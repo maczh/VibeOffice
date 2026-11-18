@@ -12,3 +12,5 @@
 - [ ] Existing templates and creation flows remain available.
 - [ ] Saved files retain the existing preservation and loss-reporting behavior.
 - [ ] Existing PPTX-visible workflows operate through the React package in standalone and embedded use.
+
+2026-11-18 follow-up: The React package now provides the PPTX editor's foundational canvas/ruler DOM instead of asking the engine to create those UI containers; engine drawing/model services bind into the React surface. Production Chromium asserts the node structure and binding identity. This is an incremental React ownership improvement; feature/format parity acceptance remains open.

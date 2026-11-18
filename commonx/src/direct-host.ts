@@ -49,11 +49,31 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
     let current: LocalDocument | undefined;
     let hooks: EngineHooks | undefined;
     let stopEngine: void | (() => void);
+    let latestDraftUpdate: { editor: string; drafts: LocalDraft<Blob>[]; restore(draft: LocalDraft<Blob>): void; discard(id: string): Promise<void> } | undefined;
     const live = () => !disposed && !signal.aborted;
     const restore = (draft: LocalDraft<Blob>) => {
       if (!isDraft(draft, options.editor)) throw new TypeError(`Invalid ${options.editor} draft`);
       if (!hooks?.open) return;
       void hooks.open(new File([draft.snapshot], draft.name), { draft: true, name: draft.name, saved: false, lossState: draft.lossState });
+    };
+    const publishDrafts = async () => {
+      const drafts = await store.list(options.editor, signal);
+      if (!live()) return;
+      options.onDraftsAvailable?.(drafts, restore);
+      const update = {
+        editor: options.editor,
+        drafts,
+        restore,
+        async discard(id: string) {
+          if (!live()) return;
+          await store.remove(id, signal);
+          await publishDrafts();
+        },
+      };
+      const recoveryWindow = view as Window & { __vibeofficeDraftRecoveries?: Record<string, typeof update> };
+      (recoveryWindow.__vibeofficeDraftRecoveries ??= {})[options.editor] = update;
+      latestDraftUpdate = update;
+      view.dispatchEvent(new view.CustomEvent('vibeoffice-drafts-update', { detail: update }));
     };
     const template = source.searchParams.get('template');
     const save = async (name: string, blob: Blob, saveAs: boolean) => {
@@ -96,10 +116,10 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
       async saveDraft(draft: LocalDraft<Blob>) {
         if (!live() || !isDraft(draft, options.editor)) return;
         await store.put(draft, signal);
-        if (live()) options.onDraftSaved?.(draft);
+        if (live()) { options.onDraftSaved?.(draft); await publishDrafts(); }
       },
       async removeDraft(id: string) {
-        if (live()) await store.remove(id, signal);
+        if (live()) { await store.remove(id, signal); await publishDrafts(); }
       },
       titleChanged(title: string) {
         if (live()) options.onTitleChange?.(title);
@@ -113,9 +133,7 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
           void mountedHooks.open?.(initial.file, { initial: true });
         }
         options.onEngineReady?.(restore);
-        void store.list(options.editor, signal).then((drafts) => {
-          if (live()) options.onDraftsAvailable?.(drafts, restore);
-        }).catch((error: unknown) => { if (live()) console.warn(`${options.editor} draft list:`, error); });
+        void publishDrafts().catch((error: unknown) => { if (live()) console.warn(`${options.editor} draft list:`, error); });
       },
     };
     const cleanupDocument = await mountLegacyEngineDocument(source, { host, signal, directHost: runtime, ...(options.skipLegacyScripts ? { skipLegacyScripts: options.skipLegacyScripts } : {}), ...(options.beforeLegacyScript ? { beforeLegacyScript: options.beforeLegacyScript } : {}), ...(options.shellOwnedByReact ? { shellOwnedByReact: true } : {}) });
@@ -179,6 +197,9 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
       host.removeEventListener('vibeoffice-react-chrome', onChrome);
       host.removeEventListener('vibeoffice-react-open-url', onOpenUrl);
       host.removeEventListener('vibeoffice-react-search', onSearch);
+      const recoveryWindow = view as Window & { __vibeofficeDraftRecoveries?: Record<string, typeof latestDraftUpdate> };
+      const publishedDrafts = recoveryWindow.__vibeofficeDraftRecoveries;
+      if (publishedDrafts && publishedDrafts[options.editor] === latestDraftUpdate) delete publishedDrafts[options.editor];
       if (typeof stopEngine === 'function') stopEngine();
       cleanupDocument();
     };

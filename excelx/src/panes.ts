@@ -16,7 +16,7 @@ export function installExcelxPanes(runtime: Window): void {
 
   /* ================= shell ================= */
   const TP = (P.task = { stack: [], pos: -1, registry: {} });
-  const reactOwnedTaskPanes = new Set(['getting-started', 'new', 'help', 'keys', 'clipboard']);
+  const reactOwnedTaskPanes = new Set(['getting-started', 'new', 'help', 'keys', 'clipboard', 'recovery']);
   const isReactOwnedTaskPane = (id) => !!window.__VIBE_OFFICE_DIRECT_HOST__ && reactOwnedTaskPanes.has(id);
   TP.mount = function (el) {
     TP.el = el;
@@ -40,9 +40,9 @@ export function installExcelxPanes(runtime: Window): void {
     }
     L.bus.on('clipboard', () => TP.refresh('clip'));
   };
-  TP.register = (p) => { if (p.id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__) return; TP.registry[p.id] = p; };
+  TP.register = (p) => { TP.registry[p.id] = p; };
   TP.show = function (id) {
-    if (!TP.registry[id] || !TP.el || (id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__)) return;
+    if (!TP.registry[id] || !TP.el) return;
     if (TP.el.hidden) A().toggleTask(true);
     if (TP.stack[TP.pos] !== id) { TP.stack = TP.stack.slice(0, TP.pos + 1); TP.stack.push(id); TP.pos = TP.stack.length - 1; }
     TP.render();

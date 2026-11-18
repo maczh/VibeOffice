@@ -7,7 +7,7 @@ export function installPptxPanes(runtime: Window): void {
   const M = L.model;
   const E = () => L.ed;
   const P = (L.panes = {});
-  const reactTaskPaneIds = new Set(['getting-started', 'new', 'help', 'clipart', 'design', 'colors', 'animSchemes', 'layout', 'transition', 'customAnim', 'clipboard', 'diagramText']);
+  const reactTaskPaneIds = new Set(['getting-started', 'new', 'help', 'clipart', 'design', 'colors', 'animSchemes', 'layout', 'transition', 'customAnim', 'clipboard', 'diagramText', 'recovery']);
 
   /* ================= Slides / Outline pane ================= */
   const LP = (P.left = { tab: 'slides' });
@@ -691,9 +691,9 @@ export function installPptxPanes(runtime: Window): void {
     TP.reactBodyRoot = h('div', { class: 'react-task-body-root', id: 'react-task-body-root' });
     el.appendChild(TP.reactBodyRoot);
   };
-  TP.register = (p) => { if (p.id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__) return; TP.registry[p.id] = p; };
+  TP.register = (p) => { TP.registry[p.id] = p; };
   TP.show = function (id) {
-    if (!TP.registry[id] || (id === 'recovery' && window.__VIBE_OFFICE_DIRECT_HOST__)) return;
+    if (!TP.registry[id]) return;
     L.app.toggleTask(true);
     if (TP.stack[TP.pos] !== id) { TP.stack = TP.stack.slice(0, TP.pos + 1); TP.stack.push(id); TP.pos = TP.stack.length - 1; }
     TP.render();

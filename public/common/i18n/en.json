@@ -93,7 +93,7 @@
  },
  "&Action Buttons": {
   "where": [
-   "lectern/js/app.js:139"
+   "lectern/js/app.js:140"
   ]
  },
  "&Add": {
@@ -154,7 +154,7 @@
  },
  "&Align or Distribute": {
   "where": [
-   "lectern/js/app.js:232"
+   "lectern/js/app.js:233"
   ]
  },
  "&Aligned at:": {
@@ -164,7 +164,7 @@
  },
  "&Alignment": {
   "where": [
-   "lectern/js/app.js:83",
+   "lectern/js/app.js:84",
    "ledger/js/dialogs2.js:928"
   ]
  },
@@ -218,7 +218,7 @@
  },
  "&Apply": {
   "where": [
-   "lectern/js/app.js:883",
+   "lectern/js/app.js:884",
    "lectern/js/dialogs.js:946",
    "lectern/js/dialogs.js:1013",
    "quire/js/dialogs.js:1112"
@@ -331,7 +331,7 @@
  },
  "&AutoShapes": {
   "where": [
-   "lectern/js/app.js:80",
+   "lectern/js/app.js:81",
    "ledger/js/commands.js:120",
    "quire/js/app.js:71"
   ]
@@ -343,7 +343,7 @@
  },
  "&Automatic": {
   "where": [
-   "lectern/js/app.js:262",
+   "lectern/js/app.js:263",
    "ledger/js/dialogs.js:1547",
    "quire/js/app.js:331",
    "quire/js/ribbon.js:99"
@@ -403,7 +403,7 @@
  },
  "&Basic Shapes": {
   "where": [
-   "lectern/js/app.js:139",
+   "lectern/js/app.js:140",
    "quire/js/app.js:297"
   ]
  },
@@ -430,7 +430,7 @@
  },
  "&Black & White": {
   "where": [
-   "lectern/js/app.js:262",
+   "lectern/js/app.js:263",
    "quire/js/app.js:331",
    "quire/js/ribbon.js:99"
   ]
@@ -457,7 +457,7 @@
  },
  "&Block Arrows": {
   "where": [
-   "lectern/js/app.js:139",
+   "lectern/js/app.js:140",
    "quire/js/app.js:297"
   ]
  },
@@ -562,7 +562,7 @@
  },
  "&Callouts": {
   "where": [
-   "lectern/js/app.js:139",
+   "lectern/js/app.js:140",
    "quire/js/app.js:297"
   ]
  },
@@ -604,7 +604,7 @@
  },
  "&Center": {
   "where": [
-   "lectern/js/app.js:285",
+   "lectern/js/app.js:286",
    "lectern/js/commands.js:105",
    "ledger/js/commands.js:153",
    "quire/js/dialogs.js:421"
@@ -698,7 +698,7 @@
  },
  "&Color:": {
   "where": [
-   "lectern/js/app.js:1688",
+   "lectern/js/app.js:1689",
    "lectern/js/dialogs.js:412",
    "lectern/js/dialogs.js:883",
    "ledger/js/dialogs.js:652"
@@ -931,7 +931,7 @@
  },
  "&Date last updated": {
   "where": [
-   "lectern/js/app.js:1825"
+   "lectern/js/app.js:1826"
   ]
  },
  "&Date line:": {
@@ -1160,7 +1160,7 @@
  },
  "&Edit": {
   "where": [
-   "lectern/js/app.js:71",
+   "lectern/js/app.js:72",
    "ledger/js/app.js:559",
    "quire/js/app.js:60"
   ]
@@ -1182,7 +1182,7 @@
  },
  "&Edit Text": {
   "where": [
-   "lectern/js/app.js:1997"
+   "lectern/js/app.js:1998"
   ]
  },
  "&Edit Wrap Points": {
@@ -1329,7 +1329,7 @@
    "common/ribbon.js:147",
    "common/ribbon.js:254",
    "common/search.js:56",
-   "lectern/js/app.js:70"
+   "lectern/js/app.js:71"
   ]
  },
  "&File/Disk...": {
@@ -1363,7 +1363,7 @@
  },
  "&Finish": {
   "where": [
-   "lectern/js/app.js:1828",
+   "lectern/js/app.js:1829",
    "ledger/js/csv.js:400",
    "ledger/js/dialogs2.js:544",
    "ledger/js/dialogs2.js:1336"
@@ -1401,7 +1401,7 @@
  },
  "&Flowchart": {
   "where": [
-   "lectern/js/app.js:139",
+   "lectern/js/app.js:140",
    "quire/js/app.js:297"
   ]
  },
@@ -1433,7 +1433,7 @@
  },
  "&Footer:": {
   "where": [
-   "lectern/js/app.js:1827",
+   "lectern/js/app.js:1828",
    "ledger/js/dialogs3.js:707",
    "ledger/js/dialogs3.js:715",
    "quire/js/dialogs.js:942"
@@ -1612,7 +1612,7 @@
  },
  "&Grayscale": {
   "where": [
-   "lectern/js/app.js:262",
+   "lectern/js/app.js:263",
    "lectern/js/commands.js:60",
    "quire/js/app.js:331",
    "quire/js/ribbon.js:99"
@@ -1663,7 +1663,7 @@
  },
  "&Grouping": {
   "where": [
-   "lectern/js/app.js:1999"
+   "lectern/js/app.js:2000"
   ]
  },
  "&Growth": {
@@ -1715,7 +1715,7 @@
  },
  "&Help|menu bar": {
   "where": [
-   "lectern/js/app.js:91",
+   "lectern/js/app.js:92",
    "ledger/js/app.js:588",
    "quire/js/app.js:90"
   ]
@@ -1872,7 +1872,7 @@
  },
  "&Insert": {
   "where": [
-   "lectern/js/app.js:79",
+   "lectern/js/app.js:80",
    "lectern/js/dialogs.js:1541",
    "lectern/js/dialogs.js:1842",
    "lectern/js/ribbon.js:36"
@@ -2005,7 +2005,7 @@
  },
  "&Layout": {
   "where": [
-   "lectern/js/app.js:295",
+   "lectern/js/app.js:296",
    "quire/js/dialogs.js:942"
   ]
  },
@@ -2019,7 +2019,7 @@
  },
  "&Left Align": {
   "where": [
-   "lectern/js/app.js:285"
+   "lectern/js/app.js:286"
   ]
  },
  "&Left column": {
@@ -2089,7 +2089,7 @@
  },
  "&Lines": {
   "where": [
-   "lectern/js/app.js:137",
+   "lectern/js/app.js:138",
    "ledger/js/drawing.js:578",
    "quire/js/app.js:296"
   ]
@@ -2157,7 +2157,7 @@
  },
  "&Loose": {
   "where": [
-   "lectern/js/app.js:286"
+   "lectern/js/app.js:287"
   ]
  },
  "&Macro": {
@@ -2236,7 +2236,7 @@
  },
  "&Master": {
   "where": [
-   "lectern/js/app.js:74"
+   "lectern/js/app.js:75"
   ]
  },
  "&Max": {
@@ -2299,7 +2299,7 @@
  },
  "&More AutoShapes...": {
   "where": [
-   "lectern/js/app.js:140",
+   "lectern/js/app.js:141",
    "quire/js/app.js:298"
   ]
  },
@@ -2431,7 +2431,7 @@
  },
  "&No": {
   "where": [
-   "lectern/js/app.js:498",
+   "lectern/js/app.js:499",
    "lectern/js/slideshow.js:837",
    "ledger/js/app.js:113",
    "ledger/js/app.js:1219"
@@ -2452,7 +2452,7 @@
  },
  "&Normal": {
   "where": [
-   "lectern/js/app.js:286",
+   "lectern/js/app.js:287",
    "lectern/js/commands.js:52",
    "ledger/js/commands.js:80",
    "quire/js/autocorrect.js:349"
@@ -2563,8 +2563,8 @@
  },
  "&Order": {
   "where": [
-   "lectern/js/app.js:230",
-   "lectern/js/app.js:1999",
+   "lectern/js/app.js:231",
+   "lectern/js/app.js:2000",
    "quire/js/app.js:464"
   ]
  },
@@ -2707,12 +2707,12 @@
  },
  "&Paste as PPTX objects": {
   "where": [
-   "lectern/js/app.js:1931"
+   "lectern/js/app.js:1932"
   ]
  },
  "&Paste as slides": {
   "where": [
-   "lectern/js/app.js:1931"
+   "lectern/js/app.js:1932"
   ]
  },
  "&Paste...": {
@@ -2763,7 +2763,7 @@
  },
  "&Picture": {
   "where": [
-   "lectern/js/app.js:80",
+   "lectern/js/app.js:81",
    "lectern/js/commands.js:64",
    "ledger/js/app.js:571",
    "ledger/js/commands.js:94"
@@ -3018,7 +3018,7 @@
  "&Replace It": {
   "where": [
    "common/core.js:406",
-   "suite/src/main.tsx:27"
+   "suite/src/main.tsx:29"
   ]
  },
  "&Replace:": {
@@ -3085,7 +3085,7 @@
  },
  "&Right Align": {
   "where": [
-   "lectern/js/app.js:285"
+   "lectern/js/app.js:286"
   ]
  },
  "&Right align page numbers": {
@@ -3426,7 +3426,7 @@
  },
  "&Stars and Banners": {
   "where": [
-   "lectern/js/app.js:139",
+   "lectern/js/app.js:140",
    "quire/js/app.js:297"
   ]
  },
@@ -3490,7 +3490,7 @@
  },
  "&Style:": {
   "where": [
-   "lectern/js/app.js:1688",
+   "lectern/js/app.js:1689",
    "lectern/js/dialogs.js:850"
   ]
  },
@@ -3576,7 +3576,7 @@
  },
  "&Table": {
   "where": [
-   "lectern/js/app.js:1998",
+   "lectern/js/app.js:1999",
    "quire/js/commands.js:426",
    "quire/js/commands.js:430",
    "quire/js/dialogs2.js:1136"
@@ -3675,7 +3675,7 @@
  },
  "&Tight|spacing": {
   "where": [
-   "lectern/js/app.js:286"
+   "lectern/js/app.js:287"
   ]
  },
  "&Time:": {
@@ -3697,7 +3697,7 @@
  },
  "&Title:": {
   "where": [
-   "lectern/js/app.js:1827",
+   "lectern/js/app.js:1828",
    "lectern/js/dialogs.js:1673",
    "ledger/js/dialogs.js:1392",
    "ledger/js/dialogs2.js:362"
@@ -3715,14 +3715,14 @@
  },
  "&Toolbars": {
   "where": [
-   "lectern/js/app.js:76",
+   "lectern/js/app.js:77",
    "ledger/js/app.js:565",
    "quire/js/app.js:65"
   ]
  },
  "&Tools": {
   "where": [
-   "lectern/js/app.js:84",
+   "lectern/js/app.js:85",
    "ledger/js/app.js:578",
    "quire/js/app.js:79"
   ]
@@ -3962,12 +3962,12 @@
  },
  "&Very Tight": {
   "where": [
-   "lectern/js/app.js:286"
+   "lectern/js/app.js:287"
   ]
  },
  "&View": {
   "where": [
-   "lectern/js/app.js:73",
+   "lectern/js/app.js:74",
    "ledger/js/app.js:564",
    "quire/js/app.js:64"
   ]
@@ -3984,7 +3984,7 @@
  },
  "&Washout": {
   "where": [
-   "lectern/js/app.js:262",
+   "lectern/js/app.js:263",
    "quire/js/app.js:331",
    "quire/js/dialogs.js:1094",
    "quire/js/ribbon.js:99"
@@ -4029,7 +4029,7 @@
  },
  "&Width:": {
   "where": [
-   "lectern/js/app.js:1688",
+   "lectern/js/app.js:1689",
    "lectern/js/dialogs.js:966",
    "quire/js/dialogs.js:515",
    "quire/js/dialogs3.js:158"
@@ -4037,7 +4037,7 @@
  },
  "&Window": {
   "where": [
-   "lectern/js/app.js:90",
+   "lectern/js/app.js:91",
    "ledger/js/app.js:587",
    "quire/js/app.js:89"
   ]
@@ -4088,7 +4088,7 @@
  },
  "&Yes": {
   "where": [
-   "lectern/js/app.js:498",
+   "lectern/js/app.js:499",
    "lectern/js/slideshow.js:837",
    "ledger/js/app.js:113",
    "ledger/js/app.js:1219"
@@ -4350,12 +4350,12 @@
  },
  "1 slide could not be recovered.": {
   "where": [
-   "lectern/js/app.js:568"
+   "lectern/js/app.js:569"
   ]
  },
  "1 slide: {0}": {
   "where": [
-   "lectern/js/app.js:1856"
+   "lectern/js/app.js:1857"
   ]
  },
  "1. Formatting restrictions": {
@@ -4825,7 +4825,7 @@
  },
  "A&utoShapes": {
   "where": [
-   "lectern/js/app.js:300",
+   "lectern/js/app.js:301",
    "quire/js/app.js:346"
   ]
  },
@@ -4969,7 +4969,7 @@
  },
  "Act&ion Buttons": {
   "where": [
-   "lectern/js/app.js:87"
+   "lectern/js/app.js:88"
   ]
  },
  "Act&ion Settings...": {
@@ -5045,9 +5045,9 @@
  "Action Buttons": {
   "where": [
    "common/geometry.js:715",
-   "lectern/js/app.js:87",
-   "lectern/js/app.js:139",
-   "lectern/js/app.js:234"
+   "lectern/js/app.js:88",
+   "lectern/js/app.js:140",
+   "lectern/js/app.js:235"
   ]
  },
  "Action Settings": {
@@ -5104,7 +5104,7 @@
  },
  "Add Effect": {
   "where": [
-   "lectern/js/app.js:973",
+   "lectern/js/app.js:974",
    "lectern/js/panes.js:1040",
    "lectern/js/panes.js:1043"
   ]
@@ -5324,7 +5324,7 @@
  },
  "Align": {
   "where": [
-   "lectern/js/app.js:1266",
+   "lectern/js/app.js:1267",
    "lectern/js/ribbon.js:90",
    "lectern/js/ribbon.js:98",
    "ledger/js/commands.js:151"
@@ -5400,7 +5400,7 @@
  },
  "Alignment": {
   "where": [
-   "lectern/js/app.js:1386",
+   "lectern/js/app.js:1387",
    "lectern/js/ribbon.js:118",
    "ledger/js/dialogs.js:742",
    "ledger/js/dialogs2.js:984"
@@ -5423,7 +5423,7 @@
  },
  "All Borders": {
   "where": [
-   "lectern/js/app.js:187",
+   "lectern/js/app.js:188",
    "ledger/js/app.js:638",
    "quire/js/app.js:232"
   ]
@@ -5651,7 +5651,7 @@
  },
  "Animation Scheme": {
   "where": [
-   "lectern/js/app.js:937"
+   "lectern/js/app.js:938"
   ]
  },
  "Animation Schemes": {
@@ -5747,8 +5747,8 @@
  },
  "Apply Design Template": {
   "where": [
-   "lectern/js/app.js:848",
-   "lectern/js/app.js:913",
+   "lectern/js/app.js:849",
+   "lectern/js/app.js:914",
    "lectern/js/panes.js:911",
    "lectern/js/panes.js:937"
   ]
@@ -5762,7 +5762,7 @@
  },
  "Apply Transition to All": {
   "where": [
-   "lectern/js/app.js:964"
+   "lectern/js/app.js:965"
   ]
  },
  "Apply a color scheme:": {
@@ -5930,7 +5930,7 @@
  },
  "Arrow Style": {
   "where": [
-   "lectern/js/app.js:304",
+   "lectern/js/app.js:305",
    "lectern/js/ribbon.js:97",
    "quire/js/app.js:350",
    "quire/js/app.js:511"
@@ -5938,7 +5938,7 @@
  },
  "Arrow at End": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
@@ -6128,7 +6128,7 @@
  },
  "AutoContent Wizard": {
   "where": [
-   "lectern/js/app.js:1827"
+   "lectern/js/app.js:1828"
   ]
  },
  "AutoCorr&ect": {
@@ -6252,12 +6252,12 @@
  },
  "AutoShape defaults set": {
   "where": [
-   "lectern/js/app.js:1316"
+   "lectern/js/app.js:1317"
   ]
  },
  "AutoShapes": {
   "where": [
-   "lectern/js/app.js:300",
+   "lectern/js/app.js:301",
    "quire/js/app.js:346"
   ]
  },
@@ -6545,8 +6545,8 @@
  "Basic Shapes": {
   "where": [
    "common/geometry.js:710",
-   "lectern/js/app.js:139",
-   "lectern/js/app.js:234",
+   "lectern/js/app.js:140",
+   "lectern/js/app.js:235",
    "quire/js/app.js:297"
   ]
  },
@@ -6738,8 +6738,8 @@
  "Block Arrows": {
   "where": [
    "common/geometry.js:711",
-   "lectern/js/app.js:139",
-   "lectern/js/app.js:234",
+   "lectern/js/app.js:140",
+   "lectern/js/app.js:235",
    "quire/js/app.js:297"
   ]
  },
@@ -6796,7 +6796,7 @@
  },
  "Bold": {
   "where": [
-   "lectern/js/app.js:1376",
+   "lectern/js/app.js:1377",
    "lectern/js/commands.js:108",
    "lectern/js/dialogs.js:371",
    "lectern/js/dialogs.js:380"
@@ -6894,13 +6894,13 @@
  },
  "Border Color": {
   "where": [
-   "lectern/js/app.js:277",
+   "lectern/js/app.js:278",
    "quire/js/app.js:323"
   ]
  },
  "Border Style": {
   "where": [
-   "lectern/js/app.js:275"
+   "lectern/js/app.js:276"
   ]
  },
  "Border Styles": {
@@ -6910,14 +6910,14 @@
  },
  "Border Width": {
   "where": [
-   "lectern/js/app.js:276"
+   "lectern/js/app.js:277"
   ]
  },
  "Borders": {
   "where": [
-   "lectern/js/app.js:278",
-   "lectern/js/app.js:1649",
-   "lectern/js/app.js:1688",
+   "lectern/js/app.js:279",
+   "lectern/js/app.js:1650",
+   "lectern/js/app.js:1689",
    "lectern/js/ribbon.js:111"
   ]
  },
@@ -6935,14 +6935,14 @@
  "Bottom": {
   "where": [
    "common/charts.js:453",
-   "lectern/js/app.js:1687",
+   "lectern/js/app.js:1688",
    "lectern/js/dialogs.js:891",
    "ledger/js/dialogs.js:604"
   ]
  },
  "Bottom Border": {
   "where": [
-   "lectern/js/app.js:187",
+   "lectern/js/app.js:188",
    "ledger/js/app.js:636",
    "quire/js/app.js:232",
    "quire/js/dialogs.js:482"
@@ -7009,7 +7009,7 @@
  },
  "Brainstorming Session": {
   "where": [
-   "lectern/js/app.js:1781"
+   "lectern/js/app.js:1782"
   ]
  },
  "Brass": {
@@ -7053,7 +7053,7 @@
  },
  "Brightness": {
   "where": [
-   "lectern/js/app.js:1506",
+   "lectern/js/app.js:1507",
    "quire/js/app.js:551"
   ]
  },
@@ -7208,7 +7208,7 @@
  },
  "Bullets": {
   "where": [
-   "lectern/js/app.js:1407",
+   "lectern/js/app.js:1408",
    "lectern/js/commands.js:118",
    "quire/js/commands.js:43",
    "quire/js/commands.js:361"
@@ -7279,7 +7279,7 @@
  },
  "C&hange AutoShape": {
   "where": [
-   "lectern/js/app.js:234"
+   "lectern/js/app.js:235"
   ]
  },
  "C&hange Case...": {
@@ -7522,7 +7522,7 @@
  "Callouts": {
   "where": [
    "common/geometry.js:714",
-   "lectern/js/app.js:234"
+   "lectern/js/app.js:235"
   ]
  },
  "Calm Water": {
@@ -7862,7 +7862,7 @@
  },
  "Change AutoShape": {
   "where": [
-   "lectern/js/app.js:1319"
+   "lectern/js/app.js:1320"
   ]
  },
  "Change Cas&e...": {
@@ -7885,7 +7885,7 @@
  },
  "Change Colors": {
   "where": [
-   "lectern/js/app.js:295",
+   "lectern/js/app.js:296",
    "lectern/js/diagram.js:471",
    "lectern/js/diagram.js:721",
    "lectern/js/ribbon.js:85"
@@ -7898,7 +7898,7 @@
  },
  "Change Layout": {
   "where": [
-   "lectern/js/app.js:295",
+   "lectern/js/app.js:296",
    "lectern/js/diagram.js:471",
    "lectern/js/ribbon.js:84"
   ]
@@ -8013,8 +8013,8 @@
  "Chart": {
   "where": [
    "common/charts.js:496",
-   "lectern/js/app.js:1704",
-   "lectern/js/app.js:1706",
+   "lectern/js/app.js:1705",
+   "lectern/js/app.js:1707",
    "lectern/js/ribbon.js:40"
   ]
  },
@@ -8170,7 +8170,7 @@
  },
  "Check the slides before you save over the original.": {
   "where": [
-   "lectern/js/app.js:568"
+   "lectern/js/app.js:569"
   ]
  },
  "Checked by": {
@@ -8433,7 +8433,7 @@
  },
  "Clear": {
   "where": [
-   "lectern/js/app.js:1176",
+   "lectern/js/app.js:1177",
    "lectern/js/textedit.js:798",
    "ledger/js/ops.js:232",
    "ledger/js/ribbon.js:39"
@@ -8501,7 +8501,7 @@
  },
  "Click a button to apply borders:": {
   "where": [
-   "lectern/js/app.js:1688"
+   "lectern/js/app.js:1689"
   ]
  },
  "Click a cell and type, then press Enter (moves down), Tab (moves right) or an arrow key. F2 edits the active cell; Alt+Enter starts a new line inside a cell. Ctrl+Enter fills the typed entry into every selected cell. Numbers, dates (3/14/2026, 14-Mar), times (9:30 AM), percentages (12%) and currency ($1,200) are recognised and formatted automatically. Start an entry with an apostrophe to keep it as text.": {
@@ -8526,7 +8526,7 @@
  },
  "Click an object or select text to apply the formatting.": {
   "where": [
-   "lectern/js/app.js:1452"
+   "lectern/js/app.js:1453"
   ]
  },
  "Click here to reload": {
@@ -8551,7 +8551,7 @@
  },
  "Click the color in the picture you want to make transparent.": {
   "where": [
-   "lectern/js/app.js:1520"
+   "lectern/js/app.js:1521"
   ]
  },
  "Click to add first slide": {
@@ -8635,7 +8635,7 @@
    "common/core.js:457",
    "common/ui.js:637",
    "common/ui.js:745",
-   "lectern/js/app.js:1109"
+   "lectern/js/app.js:1110"
   ]
  },
  "Close Full Screen": {
@@ -8651,7 +8651,7 @@
  },
  "Close Master View": {
   "where": [
-   "lectern/js/app.js:287",
+   "lectern/js/app.js:288",
    "lectern/js/ribbon.js:77"
   ]
  },
@@ -8707,7 +8707,7 @@
  },
  "Co&lor/Grayscale": {
   "where": [
-   "lectern/js/app.js:75"
+   "lectern/js/app.js:76"
   ]
  },
  "Co&lor:": {
@@ -8747,7 +8747,7 @@
  },
  "Co&nnectors": {
   "where": [
-   "lectern/js/app.js:138"
+   "lectern/js/app.js:139"
   ]
  },
  "Co&nsolidate...": {
@@ -8794,7 +8794,7 @@
  },
  "Color": {
   "where": [
-   "lectern/js/app.js:274",
+   "lectern/js/app.js:275",
    "lectern/js/dialogs.js:1890",
    "lectern/js/panes.js:610",
    "lectern/js/ribbon.js:103"
@@ -8815,7 +8815,7 @@
  },
  "Color Scheme": {
   "where": [
-   "lectern/js/app.js:856"
+   "lectern/js/app.js:857"
   ]
  },
  "Color Schemes": {
@@ -8888,10 +8888,10 @@
  },
  "Colors and Lines": {
   "where": [
-   "lectern/js/app.js:168",
    "lectern/js/app.js:169",
-   "lectern/js/app.js:184",
-   "lectern/js/app.js:185"
+   "lectern/js/app.js:170",
+   "lectern/js/app.js:185",
+   "lectern/js/app.js:186"
   ]
  },
  "Colors:": {
@@ -9318,7 +9318,7 @@
  },
  "Continue": {
   "where": [
-   "suite/src/main.tsx:29"
+   "suite/src/main.tsx:31"
   ]
  },
  "Continue Numbering": {
@@ -9346,7 +9346,7 @@
  },
  "Contrast": {
   "where": [
-   "lectern/js/app.js:1506",
+   "lectern/js/app.js:1507",
    "quire/js/app.js:551"
   ]
  },
@@ -9782,8 +9782,8 @@
  "Create File": {
   "where": [
    "start.js:141",
-   "suite/src/main.tsx:262",
-   "suite/src/main.tsx:271",
+   "suite/src/main.tsx:264",
+   "suite/src/main.tsx:273",
    "index.html:222"
   ]
  },
@@ -9872,18 +9872,18 @@
  },
  "Creating PDF...": {
   "where": [
-   "lectern/js/app.js:716"
+   "lectern/js/app.js:717"
   ]
  },
  "Creating PDF... (page {0} of {1})": {
   "where": [
-   "lectern/js/app.js:695",
+   "lectern/js/app.js:696",
    "quire/js/app.js:1144"
   ]
  },
  "Creating PDF... (slide {0} of {1})": {
   "where": [
-   "lectern/js/app.js:708"
+   "lectern/js/app.js:709"
   ]
  },
  "Creating Photo Album...": {
@@ -10472,7 +10472,7 @@
  },
  "D&esign:": {
   "where": [
-   "lectern/js/app.js:1827"
+   "lectern/js/app.js:1828"
   ]
  },
  "D&estination:": {
@@ -10492,7 +10492,7 @@
  },
  "D&raw": {
   "where": [
-   "lectern/js/app.js:302",
+   "lectern/js/app.js:303",
    "ledger/js/app.js:627",
    "quire/js/app.js:348"
   ]
@@ -10597,7 +10597,7 @@
  },
  "Dash Style": {
   "where": [
-   "lectern/js/app.js:304",
+   "lectern/js/app.js:305",
    "lectern/js/ribbon.js:97",
    "quire/js/app.js:350",
    "quire/js/app.js:498"
@@ -10842,7 +10842,7 @@
  },
  "Decrease Font Size": {
   "where": [
-   "lectern/js/app.js:1393",
+   "lectern/js/app.js:1394",
    "lectern/js/commands.js:116"
   ]
  },
@@ -11060,7 +11060,7 @@
  },
  "Delete Slide": {
   "where": [
-   "lectern/js/app.js:797"
+   "lectern/js/app.js:798"
   ]
  },
  "Delete Style": {
@@ -11081,7 +11081,7 @@
  },
  "Delete Title Master": {
   "where": [
-   "lectern/js/app.js:1084"
+   "lectern/js/app.js:1085"
   ]
  },
  "Delete columns": {
@@ -11139,7 +11139,7 @@
  },
  "Demote": {
   "where": [
-   "lectern/js/app.js:1410",
+   "lectern/js/app.js:1411",
    "lectern/js/diagram.js:447",
    "lectern/js/diagram.js:716",
    "quire/js/commands.js:523"
@@ -11184,15 +11184,15 @@
  },
  "Design": {
   "where": [
-   "lectern/js/app.js:272",
-   "lectern/js/app.js:288",
+   "lectern/js/app.js:273",
+   "lectern/js/app.js:289",
    "lectern/js/commands.js:100",
    "lectern/js/ribbon.js:81"
   ]
  },
  "Design Template (*.potx)": {
   "where": [
-   "lectern/js/app.js:580"
+   "lectern/js/app.js:581"
   ]
  },
  "Design Templates": {
@@ -11291,7 +11291,7 @@
  },
  "Diagram": {
   "where": [
-   "lectern/js/app.js:294",
+   "lectern/js/app.js:295",
    "lectern/js/render.js:570"
   ]
  },
@@ -11316,13 +11316,13 @@
  },
  "Diamond at End": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
  "Diamonds at Both Ends": {
   "where": [
-   "lectern/js/app.js:181"
+   "lectern/js/app.js:182"
   ]
  },
  "Dictionary &language:": {
@@ -11385,7 +11385,7 @@
  },
  "Dismiss": {
   "where": [
-   "suite/src/main.tsx:30"
+   "suite/src/main.tsx:32"
   ]
  },
  "Display drawing &guides on screen": {
@@ -11447,7 +11447,7 @@
  },
  "Distribute": {
   "where": [
-   "lectern/js/app.js:1285"
+   "lectern/js/app.js:1286"
   ]
  },
  "Distribute &Horizontally": {
@@ -11598,7 +11598,7 @@
  },
  "Do you want to save the changes you made to {0}?": {
   "where": [
-   "lectern/js/app.js:498"
+   "lectern/js/app.js:499"
   ]
  },
  "Document": {
@@ -11908,7 +11908,7 @@
  },
  "Draw": {
   "where": [
-   "lectern/js/app.js:302",
+   "lectern/js/app.js:303",
    "quire/js/app.js:348",
    "quire/js/ribbon.js:89"
   ]
@@ -11933,7 +11933,7 @@
  },
  "Drawing": {
   "where": [
-   "lectern/js/app.js:302",
+   "lectern/js/app.js:303",
    "lectern/js/ribbon.js:28",
    "ledger/js/app.js:627",
    "ledger/js/dialogs.js:1796"
@@ -11966,7 +11966,7 @@
  },
  "Drop a .pptx to open it, or pictures to insert them": {
   "where": [
-   "lectern/js/app.js:2159"
+   "lectern/js/app.js:2160"
   ]
  },
  "Drop a document to open it, or pictures to insert them": {
@@ -11996,14 +11996,14 @@
  },
  "Duplicate": {
   "where": [
-   "lectern/js/app.js:1193",
+   "lectern/js/app.js:1194",
    "lectern/js/editor.js:612",
    "lectern/js/panes.js:763"
   ]
  },
  "Duplicate Slide": {
   "where": [
-   "lectern/js/app.js:785"
+   "lectern/js/app.js:786"
   ]
  },
  "Dutch (Netherlands)": {
@@ -12125,7 +12125,7 @@
  },
  "Edit Chart Data...": {
   "where": [
-   "lectern/js/app.js:1706"
+   "lectern/js/app.js:1707"
   ]
  },
  "Edit Co&mment": {
@@ -12135,7 +12135,7 @@
  },
  "Edit Color Scheme": {
   "where": [
-   "lectern/js/app.js:883"
+   "lectern/js/app.js:884"
   ]
  },
  "Edit Color Schemes...": {
@@ -12171,7 +12171,7 @@
  },
  "Edit LettersArt Text": {
   "where": [
-   "lectern/js/app.js:1728",
+   "lectern/js/app.js:1729",
    "lectern/js/dialogs.js:1781",
    "quire/js/dialogs2.js:898"
   ]
@@ -12214,7 +12214,7 @@
  },
  "Edit Text...": {
   "where": [
-   "lectern/js/app.js:282",
+   "lectern/js/app.js:283",
    "lectern/js/commands.js:215",
    "quire/js/app.js:338"
   ]
@@ -12304,7 +12304,7 @@
  },
  "Elbow Arrow Connector": {
   "where": [
-   "lectern/js/app.js:138"
+   "lectern/js/app.js:139"
   ]
  },
  "Elbow Connector": {
@@ -12472,7 +12472,7 @@
  },
  "English (U.S.)": {
   "where": [
-   "lectern/js/app.js:415",
+   "lectern/js/app.js:416",
    "ledger/js/dialogs.js:1569",
    "ledger/js/spell.js:133",
    "quire/js/app.js:675"
@@ -12513,7 +12513,7 @@
  },
  "Enter a number, or Cancel to stop.": {
   "where": [
-   "suite/src/main.tsx:28"
+   "suite/src/main.tsx:30"
   ]
  },
  "Enter adds an item, Tab and Shift+Tab move it in and out a level, Alt+Shift+↑/↓ move it.": {
@@ -12924,7 +12924,7 @@
  "Excelx": {
   "where": [
    "ledger/js/panes.js:82",
-   "suite/src/main.tsx:21",
+   "suite/src/main.tsx:23",
    "index.html:227",
    "ledger/index.html:2"
   ]
@@ -13058,7 +13058,7 @@
  },
  "Exit Edit Text": {
   "where": [
-   "lectern/js/app.js:2003"
+   "lectern/js/app.js:2004"
   ]
  },
  "Expand": {
@@ -13176,7 +13176,7 @@
  },
  "F&ormat": {
   "where": [
-   "lectern/js/app.js:83",
+   "lectern/js/app.js:84",
    "ledger/js/app.js:574",
    "quire/js/app.js:75"
   ]
@@ -13448,7 +13448,7 @@
  },
  "File name": {
   "where": [
-   "suite/src/main.tsx:27"
+   "suite/src/main.tsx:29"
   ]
  },
  "File sharing": {
@@ -13495,7 +13495,7 @@
  },
  "Fill": {
   "where": [
-   "lectern/js/app.js:1688",
+   "lectern/js/app.js:1689",
    "lectern/js/dialogs.js:848",
    "lectern/js/dialogs.js:849",
    "ledger/js/dialogs.js:603"
@@ -13508,7 +13508,7 @@
  },
  "Fill &color:": {
   "where": [
-   "lectern/js/app.js:1688"
+   "lectern/js/app.js:1689"
   ]
  },
  "Fill Across Worksheets": {
@@ -13519,9 +13519,9 @@
  },
  "Fill Color": {
   "where": [
-   "lectern/js/app.js:279",
-   "lectern/js/app.js:1330",
-   "lectern/js/app.js:1672",
+   "lectern/js/app.js:280",
+   "lectern/js/app.js:1331",
+   "lectern/js/app.js:1673",
    "lectern/js/commands.js:124"
   ]
  },
@@ -13833,7 +13833,7 @@
  },
  "Fit": {
   "where": [
-   "lectern/js/app.js:258",
+   "lectern/js/app.js:259",
    "lectern/js/dialogs.js:1704"
   ]
  },
@@ -13870,7 +13870,7 @@
  },
  "Flip": {
   "where": [
-   "lectern/js/app.js:1294",
+   "lectern/js/app.js:1295",
    "quire/js/commands.js:513",
    "quire/js/commands.js:514"
   ]
@@ -13890,7 +13890,7 @@
  "Flowchart": {
   "where": [
    "common/geometry.js:712",
-   "lectern/js/app.js:234"
+   "lectern/js/app.js:235"
   ]
  },
  "Flowchart: Alternate Process": {
@@ -14080,8 +14080,8 @@
  },
  "Font": {
   "where": [
-   "lectern/js/app.js:256",
-   "lectern/js/app.js:1370",
+   "lectern/js/app.js:257",
+   "lectern/js/app.js:1371",
    "lectern/js/dialogs.js:417",
    "lectern/js/dialogs.js:430"
   ]
@@ -14093,7 +14093,7 @@
  },
  "Font Color": {
   "where": [
-   "lectern/js/app.js:1368",
+   "lectern/js/app.js:1369",
    "lectern/js/commands.js:123",
    "ledger/js/app.js:1106",
    "ledger/js/commands.js:170"
@@ -14101,8 +14101,8 @@
  },
  "Font Size": {
   "where": [
-   "lectern/js/app.js:257",
-   "lectern/js/app.js:1371",
+   "lectern/js/app.js:258",
+   "lectern/js/app.js:1372",
    "ledger/js/app.js:600",
    "quire/js/app.js:311"
   ]
@@ -14206,7 +14206,7 @@
  },
  "Footer (optional)": {
   "where": [
-   "lectern/js/app.js:1823"
+   "lectern/js/app.js:1824"
   ]
  },
  "Footer Placeholder": {
@@ -14386,7 +14386,7 @@
  },
  "Format Table": {
   "where": [
-   "lectern/js/app.js:1689",
+   "lectern/js/app.js:1690",
    "lectern/js/dialogs.js:804"
   ]
  },
@@ -14475,7 +14475,7 @@
  },
  "Formatting": {
   "where": [
-   "lectern/js/app.js:272",
+   "lectern/js/app.js:273",
    "ledger/js/app.js:621",
    "ledger/js/dialogs.js:1796",
    "quire/js/app.js:321"
@@ -15192,7 +15192,7 @@
  },
  "Group": {
   "where": [
-   "lectern/js/app.js:1206",
+   "lectern/js/app.js:1207",
    "ledger/js/app.js:1246",
    "ledger/js/dialogs.js:948",
    "ledger/js/dialogs.js:956"
@@ -15318,8 +15318,8 @@
  },
  "Harbor & Pine — 2027 Expansion (sample)": {
   "where": [
-   "lectern/js/app.js:1168",
-   "lectern/js/app.js:2491"
+   "lectern/js/app.js:1169",
+   "lectern/js/app.js:2492"
   ]
  },
  "He&ader:": {
@@ -15536,7 +15536,7 @@
  },
  "Hide Slide": {
   "where": [
-   "lectern/js/app.js:829",
+   "lectern/js/app.js:830",
    "lectern/js/commands.js:145"
   ]
  },
@@ -15963,7 +15963,7 @@
  },
  "Increase Font Size": {
   "where": [
-   "lectern/js/app.js:1393",
+   "lectern/js/app.js:1394",
    "lectern/js/commands.js:115"
   ]
  },
@@ -16133,7 +16133,7 @@
  },
  "Insert Chart": {
   "where": [
-   "lectern/js/app.js:1698",
+   "lectern/js/app.js:1699",
    "lectern/js/commands.js:89",
    "lectern/js/render.js:572",
    "ledger/js/xchart.js:434"
@@ -16192,7 +16192,7 @@
  },
  "Insert Date": {
   "where": [
-   "lectern/js/app.js:1428",
+   "lectern/js/app.js:1429",
    "ledger/js/commands.js:250",
    "quire/js/commands.js:376",
    "quire/js/commands.js:539"
@@ -16291,7 +16291,7 @@
  },
  "Insert LettersArt": {
   "where": [
-   "lectern/js/app.js:1717",
+   "lectern/js/app.js:1718",
    "lectern/js/commands.js:85",
    "quire/js/commands.js:296",
    "quire/js/dialogs2.js:861"
@@ -16342,7 +16342,7 @@
  },
  "Insert Picture": {
   "where": [
-   "lectern/js/app.js:1473",
+   "lectern/js/app.js:1474",
    "lectern/js/commands.js:83",
    "lectern/js/render.js:572",
    "ledger/js/app.js:1400"
@@ -16388,12 +16388,12 @@
  },
  "Insert Slide Number": {
   "where": [
-   "lectern/js/app.js:1428"
+   "lectern/js/app.js:1429"
   ]
  },
  "Insert Slides": {
   "where": [
-   "lectern/js/app.js:1143"
+   "lectern/js/app.js:1144"
   ]
  },
  "Insert Spreadsheet": {
@@ -16411,7 +16411,7 @@
  },
  "Insert Table": {
   "where": [
-   "lectern/js/app.js:1555",
+   "lectern/js/app.js:1556",
    "lectern/js/commands.js:90",
    "lectern/js/dialogs.js:1392",
    "lectern/js/render.js:572"
@@ -16424,7 +16424,7 @@
  },
  "Insert Text Box": {
   "where": [
-   "lectern/js/app.js:1438",
+   "lectern/js/app.js:1439",
    "ledger/js/drawing.js:569",
    "quire/js/drawtool.js:69"
   ]
@@ -16438,7 +16438,7 @@
  },
  "Insert Title Master": {
   "where": [
-   "lectern/js/app.js:1078",
+   "lectern/js/app.js:1079",
    "lectern/js/ribbon.js:76"
   ]
  },
@@ -16611,7 +16611,7 @@
  },
  "Inside Borders": {
   "where": [
-   "lectern/js/app.js:187"
+   "lectern/js/app.js:188"
   ]
  },
  "Inside Horizontal Border": {
@@ -16676,7 +16676,7 @@
  },
  "IntelliArt Styles": {
   "where": [
-   "lectern/js/app.js:295",
+   "lectern/js/app.js:296",
    "lectern/js/diagram.js:581",
    "lectern/js/diagram.js:722",
    "lectern/js/ribbon.js:85"
@@ -16741,7 +16741,7 @@
  },
  "Italic": {
   "where": [
-   "lectern/js/app.js:1376",
+   "lectern/js/app.js:1377",
    "lectern/js/commands.js:109",
    "lectern/js/dialogs.js:371",
    "lectern/js/dialogs.js:380"
@@ -17167,7 +17167,7 @@
  },
  "Left Border": {
   "where": [
-   "lectern/js/app.js:187",
+   "lectern/js/app.js:188",
    "ledger/js/app.js:636",
    "quire/js/app.js:233",
    "quire/js/dialogs.js:482"
@@ -17334,7 +17334,7 @@
  },
  "LettersArt": {
   "where": [
-   "lectern/js/app.js:282",
+   "lectern/js/app.js:283",
    "lectern/js/dialogs.js:1746",
    "lectern/js/dialogs.js:1757",
    "lectern/js/render.js:527"
@@ -17347,12 +17347,12 @@
  },
  "LettersArt Alignment": {
   "where": [
-   "lectern/js/app.js:285"
+   "lectern/js/app.js:286"
   ]
  },
  "LettersArt Character Spacing": {
   "where": [
-   "lectern/js/app.js:286"
+   "lectern/js/app.js:287"
   ]
  },
  "LettersArt Gallery": {
@@ -17370,14 +17370,14 @@
  },
  "LettersArt Shape": {
   "where": [
-   "lectern/js/app.js:283",
+   "lectern/js/app.js:284",
    "lectern/js/ribbon.js:124",
    "quire/js/app.js:338"
   ]
  },
  "LettersArt Style": {
   "where": [
-   "lectern/js/app.js:1732"
+   "lectern/js/app.js:1733"
   ]
  },
  "LettersArt Styles": {
@@ -17552,7 +17552,7 @@
  },
  "Line Color": {
   "where": [
-   "lectern/js/app.js:1343",
+   "lectern/js/app.js:1344",
    "lectern/js/commands.js:125",
    "quire/js/app.js:477",
    "quire/js/commands.js:500"
@@ -17573,9 +17573,9 @@
  },
  "Line Style": {
   "where": [
-   "lectern/js/app.js:274",
-   "lectern/js/app.js:304",
-   "lectern/js/app.js:1355",
+   "lectern/js/app.js:275",
+   "lectern/js/app.js:305",
+   "lectern/js/app.js:1356",
    "lectern/js/ribbon.js:97"
   ]
  },
@@ -17978,17 +17978,17 @@
  },
  "Macro-Enabled Presentation (*.pptm)": {
   "where": [
-   "lectern/js/app.js:578"
+   "lectern/js/app.js:579"
   ]
  },
  "Macro-Enabled Show (*.ppsm)": {
   "where": [
-   "lectern/js/app.js:579"
+   "lectern/js/app.js:580"
   ]
  },
  "Macro-Enabled Template (*.potm)": {
   "where": [
-   "lectern/js/app.js:580"
+   "lectern/js/app.js:581"
   ]
  },
  "Macro-Enabled Template (*.xltm)": {
@@ -18445,7 +18445,7 @@
  },
  "Middle": {
   "where": [
-   "lectern/js/app.js:1687",
+   "lectern/js/app.js:1688",
    "lectern/js/dialogs.js:891"
   ]
  },
@@ -18500,7 +18500,7 @@
  },
  "Missing #root mount element": {
   "where": [
-   "suite/src/main.tsx:280"
+   "suite/src/main.tsx:282"
   ]
  },
  "Mo&vies and Sounds": {
@@ -18583,8 +18583,8 @@
  },
  "More Arrows...": {
   "where": [
-   "lectern/js/app.js:183",
-   "lectern/js/app.js:185"
+   "lectern/js/app.js:184",
+   "lectern/js/app.js:186"
   ]
  },
  "More Brightness": {
@@ -18625,8 +18625,8 @@
  },
  "More Lines...": {
   "where": [
-   "lectern/js/app.js:167",
-   "lectern/js/app.js:169",
+   "lectern/js/app.js:168",
+   "lectern/js/app.js:170",
    "quire/js/app.js:492"
   ]
  },
@@ -18707,7 +18707,7 @@
  },
  "Move Paragraph": {
   "where": [
-   "lectern/js/app.js:1420"
+   "lectern/js/app.js:1421"
   ]
  },
  "Move Sheet": {
@@ -18717,7 +18717,7 @@
  },
  "Move Slide": {
   "where": [
-   "lectern/js/app.js:818"
+   "lectern/js/app.js:819"
   ]
  },
  "Move Tab": {
@@ -18997,9 +18997,9 @@
  },
  "New Slide": {
   "where": [
-   "lectern/js/app.js:272",
-   "lectern/js/app.js:288",
-   "lectern/js/app.js:767",
+   "lectern/js/app.js:273",
+   "lectern/js/app.js:289",
+   "lectern/js/app.js:768",
    "lectern/js/commands.js:75"
   ]
  },
@@ -19194,13 +19194,13 @@
  },
  "No Arrowheads": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
  "No Border": {
   "where": [
-   "lectern/js/app.js:187",
+   "lectern/js/app.js:188",
    "ledger/js/app.js:636",
    "quire/js/app.js:234",
    "quire/js/app.js:539"
@@ -19260,8 +19260,8 @@
  },
  "No Shadow": {
   "where": [
-   "lectern/js/app.js:208",
-   "lectern/js/app.js:219",
+   "lectern/js/app.js:209",
+   "lectern/js/app.js:220",
    "quire/js/app.js:522",
    "quire/js/app.js:527"
   ]
@@ -19362,7 +19362,7 @@
  },
  "No slides": {
   "where": [
-   "lectern/js/app.js:429"
+   "lectern/js/app.js:430"
   ]
  },
  "No table of contents entries found.": {
@@ -19523,8 +19523,8 @@
  },
  "Notes": {
   "where": [
-   "lectern/js/app.js:1109",
-   "lectern/js/app.js:1117",
+   "lectern/js/app.js:1110",
+   "lectern/js/app.js:1118",
    "lectern/js/panes.js:385",
    "lectern/js/panes.js:575"
   ]
@@ -19598,13 +19598,13 @@
  },
  "Nud&ge": {
   "where": [
-   "lectern/js/app.js:231",
+   "lectern/js/app.js:232",
    "quire/js/app.js:465"
   ]
  },
  "Nudge": {
   "where": [
-   "lectern/js/app.js:1305",
+   "lectern/js/app.js:1306",
    "quire/js/drawing.js:605"
   ]
  },
@@ -19719,7 +19719,7 @@
  },
  "Numbering": {
   "where": [
-   "lectern/js/app.js:1407",
+   "lectern/js/app.js:1408",
    "lectern/js/commands.js:117",
    "quire/js/commands.js:43",
    "quire/js/commands.js:105"
@@ -19993,13 +19993,13 @@
  },
  "Open File…": {
   "where": [
-   "suite/src/main.tsx:271",
+   "suite/src/main.tsx:273",
    "index.html:221"
   ]
  },
  "Open URL…": {
   "where": [
-   "suite/src/main.tsx:25"
+   "suite/src/main.tsx:27"
   ]
  },
  "Open a presentation (.pptx)...": {
@@ -20046,15 +20046,15 @@
  },
  "Opening {0}...": {
   "where": [
-   "lectern/js/app.js:545",
-   "lectern/js/app.js:558",
+   "lectern/js/app.js:546",
+   "lectern/js/app.js:559",
    "lectern/js/dialogs.js:1816",
    "ledger/js/app.js:157"
   ]
  },
  "Opening {0}... (slide {1} of {2})": {
   "where": [
-   "lectern/js/app.js:548"
+   "lectern/js/app.js:549"
   ]
  },
  "Opening...": {
@@ -20120,7 +20120,7 @@
  },
  "Order": {
   "where": [
-   "lectern/js/app.js:1249",
+   "lectern/js/app.js:1250",
    "ledger/js/drawing.js:440"
   ]
  },
@@ -20220,7 +20220,7 @@
  },
  "Outline (*.txt)": {
   "where": [
-   "lectern/js/app.js:582"
+   "lectern/js/app.js:583"
   ]
  },
  "Outline Border": {
@@ -20304,7 +20304,7 @@
  },
  "Outlining": {
   "where": [
-   "lectern/js/app.js:273",
+   "lectern/js/app.js:274",
    "quire/js/app.js:333",
    "quire/js/commands.js:267",
    "quire/js/ribbon.js:122"
@@ -20328,7 +20328,7 @@
  },
  "Outside Borders": {
   "where": [
-   "lectern/js/app.js:187",
+   "lectern/js/app.js:188",
    "ledger/js/app.js:638"
   ]
  },
@@ -20357,18 +20357,18 @@
  },
  "Oval at End": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
  "Oval at Start, Triangle at End": {
   "where": [
-   "lectern/js/app.js:181"
+   "lectern/js/app.js:182"
   ]
  },
  "Ovals at Both Ends": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
@@ -20443,18 +20443,18 @@
  },
  "PDF, one slide per page (*.pdf)": {
   "where": [
-   "lectern/js/app.js:581"
+   "lectern/js/app.js:582"
   ]
  },
  "PNG Graphics Format, current slide (*.png)": {
   "where": [
-   "lectern/js/app.js:582"
+   "lectern/js/app.js:583"
   ]
  },
  "PPTX": {
   "where": [
    "lectern/js/panes.js:734",
-   "suite/src/main.tsx:22"
+   "suite/src/main.tsx:24"
   ]
  },
  "PPTX &Help": {
@@ -20474,7 +20474,7 @@
  },
  "PPTX requires the shared mount-scope runtime": {
   "where": [
-   "lectern/js/app.js:2521"
+   "lectern/js/app.js:2522"
   ]
  },
  "Pa&ge(s)": {
@@ -20597,7 +20597,7 @@
  },
  "Page Setup": {
   "where": [
-   "lectern/js/app.js:1022",
+   "lectern/js/app.js:1023",
    "lectern/js/dialogs.js:968",
    "ledger/js/dialogs3.js:685",
    "ledger/js/dialogs3.js:735"
@@ -20866,7 +20866,7 @@
   "where": [
    "common/ui.js:863",
    "ledger/js/app.js:182",
-   "suite/src/main.tsx:29"
+   "suite/src/main.tsx:31"
   ]
  },
  "Password to &open:": {
@@ -20894,10 +20894,10 @@
  },
  "Paste": {
   "where": [
-   "lectern/js/app.js:1880",
-   "lectern/js/app.js:1894",
-   "lectern/js/app.js:1897",
-   "lectern/js/app.js:1914"
+   "lectern/js/app.js:1881",
+   "lectern/js/app.js:1895",
+   "lectern/js/app.js:1898",
+   "lectern/js/app.js:1915"
   ]
  },
  "Paste &Link": {
@@ -20957,12 +20957,12 @@
  },
  "Paste Slides": {
   "where": [
-   "lectern/js/app.js:1885"
+   "lectern/js/app.js:1886"
   ]
  },
  "Paste Special": {
   "where": [
-   "lectern/js/app.js:1932",
+   "lectern/js/app.js:1933",
    "ledger/js/clipboard.js:203",
    "ledger/js/dialogs.js:1264",
    "ledger/js/panes.js:144"
@@ -20976,7 +20976,7 @@
  },
  "Paste as &Unformatted Text": {
   "where": [
-   "lectern/js/app.js:1931"
+   "lectern/js/app.js:1932"
   ]
  },
  "Paste as Hyperlink": {
@@ -21134,8 +21134,8 @@
  },
  "Photo Album": {
   "where": [
-   "lectern/js/app.js:1739",
-   "lectern/js/app.js:1741",
+   "lectern/js/app.js:1740",
+   "lectern/js/app.js:1742",
    "lectern/js/dialogs.js:1809"
   ]
  },
@@ -21177,7 +21177,7 @@
  },
  "Picture": {
   "where": [
-   "lectern/js/app.js:274",
+   "lectern/js/app.js:275",
    "lectern/js/dialogs.js:904",
    "lectern/js/render.js:448",
    "lectern/js/render.js:570"
@@ -21200,7 +21200,7 @@
  },
  "Picture Color": {
   "where": [
-   "lectern/js/app.js:1505",
+   "lectern/js/app.js:1506",
    "quire/js/app.js:550"
   ]
  },
@@ -21454,12 +21454,12 @@
  },
  "PowerPoint Presentation (*.pptx)": {
   "where": [
-   "lectern/js/app.js:578"
+   "lectern/js/app.js:579"
   ]
  },
  "PowerPoint Show (*.ppsx)": {
   "where": [
-   "lectern/js/app.js:579"
+   "lectern/js/app.js:580"
   ]
  },
  "Pr&eset": {
@@ -21501,12 +21501,12 @@
  },
  "Presentation title": {
   "where": [
-   "lectern/js/app.js:1822"
+   "lectern/js/app.js:1823"
   ]
  },
  "Presentation type:": {
   "where": [
-   "lectern/js/app.js:1827"
+   "lectern/js/app.js:1828"
   ]
  },
  "Presentation: {0}": {
@@ -21788,7 +21788,7 @@
  },
  "Project Overview": {
   "where": [
-   "lectern/js/app.js:1779"
+   "lectern/js/app.js:1780"
   ]
  },
  "Project Status Report": {
@@ -21798,7 +21798,7 @@
  },
  "Promote": {
   "where": [
-   "lectern/js/app.js:1410",
+   "lectern/js/app.js:1411",
    "lectern/js/diagram.js:447",
    "lectern/js/diagram.js:715",
    "quire/js/commands.js:522"
@@ -22149,7 +22149,7 @@
  },
  "Reading design...": {
   "where": [
-   "lectern/js/app.js:905"
+   "lectern/js/app.js:906"
   ]
  },
  "Ready": {
@@ -22223,7 +22223,7 @@
  },
  "Recommending a Strategy": {
   "where": [
-   "lectern/js/app.js:1778"
+   "lectern/js/app.js:1779"
   ]
  },
  "Record macro": {
@@ -22243,12 +22243,12 @@
  },
  "Recover": {
   "where": [
-   "suite/src/main.tsx:30"
+   "suite/src/main.tsx:32"
   ]
  },
  "Recover unsaved work": {
   "where": [
-   "suite/src/main.tsx:30"
+   "suite/src/main.tsx:32"
   ]
  },
  "Recovered the unsaved changes. Save the document to keep them.": {
@@ -22258,7 +22258,7 @@
  },
  "Recovered the unsaved changes. Save the presentation to keep them.": {
   "where": [
-   "lectern/js/app.js:2505"
+   "lectern/js/app.js:2506"
   ]
  },
  "Recovered the unsaved changes. Save the workbook to keep them.": {
@@ -22745,7 +22745,7 @@
  },
  "Reset Picture": {
   "where": [
-   "lectern/js/app.js:1507",
+   "lectern/js/app.js:1508",
    "lectern/js/commands.js:194",
    "quire/js/commands.js:492"
   ]
@@ -24555,7 +24555,7 @@
  },
  "Right Border": {
   "where": [
-   "lectern/js/app.js:187",
+   "lectern/js/app.js:188",
    "ledger/js/app.js:636",
    "quire/js/app.js:233",
    "quire/js/dialogs.js:482"
@@ -24655,7 +24655,7 @@
  },
  "Rotate": {
   "where": [
-   "lectern/js/app.js:1293",
+   "lectern/js/app.js:1294",
    "lectern/js/editor.js:675",
    "quire/js/commands.js:491",
    "quire/js/commands.js:511"
@@ -24681,7 +24681,7 @@
  },
  "Rotate or Fl&ip": {
   "where": [
-   "lectern/js/app.js:233",
+   "lectern/js/app.js:234",
    "quire/js/app.js:466"
   ]
  },
@@ -24993,7 +24993,7 @@
   "where": [
    "lectern/js/commands.js:26",
    "quire/js/dialogs3.js:945",
-   "suite/src/main.tsx:27"
+   "suite/src/main.tsx:29"
   ]
  },
  "Save &As...": {
@@ -25082,9 +25082,9 @@
  },
  "Saved {0}": {
   "where": [
-   "lectern/js/app.js:628",
+   "lectern/js/app.js:629",
    "quire/js/app.js:1088",
-   "suite/src/main.tsx:30"
+   "suite/src/main.tsx:32"
   ]
  },
  "Saving {0}...": {
@@ -25094,7 +25094,7 @@
  },
  "Saving...": {
   "where": [
-   "lectern/js/app.js:610",
+   "lectern/js/app.js:611",
    "ledger/js/app.js:289",
    "quire/js/app.js:886",
    "quire/js/app.js:1041"
@@ -25688,7 +25688,7 @@
  },
  "Selling a Product or Service": {
   "where": [
-   "lectern/js/app.js:1783"
+   "lectern/js/app.js:1784"
   ]
  },
  "Semi-block": {
@@ -25773,7 +25773,7 @@
  },
  "Service worker:": {
   "where": [
-   "suite/src/main.tsx:93"
+   "suite/src/main.tsx:95"
   ]
  },
  "Set AutoShape &Defaults": {
@@ -25800,7 +25800,7 @@
  },
  "Set Transparent Color": {
   "where": [
-   "lectern/js/app.js:1542",
+   "lectern/js/app.js:1543",
    "lectern/js/commands.js:195"
   ]
  },
@@ -25864,23 +25864,23 @@
  },
  "Shadow": {
   "where": [
-   "lectern/js/app.js:1365",
-   "lectern/js/app.js:1376",
+   "lectern/js/app.js:1366",
+   "lectern/js/app.js:1377",
    "lectern/js/commands.js:111",
    "lectern/js/ribbon.js:89"
   ]
  },
  "Shadow Style": {
   "where": [
-   "lectern/js/app.js:208",
-   "lectern/js/app.js:219",
-   "lectern/js/app.js:304",
+   "lectern/js/app.js:209",
+   "lectern/js/app.js:220",
+   "lectern/js/app.js:305",
    "lectern/js/ribbon.js:97"
   ]
  },
  "Shadow style": {
   "where": [
-   "lectern/js/app.js:219"
+   "lectern/js/app.js:220"
   ]
  },
  "Shadows": {
@@ -26426,7 +26426,7 @@
  },
  "Single File Web Page (*.html)": {
   "where": [
-   "lectern/js/app.js:581"
+   "lectern/js/app.js:582"
   ]
  },
  "Single Opening Quote": {
@@ -26536,7 +26536,7 @@
  },
  "Sli&de Show": {
   "where": [
-   "lectern/js/app.js:86"
+   "lectern/js/app.js:87"
   ]
  },
  "Sli&de Sorter": {
@@ -26563,7 +26563,7 @@
  },
  "Slide &number": {
   "where": [
-   "lectern/js/app.js:1825",
+   "lectern/js/app.js:1826",
    "lectern/js/dialogs.js:1002"
   ]
  },
@@ -26595,13 +26595,13 @@
  },
  "Slide Layout": {
   "where": [
-   "lectern/js/app.js:839",
+   "lectern/js/app.js:840",
    "lectern/js/panes.js:859"
   ]
  },
  "Slide Master": {
   "where": [
-   "lectern/js/app.js:427",
+   "lectern/js/app.js:428",
    "lectern/js/panes.js:176",
    "lectern/js/panes.js:195",
    "lectern/js/ribbon.js:67"
@@ -26609,7 +26609,7 @@
  },
  "Slide Master View": {
   "where": [
-   "lectern/js/app.js:287"
+   "lectern/js/app.js:288"
   ]
  },
  "Slide N&umber": {
@@ -26672,8 +26672,8 @@
  },
  "Slide Sorter": {
   "where": [
-   "lectern/js/app.js:288",
-   "lectern/js/app.js:428",
+   "lectern/js/app.js:289",
+   "lectern/js/app.js:429",
    "lectern/js/panes.js:482",
    "lectern/js/ribbon.js:66"
   ]
@@ -26685,7 +26685,7 @@
  },
  "Slide Transition": {
   "where": [
-   "lectern/js/app.js:957",
+   "lectern/js/app.js:958",
    "lectern/js/commands.js:144",
    "lectern/js/panes.js:1162"
   ]
@@ -26731,12 +26731,12 @@
  },
  "Slide {0} of {1}": {
   "where": [
-   "lectern/js/app.js:429"
+   "lectern/js/app.js:430"
   ]
  },
  "Slide {0}:": {
   "where": [
-   "lectern/js/app.js:1109"
+   "lectern/js/app.js:1110"
   ]
  },
  "Slide...": {
@@ -26770,7 +26770,7 @@
  },
  "Slides from Outline": {
   "where": [
-   "lectern/js/app.js:1124"
+   "lectern/js/app.js:1125"
   ]
  },
  "Slides per page:": {
@@ -27026,7 +27026,7 @@
  },
  "Source: {0}": {
   "where": [
-   "lectern/js/app.js:1931"
+   "lectern/js/app.js:1932"
   ]
  },
  "South": {
@@ -27096,7 +27096,7 @@
  },
  "Speaker Notes": {
   "where": [
-   "lectern/js/app.js:1109",
+   "lectern/js/app.js:1110",
    "lectern/js/commands.js:146"
   ]
  },
@@ -27124,7 +27124,7 @@
  },
  "Spelling": {
   "where": [
-   "lectern/js/app.js:1459",
+   "lectern/js/app.js:1460",
    "lectern/js/commands.js:132",
    "lectern/js/dialogs.js:1616",
    "lectern/js/ribbon.js:63"
@@ -27182,7 +27182,7 @@
  },
  "Spelling is checked as you type: misspelled words get a wavy red underline while you edit text.\nHold Shift and right-click a flagged word to see your browser's suggestions.": {
   "where": [
-   "lectern/js/app.js:1459"
+   "lectern/js/app.js:1460"
   ]
  },
  "Spelling suggestions come from your browser. Hold Shift while right-clicking a word to see them.": {
@@ -27236,7 +27236,7 @@
  },
  "Split Cell divides a merged cell back into its original cells. Select a merged cell first.": {
   "where": [
-   "lectern/js/app.js:1625"
+   "lectern/js/app.js:1626"
   ]
  },
  "Split Cells": {
@@ -27361,7 +27361,7 @@
  "Standard": {
   "where": [
    "common/ui.js:1198",
-   "lectern/js/app.js:271",
+   "lectern/js/app.js:272",
    "ledger/js/app.js:620",
    "ledger/js/dialogs.js:1796"
   ]
@@ -27385,8 +27385,8 @@
  "Stars and Banners": {
   "where": [
    "common/geometry.js:713",
-   "lectern/js/app.js:139",
-   "lectern/js/app.js:234",
+   "lectern/js/app.js:140",
+   "lectern/js/app.js:235",
    "quire/js/app.js:297"
   ]
  },
@@ -27541,7 +27541,7 @@
  },
  "Status Report": {
   "where": [
-   "lectern/js/app.js:1780"
+   "lectern/js/app.js:1781"
   ]
  },
  "Status bar": {
@@ -27579,7 +27579,7 @@
  },
  "Stealth at End": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
@@ -27631,7 +27631,7 @@
  "Straight Connector": {
   "where": [
    "common/geometry.js:445",
-   "lectern/js/app.js:138"
+   "lectern/js/app.js:139"
   ]
  },
  "Stri&kethrough": {
@@ -27782,7 +27782,7 @@
  },
  "Subscript": {
   "where": [
-   "lectern/js/app.js:1382",
+   "lectern/js/app.js:1383",
    "lectern/js/commands.js:113",
    "quire/js/commands.js:331",
    "quire/js/panes.js:157"
@@ -27856,7 +27856,7 @@
  },
  "Summary Slide": {
   "where": [
-   "lectern/js/app.js:1095",
+   "lectern/js/app.js:1096",
    "lectern/js/commands.js:129"
   ]
  },
@@ -27897,7 +27897,7 @@
  },
  "Superscript": {
   "where": [
-   "lectern/js/app.js:1382",
+   "lectern/js/app.js:1383",
    "lectern/js/commands.js:112",
    "quire/js/commands.js:332",
    "quire/js/panes.js:157"
@@ -28057,8 +28057,8 @@
  },
  "Table": {
   "where": [
-   "lectern/js/app.js:280",
-   "lectern/js/app.js:1588",
+   "lectern/js/app.js:281",
+   "lectern/js/app.js:1589",
    "lectern/js/ribbon.js:38",
    "lectern/js/ribbon.js:114"
   ]
@@ -28192,7 +28192,7 @@
  },
  "Tables and Borders": {
   "where": [
-   "lectern/js/app.js:275",
+   "lectern/js/app.js:276",
    "quire/js/app.js:323",
    "quire/js/commands.js:267"
   ]
@@ -28423,7 +28423,7 @@
  },
  "Text &alignment:": {
   "where": [
-   "lectern/js/app.js:1688"
+   "lectern/js/app.js:1689"
   ]
  },
  "Text &anchor point:": {
@@ -28460,7 +28460,7 @@
  },
  "Text Box": {
   "where": [
-   "lectern/js/app.js:1688",
+   "lectern/js/app.js:1689",
    "lectern/js/commands.js:87",
    "lectern/js/dialogs.js:905",
    "lectern/js/ribbon.js:42"
@@ -28634,7 +28634,7 @@
  },
  "That design could not be read: {0}": {
   "where": [
-   "lectern/js/app.js:919"
+   "lectern/js/app.js:920"
   ]
  },
  "That file is no longer available here. Open it again from your computer.": {
@@ -28672,7 +28672,7 @@
  },
  "The PDF could not be created: {0}": {
   "where": [
-   "lectern/js/app.js:718",
+   "lectern/js/app.js:719",
    "quire/js/app.js:1155",
    "quire/js/dialogs3.js:1093"
   ]
@@ -28880,12 +28880,12 @@
  },
  "The file could not be opened: {0}": {
   "where": [
-   "suite/src/main.tsx:26"
+   "suite/src/main.tsx:28"
   ]
  },
  "The file could not be saved: {0}": {
   "where": [
-   "lectern/js/app.js:633",
+   "lectern/js/app.js:634",
    "quire/js/app.js:1093"
   ]
  },
@@ -29090,7 +29090,7 @@
  },
  "The remote file changed since it was opened. Replace it anyway?": {
   "where": [
-   "suite/src/main.tsx:25"
+   "suite/src/main.tsx:27"
   ]
  },
  "The search item wasn't found.": {
@@ -29116,7 +29116,7 @@
  },
  "The selected slides have no titles to summarize.": {
   "where": [
-   "lectern/js/app.js:1091"
+   "lectern/js/app.js:1092"
   ]
  },
  "The selection contains multiple data values. Merging into one cell will keep the upper-left most data only.": {
@@ -29513,12 +29513,12 @@
  },
  "This WebDAV folder is empty.": {
   "where": [
-   "suite/src/main.tsx:28"
+   "suite/src/main.tsx:30"
   ]
  },
  "This browser blocked the image export.": {
   "where": [
-   "lectern/js/app.js:678"
+   "lectern/js/app.js:679"
   ]
  },
  "This browser blocked the page image.": {
@@ -29638,7 +29638,7 @@
  },
  "This file type is not supported.": {
   "where": [
-   "suite/src/main.tsx:26"
+   "suite/src/main.tsx:28"
   ]
  },
  "This file was damaged; Excelx repaired what it could.": {
@@ -29688,7 +29688,7 @@
  },
  "This picture cannot be edited.": {
   "where": [
-   "lectern/js/app.js:1536"
+   "lectern/js/app.js:1537"
   ]
  },
  "This pivot table will be saved as plain cells, because a column it uses was deleted from its source data.": {
@@ -29871,7 +29871,7 @@
  },
  "Title Master": {
   "where": [
-   "lectern/js/app.js:427",
+   "lectern/js/app.js:428",
    "lectern/js/panes.js:176",
    "lectern/js/panes.js:195"
   ]
@@ -30100,7 +30100,7 @@
  "Top": {
   "where": [
    "common/charts.js:453",
-   "lectern/js/app.js:1687",
+   "lectern/js/app.js:1688",
    "lectern/js/dialogs.js:891",
    "ledger/js/dialogs.js:604"
   ]
@@ -30113,7 +30113,7 @@
  },
  "Top Border": {
   "where": [
-   "lectern/js/app.js:187",
+   "lectern/js/app.js:188",
    "quire/js/app.js:232",
    "quire/js/dialogs.js:482"
   ]
@@ -30247,18 +30247,18 @@
  },
  "Training": {
   "where": [
-   "lectern/js/app.js:1782"
+   "lectern/js/app.js:1783"
   ]
  },
  "Transition": {
   "where": [
-   "lectern/js/app.js:288",
+   "lectern/js/app.js:289",
    "lectern/js/commands.js:144"
   ]
  },
  "Transition applied to all slides": {
   "where": [
-   "lectern/js/app.js:967"
+   "lectern/js/app.js:968"
   ]
  },
  "Transition to This Slide": {
@@ -30325,19 +30325,19 @@
  },
  "Triangle at End": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
  "Triangle at Start": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
  "Triangles at Both Ends": {
   "where": [
-   "lectern/js/app.js:181",
+   "lectern/js/app.js:182",
    "quire/js/app.js:509"
   ]
  },
@@ -30441,7 +30441,7 @@
  },
  "Typing": {
   "where": [
-   "lectern/js/app.js:2139",
+   "lectern/js/app.js:2140",
    "lectern/js/diagram.js:466",
    "lectern/js/diagram.js:515",
    "lectern/js/diagram.js:525"
@@ -30526,7 +30526,7 @@
  },
  "Underline": {
   "where": [
-   "lectern/js/app.js:1376",
+   "lectern/js/app.js:1377",
    "lectern/js/commands.js:110",
    "quire/js/commands.js:327",
    "quire/js/commands.js:328"
@@ -30595,7 +30595,7 @@
  },
  "Ungroup": {
   "where": [
-   "lectern/js/app.js:1222",
+   "lectern/js/app.js:1223",
    "ledger/js/app.js:1246",
    "ledger/js/dialogs.js:948",
    "ledger/js/dialogs.js:956"
@@ -30716,7 +30716,7 @@
  },
  "Untitled": {
   "where": [
-   "lectern/js/app.js:1856"
+   "lectern/js/app.js:1857"
   ]
  },
  "Up": {
@@ -30980,12 +30980,12 @@
  },
  "Username": {
   "where": [
-   "suite/src/main.tsx:29"
+   "suite/src/main.tsx:31"
   ]
  },
  "V&ery Loose": {
   "where": [
-   "lectern/js/app.js:286"
+   "lectern/js/app.js:287"
   ]
  },
  "Va&lidation...": {
@@ -31338,17 +31338,17 @@
  },
  "WebDAV collection URL": {
   "where": [
-   "suite/src/main.tsx:26"
+   "suite/src/main.tsx:28"
   ]
  },
  "WebDAV files": {
   "where": [
-   "suite/src/main.tsx:28"
+   "suite/src/main.tsx:30"
   ]
  },
  "WebDAV…": {
   "where": [
-   "suite/src/main.tsx:25"
+   "suite/src/main.tsx:27"
   ]
  },
  "Webdings": {
@@ -31703,7 +31703,7 @@
  "Wordx": {
   "where": [
    "quire/js/panes.js:98",
-   "suite/src/main.tsx:20",
+   "suite/src/main.tsx:22",
    "index.html:226",
    "quire/index.html:13"
   ]
@@ -31954,7 +31954,7 @@
  },
  "Your Text Here": {
   "where": [
-   "lectern/js/app.js:1710",
+   "lectern/js/app.js:1711",
    "lectern/js/dialogs.js:1768",
    "lectern/js/dialogs.js:1777",
    "quire/js/dialogs2.js:855"
@@ -32050,8 +32050,8 @@
  },
  "Zoom": {
   "where": [
-   "lectern/js/app.js:258",
-   "lectern/js/app.js:416",
+   "lectern/js/app.js:259",
+   "lectern/js/app.js:417",
    "lectern/js/dialogs.js:1708",
    "lectern/js/panes.js:988"
   ]
@@ -32649,7 +32649,7 @@
  },
  "{0} can't read {1}. {2}\nMake sure the file is a PowerPoint 2007 or later presentation (.pptx).": {
   "where": [
-   "lectern/js/app.js:574"
+   "lectern/js/app.js:575"
   ]
  },
  "{0} cell(s) found": {
@@ -32680,7 +32680,7 @@
  },
  "{0} found a problem with content in {1} and repaired the presentation.": {
   "where": [
-   "lectern/js/app.js:568"
+   "lectern/js/app.js:569"
   ]
  },
  "{0} has finished searching the presentation and made 1 replacement.": {
@@ -32707,7 +32707,7 @@
  },
  "{0} is in the older binary PowerPoint 97–2003 format. Open it in PowerPoint, Keynote, Google Slides or LibreOffice and save it as .pptx, then open the .pptx here.": {
   "where": [
-   "lectern/js/app.js:543"
+   "lectern/js/app.js:544"
   ]
  },
  "{0} is not installed on this computer, so its text is shown in a default font. The document keeps the font name {0} and shows in that font on computers that have it.": {
@@ -32773,7 +32773,7 @@
  },
  "{0} objects: {1}": {
   "where": [
-   "lectern/js/app.js:1846"
+   "lectern/js/app.js:1847"
   ]
  },
  "{0} of 24 - Clipboard. Click an item to paste.": {
@@ -32820,10 +32820,10 @@
  },
  "{0} pt": {
   "where": [
-   "lectern/js/app.js:166",
-   "lectern/js/app.js:169",
-   "lectern/js/app.js:200",
-   "lectern/js/app.js:1683"
+   "lectern/js/app.js:167",
+   "lectern/js/app.js:170",
+   "lectern/js/app.js:201",
+   "lectern/js/app.js:1684"
   ]
  },
  "{0} seconds": {
@@ -32833,12 +32833,12 @@
  },
  "{0} slides could not be recovered.": {
   "where": [
-   "lectern/js/app.js:568"
+   "lectern/js/app.js:569"
   ]
  },
  "{0} slides: {1}": {
   "where": [
-   "lectern/js/app.js:1856"
+   "lectern/js/app.js:1857"
   ]
  },
  "{0} toolbar": {

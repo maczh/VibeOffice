@@ -42,15 +42,25 @@ export function installExcelxGridRuntime(runtime: Window): void {
 
   /* ------------------------------------------------------------ setup */
   G.init = function (wb) {
+    const direct = !!(root.VO && root.VO.reactDirectHost);
     wrap = L.$('#gridwrap');
     layer = L.$('#glayer');
-    canvas = h('canvas', { class: 'gcv', 'aria-hidden': 'true' });
-    wrap.insertBefore(canvas, layer);
-    inp = h('textarea', { class: 'celledit', id: 'celledit', 'aria-label': 'Cell editor', spellcheck: 'false', autocomplete: 'off', autocapitalize: 'off', wrap: 'off', rows: '1' });
-    inp.style.opacity = '0';
-    inp.style.pointerEvents = 'none';
-    wrap.appendChild(inp);
+    canvas = direct ? wrap.querySelector(':scope > canvas.gcv[data-react-owned="excelx-grid-canvas"]') : null;
+    inp = direct ? wrap.querySelector(':scope > textarea.celledit[data-react-owned="excelx-cell-editor"]') : null;
+    if (direct && (!canvas || !inp)) throw new Error('The React Excelx shell is missing its worksheet canvas or cell editor');
+    if (!canvas) {
+      canvas = h('canvas', { class: 'gcv', 'aria-hidden': 'true' });
+      wrap.insertBefore(canvas, layer);
+    }
+    if (!inp) {
+      inp = h('textarea', { class: 'celledit', id: 'celledit', 'aria-label': 'Cell editor', spellcheck: 'false', autocomplete: 'off', autocapitalize: 'off', wrap: 'off', rows: '1' });
+      inp.style.opacity = '0';
+      inp.style.pointerEvents = 'none';
+      wrap.appendChild(inp);
+    }
+    G.canvas = canvas;
     G.input = inp;
+    G.surfaceOwnedByReact = direct;
     vbar = new Scrollbar(L.$('#vscroll'), 'v', (pos, how) => scrollTo('v', pos, how));
     hbar = new Scrollbar(L.$('#hscroll'), 'h', (pos, how) => scrollTo('h', pos, how));
     G.setWorkbook(wb);
@@ -60,7 +70,6 @@ export function installExcelxGridRuntime(runtime: Window): void {
     const onCut = (e) => { if (L.editor.active) return; e.preventDefault(); L.clip.copy(e, true); };
     const onPaste = (e) => { if (L.editor.active) return; e.preventDefault(); L.clip.paste(e); };
     const handlers = { pointerdown: onPointerDown, pointermove: onHover, dblclick: onDblClick, wheel: onWheel, contextmenu: onContext, focus: onFocus, keydown: onKey, input: onInput, compositionstart: onCompositionStart, copy: onCopy, cut: onCut, paste: onPaste };
-    const direct = !!(root.VO && root.VO.reactDirectHost);
     if (direct) {
       G.reactMountInteractions = () => {
         if (!wrap || !inp) return () => {};
