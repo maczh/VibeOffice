@@ -15,18 +15,52 @@ const HL_NAMES: Record<string, string> = {
 
 const escHtml = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
+/* The same CSS font stacks Quire uses in public/common/core.js, so the page paints with
+   the browser's stand-ins for the font names kept in the document. */
+const FONT_FALLBACK: Record<string, string> = {
+  arial: '"Arimo","Liberation Sans",Helvetica,sans-serif',
+  'arial black': '"Arial Black","Arimo",sans-serif',
+  'arial narrow': '"Arial Narrow","Arimo",sans-serif',
+  helvetica: '"Helvetica Neue","TeX Gyre Heros","Nimbus Sans",Arial,"Arimo",sans-serif',
+  'times new roman': '"Tinos","Liberation Serif",Times,serif',
+  times: '"Times New Roman","Tinos","TeX Gyre Termes",serif',
+  'courier new': '"Cousine","Liberation Mono",Courier,monospace',
+  courier: '"Courier New","Cousine",monospace',
+  calibri: '"Carlito",Candara,"Segoe UI",sans-serif',
+  'calibri light': '"Carlito",sans-serif',
+  aptos: 'Calibri,"Carlito",sans-serif',
+  georgia: '"Gelasio","DejaVu Serif","Times New Roman","Tinos",serif',
+  cambria: '"Caladea",Georgia,serif',
+  tahoma: '"DejaVu Sans Condensed",Verdana,Arial,"Arimo",sans-serif',
+  verdana: '"DejaVu Sans",Tahoma,Arial,"Arimo",sans-serif',
+  symbol: '"Segoe UI Symbol",serif',
+  wingdings: '"Segoe UI Symbol",sans-serif',
+}
+
+export function fontStack(name: string): string {
+  const family = String(name).replace(/"/g, '').trim()
+  const fallback = FONT_FALLBACK[family.toLowerCase()] || 'Arial,"Arimo",sans-serif'
+  /* A style attribute is double-quoted; use single quotes in the CSS value. */
+  return `'${family}',${fallback.replace(/"/g, "'")}`
+}
+
 function rPrStyle(r: RPr | undefined, doc: Doc): string {
   const s: string[] = []
   const font = r?.font || doc.defaultFont
   const size = r?.size || doc.defaultSize
-  s.push(`font-family:${font},Carlito,Calibri,sans-serif`)
+  s.push(`font-family:${fontStack(font)}`)
   s.push(`font-size:${size}pt`)
   if (r?.bold) s.push('font-weight:bold')
   if (r?.italic) s.push('font-style:italic')
   const td: string[] = []
   if (r?.underline) td.push('underline')
   if (r?.strike) td.push('line-through')
-  if (td.length) s.push('text-decoration:' + td.join(' '))
+  if (td.length) s.push('text-decoration-line:' + td.join(' '))
+  if (r?.underlineStyle === 'double') s.push('text-decoration-style:double')
+  if (r?.underlineStyle === 'words') s.push('text-decoration-style:dotted')
+  if (r?.caps === 'all') s.push('text-transform:uppercase')
+  if (r?.caps === 'small') s.push('font-variant:small-caps')
+  if (r?.hidden) s.push('color:transparent;text-shadow:none')
   if (r?.color) s.push('color:' + r.color)
   if (r?.highlight) s.push('background:' + r.highlight)
   if (r?.vertAlign === 'superscript') s.push('vertical-align:super;font-size:smaller')
@@ -46,6 +80,11 @@ function pPrStyle(p: Para, doc: Doc): string {
   const indent = p.pPr?.indent ?? 0
   if (indent) s.push('padding-left:' + indent + 'px')
   if (p.pPr?.line) s.push(p.pPr.line > 4 ? 'line-height:' + p.pPr.line + 'px' : 'line-height:' + p.pPr.line)
+  if (p.pPr?.pageBreakBefore) s.push('break-before:page;page-break-before:always')
+  if (p.pPr?.keepNext) s.push('page-break-after:avoid')
+  if (p.pPr?.keepLines) s.push('page-break-inside:avoid')
+  if (p.pPr?.borders) s.push('outline:1px solid #888;outline-offset:1px')
+  if (p.pPr?.shading) s.push('background:' + p.pPr.shading)
   const rPr = st?.rPr
   if (rPr) s.push(rPrStyle(rPr, doc))
   return s.join(';')
@@ -55,7 +94,17 @@ function runHtml(r: Run, doc: Doc): string {
   if (r.raw != null) return `<span class="raw" contenteditable="false" data-raw="${encodeURIComponent(r.raw)}">[object]</span>`
   const style = rPrStyle(r.rPr, doc)
   if (r.image) {
-    return `<img class="img" src="${r.image.url}" width="${r.image.w}" height="${r.image.h}" data-part="${r.image.part}" data-rid="${r.image.rId}" data-w="${r.image.w}" data-h="${r.image.h}" style="${style}">`
+    const img = r.image
+    const css = [style]
+    if (img.rotation) css.push(`transform:rotate(${img.rotation}deg)`)
+    if (img.contrast != null) css.push(`filter:contrast(${img.contrast}%)`)
+    if (img.brightness != null) css.push(`filter:brightness(${img.brightness}%)`)
+    if (img.wrap === 'square' || img.wrap === 'tight') css.push('float:left;margin:0 8px 4px 0')
+    if (img.wrap === 'behind') css.push('position:absolute;z-index:-1')
+    const crop = img.crop
+    return `<img class="img" src="${img.url}" width="${img.w}" height="${img.h}" data-part="${img.part}" data-rid="${img.rId}"` +
+      ` data-w="${img.w}" data-h="${img.h}"${crop ? ` data-crop="${crop.l},${crop.t},${crop.r},${crop.b}"` : ''}` +
+      ` data-wrap="${img.wrap || 'inline'}" style="${css.join(';')}">`
   }
   if (r.br) return '<br>'
   if (r.tab) return `<span class="tb" style="${style}">\t</span>`
@@ -67,23 +116,36 @@ function runHtml(r: Run, doc: Doc): string {
 
 export function renderBlock(b: Block, doc: Doc): string {
   if (isPara(b)) {
-    const inner = b.runs.map((r) => runHtml(r, doc)).join('')
+    const style = b.pPr?.style ? doc.styles.find((s) => s.id === b.pPr!.style) : undefined
+    const inner = b.runs.map((r) => runHtml({ ...r, rPr: { ...style?.rPr, ...r.rPr } }, doc)).join('')
     const marker = listMarker(b, doc)
     return `<div class="p" data-id="${b.id}" style="${pPrStyle(b, doc)}">${marker}${inner || '<br>'}</div>`
   }
   const t = b as Table
   const cols = t.widths.map((w) => `<col style="width:${w}px">`).join('')
-  const rows = t.rows.map((row) => {
+  const tableStyle = [
+    'border-collapse:collapse',
+    `table-layout:${t.autoFit === 'content' ? 'auto' : 'fixed'}`,
+    'break-inside:avoid', 'page-break-inside:avoid',
+    t.align === 'center' ? 'margin-left:auto;margin-right:auto' : t.align === 'right' ? 'margin-left:auto' : '',
+  ].filter(Boolean).join(';')
+  const rows = t.rows.map((row, ri) => {
     const cells = row.map((c) => {
       const span = c.gridSpan && c.gridSpan > 1 ? ` colspan="${c.gridSpan}"` : ''
       const vm = c.vMerge === 'continue' ? ' data-vmerge="continue"' : c.vMerge === 'restart' ? ' data-vmerge="restart"' : ''
-      const fill = c.fill ? `background:${c.fill};` : ''
+      const border = c.borders === false ? 'border:0' : 'border:1px solid #888'
+      const css = [
+        c.fill ? `background:${c.fill}` : '', border, 'padding:2px 4px',
+        `vertical-align:${c.vAlign === 'center' ? 'middle' : c.vAlign === 'bottom' ? 'bottom' : 'top'}`,
+        c.textDirection === 'vertical' ? 'writing-mode:vertical-lr' : '',
+        ri < (t.headerRows || 0) ? 'font-weight:bold' : '',
+      ].filter(Boolean).join(';')
       const paras = c.paras.map((p) => renderBlock(p, doc)).join('')
-      return `<td${span}${vm} data-w="${c.width || 0}" style="${fill}border:1px solid #888;padding:2px 4px;vertical-align:top">${paras}</td>`
+      return `<td${span}${vm} data-w="${c.width || 0}" style="${css}">${paras}</td>`
     }).join('')
     return `<tr>${cells}</tr>`
   }).join('')
-  return `<table class="tbl" data-id="${t.id}" style="border-collapse:collapse;table-layout:fixed"><colgroup>${cols}</colgroup>${rows}</table>`
+  return `<table class="tbl" data-id="${t.id}" style="${tableStyle}"><colgroup>${cols}</colgroup>${rows}</table>`
 }
 
 function listMarker(p: Para, doc: Doc): string {
@@ -130,6 +192,11 @@ function mergeStyle(r: RPr, el: HTMLElement): RPr {
   if (bg && bg !== '#ffffff') out.highlight = HL_NAMES[bg.toLowerCase()] || bg
   if (st.verticalAlign === 'super') out.vertAlign = 'superscript'
   if (st.verticalAlign === 'sub') out.vertAlign = 'subscript'
+  if (st.textTransform === 'uppercase') out.caps = 'all'
+  if (st.fontVariantCaps === 'small-caps') out.caps = 'small'
+  if (st.textDecorationStyle === 'double') out.underlineStyle = 'double'
+  if (st.textDecorationStyle === 'dotted') out.underlineStyle = 'words'
+  if (st.color === 'rgba(0, 0, 0, 0)' || st.color === 'transparent') out.hidden = true
   return out
 }
 
@@ -144,11 +211,14 @@ function syncRuns(node: Node, rPr: RPr, link: { rId: string; url: string } | und
   const tag = el.tagName.toLowerCase()
   if (tag === 'br') { out.push({ br: true, rPr: cleanRPr(rPr) }); return }
   if (tag === 'img') {
+    const crop = (el.getAttribute('data-crop') || '').split(',').map(Number)
     out.push({
       image: {
         url: el.getAttribute('src') || '', part: el.getAttribute('data-part') || '',
         rId: el.getAttribute('data-rid') || '', w: +(el.getAttribute('data-w') || el.getAttribute('width') || 100),
         h: +(el.getAttribute('data-h') || el.getAttribute('height') || 100),
+        ...(crop.length === 4 && crop.some((n) => n > 0) ? { crop: { l: crop[0], r: crop[2], t: crop[1], b: crop[3] } } : {}),
+        wrap: (el.getAttribute('data-wrap') || 'inline') as NonNullable<NonNullable<Run['image']>['wrap']>,
       },
       rPr: cleanRPr(rPr),
     })
@@ -182,6 +252,9 @@ function cleanRPr(r: RPr): RPr | undefined {
   if (r.color) out.color = r.color
   if (r.highlight) out.highlight = r.highlight
   if (r.vertAlign) out.vertAlign = r.vertAlign
+  if (r.caps) out.caps = r.caps
+  if (r.hidden) out.hidden = r.hidden
+  if (r.underlineStyle) out.underlineStyle = r.underlineStyle
   return Object.keys(out).length ? out : undefined
 }
 
@@ -215,9 +288,19 @@ export function syncBlock(el: HTMLElement, doc: Doc, prev?: Block): Block {
         if (bg) cell.fill = bg
         const w = +(cellEl.getAttribute('data-w') || 0)
         if (w) cell.width = w
+        const va = cellEl.style.verticalAlign
+        if (va === 'middle' || va === 'bottom') cell.vAlign = va === 'middle' ? 'center' : 'bottom'
+        if (cellEl.style.writingMode.includes('vertical')) cell.textDirection = 'vertical'
+        if (cellEl.style.border === '0px solid rgb(0, 0, 0)' || cellEl.style.border === '0') cell.borders = false
         return cell
       }))
-    const t: Table = { kind: 'tbl', id: id || uid('t'), rows, widths: widths.length ? widths : (prevT?.widths || [100]) }
+    const t: Table = {
+      kind: 'tbl', id: id || uid('t'), rows,
+      widths: widths.length ? widths : (prevT?.widths || [100]),
+      ...(prevT?.align ? { align: prevT.align } : {}),
+      ...(prevT?.autoFit ? { autoFit: prevT.autoFit } : {}),
+      ...(prevT?.headerRows ? { headerRows: prevT.headerRows } : {}),
+    }
     return t
   }
   const prevP = prev && prev.kind === 'p' ? prev : undefined

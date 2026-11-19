@@ -1,0 +1,2 @@
+export interface DocumentTemplate { id: string; name: string; description?: string; format?: 'docx' | 'md' | 'html'; content?: string }
+export class TemplateCatalog { constructor(private readonly templates: DocumentTemplate[] = []) {} list(): DocumentTemplate[] { return this.templates.slice() } get(id: string): DocumentTemplate | undefined { return this.templates.find(template => template.id === id) } create(id: string): string { return this.get(id)?.content ?? '' } }

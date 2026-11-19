@@ -1,4 +1,8 @@
 import { type OfficeApi, type OfficeProps, type OpenInput, type SaveTarget } from '@voffice/react-shared';
+import '../../public/common/looks.css';
+import '../../public/common/ui.css';
+import '../../public/fonts/fonts.css';
+import './quire.css';
 export { quireScriptMigration } from './quire-manifest';
 export { TaskPane, type TaskPaneProps } from './components/TaskPane';
 export { EditorSurface, type EditorSurfaceProps } from './components/EditorSurface';
@@ -9,7 +13,6 @@ export { RWordWorkspace, type RWordWorkspaceProps, type WorkspacePanel } from '.
 export { OutlinePanel, type OutlinePanelProps } from './components/OutlinePanel';
 export { FormattingPanel, type FormattingPanelProps } from './components/FormattingPanel';
 export { CommandSurface, type CommandSurfaceProps } from './components/CommandSurface';
-import '../../rshared/src/style.css';
 export type { OfficeApi, OfficeProps, OpenInput, SaveTarget };
 export interface RWordProps extends OfficeProps {
     onReady?: () => void;

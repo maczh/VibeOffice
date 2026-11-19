@@ -1130,7 +1130,37 @@ function je(e) {
 	return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n" + w(e);
 }
 // src/chrome.tsx
-function Me({ menus: e }) {
+function Me({ items: e, close: t }) {
+	let [n, r] = o(null);
+	return /* @__PURE__ */ c(s, { children: e.map((e, i) => e.sep ? /* @__PURE__ */ c("div", { className: "vo-menu-sep" }, `sep-${i}`) : /* @__PURE__ */ l("div", {
+		className: "vo-menu-row",
+		onMouseEnter: () => r(e.label),
+		children: [/* @__PURE__ */ l("button", {
+			disabled: e.disabled,
+			role: "menuitem",
+			onMouseDown: (n) => {
+				n.stopPropagation(), e.sub?.length || (t(), e.run?.());
+			},
+			children: [
+				e.checked ? "✓ " : "",
+				e.label,
+				e.key && /* @__PURE__ */ c("span", {
+					className: "vo-menu-key",
+					children: e.key
+				}),
+				e.sub?.length ? " ▶" : ""
+			]
+		}), n === e.label && e.sub?.length ? /* @__PURE__ */ c("div", {
+			className: "vo-menu-sub",
+			role: "menu",
+			children: /* @__PURE__ */ c(Me, {
+				items: e.sub,
+				close: t
+			})
+		}) : null]
+	}, `${e.label}-${i}`)) });
+}
+function Ne({ menus: e }) {
 	let [t, n] = o(null);
 	return r(() => {
 		let e = () => n(null);
@@ -1148,44 +1178,45 @@ function Me({ menus: e }) {
 			}), t === e.label && /* @__PURE__ */ c("div", {
 				className: "vo-menu-pop",
 				role: "menu",
-				children: e.items.map((t, r) => t.sep ? /* @__PURE__ */ c("div", { className: "vo-menu-sep" }, `${e.label}-sep-${r}`) : /* @__PURE__ */ l("button", {
-					disabled: t.disabled,
-					role: "menuitem",
-					onMouseDown: (e) => {
-						e.stopPropagation(), n(null), t.run?.();
-					},
-					children: [
-						t.checked ? "✓ " : "",
-						t.label,
-						t.key && /* @__PURE__ */ c("span", {
-							className: "vo-menu-key",
-							children: t.key
-						})
-					]
-				}, t.label))
+				children: /* @__PURE__ */ c(Me, {
+					items: e.items,
+					close: () => n(null)
+				})
 			})]
 		}, e.label))
 	});
 }
-var Ne = {
-	new: "＋",
-	open: "📂",
-	save: "💾",
-	undo: "↶",
-	redo: "↷",
-	print: "🖨",
-	find: "🔍",
-	cut: "✂",
-	copy: "▣",
-	paste: "📋",
-	bold: "B",
-	italic: "I",
-	underline: "U",
-	table: "▦",
-	break: "↵",
-	date: "📅"
+var Pe = {
+	new: "M8 2v12M2 8h12",
+	open: "M2 4h5l2 2h5v7H2z",
+	save: "M3 2h10v12H3zM5 2v4h6V2M5 10h6v4H5z",
+	undo: "M4 6h8a3 3 0 010 6H8M4 6l3-3M4 6l3 3",
+	redo: "M12 6H4a3 3 0 000 6h4M12 6L9 3M12 6L9 9",
+	print: "M4 5V2h8v3M4 11H2V6h12v5M4 9h8v5H4z",
+	find: "M7 3a4 4 0 100 8 4 4 0 000-8m3 7 4 4",
+	cut: "M5 5l8 8M13 5L5 13M3 4a1.5 1.5 0 103 0 1.5 1.5 0 00-3 0",
+	copy: "M5 5h8v8H5zM3 3h8v2H5v6H3z",
+	paste: "M5 4h8v10H5zM7 2h4v3H7z",
+	table: "M2 2h12v12H2zM2 6h12M2 10h12M6 2v12M10 2v12",
+	break: "M3 8h8M8 5l3 3-3 3",
+	date: "M3 3h10v11H3zM3 6h10M6 2v3M10 2v3"
 };
-function Pe({ items: e }) {
+function Fe({ id: e }) {
+	return /* @__PURE__ */ c("svg", {
+		className: `vo-tool-icon vo-tool-icon-${e}`,
+		viewBox: "0 0 16 16",
+		"aria-hidden": "true",
+		children: /* @__PURE__ */ c("path", {
+			d: Pe[e] ?? "M4 4h8v8H4z",
+			fill: "none",
+			stroke: "currentColor",
+			strokeWidth: "1.25",
+			strokeLinecap: "round",
+			strokeLinejoin: "round"
+		})
+	});
+}
+function Ie({ items: e }) {
 	return /* @__PURE__ */ c("div", {
 		className: "vo-toolbar vo-commandbar",
 		children: e.map((e) => e.kind === "sep" ? /* @__PURE__ */ c("span", { className: "vo-tool-sep" }, e.id) : /* @__PURE__ */ c("button", {
@@ -1193,15 +1224,11 @@ function Pe({ items: e }) {
 			title: e.title ?? e.label,
 			"aria-label": e.title ?? e.label,
 			onClick: () => void e.run?.(),
-			children: e.icon ?? /* @__PURE__ */ c("span", {
-				className: `vo-tool-icon vo-tool-icon-${e.id}`,
-				"aria-hidden": "true",
-				children: Ne[e.id] ?? "◆"
-			})
+			children: e.icon ?? /* @__PURE__ */ c(Fe, { id: e.id })
 		}, e.id))
 	});
 }
-function Fe({ tabs: e }) {
+function Le({ tabs: e }) {
 	let [t, n] = o(e[0]?.id), r = e.find((e) => e.id === t) ?? e[0];
 	return /* @__PURE__ */ l("section", {
 		className: "vo-ribbon",
@@ -1219,19 +1246,33 @@ function Fe({ tabs: e }) {
 				title: e.title ?? e.label,
 				"aria-label": e.title ?? e.label,
 				onClick: () => void e.run?.(),
-				children: [e.icon ?? /* @__PURE__ */ c("span", {
-					className: "vo-tool-icon",
-					"aria-hidden": "true",
-					children: Ne[e.id] ?? "◆"
-				}), /* @__PURE__ */ c("span", { children: e.label ?? e.id })]
+				children: [e.icon ?? /* @__PURE__ */ c(Fe, { id: e.id }), /* @__PURE__ */ c("span", { children: e.label ?? e.id })]
 			}, e.id))
 		})]
 	});
 }
-function Ie({ children: e }) {
-	return /* @__PURE__ */ c("div", {
+function Re({ children: e }) {
+	return /* @__PURE__ */ l("div", {
 		className: "vo-status",
-		children: e
+		children: [
+			/* @__PURE__ */ c("span", {
+				className: "vo-status-cell vo-status-grow",
+				children: e
+			}),
+			/* @__PURE__ */ c("span", {
+				className: "vo-status-cell",
+				children: "Ready"
+			}),
+			/* @__PURE__ */ c("span", {
+				className: "vo-status-cell vo-status-spell",
+				"aria-label": "Spelling and grammar status",
+				children: "✓"
+			}),
+			/* @__PURE__ */ c("span", {
+				className: "vo-status-cell",
+				children: "100%"
+			})
+		]
 	});
 }
 function Z({ title: e, children: t, onClose: n }) {
@@ -1254,7 +1295,7 @@ function Z({ title: e, children: t, onClose: n }) {
 		})
 	});
 }
-function Le({ mode: e, fileName: t, onSubmit: n, onClose: r }) {
+function ze({ mode: e, fileName: t, onSubmit: n, onClose: r }) {
 	let [i, a] = o("");
 	return /* @__PURE__ */ l(Z, {
 		title: e === "open" ? "Open from Online" : "Save to Online",
@@ -1278,7 +1319,7 @@ function Le({ mode: e, fileName: t, onSubmit: n, onClose: r }) {
 		]
 	});
 }
-function Re({ x: e, y: t, items: n, onClose: i }) {
+function Be({ x: e, y: t, items: n, onClose: i }) {
 	let s = a(null), [u, d] = o(null);
 	return r(() => {
 		let e = (e) => {
@@ -1318,7 +1359,7 @@ function Re({ x: e, y: t, items: n, onClose: i }) {
 				]
 			}), u === n.label && n.sub?.length ? /* @__PURE__ */ c("div", {
 				className: "vo-context-sub",
-				children: /* @__PURE__ */ c(Re, {
+				children: /* @__PURE__ */ c(Be, {
 					x: e + 180,
 					y: t + r * 28,
 					items: n.sub,
@@ -1330,7 +1371,7 @@ function Re({ x: e, y: t, items: n, onClose: i }) {
 }
 // src/common.tsx
 var Q = "vibeoffice.recent";
-function ze() {
+function Ve() {
 	try {
 		let e = JSON.parse(localStorage.getItem(Q) || "[]");
 		return Array.isArray(e) ? e.slice(0, 12) : [];
@@ -1338,8 +1379,8 @@ function ze() {
 		return [];
 	}
 }
-function Be() {
-	let [e, t] = o(ze);
+function He() {
+	let [e, t] = o(Ve);
 	return {
 		recent: e,
 		remember: n((e) => t((t) => {
@@ -1361,7 +1402,7 @@ function Be() {
 		}), [])
 	};
 }
-function Ve(e) {
+function Ue(e) {
 	let [t, n] = o(() => e || localStorage.getItem("vibeoffice.look") || "classic");
 	return r(() => {
 		try {
@@ -1373,7 +1414,7 @@ function Ve(e) {
 		layout: t === "paper2016" ? "ribbon" : "bars"
 	};
 }
-function He(e, t = "You have unsaved changes.") {
+function We(e, t = "You have unsaved changes.") {
 	r(() => {
 		let n = (n) => {
 			e && (n.preventDefault(), n.returnValue = t);
@@ -1381,7 +1422,7 @@ function He(e, t = "You have unsaved changes.") {
 		return window.addEventListener("beforeunload", n), () => window.removeEventListener("beforeunload", n);
 	}, [e, t]);
 }
-function Ue() {
+function Ge() {
 	let [e, t] = o(() => localStorage.getItem("vibeoffice.lang") || "en");
 	return {
 		lang: e,
@@ -1395,7 +1436,7 @@ function Ue() {
 		t: (e, ...t) => e.replace(/\{(\d+)\}/g, (e, n) => t[+n] == null ? e : String(t[+n]))
 	};
 }
-function We(e = "/sw.js") {
+function Ke(e = "/sw.js") {
 	let [t, i] = o(!1), [a, s] = o(null);
 	return r(() => {
 		if (!("serviceWorker" in navigator)) return;
@@ -1414,7 +1455,7 @@ function We(e = "/sw.js") {
 		}, [a])
 	};
 }
-function Ge() {
+function qe() {
 	let [e, t] = o({
 		visible: !1,
 		prompt: "",
@@ -1436,8 +1477,8 @@ function Ge() {
 		}
 	};
 }
-function Ke() {
-	let { lang: e, setLanguage: t } = Ue();
+function Je() {
+	let { lang: e, setLanguage: t } = Ge();
 	return /* @__PURE__ */ l("label", {
 		className: "vo-language-select",
 		children: [/* @__PURE__ */ c("span", { children: "Language" }), /* @__PURE__ */ c("select", {
@@ -1456,7 +1497,7 @@ function Ke() {
 		})]
 	});
 }
-function qe({ accept: e, onFiles: t, children: n }) {
+function Ye({ accept: e, onFiles: t, children: n }) {
 	let r = (t) => !e || e.split(",").some((e) => e.trim().startsWith(".") && t.name.toLowerCase().endsWith(e.trim().toLowerCase()));
 	return /* @__PURE__ */ c("div", {
 		onDragOver: (e) => e.preventDefault(),
@@ -1466,13 +1507,13 @@ function qe({ accept: e, onFiles: t, children: n }) {
 		children: n
 	});
 }
-function Je({ recent: e, onOpen: t, onCreate: n, onRecent: r, onRemove: i }) {
+function Xe({ recent: e, onOpen: t, onCreate: n, onRecent: r, onRemove: i }) {
 	return /* @__PURE__ */ l("main", {
 		className: "vo-start-center",
 		children: [
 			/* @__PURE__ */ l("div", {
 				className: "start-head",
-				children: [/* @__PURE__ */ c("h1", { children: "VibeOffice" }), /* @__PURE__ */ c(Ke, {})]
+				children: [/* @__PURE__ */ c("h1", { children: "VibeOffice" }), /* @__PURE__ */ c(Je, {})]
 			}),
 			/* @__PURE__ */ l("section", {
 				className: "start-actions",
@@ -1508,8 +1549,8 @@ function Je({ recent: e, onOpen: t, onCreate: n, onRecent: r, onRemove: i }) {
 		]
 	});
 }
-function Ye({ script: e = "/sw.js" }) {
-	let { updateAvailable: t, applyUpdate: n } = We(e);
+function Ze({ script: e = "/sw.js" }) {
+	let { updateAvailable: t, applyUpdate: n } = Ke(e);
 	return t ? /* @__PURE__ */ l("div", {
 		className: "vo-pwa-update",
 		role: "status",
@@ -1519,7 +1560,7 @@ function Ye({ script: e = "/sw.js" }) {
 		})]
 	}) : null;
 }
-function Xe({ visible: e, prompt: t, choices: n, onHide: r, onChoose: i }) {
+function Qe({ visible: e, prompt: t, choices: n, onHide: r, onChoose: i }) {
 	return e ? /* @__PURE__ */ l("aside", {
 		className: "vo-assistant",
 		role: "complementary",
@@ -1542,7 +1583,7 @@ function Xe({ visible: e, prompt: t, choices: n, onHide: r, onChoose: i }) {
 		]
 	}) : null;
 }
-function Ze(e) {
+function $e(e) {
 	let t = (e) => e.flatMap((e) => e.sep || !e.label || !e.run ? e.sub ? t(e.sub) : [] : [{
 		id: e.id || e.label,
 		label: e.label,
@@ -1553,7 +1594,7 @@ function Ze(e) {
 	}]);
 	return e.flatMap((e) => t(e.items));
 }
-function Qe({ commands: e, placeholder: t = "Search commands", onRun: n }) {
+function et({ commands: e, placeholder: t = "Search commands", onRun: n }) {
 	let [r, a] = o(""), s = i(() => {
 		let t = r.trim().toLowerCase();
 		return t ? e.filter((e) => [
@@ -1592,7 +1633,7 @@ function Qe({ commands: e, placeholder: t = "Search commands", onRun: n }) {
 		]
 	});
 }
-function $e({ mode: e, fileName: t, onSubmit: n, onClose: r }) {
+function tt({ mode: e, fileName: t, onSubmit: n, onClose: r }) {
 	let [i, a] = o("webdav"), [u, d] = o({}), f = (e) => (t) => d((n) => ({
 		...n,
 		[e]: t.target.value
@@ -1691,7 +1732,7 @@ function $(e) {
 		return "document";
 	}
 }
-async function et(e) {
+async function nt(e) {
 	if (e.kind === "s3") return ce(e);
 	if (e.kind === "webdav") return ue(e);
 	if (e.kind === "http") return fe(e);
@@ -1702,7 +1743,7 @@ async function et(e) {
 		name: $(e.url)
 	};
 }
-async function tt(e, t, n) {
+async function rt(e, t, n) {
 	if (t = await t, e.kind === "post") return pe(e, t, n);
 	if (e.kind === "s3") return le(e, t);
 	if (e.kind === "webdav") return de(e, t);
@@ -1714,11 +1755,11 @@ async function tt(e, t, n) {
 	});
 	if (!r.ok) throw Error(`Upload failed: ${r.status} ${r.statusText}`);
 }
-function nt(e, t) {
+function it(e, t) {
 	let n = document.createElement("a");
 	n.href = URL.createObjectURL(e), n.download = t, n.click(), setTimeout(() => URL.revokeObjectURL(n.href), 0);
 }
-var rt = class extends e {
+var at = class extends e {
 	state = { error: null };
 	static getDerivedStateFromError(e) {
 		return { error: e };
@@ -1733,4 +1774,4 @@ var rt = class extends e {
 		}, this.state.error.message) : this.props.children;
 	}
 };
-export { Xe as Assistant, Qe as CommandSearch, Re as ContextMenu, Z as Dialog, b as El, rt as ErrorBoundary, qe as FileDropZone, Ke as LanguageSelect, Me as MenuBar, G as NS, Le as OnlineDialog, $e as OnlineSourceDialog, Oe as Package, Ye as PwaUpdate, Fe as Ribbon, Je as StartCenter, Ie as StatusBar, Pe as Toolbar, y as Txt, ne as attrs, ie as chars, Ze as commandsFromMenus, ke as contentTypeForExt, N as crc32, Ee as decode, C as decodeBytes, nt as downloadBlob, Te as encode, h as esc, v as escText, et as fetchOnline, K as formats, z as inflateRaw, L as inflateRawJS, oe as mkEl, $ as nameFromUrl, Ae as newPackage, S as parseXml, U as readZip, Y as resolveTarget, tt as saveOnline, ae as scanXml, w as serializeXml, m as unescape, ee as unx, Ge as useAssistant, He as useDirtyGuard, Ue as useI18n, Ve as useLook, We as usePwa, Be as useRecentFiles, De as uuid, W as writeZip, je as xmlPart };
+export { Qe as Assistant, et as CommandSearch, Be as ContextMenu, Z as Dialog, b as El, at as ErrorBoundary, Ye as FileDropZone, Je as LanguageSelect, Ne as MenuBar, G as NS, ze as OnlineDialog, tt as OnlineSourceDialog, Oe as Package, Ze as PwaUpdate, Le as Ribbon, Xe as StartCenter, Re as StatusBar, Ie as Toolbar, y as Txt, ne as attrs, ie as chars, $e as commandsFromMenus, ke as contentTypeForExt, N as crc32, Ee as decode, C as decodeBytes, it as downloadBlob, Te as encode, h as esc, v as escText, nt as fetchOnline, K as formats, z as inflateRaw, L as inflateRawJS, oe as mkEl, $ as nameFromUrl, Ae as newPackage, S as parseXml, U as readZip, Y as resolveTarget, rt as saveOnline, ae as scanXml, w as serializeXml, m as unescape, ee as unx, qe as useAssistant, We as useDirtyGuard, Ge as useI18n, Ue as useLook, Ke as usePwa, He as useRecentFiles, De as uuid, W as writeZip, je as xmlPart };

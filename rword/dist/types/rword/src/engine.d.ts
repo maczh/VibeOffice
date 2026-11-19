@@ -18,4 +18,6 @@ export { CommandRegistry, History, type Command, type CommandContext } from './s
 export { paginateBlocks, pageCount, type PageSlice } from './services/layout';
 export { outline, headingLevel, type OutlineNode } from './services/outline';
 export { replaceRange, toggleCase, splitParagraph, applyRunStyle } from './services/textOps';
+export { ommlToMathText, mathTextToOmml, type MathRun } from './services/omml';
+export { TemplateCatalog, type DocumentTemplate } from './services/templates';
 export { quireMenus, quireTools, type QuireCommandActions } from './services/quireCommands';

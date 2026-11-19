@@ -22,7 +22,10 @@ function rPrXml(r: RPr | undefined): string {
   if (r.bold) s += '<w:b/>'
   if (r.italic) s += '<w:i/>'
   if (r.strike) s += '<w:strike/>'
-  if (r.underline) s += '<w:u w:val="single"/>'
+  if (r.underline) s += `<w:u w:val="${r.underlineStyle || 'single'}"/>`
+  if (r.caps === 'all') s += '<w:caps/>'
+  if (r.caps === 'small') s += '<w:smallCaps/>'
+  if (r.hidden) s += '<w:vanish/>'
   if (r.color) s += `<w:color w:val="${r.color.replace('#', '').toUpperCase()}"/>`
   if (r.size) s += `<w:sz w:val="${Math.round(r.size * 2)}"/><w:szCs w:val="${Math.round(r.size * 2)}"/>`
   if (r.highlight) s += `<w:highlight w:val="${esc(r.highlight)}"/>`
@@ -49,6 +52,11 @@ function pPrXml(p: PPr | undefined): string {
     s += `<w:ind${left}${hang}/>`
   }
   if (p.align) s += `<w:jc w:val="${p.align === 'justify' ? 'both' : p.align}"/>`
+  if (p.keepNext) s += '<w:keepNext/>'
+  if (p.keepLines) s += '<w:keepLines/>'
+  if (p.outlineLvl != null) s += `<w:outlineLvl w:val="${p.outlineLvl}"/>`
+  if (p.borders) s += '<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="auto"/></w:pBdr>'
+  if (p.shading) s += `<w:shd w:val="clear" w:color="auto" w:fill="${p.shading.replace('#', '').toUpperCase()}"/>`
   return s ? `<w:pPr>${s}</w:pPr>` : ''
 }
 
@@ -129,24 +137,30 @@ async function paraXml(ctx: WriteCtx, p: Para): Promise<string> {
 
 async function tableXml(ctx: WriteCtx, t: Table): Promise<string> {
   const grid = t.widths.map((w) => `<w:gridCol w:w="${tw(w)}"/>`).join('')
-  const borders = '<w:tblBorders>' +
+  const borders = t.rows.some((row) => row.some((c) => c.borders === false)) ? '' : '<w:tblBorders>' +
     ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map((s) => `<w:${s} w:val="single" w:sz="4" w:space="0" w:color="auto"/>`).join('') +
     '</w:tblBorders>'
+  const jc = t.align ? `<w:jc w:val="${t.align}"/>` : ''
+  const layout = t.autoFit === 'content' ? '<w:tblLayout w:type="autofit"/>' : t.autoFit === 'fixed' ? '<w:tblLayout w:type="fixed"/>' : ''
   const rows: string[] = []
-  for (const row of t.rows) {
+  for (let ri = 0; ri < t.rows.length; ri++) {
+    const row = t.rows[ri]
     const cells: string[] = []
     for (const c of row) {
       let tcPr = `<w:tcW w:w="${tw(c.width || 100)}" w:type="dxa"/>`
       if (c.gridSpan && c.gridSpan > 1) tcPr += `<w:gridSpan w:val="${c.gridSpan}"/>`
       if (c.vMerge) tcPr += c.vMerge === 'restart' ? '<w:vMerge w:val="restart"/>' : '<w:vMerge/>'
       if (c.fill) tcPr += `<w:shd w:val="clear" w:color="auto" w:fill="${c.fill.replace('#', '').toUpperCase()}"/>`
+      if (c.vAlign) tcPr += `<w:vAlign w:val="${c.vAlign === 'center' ? 'center' : c.vAlign === 'bottom' ? 'bottom' : 'top'}"/>`
+      if (c.textDirection === 'vertical') tcPr += '<w:textDirection w:val="tbRl"/>'
       const paras: string[] = []
       for (const p of c.paras) paras.push(await paraXml(ctx, p))
       cells.push(`<w:tc><w:tcPr>${tcPr}</w:tcPr>${paras.join('')}</w:tc>`)
     }
-    rows.push(`<w:tr>${cells.join('')}</w:tr>`)
+    const trPr = ri === 0 && t.headerRows ? '<w:trPr><w:tblHeader/></w:trPr>' : ''
+    rows.push(`<w:tr>${trPr}${cells.join('')}</w:tr>`)
   }
-  return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>${borders}</w:tblPr><w:tblGrid>${grid}</w:tblGrid>${rows.join('')}</w:tbl>`
+  return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>${borders}${jc}${layout}</w:tblPr><w:tblGrid>${grid}</w:tblGrid>${rows.join('')}</w:tbl>`
 }
 
 function sectXml(doc: Doc): string {
@@ -154,7 +168,7 @@ function sectXml(doc: Doc): string {
   const m = s.margins
   return `<w:sectPr><w:pgSz w:w="${s.pageW}" w:h="${s.pageH}"/>` +
     `<w:pgMar w:top="${m.top}" w:right="${m.right}" w:bottom="${m.bottom}" w:left="${m.left}" w:header="720" w:footer="720" w:gutter="0"/>` +
-    `<w:cols w:space="720"/><w:docGrid w:linePitch="360"/></w:sectPr>`
+    `<w:cols w:num="${Math.max(1, s.columns || 1)}" w:space="720"/><w:docGrid w:linePitch="360"/></w:sectPr>`
 }
 
 async function bodyXml(ctx: WriteCtx, doc: Doc): Promise<string> {

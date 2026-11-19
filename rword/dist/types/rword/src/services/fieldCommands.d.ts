@@ -1,0 +1,12 @@
+import { type Doc } from '../engine/model';
+import { type CommandFn } from './documentCommands';
+export declare const symbolCommands: Record<string, CommandFn>;
+export declare const fieldCommands: Record<string, CommandFn>;
+export declare const pictureCommands: Record<string, CommandFn>;
+export declare const headerFooterCommands: Record<string, CommandFn>;
+export declare const mailMergeCommands: Record<string, CommandFn>;
+export declare function loadMergeSource(doc: Doc, text: string): number;
+export declare const drawingCommands: Record<string, CommandFn>;
+export declare const paragraphDialogCommands: Record<string, CommandFn>;
+export declare const auxiliaryCommands: Record<string, CommandFn>;
+export declare const newRevisionId: () => string;

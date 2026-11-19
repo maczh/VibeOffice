@@ -29,8 +29,17 @@ function readRPr(el: El | undefined): RPr | undefined {
   const r: RPr = {}
   if (kid(el, 'b')) r.bold = on(attr(kid(el, 'b'), 'val') || '1')
   if (kid(el, 'i')) r.italic = on(attr(kid(el, 'i'), 'val') || '1')
-  if (kid(el, 'u')) r.underline = true
+  const u = kid(el, 'u')
+  if (u) {
+    r.underline = true
+    const uv = attr(u, 'val')
+    if (uv === 'double') r.underlineStyle = 'double'
+    else if (uv === 'words') r.underlineStyle = 'words'
+  }
   if (kid(el, 'strike')) r.strike = on(attr(kid(el, 'strike'), 'val') || '1')
+  if (on(attr(kid(el, 'caps'), 'val') || '1')) r.caps = 'all'
+  else if (on(attr(kid(el, 'smallCaps'), 'val') || '1')) r.caps = 'small'
+  if (on(attr(kid(el, 'vanish'), 'val') || '1')) r.hidden = true
   const fonts = kid(el, 'rFonts')
   if (fonts) r.font = attr(fonts, 'ascii') || attr(fonts, 'hAnsi') || undefined
   const sz = kid(el, 'sz')
@@ -76,6 +85,13 @@ function readPPr(el: El | undefined): PPr | undefined {
     if (line && attr(spacing, 'lineRule') !== 'auto') p.line = Math.round(+line / TWIP_PER_PX)
     else if (line) p.line = +line / 240
   }
+  if (kid(el, 'keepNext')) p.keepNext = true
+  if (kid(el, 'keepLines')) p.keepLines = true
+  const outline = kid(el, 'outlineLvl')
+  if (outline) p.outlineLvl = +(attr(outline, 'val') || 9)
+  if (kid(el, 'pBdr')) p.borders = true
+  const shd = kid(el, 'shd')
+  if (shd) p.shading = '#' + (attr(shd, 'fill') || 'FFFFFF')
   return Object.keys(p).length ? p : undefined
 }
 
@@ -173,13 +189,29 @@ function readTable(el: El, pkg: Package, part: string): Table {
       if (shd && attr(shd, 'fill') && attr(shd, 'fill') !== 'auto') cell.fill = '#' + attr(shd, 'fill')
       const tcW = tcPr ? kid(tcPr, 'tcW') : undefined
       if (tcW) cell.width = Math.round(+(attr(tcW, 'w') || 0) / TWIP_PER_PX)
+      const va = tcPr ? kid(tcPr, 'vAlign') : undefined
+      if (va) cell.vAlign = attr(va, 'val') === 'center' ? 'center' : attr(va, 'val') === 'bottom' ? 'bottom' : 'top'
+      if (tcPr && kid(tcPr, 'tcBorders')) cell.borders = true
+      const tcMar = tcPr ? kid(tcPr, 'textDirection') : undefined
+      if (tcMar && attr(tcMar, 'val') === 'tbRl') cell.textDirection = 'vertical'
       for (const p of kids(tc, 'p')) cell.paras.push(readPara(p, pkg, part))
       if (!cell.paras.length) cell.paras.push(emptyPara())
       row.push(cell)
     }
     rows.push(row)
   }
-  return { kind: 'tbl', id: uid('t'), rows, widths }
+  const table: Table = { kind: 'tbl', id: uid('t'), rows, widths }
+  const tblPr = kid(el, 'tblPr')
+  if (tblPr) {
+    const jc = kid(tblPr, 'jc')
+    if (jc) table.align = attr(jc, 'val') === 'center' ? 'center' : attr(jc, 'val') === 'right' ? 'right' : 'left'
+    const layout = kid(tblPr, 'tblLayout')
+    if (layout && attr(layout, 'type') === 'autofit') table.autoFit = 'content'
+    const firstRow = kids(el, 'tr')[0]
+    const firstTrPr = firstRow ? kid(firstRow, 'trPr') : undefined
+    if (firstTrPr && kid(firstTrPr, 'tblHeader')) table.headerRows = 1
+  }
+  return table
 }
 
 function readStyles(pkg: Package): { styles: StyleDef[]; defaultFont: string; defaultSize: number } {
@@ -225,7 +257,10 @@ function readNumbering(pkg: Package): Record<number, string> {
 }
 
 function readSection(body: El): Section {
-  const sectPr = kid(body, 'sectPr')
+  return readSectionProperties(kid(body, 'sectPr'))
+}
+
+function readSectionProperties(sectPr: El | undefined): Section {
   const sec = defaultSection()
   if (!sectPr) return sec
   const pgSz = kid(sectPr, 'pgSz')
@@ -237,6 +272,8 @@ function readSection(body: El): Section {
       bottom: +(attr(pgMar, 'bottom') || 1440), left: +(attr(pgMar, 'left') || 1440),
     }
   }
+  const cols = kid(sectPr, 'cols')
+  if (cols) sec.columns = Math.max(1, +(attr(cols, 'num') || 1))
   return sec
 }
 
@@ -248,8 +285,14 @@ export async function readDocx(bytes: Uint8Array | ArrayBuffer): Promise<ReadRes
   const root = pkg.xml(part)
   const body = kid(root, 'body') || root
   const blocks: Block[] = []
+  let section = readSection(body)
   for (const child of body.children) {
-    if (child.localName === 'p') blocks.push(readPara(child, pkg, part))
+    if (child.localName === 'p') {
+      blocks.push(readPara(child, pkg, part))
+      const pPr = kid(child, 'pPr')
+      const paragraphSection = pPr ? kid(pPr, 'sectPr') : undefined
+      if (paragraphSection) section = readSectionProperties(paragraphSection)
+    }
     else if (child.localName === 'tbl') blocks.push(readTable(child, pkg, part))
     else if (child.localName === 'sectPr') { /* handled */ }
     else blocks.push({ ...emptyPara(), raw: serializeRaw(child) })
@@ -257,7 +300,7 @@ export async function readDocx(bytes: Uint8Array | ArrayBuffer): Promise<ReadRes
   if (!blocks.length) blocks.push(emptyPara())
   const { styles, defaultFont, defaultSize } = readStyles(pkg)
   const doc: Doc = {
-    blocks, section: readSection(body), styles, defaultFont, defaultSize,
+    blocks, section, styles, defaultFont, defaultSize,
     numbering: readNumbering(pkg),
     format: pkg.variant('docx'),
   }

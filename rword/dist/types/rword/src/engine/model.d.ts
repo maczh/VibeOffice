@@ -2,6 +2,7 @@ export interface RPr {
     bold?: boolean;
     italic?: boolean;
     underline?: boolean;
+    underlineStyle?: 'double' | 'words';
     strike?: boolean;
     font?: string;
     /** point size */
@@ -9,6 +10,8 @@ export interface RPr {
     color?: string;
     highlight?: string;
     vertAlign?: 'superscript' | 'subscript';
+    caps?: 'all' | 'small';
+    hidden?: boolean;
 }
 export interface ImageRef {
     rId: string;
@@ -17,6 +20,38 @@ export interface ImageRef {
     /** display size in px */
     w: number;
     h: number;
+    /** picture-tool state, kept on the run so it survives DOCX write-back */
+    contrast?: number;
+    brightness?: number;
+    crop?: {
+        l: number;
+        r: number;
+        t: number;
+        b: number;
+    };
+    rotation?: number;
+    wrap?: 'inline' | 'square' | 'tight' | 'behind';
+}
+/** A tracked change. `before`/`after` hold text so accept/reject can be applied. */
+export interface Revision {
+    id: string;
+    kind: 'insert' | 'delete' | 'format';
+    author: string;
+    date: string;
+    text: string;
+    before?: string;
+    after?: string;
+    accepted?: boolean;
+    rejected?: boolean;
+    blockId?: string;
+}
+export interface Comment {
+    id: string;
+    author: string;
+    date: string;
+    text: string;
+    blockId?: string;
+    resolved?: boolean;
 }
 export interface Run {
     text?: string;
@@ -43,6 +78,13 @@ export interface PPr {
     spaceBefore?: number;
     spaceAfter?: number;
     line?: number;
+    outlineLvl?: number;
+    keepNext?: boolean;
+    keepLines?: boolean;
+    borders?: boolean;
+    shading?: string;
+    /** expanded/collapsed outline state */
+    collapsed?: boolean;
 }
 export interface Para {
     kind: 'p';
@@ -57,6 +99,9 @@ export interface Cell {
     vMerge?: 'restart' | 'continue';
     fill?: string;
     width?: number;
+    vAlign?: 'top' | 'center' | 'bottom';
+    textDirection?: 'horizontal' | 'vertical';
+    borders?: boolean;
     raw?: string;
 }
 export interface Table {
@@ -65,6 +110,9 @@ export interface Table {
     rows: Cell[][];
     /** column widths in px */
     widths: number[];
+    align?: 'left' | 'center' | 'right';
+    autoFit?: 'content' | 'window' | 'fixed';
+    headerRows?: number;
     raw?: string;
 }
 export type Block = Para | Table;
@@ -78,6 +126,8 @@ export interface Section {
         bottom: number;
         left: number;
     };
+    /** Number of newspaper-style text columns in this section. */
+    columns?: number;
 }
 export interface StyleDef {
     id: string;
@@ -95,6 +145,26 @@ export interface Doc {
     /** numId → level-0 number format (bullet/decimal/…), from numbering.xml */
     numbering?: Record<number, string>;
     format: string;
+    comments?: Comment[];
+    revisions?: Revision[];
+    bookmarks?: Record<string, string>;
+    /** mail-merge state: CSV source rows and current record */
+    merge?: {
+        source?: string;
+        rows?: Record<string, string>[];
+        index?: number;
+    };
+    /** last Go Back position, block id */
+    lastPosition?: string;
+    /** table/paragraph borders enabled by the current view toggle */
+    gridlines?: boolean;
+    headerFooter?: {
+        header?: string;
+        footer?: string;
+        linkPrev?: boolean;
+        showText?: boolean;
+        kind?: 'odd' | 'even';
+    };
 }
 export declare const uid: (p?: string) => string;
 export declare const emptyPara: (pPr?: PPr) => Para;
