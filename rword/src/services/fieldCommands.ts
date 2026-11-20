@@ -133,8 +133,8 @@ export const pictureCommands: Record<string, CommandFn> = {
     return undefined
   },
   wordartEdit: (env) => { insertText(env.loc?.para, env.arg || 'WordArt', { bold: true, size: 28 }); return undefined },
-  wordartGallery: (env) => fieldCommands.insertWordArt!(env),
-  waShape: (env) => fieldCommands.insertWordArt!(env),
+  wordartGallery: (env) => pictureCommands.insertWordArt!(env),
+  waShape: (env) => pictureCommands.insertWordArt!(env),
   textBox: (env) => { insertText(env.loc?.para, '[Text Box]'); return undefined },
   insertChart: (env) => { insertText(env.loc?.para, '[Chart]'); return undefined },
   insertExcel: (env) => { insertText(env.loc?.para, '[Excel Sheet]'); return undefined },

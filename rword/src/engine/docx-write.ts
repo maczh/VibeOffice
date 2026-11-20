@@ -55,7 +55,17 @@ function pPrXml(p: PPr | undefined): string {
   if (p.keepNext) s += '<w:keepNext/>'
   if (p.keepLines) s += '<w:keepLines/>'
   if (p.outlineLvl != null) s += `<w:outlineLvl w:val="${p.outlineLvl}"/>`
-  if (p.borders) s += '<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="auto"/></w:pBdr>'
+  if (p.borders) {
+    const edges = Object.entries(p.borders).filter(([, b]) => b && b.val !== 'nil' && b.val !== 'none')
+    if (edges.length) {
+      s += '<w:pBdr>' + edges.map(([edge, b]) => {
+        const sz = Math.max(2, Math.round((b?.sz ?? 0.5) * 8))
+        const val = b?.val === 'dashed' ? 'dashed' : b?.val === 'dotted' ? 'dotted' : b?.val === 'double' ? 'double' : b?.val === 'dotDash' ? 'dotDash' : 'single'
+        const colour = (b?.color && b.color !== 'auto' ? b.color : 'auto').toUpperCase()
+        return `<w:${edge} w:val="${val}" w:sz="${sz}" w:space="${b?.space ?? 1}" w:color="${colour}"/>`
+      }).join('') + '</w:pBdr>'
+    }
+  }
   if (p.shading) s += `<w:shd w:val="clear" w:color="auto" w:fill="${p.shading.replace('#', '').toUpperCase()}"/>`
   return s ? `<w:pPr>${s}</w:pPr>` : ''
 }
@@ -137,7 +147,7 @@ async function paraXml(ctx: WriteCtx, p: Para): Promise<string> {
 
 async function tableXml(ctx: WriteCtx, t: Table): Promise<string> {
   const grid = t.widths.map((w) => `<w:gridCol w:w="${tw(w)}"/>`).join('')
-  const borders = t.rows.some((row) => row.some((c) => c.borders === false)) ? '' : '<w:tblBorders>' +
+  const borders = t.rows.some((row) => row.some((c) => !c.borders)) ? '' : '<w:tblBorders>' +
     ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map((s) => `<w:${s} w:val="single" w:sz="4" w:space="0" w:color="auto"/>`).join('') +
     '</w:tblBorders>'
   const jc = t.align ? `<w:jc w:val="${t.align}"/>` : ''
@@ -153,6 +163,17 @@ async function tableXml(ctx: WriteCtx, t: Table): Promise<string> {
       if (c.fill) tcPr += `<w:shd w:val="clear" w:color="auto" w:fill="${c.fill.replace('#', '').toUpperCase()}"/>`
       if (c.vAlign) tcPr += `<w:vAlign w:val="${c.vAlign === 'center' ? 'center' : c.vAlign === 'bottom' ? 'bottom' : 'top'}"/>`
       if (c.textDirection === 'vertical') tcPr += '<w:textDirection w:val="tbRl"/>'
+      if (c.borders && typeof c.borders === 'object') {
+        const edges = Object.entries(c.borders).filter(([, b]) => b && b.val !== 'nil' && b.val !== 'none')
+        if (edges.length) {
+          tcPr += '<w:tcBorders>' + edges.map(([edge, b]) => {
+            const sz = Math.max(2, Math.round((b?.sz ?? 0.5) * 8))
+            const val = b?.val === 'dashed' ? 'dashed' : b?.val === 'dotted' ? 'dotted' : b?.val === 'double' ? 'double' : 'single'
+            const colour = (b?.color && b.color !== 'auto' ? b.color : 'auto').toUpperCase()
+            return `<w:${edge} w:val="${val}" w:sz="${sz}" w:space="0" w:color="${colour}"/>`
+          }).join('') + '</w:tcBorders>'
+        }
+      }
       const paras: string[] = []
       for (const p of c.paras) paras.push(await paraXml(ctx, p))
       cells.push(`<w:tc><w:tcPr>${tcPr}</w:tcPr>${paras.join('')}</w:tc>`)

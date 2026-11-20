@@ -45,7 +45,11 @@ function readRPr(el: El | undefined): RPr | undefined {
   const sz = kid(el, 'sz')
   if (sz) r.size = +(attr(sz, 'val') || 22) / 2
   const color = kid(el, 'color')
-  if (color && attr(color, 'val') && attr(color, 'val') !== 'auto') r.color = ('#' + attr(color, 'val')).toLowerCase()
+  const colorValue = attr(color, 'val')?.toLowerCase()
+  // Word exports some CJK runs with an explicit white font color even when
+  // the page has the normal white background. Treat that value as automatic
+  // black so those runs do not disappear in the editor.
+  if (colorValue && colorValue !== 'auto' && colorValue !== 'ffffff' && colorValue !== 'fff') r.color = '#' + colorValue
   const hl = kid(el, 'highlight')
   if (hl) r.highlight = attr(hl, 'val') || undefined
   const va = kid(el, 'vertAlign')
@@ -89,7 +93,23 @@ function readPPr(el: El | undefined): PPr | undefined {
   if (kid(el, 'keepLines')) p.keepLines = true
   const outline = kid(el, 'outlineLvl')
   if (outline) p.outlineLvl = +(attr(outline, 'val') || 9)
-  if (kid(el, 'pBdr')) p.borders = true
+  const pBdr = kid(el, 'pBdr')
+  if (pBdr) {
+    const edges: NonNullable<PPr['borders']> = {}
+    for (const edge of ['top', 'bottom', 'left', 'right', 'between', 'insideH', 'insideV'] as const) {
+      const b = kid(pBdr, edge)
+      if (!b) continue
+      const val = attr(b, 'val') || 'single'
+      if (val === 'nil' || val === 'none') continue
+      edges[edge] = {
+        val,
+        sz: Math.round((+(attr(b, 'sz') || 4) / 8) * 100) / 100,
+        color: (attr(b, 'color') || 'auto') === 'auto' ? 'auto' : (attr(b, 'color') || 'auto').toLowerCase(),
+        space: +(attr(b, 'space') || 0),
+      }
+    }
+    if (Object.keys(edges).length) p.borders = edges
+  }
   const shd = kid(el, 'shd')
   if (shd) p.shading = '#' + (attr(shd, 'fill') || 'FFFFFF')
   return Object.keys(p).length ? p : undefined
@@ -191,7 +211,23 @@ function readTable(el: El, pkg: Package, part: string): Table {
       if (tcW) cell.width = Math.round(+(attr(tcW, 'w') || 0) / TWIP_PER_PX)
       const va = tcPr ? kid(tcPr, 'vAlign') : undefined
       if (va) cell.vAlign = attr(va, 'val') === 'center' ? 'center' : attr(va, 'val') === 'bottom' ? 'bottom' : 'top'
-      if (tcPr && kid(tcPr, 'tcBorders')) cell.borders = true
+      const tcBorders = tcPr ? kid(tcPr, 'tcBorders') : undefined
+      if (tcBorders) {
+        const edges: NonNullable<Cell['borders']> = {}
+        for (const edge of ['top', 'bottom', 'left', 'right', 'insideH', 'insideV'] as const) {
+          const b = kid(tcBorders, edge)
+          if (!b) continue
+          const val = attr(b, 'val') || 'single'
+          if (val === 'nil' || val === 'none') continue
+          edges[edge] = {
+            val,
+            sz: Math.round((+(attr(b, 'sz') || 4) / 8) * 100) / 100,
+            color: (attr(b, 'color') || 'auto') === 'auto' ? 'auto' : (attr(b, 'color') || 'auto').toLowerCase(),
+            space: +(attr(b, 'space') || 0),
+          }
+        }
+        if (Object.keys(edges).length) cell.borders = edges
+      }
       const tcMar = tcPr ? kid(tcPr, 'textDirection') : undefined
       if (tcMar && attr(tcMar, 'val') === 'tbRl') cell.textDirection = 'vertical'
       for (const p of kids(tc, 'p')) cell.paras.push(readPara(p, pkg, part))

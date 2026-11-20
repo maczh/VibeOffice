@@ -152,7 +152,7 @@ export const tableCommands: Record<string, CommandFn> = {
     for (let i = 1; i < span && at.col + i < row.length; i++) {
       const next = row[at.col + i]
       width += next.width || at.table.widths[at.col + i] || 96
-      next.borders = false
+      next.borders = undefined
     }
     row.splice(at.col + 1, Math.max(0, span - 1))
     at.table.widths.splice(at.col + 1, Math.max(0, span - 1))
@@ -270,7 +270,7 @@ export const tableCommands: Record<string, CommandFn> = {
   eraser: (env) => {
     const at = needTable(env)
     if (!at) return 'Place the cursor in a table cell first.'
-    at.cell.borders = at.cell.borders === false
+    at.cell.borders = at.cell.borders && Object.keys(at.cell.borders).length ? undefined : { top: { val: 'single', sz: 0.5, color: 'auto' }, bottom: { val: 'single', sz: 0.5, color: 'auto' }, left: { val: 'single', sz: 0.5, color: 'auto' }, right: { val: 'single', sz: 0.5, color: 'auto' } }
     return undefined
   },
   gridlines: (env) => { env.doc.gridlines = !env.doc.gridlines; return undefined },
@@ -462,7 +462,7 @@ export const formatCommands: Record<string, CommandFn> = {
   },
   bordersDlg: (env) => {
     const para = env.loc?.para; if (!para) return undefined
-    para.pPr = { ...para.pPr, borders: !para.pPr?.borders }
+    para.pPr = { ...para.pPr, borders: para.pPr?.borders ? undefined : { top: { val: 'single', sz: 0.5, color: 'auto' }, bottom: { val: 'single', sz: 0.5, color: 'auto' }, left: { val: 'single', sz: 0.5, color: 'auto' }, right: { val: 'single', sz: 0.5, color: 'auto' } } }
     return undefined
   },
   borderBtn: (env) => formatCommands.bordersDlg(env),

@@ -60,8 +60,10 @@ function rPrStyle(r: RPr | undefined, doc: Doc): string {
   if (r?.underlineStyle === 'words') s.push('text-decoration-style:dotted')
   if (r?.caps === 'all') s.push('text-transform:uppercase')
   if (r?.caps === 'small') s.push('font-variant:small-caps')
-  if (r?.hidden) s.push('color:transparent;text-shadow:none')
-  if (r?.color) s.push('color:' + r.color)
+  // Some Word files mark CJK runs as vanished while still expecting them to
+  // be visible in the normal document view. Rendering them transparent makes
+  // the text appear only when selected, so keep the run readable here.
+  if (r?.color && !/^#(?:fff|ffffff)$/i.test(r.color.trim())) s.push('color:' + r.color)
   if (r?.highlight) s.push('background:' + r.highlight)
   if (r?.vertAlign === 'superscript') s.push('vertical-align:super;font-size:smaller')
   if (r?.vertAlign === 'subscript') s.push('vertical-align:sub;font-size:smaller')
@@ -83,7 +85,18 @@ function pPrStyle(p: Para, doc: Doc): string {
   if (p.pPr?.pageBreakBefore) s.push('break-before:page;page-break-before:always')
   if (p.pPr?.keepNext) s.push('page-break-after:avoid')
   if (p.pPr?.keepLines) s.push('page-break-inside:avoid')
-  if (p.pPr?.borders) s.push('outline:1px solid #888;outline-offset:1px')
+  const borders = p.pPr?.borders
+  if (borders) {
+    for (const edge of ['top', 'bottom', 'left', 'right'] as const) {
+      const b = borders[edge]
+      if (!b || b.val === 'nil' || b.val === 'none') continue
+      const width = Math.max(0.5, (b.sz ?? 0.5) * 1.33)
+      const style = b.val === 'dashed' || b.val === 'dotted' || b.val === 'dotDash'
+        ? (b.val === 'dotted' ? 'dotted' : 'dashed')
+        : b.val === 'double' ? 'double' : 'solid'
+      s.push(`border-${edge}:${width}px ${style} ${b.color && b.color !== 'auto' ? '#' + b.color : '#000'}`)
+    }
+  }
   if (p.pPr?.shading) s.push('background:' + p.pPr.shading)
   const rPr = st?.rPr
   if (rPr) s.push(rPrStyle(rPr, doc))
@@ -99,8 +112,13 @@ function runHtml(r: Run, doc: Doc): string {
     if (img.rotation) css.push(`transform:rotate(${img.rotation}deg)`)
     if (img.contrast != null) css.push(`filter:contrast(${img.contrast}%)`)
     if (img.brightness != null) css.push(`filter:brightness(${img.brightness}%)`)
+    if (img.gray) css.push('filter:grayscale(1)')
+    if (img.bw) css.push('filter:grayscale(1) contrast(1.6)')
+    if (img.washout) css.push('filter:brightness(1.4) contrast(0.6)')
+    if (img.offset && (img.offset.x || img.offset.y)) css.push(`position:relative;left:${img.offset.x || 0}px;top:${img.offset.y || 0}px`)
     if (img.wrap === 'square' || img.wrap === 'tight') css.push('float:left;margin:0 8px 4px 0')
     if (img.wrap === 'behind') css.push('position:absolute;z-index:-1')
+    if (img.wrap === 'none' || img.wrap === 'topBottom' || img.wrap === 'through') css.push('float:left;margin:0 8px 4px 0')
     const crop = img.crop
     return `<img class="img" src="${img.url}" width="${img.w}" height="${img.h}" data-part="${img.part}" data-rid="${img.rId}"` +
       ` data-w="${img.w}" data-h="${img.h}"${crop ? ` data-crop="${crop.l},${crop.t},${crop.r},${crop.b}"` : ''}` +
@@ -133,7 +151,7 @@ export function renderBlock(b: Block, doc: Doc): string {
     const cells = row.map((c) => {
       const span = c.gridSpan && c.gridSpan > 1 ? ` colspan="${c.gridSpan}"` : ''
       const vm = c.vMerge === 'continue' ? ' data-vmerge="continue"' : c.vMerge === 'restart' ? ' data-vmerge="restart"' : ''
-      const border = c.borders === false ? 'border:0' : 'border:1px solid #888'
+      const border = cellBorderStyle(c)
       const css = [
         c.fill ? `background:${c.fill}` : '', border, 'padding:2px 4px',
         `vertical-align:${c.vAlign === 'center' ? 'middle' : c.vAlign === 'bottom' ? 'bottom' : 'top'}`,
@@ -152,6 +170,22 @@ function listMarker(p: Para, doc: Doc): string {
   if (p.pPr?.numId == null) return ''
   // numbering is resolved by the component (needs sequence context); a bullet is static
   return `<span class="lm" contenteditable="false" data-num="${p.pPr.numId}" data-ilvl="${p.pPr.ilvl || 0}"></span>`
+}
+
+/** The cell's border CSS: a per-edge set when the cell has one, a plain frame otherwise. */
+function cellBorderStyle(c: Cell): string {
+  if (!c.borders) return 'border:1px solid #888'
+  const parts: string[] = []
+  for (const edge of ['top', 'bottom', 'left', 'right'] as const) {
+    const b = c.borders[edge]
+    if (!b || b.val === 'nil' || b.val === 'none') { parts.push(`border-${edge}:0`); continue }
+    const width = Math.max(0.5, (b.sz ?? 0.5) * 1.33)
+    const style = b.val === 'dashed' || b.val === 'dotted' || b.val === 'dotDash'
+      ? (b.val === 'dotted' ? 'dotted' : 'dashed')
+      : b.val === 'double' ? 'double' : 'solid'
+    parts.push(`border-${edge}:${width}px ${style} ${b.color && b.color !== 'auto' ? '#' + b.color : '#000'}`)
+  }
+  return parts.join(';')
 }
 
 /* ---------- DOM → model ---------- */
@@ -261,7 +295,10 @@ function cleanRPr(r: RPr): RPr | undefined {
 export function syncPara(el: HTMLElement, prev?: Para): Para {
   const runs: Run[] = []
   for (const child of Array.from(el.childNodes)) syncRuns(child, {}, undefined, runs)
-  const p: Para = prev ? { ...prev, runs } : emptyPara()
+  /* The parsed runs are the content of record: keep them even when no previous
+   * model paragraph is supplied (table cells are synced without one), or every
+   * surface sync would wipe all text out of the table. */
+  const p: Para = prev ? { ...prev, runs } : { ...emptyPara(), runs }
   p.id = el.getAttribute('data-id') || p.id
   // read alignment/indent back from the element style (execCommand justify sets it)
   const align = el.style.textAlign
@@ -273,11 +310,18 @@ export function syncBlock(el: HTMLElement, doc: Doc, prev?: Block): Block {
   const id = el.getAttribute('data-id') || undefined
   if (el.tagName.toLowerCase() === 'table') {
     const prevT = prev && prev.kind === 'tbl' ? prev : undefined
+    /* Match each cell paragraph with its previous model entry (by data-id) so
+     * paragraph formatting (indent, spacing, numbering…) survives the round trip. */
+    const prevParas = new Map<string, Para>()
+    for (const row of prevT?.rows || []) for (const cell of row) for (const para of cell.paras) prevParas.set(para.id, para)
     const widths: number[] = Array.from(el.querySelectorAll('col')).map((c) => parseInt((c as HTMLElement).style.width) || 100)
     const rows: Cell[][] = Array.from(el.querySelectorAll(':scope > tbody > tr, :scope > tr')).map((tr) =>
       Array.from((tr as HTMLElement).querySelectorAll(':scope > td, :scope > th')).map((td) => {
         const cellEl = td as HTMLElement
-        const paras: Para[] = Array.from(cellEl.querySelectorAll(':scope > .p')).map((p) => syncPara(p as HTMLElement))
+        const paras: Para[] = Array.from(cellEl.querySelectorAll(':scope > .p')).map((p) => {
+          const element = p as HTMLElement
+          return syncPara(element, prevParas.get(element.getAttribute('data-id') || ''))
+        })
         if (!paras.length) paras.push(emptyPara())
         const cell: Cell = { paras }
         const span = cellEl.getAttribute('colspan')
@@ -291,7 +335,19 @@ export function syncBlock(el: HTMLElement, doc: Doc, prev?: Block): Block {
         const va = cellEl.style.verticalAlign
         if (va === 'middle' || va === 'bottom') cell.vAlign = va === 'middle' ? 'center' : 'bottom'
         if (cellEl.style.writingMode.includes('vertical')) cell.textDirection = 'vertical'
-        if (cellEl.style.border === '0px solid rgb(0, 0, 0)' || cellEl.style.border === '0') cell.borders = false
+        {
+          const edges: NonNullable<Cell['borders']> = {}
+          for (const edge of ['top', 'bottom', 'left', 'right'] as const) {
+            const side = `border${edge[0].toUpperCase()}${edge.slice(1)}`
+            const style = cellEl.style as unknown as Record<string, string>
+            const width = parseFloat(style[side + 'Width'] || '0')
+            if (!width) continue
+            const edgeStyle = style[side + 'Style'] || 'solid'
+            const colour = rgbToHex(style[side + 'Color']) || '#000000'
+            edges[edge] = { val: edgeStyle === 'none' ? 'nil' : edgeStyle, sz: Math.round(width / 1.33 * 100) / 100, color: colour.replace('#', '') }
+          }
+          if (Object.keys(edges).length) cell.borders = edges
+        }
         return cell
       }))
     const t: Table = {

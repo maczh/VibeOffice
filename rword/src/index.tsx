@@ -3,7 +3,7 @@ import { ErrorBoundary, downloadBlob, fetchOnline, saveOnline, useDirtyGuard, ty
 import type { Package } from '@voffice/react-shared'
 import {
   docText, emptyPara, htmlToText, imageRun, insertTable, newDoc, readMarkdown, renderBlock, resolveMarkers,
-  syncBlock, textToHtml, writeMarkdown, wordCount, type Doc,
+  syncBlock, textToHtml, writeMarkdown, wordCount, type Block, type Doc,
 } from './engine'
 import { readDocx, writeDocx } from './engine'
 import { replaceAll } from './find'
@@ -11,9 +11,11 @@ import { buildWelcomeDoc } from './welcome'
 import { documentCommands, fallbackLocation, locate, type CommandEnv, type CommandFn } from './services/documentCommands'
 import { recordInsertion, reviewCommands } from './services/reviewCommands'
 import { auxiliaryCommands, loadMergeSource } from './services/fieldCommands'
+import { toolbarCommands } from './services/toolbarCommands'
+import { buildToolbars, type ToolbarEnv } from './toolbars'
 import { getIcon } from './icons'
 import { QDialog, QIcon, QMenuBar, QTaskPane, QToolbar, QToolButton, QViewBar, iconFor, labelFor, type QItem, type QMenu, type QTool } from './quireChrome'
-import { t } from './i18n'
+import { plainAmp, t } from './i18n'
 
 /* Classic chrome stylesheets — RWord renders the same DOM as public/quire. */
 import '../../public/common/looks.css'
@@ -66,6 +68,9 @@ const COMMAND_LABELS: Record<string, string> = {
   newWindow: '&New Window', arrangeAll: '&Arrange All', splitWindow: '&Split',
 }
 
+/** An action the interface can run; some take a value, such as a colour or a size. */
+export type ActionFn = (arg?: string) => void
+
 /* Commands whose Quire implementation asks for a value before touching the document. */
 const COMMAND_DIALOGS: Record<string, Dialog> = {
   changeCase: 'changeCase', insertCells: 'insertCells', insertSymbol: 'insertSymbol',
@@ -100,6 +105,19 @@ function docFromMarkdown(value: string): Doc {
   if (!doc.blocks.length) doc.blocks.push(emptyPara()); return doc
 }
 
+/** The outline level of a paragraph: 1 for Heading 1 … 0 for body text. */
+function outlineLevelOf(doc: Doc, paraId: string | undefined): number {
+  if (!paraId) return 0
+  for (const block of doc.blocks) {
+    if (block.kind !== 'p') continue
+    if (block.id === paraId) {
+      const match = /^Heading([1-9])$/i.exec(block.pPr?.style || '')
+      return match ? Number(match[1]) : 0
+    }
+  }
+  return 0
+}
+
 function replaceInDoc(doc: Doc, find: string, replace: string): number {
   let count = 0
   const visit = (runs: { text?: string }[]) => {
@@ -124,6 +142,9 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
   const [busy, setBusy] = useState('')
   const [status, setStatus] = useState('')
   const [surfaceVersion, setSurfaceVersion] = useState(0)
+  const [layoutPageCount, setLayoutPageCount] = useState(1)
+  const [layoutHeight, setLayoutHeight] = useState(0)
+  const [pageGroups, setPageGroups] = useState<number[][]>([])
   const [view, setView] = useState<'normal' | 'web' | 'print' | 'outline' | 'reading' | 'preview'>('print')
   const [context, setContext] = useState<{ x: number; y: number } | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)
@@ -158,12 +179,16 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
     standard: true, formatting: true, drawing: true,
     tables: false, reviewing: false, outlining: false, headerFooter: false, picture: false, mailMerge: false, wordart: false,
   })
+  const [outlineShow, setOutlineShow] = useState(0)
+  const [picModeState, setPicModeState] = useState('')
+  const [wrapModeState, setWrapModeState] = useState('inline')
 
   const docRef = useRef<Doc>(newDoc())
   const pkgRef = useRef<Package | null>(null)
   const partRef = useRef('word/document.xml')
   const sourceRef = useRef<OpenInput | null>(null)
   const surfaceRef = useRef<HTMLDivElement>(null)
+  const surfaceRefs = useRef<HTMLDivElement[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const imageRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
@@ -174,6 +199,10 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
   const pvZoomRef = useRef(1)
   const history = useRef<string[]>([])
   const future = useRef<string[]>([])
+  /* The undo and redo histories carry a label each, so the split buttons can show
+   * the list of actions the original shows. */
+  const undoLabels = useRef<string[]>([])
+  const redoLabels = useRef<string[]>([])
   const caret = useRef<{ node: Node; offset: number } | null>(null)
 
   const mark = useCallback((value: boolean) => { setDirty(value); onChange?.(value) }, [onChange])
@@ -186,8 +215,13 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
   useDirtyGuard(dirty)
 
   /* Keep the document model authoritative; the editing surface is rendered from it. */
-  const commit = useCallback((options?: { history?: boolean }) => {
-    if (options?.history !== false) { history.current.push(JSON.stringify(docRef.current)); future.current = [] }
+  const commit = useCallback((options?: { history?: boolean; label?: string }) => {
+    if (options?.history !== false) {
+      history.current.push(JSON.stringify(docRef.current))
+      undoLabels.current.push(options?.label || t('Edit'))
+      future.current = []
+      redoLabels.current = []
+    }
     setVersion((v) => v + 1)
     setSurfaceVersion((v) => v + 1)
     mark(true)
@@ -217,6 +251,10 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
         partRef.current = result.part
       }
       sourceRef.current = input
+      surfaceRefs.current = []
+      setPageGroups([])
+      setLayoutHeight(0)
+      setLayoutPageCount(1)
       setName(file.name)
       history.current = []; future.current = []
       commit({ history: false })
@@ -253,6 +291,10 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
 
   const newDocument = useCallback((welcome = false) => {
     docRef.current = welcome ? buildWelcomeDoc() : newDoc()
+    surfaceRefs.current = []
+    setPageGroups([])
+    setLayoutHeight(0)
+    setLayoutPageCount(1)
     pkgRef.current = null
     sourceRef.current = null
     history.current = []; future.current = []
@@ -265,6 +307,8 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
     const previous = history.current.pop()
     if (previous === undefined) return
     future.current.push(JSON.stringify(docRef.current))
+    const label = undoLabels.current.pop() || t('Edit')
+    redoLabels.current.push(label)
     docRef.current = JSON.parse(previous) as Doc
     commit({ history: false })
   }, [commit])
@@ -273,14 +317,27 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
     const next = future.current.pop()
     if (next === undefined) return
     history.current.push(JSON.stringify(docRef.current))
+    const label = redoLabels.current.pop() || t('Edit')
+    undoLabels.current.push(label)
     docRef.current = JSON.parse(next) as Doc
     commit({ history: false })
   }, [commit])
 
   const syncSurface = useCallback(() => {
-    const surface = surfaceRef.current
-    if (!surface) return
-    const blocks = Array.from(surface.children).filter((element) => !(element as HTMLElement).classList.contains('react-page-break')).map((element, i) => syncBlock(element as HTMLElement, docRef.current, docRef.current.blocks[i]))
+    const surfaces = surfaceRefs.current.filter(Boolean)
+    if (!surfaces.length) return
+    const elements = surfaces.flatMap((surface) => Array.from(surface.children))
+    const previous = docRef.current.blocks
+    const byId = new Map(previous.map((block) => [block.id, block]))
+    const changed = new Map<string, Block>()
+    elements.forEach((element) => {
+      const html = element as HTMLElement
+      const id = html.dataset.id
+      if (!id) return
+      const old = byId.get(id)
+      if (old) changed.set(id, syncBlock(html, docRef.current, old))
+    })
+    const blocks = previous.map((block) => changed.get(block.id) || block)
     docRef.current = { ...docRef.current, blocks }
     commit()
   }, [commit])
@@ -327,7 +384,34 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
   }, [findText, replaceText, matchCase, commit, flash])
 
   const exec = useCallback((command: string, value?: string) => {
-    surfaceRef.current?.focus()
+    const selection = window.getSelection()
+    const hasEditorSelection = Boolean(selection?.rangeCount && selection.anchorNode &&
+      Array.from(document.querySelectorAll<HTMLElement>('.pg-col')).some((surface) => surface.contains(selection.anchorNode)))
+    if (!hasEditorSelection) surfaceRef.current?.focus()
+    const alignment: Record<string, string> = {
+      justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify',
+    }
+    if (alignment[command]) {
+      let node: Node | null = selection?.anchorNode || null
+      if (node && node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement
+      const element = node instanceof HTMLElement ? node.closest<HTMLElement>('.p,td,th') : null
+      if (element) {
+        element.style.textAlign = alignment[command]
+        /* Keep the model in step so alignment survives a rebuild and is saved
+         * with the document. The DOM patch above stays authoritative for the
+         * visible surface until the next rebuild (re-rendering immediately
+         * after a selection inside a table would replace its cell DOM before
+         * the selection has been committed). */
+        const id = element.getAttribute('data-id') ||
+          element.querySelector<HTMLElement>('.p[data-id]')?.getAttribute('data-id')
+        const located = locate(docRef.current, id)
+        if (located?.para) {
+          located.para.pPr = { ...located.para.pPr, align: alignment[command] as 'left' | 'center' | 'right' | 'justify' }
+        }
+        mark(true)
+      }
+      return
+    }
     document.execCommand(command, false, value)
     if (trk && value && /^(insertText|insertHTML|paste)$/.test(command)) {
       const sel = window.getSelection()
@@ -402,13 +486,14 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
   }, [save, undo, redo, newDocument, exec, togglePreview])
 
   useEffect(() => {
-    const surface = surfaceRef.current
-    if (!surface) return
-    surface.innerHTML = docRef.current.blocks.map((block, index) => {
-      const pageBreak = index > 0 && index % 32 === 0 ? '<div class="react-page-break" contenteditable="false" aria-label="Page break"></div>' : ''
-      return pageBreak + renderBlock(block, docRef.current)
-    }).join('')
-    resolveMarkers(surface, docRef.current)
+    const surfaces = surfaceRefs.current.filter(Boolean)
+    if (!surfaces.length) return
+    const groups = pageGroups.length ? pageGroups : [docRef.current.blocks.map((_, index) => index)]
+    surfaces.forEach((surface, pageIndex) => {
+      surface.innerHTML = (groups[pageIndex] || []).map((index) => renderBlock(docRef.current.blocks[index], docRef.current)).join('')
+      resolveMarkers(surface, docRef.current)
+    })
+    const surface = surfaces[0]
     if (caret.current) {
       try {
         const range = document.createRange()
@@ -418,7 +503,38 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
       } catch { /* caret may point at a replaced node */ }
       caret.current = null
     }
-  }, [surfaceVersion])
+    const measurePages = () => {
+      const height = Math.max(...surfaces.map((item) => Math.max(item.scrollHeight, item.getBoundingClientRect().height)))
+      setLayoutHeight((current) => Math.abs(current - height) < 1 ? current : height)
+      const next = Math.max(1, pageGroups.length || Math.ceil(height / pageH))
+      setLayoutPageCount((current) => current === next ? current : next)
+      if (!pageGroups.length && docRef.current.blocks.length > 1) {
+        const measured = Array.from(surface.children)
+        const nextGroups: number[][] = [[]]
+        let used = 0
+        let pageStart = 0
+        const pageContentLimit = Math.max(120, contentH - 8)
+        measured.forEach((element, index) => {
+          const html = element as HTMLElement
+          const blockHeight = Math.max(1, html.offsetHeight)
+          const renderedTop = html.offsetTop
+          const renderedBottom = renderedTop + blockHeight
+          if (nextGroups[nextGroups.length - 1].length && Math.max(used + blockHeight, renderedBottom - pageStart) > pageContentLimit) {
+            nextGroups.push([])
+            used = 0
+            pageStart = renderedTop
+          }
+          nextGroups[nextGroups.length - 1].push(index)
+          used = Math.max(blockHeight, renderedBottom - pageStart)
+        })
+        if (nextGroups.length > 1) setPageGroups(nextGroups)
+      }
+    }
+    measurePages()
+    const observer = new ResizeObserver(measurePages)
+    observer.observe(surface)
+    return () => observer.disconnect()
+  }, [surfaceVersion, pageGroups])
 
   const captureCaret = useCallback(() => {
     const sel = window.getSelection()
@@ -438,7 +554,7 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
   const selectionText = useCallback(() => window.getSelection()?.toString() || '', [])
 
   const runCommand = useCallback((id: string, arg?: string): boolean => {
-    const fn: CommandFn | undefined = documentCommands[id] || reviewCommands[id] || auxiliaryCommands[id]
+    const fn: CommandFn | undefined = documentCommands[id] || reviewCommands[id] || auxiliaryCommands[id] || toolbarCommands[id]
     if (!fn) return false
     if (arg === undefined && COMMAND_DIALOGS[id]) {
       setCommandArg('')
@@ -453,7 +569,7 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
       surfaceRef.current?.querySelector<HTMLElement>(`[data-id="${target}"]`)?.scrollIntoView({ block: 'center' })
       return true
     }
-    commit()
+    commit({ label: plainAmp(t(COMMAND_LABELS[id] || labelFor(id))) })
     if (result) flash(t(result))
     return true
   }, [activeLocation, selectionText, commit, flash])
@@ -559,7 +675,7 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
     box.append(frame, label)
   }, [thumbsOpen, version, zoom])
 
-  const actions: Record<string, () => void> = {
+  const actions: Record<string, ActionFn> = {
     new: () => newDocument(false),
     open: () => fileRef.current?.click(),
     close: () => newDocument(false),
@@ -627,11 +743,45 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
     extendSel: () => selectInSurface('para'),
     browsePrev: () => browse(-1), browseNext: () => browse(1),
     focusFont: () => focusCombo(1), focusSize: () => focusCombo(2), focusStyle: () => focusCombo(0),
+
+    /* --- the toolbar dropdowns --- */
+    tb_tables: () => toggleToolbar('tables'),
+    tb_drawing: () => toggleToolbar('drawing'),
+    setZoom: (value?: string) => {
+      if (!value) return
+      const n = parseInt(value, 10)
+      if (n > 0) setZoom(n / 100)
+      else if (value === 'Two Pages') setZoom(fitZoom(2))
+      else if (value === 'Whole Page') setZoom(fitZoom())
+      else if (value === 'Page Width') setZoom(Math.max(0.1, Math.min(1, ((scrollerRef.current?.clientWidth || window.innerWidth) - 40) / pageW)))
+      else if (value === 'Text Width') setZoom(Math.max(0.1, Math.min(1, contentW / (pageW - margin.left - margin.right))))
+    },
+    setStyle: (value?: string) => {
+      if (!value) return
+      setStyle(value)
+      const id = /^Heading([1-3])$/.exec(value)
+      runCommand(id ? 'styleH' + id[1] : value === 'Normal' ? 'styleNormal' : 'styleNormal')
+    },
+    setFont: (value?: string) => { if (!value) return; setFont(value); exec('fontName', value) },
+    setSize: (value?: string) => { if (!value) return; setSize(value); exec('fontSize', value) },
+    setOutlineLevel: (value?: string) => { if (value) runCommand('setOutlineLevel', value) },
+    setOutlineShow: (value?: string) => { if (value) { setOutlineShow(Number(value) || 0); flash(t('Show Level {0}', value)) } },
+    goToRecord: (value?: string) => { if (value) runCommand('goToRecord', value) },
+    setPicMode: (value?: string) => { setPicModeState(value || ''); runCommand('setPicMode', value || '') },
+    setWrap: (value?: string) => { if (value) { setWrapModeState(value); runCommand('setWrap', value) } },
+    insertShape: (value?: string) => { if (value) runCommand('insertShape', value) },
+    setFillColor: (value?: string) => { if (value) runCommand('setFillColor', value) },
+    setLineColor: (value?: string) => { if (value) runCommand('setLineColor', value) },
+    setLineStyle: (value?: string) => { if (value) runCommand('setLineStyle', value) },
+    setDashStyle: (value?: string) => { if (value) runCommand('setDashStyle', value) },
+    setArrowStyle: (value?: string) => { if (value) runCommand('setArrowStyle', value) },
+    setShadowStyle: (value?: string) => { if (value) runCommand('setShadowStyle', value) },
   }
   /* Every command with no component-specific implementation is delegated to the
      model command tables, so the full Quire command set stays reachable. */
   const allCommandIds = new Set([
     ...Object.keys(documentCommands), ...Object.keys(reviewCommands), ...Object.keys(auxiliaryCommands),
+    ...Object.keys(toolbarCommands),
   ])
   for (const id of allCommandIds) {
     if (!(id in actions)) actions[id] = () => { runCommand(id) }
@@ -722,120 +872,76 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
   ]
   menusRef.current = menus
 
-  const standardTools: QTool[] = [
-    { id: 'new', run: A.new }, { id: 'open', run: A.open }, { id: 'save', run: A.save },
-    { id: 'permission', icon: 'permission', tip: 'Restrict Permission', run: A.permission },
-    { id: 'sendMail', icon: 'envelope', tip: 'E-mail', run: A.sendMail },
-    { id: 'print', run: A.print }, { id: 'printPreview', run: A.printPreview },
-    { id: 'spelling', run: A.spelling }, { id: 'research', run: () => { setPane('help'); setTaskPane(true) } }, { sep: true },
-    { id: 'cut', run: A.cut }, { id: 'copy', run: A.copy }, { id: 'paste', run: A.paste },
-    { id: 'painter', run: A.clearFormats }, { sep: true },
-    { id: 'undo', run: A.undo }, { id: 'redo', run: A.redo }, { sep: true },
-    { id: 'hyperlink', run: A.hyperlink },
-    { id: 'tb_tables', icon: 'tablesBorders', tip: 'Tables and Borders', run: A.insertTable },
-    { id: 'table', icon: 'table', tip: 'Insert Table', run: A.insertTable },
-    { id: 'insertExcel', icon: 'excel', tip: 'Insert Excel Sheet', run: A.insertExcel },
-    { id: 'columns', icon: 'columns', tip: 'Columns', run: A.columnsDlg },
-    { id: 'tb_drawing', icon: 'drawing', tip: 'Drawing', run: () => toggleToolbar('drawing') },
-    { id: 'docMap', run: A.docMap }, { id: 'showMarks', run: A.showMarks },
-    { combo: { value: `${Math.round(zoom * 100)}%`, options: ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%', 'Page Width', 'Text Width', 'Whole Page', 'Two Pages'], width: 74,
-      onChange: (v) => { const n = parseInt(v, 10); if (n > 0) setZoom(n / 100) } } },
-    { id: 'help', run: A.help },
-    { id: 'viewReading', icon: 'read', label: 'Read', tip: 'Read Mode', run: A.viewReading },
-  ]
+  const standardTools: QTool[] = []
+  const formattingTools: QTool[] = []
+  const hiddenToolbars: { id: string; label: string; items: QTool[] }[] = []
+  {
+    /* The toolbars are built from the original Quire's specification. */
+    const env: ToolbarEnv = {
+      run: (id) => {
+        const fn = A[id]
+        if (typeof fn === 'function') fn()
+        else if (!runCommand(id)) flash(t('{0} is not available in this build.', COMMAND_LABELS[id] || labelFor(id)))
+      },
+      runArg: (id, arg) => {
+        const fn = A[id]
+        if (typeof fn === 'function') fn(arg)
+        else if (!runCommand(id, arg)) flash(t('{0} is not available in this build.', COMMAND_LABELS[id] || labelFor(id)))
+      },
+      item,
+      zoom,
+      style,
+      font,
+      size,
+      outlineLevel: outlineLevelOf(docRef.current, activeLocation()?.para?.id),
+      outlineShow: outlineShow,
+      mergeRecord: (docRef.current.merge?.index || 0) + 1,
+      mergeRecords: docRef.current.merge?.rows?.length || 0,
+      picMode: picModeState,
+      wrapMode: wrapModeState,
+      undoLabels: undoLabels.current,
+      redoLabels: redoLabels.current,
+    }
+    const bars = buildToolbars(env)
+    standardTools.push(...bars.standard)
+    formattingTools.push(...bars.formatting)
+    hiddenToolbars.push(
+      { id: 'tables', label: 'Tables and Borders', items: bars.tables },
+      { id: 'reviewing', label: 'Reviewing', items: bars.reviewing },
+      { id: 'outlining', label: 'Outlining', items: bars.outlining },
+      { id: 'headerFooter', label: 'Header and Footer', items: bars.headerFooter },
+      { id: 'picture', label: 'Picture', items: bars.picture },
+      { id: 'mailMerge', label: 'Mail Merge', items: bars.mailMerge },
+      { id: 'wordart', label: 'LettersArt', items: bars.wordart },
+    )
+  }
 
-  const formattingTools: QTool[] = [
-    { id: 'stylesPane', run: A.stylesPane },
-    { combo: { value: style, options: ['Normal', 'Heading 1', 'Heading 2', 'Heading 3', 'Title', 'Subtitle'], width: 118,
-      onChange: (v) => setStyle(v) } },
-    { combo: { value: font, options: ['Arial', 'Calibri', 'Times New Roman', 'Courier New', 'Georgia', 'Tahoma', 'Verdana'], width: 136,
-      onChange: (v) => { setFont(v); exec('fontName', v) } } },
-    { combo: { value: size, options: ['8', '9', '10', '11', '12', '14', '16', '18', '20', '24', '28', '36', '48', '72'], width: 48,
-      onChange: (v) => { setSize(v); exec('fontSize', v) } } },
-    { id: 'bold', run: A.bold }, { id: 'italic', run: A.italic }, { id: 'underline', run: A.underline }, { sep: true },
-    { id: 'alignLeft', run: A.alignLeft }, { id: 'alignCenter', run: A.alignCenter },
-    { id: 'alignRight', run: A.alignRight }, { id: 'justify', run: A.justify }, { sep: true },
-    { id: 'lineSpacing', icon: 'lineSpacing', tip: 'Line Spacing', run: A.lineSpacing }, { sep: true },
-    { id: 'numbering', run: A.numbering }, { id: 'bullets', run: A.bullets },
-    { id: 'decIndent', run: A.decIndent }, { id: 'incIndent', run: A.incIndent }, { sep: true },
-    { id: 'borderBtn', icon: 'bordersAll', tip: 'Borders', run: A.bordersDlg },
-    { id: 'fontColorBtn', run: () => exec('foreColor', '#C00000') },
-    { id: 'highlightBtn', run: () => exec('hiliteColor', '#FFFF00') },
-  ]
-
-  const drawingTools: QTool[] = [
-    { id: 'draw', label: 'Draw', run: A.draw },
-    { id: 'selectObjects', run: A.selectObjects }, { sep: true },
-    { id: 'autoshapes', label: 'AutoShapes', run: A.autoshapes },
-    { id: 'drawLine', run: A.drawLine }, { id: 'drawArrow', run: A.drawArrow },
-    { id: 'drawRect', run: A.drawRect }, { id: 'drawOval', run: A.drawOval },
-    { id: 'textBox', run: A.textBox }, { id: 'insertWordArt', run: A.insertWordArt },
-    { id: 'insertDiagram', run: A.insertDiagram }, { id: 'insertClipArt', run: A.insertClipArt },
-    { id: 'insertPicture', run: A.insertPicture }, { sep: true },
-    { id: 'fillColor', run: A.fillColor }, { id: 'lineColor', run: A.lineColor },
-    { id: 'fontColorBtn', run: () => exec('foreColor', '#C00000') }, { sep: true },
-    { id: 'lineStyle', run: A.lineStyle }, { id: 'dashStyle', run: A.dashStyle },
-    { id: 'arrowStyle', run: A.arrowStyle }, { id: 'shadowStyle', run: A.shadowStyle },
-  ]
-
-  /* Quire keeps these toolbars in the DOM even while hidden, so their command state and
-     dimensions stay in sync when View ▸ Toolbars changes. */
-  const hiddenToolbars: { id: string; label: string; items: QTool[] }[] = [
-    { id: 'tables', label: 'Tables and Borders', items: [
-      { id: 'drawTable', run: A.drawTable }, { id: 'eraser', run: A.eraser }, { sep: true },
-      { id: 'dashStyle', run: A.dashStyle }, { id: 'lineStyle', run: A.lineStyle }, { id: 'lineColor', run: A.lineColor },
-      { id: 'borderBtn', run: A.bordersDlg }, { id: 'fillColor', run: A.fillColor }, { sep: true },
-      { id: 'table', run: A.insertTable }, { id: 'mergeCells', run: A.mergeCells }, { id: 'splitCells', run: A.splitCells }, { sep: true },
-      { id: 'alignTop', run: A.alignTop }, { id: 'distRows', run: A.distRows }, { id: 'distCols', run: A.distCols }, { sep: true },
-      { id: 'tableAutoFormat', run: A.tableAutoFormat }, { id: 'textDirection', run: A.textDirection }, { sep: true },
-      { id: 'sortAsc', run: A.sortAsc }, { id: 'sortDesc', run: A.sortDesc }, { id: 'autoSum', run: A.autoSum },
-    ] },
-    { id: 'reviewing', label: 'Reviewing', items: [
-      { id: 'markupFinalMarkup', label: 'Final Showing Markup', run: A.markupFinalMarkup },
-      { id: 'show', label: 'Show', run: A.showFormatting }, { sep: true },
-      { id: 'prevChange', run: A.prevChange }, { id: 'nextChange', run: A.nextChange }, { sep: true },
-      { id: 'acceptChange', run: A.acceptChange }, { id: 'rejectChange', run: A.rejectChange }, { sep: true },
-      { id: 'insertComment', run: A.insertComment }, { id: 'trackChanges', run: A.trackChanges }, { id: 'reviewingPane', run: A.reviewingPane },
-    ] },
-    { id: 'outlining', label: 'Outlining', items: [
-      { id: 'promoteH1', run: A.promoteH1 }, { id: 'promote', run: A.promote },
-      { combo: { value: 'Body text', options: ['Level 1', 'Level 2', 'Body text'], width: 74 } },
-      { id: 'demote', run: A.demote }, { id: 'demoteBody', run: A.demoteBody }, { sep: true },
-      { id: 'moveUp', run: A.moveUp }, { id: 'moveDown', run: A.moveDown },
-      { id: 'expand', run: A.expand }, { id: 'collapse', run: A.collapse },
-      { combo: { value: 'Show All Levels', options: ['Show All Levels', 'Show Level 1', 'Show Level 2'], width: 96 } },
-      { id: 'olFirstLine', run: A.olFirstLine }, { id: 'olFormatting', run: A.olFormatting }, { sep: true },
-      { id: 'updateTOC', run: A.updateTOC }, { id: 'gotoTOC', run: A.gotoTOC },
-    ] },
-    { id: 'headerFooter', label: 'Header and Footer', items: [
-      { id: 'hfAutoText', label: 'Insert AutoText', run: A.hfAutoText }, { sep: true },
-      { id: 'hfPageNum', run: A.hfPageNum }, { id: 'hfNumPages', run: A.hfNumPages },
-      { id: 'hfFormatPageNum', run: A.hfFormatPageNum }, { id: 'hfDate', run: A.hfDate }, { id: 'hfTime', run: A.hfTime }, { sep: true },
-      { id: 'pageSetup', run: A.pageSetup }, { id: 'hfShowText', run: A.hfShowText }, { id: 'hfLinkPrev', run: A.hfLinkPrev }, { sep: true },
-      { id: 'hfSwitch', run: A.hfSwitch }, { id: 'hfPrev', run: A.hfPrev }, { id: 'hfNext', run: A.hfNext }, { sep: true },
-      { id: 'hfClose', label: 'Close', run: A.hfClose },
-    ] },
-    { id: 'picture', label: 'Picture', items: [
-      { id: 'insertPicture', run: A.insertPicture }, { id: 'colorPic', label: 'Color', run: A.colorPic },
-      { id: 'picMoreContrast', run: A.picMoreContrast }, { id: 'picLessContrast', run: A.picLessContrast },
-      { id: 'picMoreBright', run: A.picMoreBright }, { id: 'picLessBright', run: A.picLessBright }, { sep: true },
-      { id: 'picCrop', run: A.picCrop }, { id: 'picRotate', run: A.picRotate }, { id: 'lineStyle', run: A.lineStyle }, { sep: true },
-      { id: 'textWrap', run: A.textWrap }, { id: 'formatObject', run: A.formatObject }, { id: 'picReset', run: A.picReset },
-    ] },
-    { id: 'mailMerge', label: 'Mail Merge', items: [
-      { id: 'mmMainDoc', run: A.mailMerge }, { id: 'mmOpenSource', run: A.mmOpenSource }, { id: 'mmRecipients', run: A.mmRecipients }, { sep: true },
-      { id: 'mmAddress', run: A.mmAddress }, { id: 'mmGreeting', run: A.mmGreeting }, { id: 'mmInsertField', run: A.mmInsertField }, { sep: true },
-      { id: 'mmViewData', run: A.mmViewData }, { id: 'mmFirst', run: A.mmFirst }, { id: 'mmPrev', run: A.mmPrev },
-      { combo: { value: `${(docRef.current.merge?.index || 0) + 1}`, options: (docRef.current.merge?.rows || []).map((_, i) => `${i + 1}`), width: 34 } },
-      { id: 'mmNext', run: A.mmNext }, { id: 'mmLast', run: A.mmLast }, { sep: true },
-      { id: 'mmMergeNew', run: A.mmMergeNew }, { id: 'mmMergePrint', run: A.mmMergePrint },
-    ] },
-    { id: 'wordart', label: 'LettersArt', items: [
-      { id: 'insertWordArt', run: A.insertWordArt }, { id: 'wordartEdit', label: 'Edit Text...', run: A.wordartEdit },
-      { id: 'wordartGallery', run: A.wordartGallery }, { id: 'formatObject', run: A.formatObject },
-      { id: 'waShape', label: 'LettersArt Shape', run: A.waShape }, { id: 'textWrap', label: 'Text Wrapping', run: A.textWrap },
-    ] },
-  ]
+  const drawingTools: QTool[] = []
+  {
+    const env: ToolbarEnv = {
+      run: (id) => {
+        const fn = A[id]
+        if (typeof fn === 'function') fn()
+        else if (!runCommand(id)) flash(t('{0} is not available in this build.', COMMAND_LABELS[id] || labelFor(id)))
+      },
+      runArg: (id, arg) => {
+        const fn = A[id]
+        if (typeof fn === 'function') fn(arg)
+        else if (!runCommand(id, arg)) flash(t('{0} is not available in this build.', COMMAND_LABELS[id] || labelFor(id)))
+      },
+      item,
+      zoom, style, font, size,
+      outlineLevel: outlineLevelOf(docRef.current, activeLocation()?.para?.id),
+      outlineShow: outlineShow,
+      mergeRecord: (docRef.current.merge?.index || 0) + 1,
+      mergeRecords: docRef.current.merge?.rows?.length || 0,
+      picMode: picModeState,
+      wrapMode: wrapModeState,
+      undoLabels: undoLabels.current,
+      redoLabels: redoLabels.current,
+    }
+    drawingTools.push(...buildToolbars(env).drawing)
+  }
 
   /* Print Preview toolbar — mirrors Quire's tb-preview. */
   const pvZoomOptions = ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%', 'Page Width', 'Text Width', 'Whole Page', 'Two Pages']
@@ -883,15 +989,17 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
     { label: 'Hyperlink…', run: A.hyperlink },
   ]
 
-  const pageCount = Math.max(1, Math.ceil(docRef.current.blocks.length / 32))
+  const pageCount = pageGroups.length || layoutPageCount
   const hf = docRef.current.headerFooter || {}
+  const showPageChrome = Boolean(hf.header || hf.footer || hf.showText)
   const resolveFields = (value: string) => value.replace(/«PAGE»/g, '1').replace(/«NUMPAGES»/g, String(pageCount))
   const headerText = hf.header ? resolveFields(hf.header) : 'Quire'
   const footerText = hf.footer ? resolveFields(hf.footer) : t('Page {0} of {1}', 1, 1)
 
   const pageStyle = {
     width: `${pageW}px`,
-    height: `${pageH}px`,
+    height: `${Math.max(pageH, layoutHeight + margin.top + margin.bottom)}px`,
+    background: '#fff',
   }
   const bodyStyle = {
     left: `${margin.left}px`, top: `${margin.top}px`,
@@ -908,14 +1016,14 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
         <button className="btn small" onClick={() => setPane('help')}>{t('Go')}</button>
       </div></div>
       <div className="tp-sec"><div className="tp-h">{t('Open')}</div>
-        <button className="tp-link" onClick={A.open}>{t('More...')}</button>
+        <button className="tp-link" onClick={() => A.open()}>{t('More...')}</button>
         <button className="tp-link" onClick={() => newDocument(false)}>{t('Create a new document...')}</button>
-        <button className="tp-link" onClick={A.sample}>{t('Open the welcome document')}</button>
+        <button className="tp-link" onClick={() => A.sample()}>{t('Open the welcome document')}</button>
       </div>
       <div className="tp-sec"><div className="tp-h">{t('Learn')}</div>
-        <button className="tp-link" onClick={A.keyboardHelp}>{t('Keyboard shortcuts and help')}</button>
-        <button className="tp-link" onClick={A.stylesPane}>{t('Styles and Formatting')}</button>
-        <button className="tp-link" onClick={A.mailMerge}>{t('Mail Merge wizard')}</button>
+        <button className="tp-link" onClick={() => A.keyboardHelp()}>{t('Keyboard shortcuts and help')}</button>
+        <button className="tp-link" onClick={() => A.stylesPane()}>{t('Styles and Formatting')}</button>
+        <button className="tp-link" onClick={() => A.mailMerge()}>{t('Mail Merge wizard')}</button>
       </div>
     </>
     if (pane === 'help') return <div className="tp-sec">
@@ -961,20 +1069,20 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
         </div>
         <div className="tp-sec"><div className="tp-h">{t('View Record')}</div>
           <div className="tp-row">
-            <button className="btn small" onClick={A.mmFirst}>{'|<'}</button>
-            <button className="btn small" onClick={A.mmPrev}>{'<'}</button>
+            <button className="btn small" onClick={() => A.mmFirst()}>{'|<'}</button>
+            <button className="btn small" onClick={() => A.mmPrev()}>{'<'}</button>
             <span>{rows.length ? `${(merge.index || 0) + 1} / ${rows.length}` : '0 / 0'}</span>
-            <button className="btn small" onClick={A.mmNext}>{'>'}</button>
-            <button className="btn small" onClick={A.mmLast}>{'|>'}</button>
+            <button className="btn small" onClick={() => A.mmNext()}>{'>'}</button>
+            <button className="btn small" onClick={() => A.mmLast()}>{'|>'}</button>
           </div>
           <p className="tp-note">{rows[merge.index || 0] ? Object.entries(rows[merge.index || 0]!).map(([k, v]) => `${k}: ${v}`).join(', ') : t('No data source loaded.')}</p>
         </div>
-        <div className="tp-btns"><button className="btn" onClick={A.mmMergeNew}>{t('Merge to New Document')}</button></div>
+        <div className="tp-btns"><button className="btn" onClick={() => A.mmMergeNew()}>{t('Merge to New Document')}</button></div>
       </div>
     }
     if (pane === 'new') return <div className="tp-sec"><div className="tp-h">{t('New')}</div>
       <button className="tp-link" onClick={() => newDocument(false)}>{t('Blank document')}</button>
-      <button className="tp-link" onClick={A.sample}>{t('Welcome document')}</button>
+      <button className="tp-link" onClick={() => A.sample()}>{t('Welcome document')}</button>
     </div>
     return <div className="tp-sec"><div className="tp-h">{t('Task Pane')}</div>
       {(['getting-started', 'help', 'search', 'styles', 'reveal', 'mailmerge'] as Pane[]).map((p) =>
@@ -1034,10 +1142,10 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
           <div className={`work${rulers ? ' rulers' : ''}${vruler ? ' vruler' : ''}`} id="work">
             <div className="r-corner" id="rcorner"><button className="tabsel" title={t('Toggle rulers')} onClick={() => setVruler((v) => !v)} /></div>
             <div className="ruler-h" id="hruler">
-              <canvas ref={(el) => { if (el) drawRuler(el, 'horizontal', contentW, zoom) }} />
+              <canvas ref={(el) => { if (el) drawRuler(el, 'horizontal', pageW * zoom, zoom) }} />
             </div>
             <div className="ruler-v" id="vruler">
-              <canvas ref={(el) => { if (el) drawRuler(el, 'vertical', contentH, zoom) }} />
+              <canvas ref={(el) => { if (el) drawRuler(el, 'vertical', contentH * zoom, zoom) }} />
             </div>
             <div className={`scroller${view === 'web' || view === 'normal' ? ' flowview' : ''}${view === 'web' ? ' webview' : ''}${view === 'preview' && pvZoomed ? ' zoomed' : ''}`} id="scroller"
               ref={scrollerRef} tabIndex={-1}
@@ -1047,26 +1155,26 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
               onContextMenu={(e) => { e.preventDefault(); captureCaret(); setContext({ x: e.clientX, y: e.clientY }) }}>
               <div className="sizer">
                 <div className={`pages${columns > 1 ? ' multi' : ''}${marks ? ' marks' : ''}`} id="pages" style={{ width: '100%', transform: `scale(${zoom})` }}>
-                  <div className="pg" ref={pageRef} style={pageStyle}>
-                    <div className="pg-hdr" data-label={t('Header')} style={{ left: margin.left, top: margin.top / 2, right: margin.right, fontSize: 12 }}>
+                  {(pageGroups.length ? pageGroups : [[]]).map((group, pageIndex) => <div className="pg" key={pageIndex} ref={pageIndex === 0 ? pageRef : undefined} style={{ ...pageStyle, height: `${pageH}px` }}>
+                    {showPageChrome && <div className="pg-hdr" data-label={t('Header')} style={{ left: margin.left, top: margin.top / 2, right: margin.right, fontSize: 12 }}>
                       <div className="p"><div className="pc"><span>{headerText}</span><span style={{ float: 'right' }}>{t('Sample document')}</span></div></div>
-                    </div>
+                    </div>}
                     <div className="pg-body" style={bodyStyle}>
                       <div className="pg-reg" style={{ width: '100%' }}>
                         <div className="pg-col" style={{ width: '100%', fontSize: '16px' }}
-                          ref={surfaceRef} contentEditable={!readonly && view !== 'preview'} suppressContentEditableWarning
+                          ref={(element) => { surfaceRefs.current[pageIndex] = element as HTMLDivElement; if (pageIndex === 0) surfaceRef.current = element }} contentEditable={!readonly && view !== 'preview'} suppressContentEditableWarning
                           onInput={syncSurface} onMouseUp={captureCaret} onKeyUp={captureCaret}
                           aria-label="Document editor" spellCheck={spellOn} />
                       </div>
                     </div>
-                    <div className="pg-fn" style={{ left: margin.left, right: margin.right, bottom: margin.bottom + 12, fontSize: 10 }}>
+                    {showPageChrome && <div className="pg-fn" style={{ left: margin.left, right: margin.right, bottom: margin.bottom + 12, fontSize: 10 }}>
                       <div className="p"><div className="pc"><span>1</span> {t('Footnotes are numbered automatically and placed at the bottom of the page.')}</div></div>
-                    </div>
-                    <div className="pg-ftr" data-label={t('Footer')} style={{ left: margin.left, right: margin.right, bottom: margin.bottom / 2, fontSize: 12 }}>
+                    </div>}
+                    {showPageChrome && <div className="pg-ftr" data-label={t('Footer')} style={{ left: margin.left, right: margin.right, bottom: margin.bottom / 2, fontSize: 12 }}>
                       <div className="p"><div className="pc"><span style={{ float: 'right' }}>{footerText}</span></div></div>
-                    </div>
+                    </div>}
                     <div className="crop" />
-                  </div>
+                  </div>)}
                 </div>
               </div>
             </div>
@@ -1103,7 +1211,7 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
         {sb('grow', undefined, status || busy)}
       </div>
 
-      {context && <div className="menu" role="menu" style={{ left: context.x, top: context.y }} onMouseLeave={() => setContext(null)}>
+      {context && <div className="menu" role="menu" style={{ left: Math.min(context.x, Math.max(2, window.innerWidth - 180)), top: Math.min(context.y, Math.max(2, window.innerHeight - 240)) }} onMouseLeave={() => setContext(null)}>
         {contextItems.map((it, i) => it.sep ? <div className="m-sep" key={`s${i}`} /> :
           <div className="m-item" role="menuitem" key={`${it.label}-${i}`} onClick={() => { setContext(null); void it.run?.() }}>
             <span className="m-ico">{it.icon ? <QIcon name={iconFor(it.icon)} /> : null}</span>
@@ -1161,8 +1269,8 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
       </QDialog>}
       {dialog === 'paragraph' && <QDialog title={t('Paragraph')} onClose={() => setDialog(null)}>
         <div className="row"><label>{t('Alignment')}</label>
-          <button className="btn" onClick={A.alignLeft}>{t('Left')}</button><button className="btn" onClick={A.alignCenter}>{t('Center')}</button>
-          <button className="btn" onClick={A.alignRight}>{t('Right')}</button><button className="btn" onClick={A.justify}>{t('Justify')}</button>
+          <button className="btn" onClick={() => A.alignLeft()}>{t('Left')}</button><button className="btn" onClick={() => A.alignCenter()}>{t('Center')}</button>
+          <button className="btn" onClick={() => A.alignRight()}>{t('Right')}</button><button className="btn" onClick={() => A.justify()}>{t('Justify')}</button>
         </div>
         <div className="tp-btns"><button className="btn" onClick={() => setDialog(null)}>{t('OK')}</button></div>
       </QDialog>}
@@ -1268,8 +1376,8 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
 function drawRuler(canvas: HTMLCanvasElement, orientation: 'horizontal' | 'vertical', length: number, zoom: number): void {
   const ratio = window.devicePixelRatio || 1
   const wide = orientation === 'horizontal'
-  const width = wide ? Math.max(600, length + 40) : 20
-  const height = wide ? 20 : Math.max(600, length + 40)
+  const width = wide ? Math.max(600, length) : 20
+  const height = wide ? 20 : Math.max(600, length)
   if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
     canvas.width = Math.round(width * ratio)
     canvas.height = Math.round(height * ratio)

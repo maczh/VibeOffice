@@ -19,6 +19,7 @@
 .ruler-h { grid-column: 2; grid-row: 1; position: relative; overflow: hidden; background: linear-gradient(var(--tb-a), var(--tb-b)); border-bottom: 1px solid var(--ruler-line); user-select: none; touch-action: none; }
 .ruler-v { grid-column: 1; grid-row: 2; position: relative; overflow: hidden; background: linear-gradient(90deg, var(--tb-a), var(--tb-b)); border-right: 1px solid var(--ruler-line); user-select: none; }
 .ruler-h canvas, .ruler-v canvas { position: absolute; left: 0; top: 0; pointer-events: none; }
+.ruler-h canvas { left: 50%; transform: translateX(-50%); }
 .rmark { position: absolute; width: 9px; height: 7px; margin-left: -4.5px; cursor: default; z-index: 2; }
 .rmark svg { display: block; }
 .rmark.tabstop { width: 8px; height: 8px; margin-left: -1px; top: 11px; }
@@ -36,6 +37,8 @@
 .pages { position: absolute; top: 14px; left: 10px; transform-origin: 0 0; outline: none; color: #000; font-size: 16px; line-height: normal; caret-color: #000; -webkit-user-modify: read-write-plaintext-only; }
 .pages { -webkit-user-modify: read-write; }
 .pg { position: relative; margin: 0 auto 14px; background: #fff; box-shadow: 0 0 0 1px #4a4a4a, 3px 3px 0 1px #3c3c3c; contain: layout paint; overflow: visible; }
+.scroller:not(.flowview) .pg { contain: none; }
+.scroller:not(.flowview) .pg-body { height: auto !important; min-height: 100%; overflow: visible; }
 .pages.multi { display: flex; flex-wrap: wrap; gap: 14px 16px; align-items: flex-start; }
 .pages.multi .pg { margin: 0; }
 .pg.blank::after { content: var(--t-blank, "(This page intentionally left blank by a section break)"); position: absolute; left: 0; right: 0; top: 45%; text-align: center; color: #999; font: 12px Arial, Arimo, sans-serif; }

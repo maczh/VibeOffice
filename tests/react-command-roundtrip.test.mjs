@@ -8,7 +8,11 @@ test('command-created formatting and table state survives DOCX round-trip', asyn
     text: 'Formatted',
     rPr: { caps: 'all', hidden: true, underline: true, underlineStyle: 'double', vertAlign: 'superscript' },
   }]
-  doc.blocks[0].pPr = { keepNext: true, outlineLvl: 0, borders: true }
+  doc.blocks[0].pPr = {
+    keepNext: true,
+    outlineLvl: 0,
+    borders: { bottom: { val: 'single', sz: 1.5, color: 'auto', space: 1 } },
+  }
   doc.blocks.push({
     kind: 'tbl', id: 'cmd-table', widths: [144, 144], align: 'center', autoFit: 'content', headerRows: 1,
     rows: [
@@ -32,7 +36,11 @@ test('command-created formatting and table state survives DOCX round-trip', asyn
   assert.equal(para.runs[0].rPr.vertAlign, 'superscript')
   assert.equal(para.pPr.keepNext, true)
   assert.equal(para.pPr.outlineLvl, 0)
-  assert.equal(para.pPr.borders, true)
+  /* paragraph borders are kept per edge, the way the toolbar sets them */
+  assert.equal(para.pPr.borders.bottom.val, 'single')
+  assert.equal(para.pPr.borders.bottom.sz, 1.5)
+  assert.equal(para.pPr.borders.bottom.color, 'auto')
+  assert.equal(para.pPr.borders.bottom.space, 1)
 
   const table = reopened.blocks[1]
   assert.equal(table.kind, 'tbl')

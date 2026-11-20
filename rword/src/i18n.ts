@@ -159,3 +159,30 @@ export function t(text: string, ...args: (string | number)[]): string {
 export function plainAmp(text: string): string {
   return t(text).replace(/&(.)/, '$1')
 }
+
+/** A shortcut as the original shows it (common/ui.js → keyText): each key name in the
+ *  UI's language, the modifiers in Apple's symbols and order on a Mac. Only the
+ *  keys the original names are translated; the arrow keys keep their English. */
+const MAC_MODS: [string, string][] = [['Alt', '⌥'], ['Shift', '⇧'], ['Ctrl', '⌘']]
+const KEY_NAMES = ['Ctrl', 'Shift', 'Alt', 'Del', 'Ins', 'Esc', 'Home', 'End', 'Enter', 'Tab', 'Space', 'Backspace', 'Page Up', 'Page Down', 'PgUp', 'PgDn']
+
+function keyName(part: string): string {
+  return KEY_NAMES.includes(part) ? t(`${part}|key`) : part
+}
+
+export function keyText(key: string | undefined): string {
+  if (!key) return ''
+  const parts = String(key).split('+')
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
+  if (!isMac) return parts.map(keyName).join('+')
+  const mods = MAC_MODS.filter(([m]) => parts.includes(m)).map(([, s]) => s).join('')
+  const rest = parts.filter((p) => !MAC_MODS.some(([m]) => m === p)).map(keyName).join('+')
+  return mods + rest
+}
+
+/** A label as the original's menus show it: its access key underlined. */
+export function ampHTML(text: string): { __html: string } {
+  const escaped = t(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const marked = escaped.replace(/&amp;&amp;/g, '\u0000').replace(/&amp;(\S)/g, '<u>$1</u>').replace(/\u0000/g, '&amp;')
+  return { __html: marked }
+}

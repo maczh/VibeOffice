@@ -1,8 +1,19 @@
 /* Quire chrome for the React editor. Mirrors the DOM and class names of public/quire
  * so the classic looks.css / ui.css / quire.css styles render the interface identically. */
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { getIcon } from './icons'
-import { plainAmp, t } from './i18n'
+import { ampHTML, keyText, plainAmp, t } from './i18n'
+import { COMMAND_META } from './commandMeta'
+
+/** The menu that holds a panel tells it how to close itself (the original's
+ * `it.custom(() => ui.closeMenus())`): a panel's action closes the menu first. */
+const MenuCloseContext = createContext<() => void>(() => {})
+
+/** Close the menu a panel sits in. Panels call it before they run their action. */
+export function useMenuClose(): () => void {
+  return useContext(MenuCloseContext)
+}
 
 export interface QItem {
   id?: string
@@ -15,6 +26,14 @@ export interface QItem {
   disabled?: boolean
   bold?: boolean
   sub?: QItem[]
+  /** a custom panel rendered in place of a menu row (the original's `custom` items) */
+  panel?: ReactNode
+  /** a section heading row */
+  heading?: string
+  /** the row's own tooltip (the original's `it.tip`) */
+  tip?: string
+  /** the class the menu carrying this row gets (the original's `opts.cls`) */
+  cls?: string
   run?: () => void
 }
 export interface QMenu { label: string; items: QItem[] }
@@ -26,8 +45,11 @@ export interface QTool {
   sep?: boolean
   disabled?: boolean
   checked?: boolean
+  /** a dropdown arrow next to the button (the original's `tbDrop`) */
   drop?: QItem[]
-  combo?: { value: string; options: string[]; width?: number; onChange?: (value: string) => void }
+  /** a split button: the main action plus a dropdown arrow (the original's `tbSplit`) */
+  split?: { items: QItem[] }
+  combo?: { id?: string; value: string; options: string[]; width?: number; tip?: string; onChange?: (value: string) => void }
   run?: () => void
 }
 
@@ -75,16 +97,58 @@ export function labelFor(id: string): string {
   return bare.charAt(0).toUpperCase() + bare.slice(1)
 }
 
+/* The original's command registry: each command's own label (its menu name and the
+ * name its button announces) and its shortcut. The toolbars read them from here, so
+ * a button announces what the original announces. */
+const COMMAND_LABELS: Record<string, string> = {}
+const COMMAND_KEYS: Record<string, string> = {}
+for (const meta of COMMAND_META) {
+  COMMAND_LABELS[meta.id] = meta.label || meta.id
+  if (meta.key) COMMAND_KEYS[meta.id] = meta.key
+}
+
 export function QIcon({ name, size = 16 }: { name: string; size?: number }): ReactNode {
   return <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: getIcon(name, size) }} />
 }
 
-const amp = (s: string) => ({ __html: t(s).replace(/&([^&])/, '<u>$1</u>') })
+const amp = (s: string) => ampHTML(s)
 
-function QMenuPopup({ items, x, y, onClose }: { items: QItem[]; x: number; y: number; onClose: () => void }): ReactNode {
+/** The tip a button shows: its command's tip, with the shortcut appended. */
+function buttonTip(item: QTool): string {
+  const tip = plainAmp(t(item.tip || item.label || (item.id ? labelFor(item.id) : '')))
+  const key = COMMAND_KEYS[item.id || '']
+  return key ? `${tip} (${keyText(key)})` : tip
+}
+
+/** The name a button announces: the command's own label (the original's `stripAmp(c.label)`). */
+function buttonLabel(item: QTool): string {
+  const id = item.id || ''
+  return plainAmp(t(COMMAND_LABELS[id] || item.tip || item.label || labelFor(id)))
+}
+
+/** A split button's arrow names the command it belongs to, not the shortcut
+ * (the original's `ui.tbSplit`: the arrow's data-tip is the command's label). */
+function splitArrowTip(item: QTool): string {
+  const id = item.id || ''
+  return plainAmp(t(COMMAND_LABELS[id] || item.tip || item.label || labelFor(id)))
+}
+
+function QMenuPopup({ items, x, y, onClose, cls }: { items: QItem[]; x: number; y: number; onClose: () => void; cls?: string }): ReactNode {
   const [active, setActive] = useState<number | null>(null)
   const [sub, setSub] = useState<{ x: number; y: number; items: QItem[] } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  /* The original Quire appends menus to the body and clamps them into the
+   * viewport; do the same after mount so a popup never lands off-screen. */
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    let left = x
+    let top = y
+    if (left + rect.width > window.innerWidth - 2) left = Math.max(2, window.innerWidth - rect.width - 2)
+    if (top + rect.height > window.innerHeight - 2) top = Math.max(2, window.innerHeight - rect.height - 2)
+    if (left !== x || top !== y) { el.style.left = `${left}px`; el.style.top = `${top}px` }
+  }, [x, y])
   useEffect(() => {
     const down = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node) && !(e.target as HTMLElement).closest('.mb-item')) onClose() }
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -100,23 +164,31 @@ function QMenuPopup({ items, x, y, onClose }: { items: QItem[]; x: number; y: nu
     else if (e.key === 'Enter' && active != null) { e.preventDefault(); const it = items[active]; if (it.sub?.length) return; onClose(); void it.run?.() }
     else if (e.key === 'ArrowLeft') onClose()
   }
-  return <>
-    <div ref={ref} className="menu" role="menu" style={{ left: x, top: y }} tabIndex={-1} onKeyDown={keys}>
+  /* the original lets a menu carry a class (a grid or colour panel's menu) */
+  const menuCls = cls || items.find((it) => it.cls)?.cls || ''
+  return createPortal(<MenuCloseContext.Provider value={onClose}>
+    <div ref={ref} className={`menu${menuCls ? ' ' + menuCls : ''}`} role="menu" style={{ left: x, top: y }} tabIndex={-1} onKeyDown={keys}>
       {items.map((it, i) => it.sep
         ? <div className="m-sep" key={`s${i}`} />
+        : it.panel !== undefined
+        /* the original appends a custom panel straight into the menu */
+        ? <Fragment key={`p${i}`}>{it.panel}</Fragment>
+        : it.heading
+        ? <div key={`h${i}`} className="m-head">{it.heading}</div>
         : <div key={`${it.label}-${i}`} className={`m-item${active === i ? ' act' : ''}${it.disabled ? ' dis' : ''}${it.bold ? ' bold' : ''}${it.sub?.length ? ' has-sub' : ''}`}
             role="menuitem" data-cmd={it.id || undefined} aria-disabled={it.disabled || undefined}
+            title={it.tip || undefined}
             onMouseEnter={(e) => { setActive(i); if (it.sub?.length) { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setSub({ x: r.right - 2, y: r.top - 2, items: it.sub }) } else setSub(null) }}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => { if (it.disabled || it.sub?.length) return; onClose(); void it.run?.() }}>
-            <span className="m-ico">{it.checked ? <span className="m-check">✓</span> : it.icon ? <QIcon name={iconFor(it.icon)} /> : null}</span>
+            <span className="m-ico">{it.checked ? <span className={it.radio ? 'm-radio' : 'm-check'}>{it.radio ? '●' : '✓'}</span> : it.icon ? <QIcon name={iconFor(it.icon)} /> : null}</span>
             <span className="m-lbl" dangerouslySetInnerHTML={amp(it.label || '')} />
-            {it.key && <span className="m-key">{it.key}</span>}
-            {it.sub?.length ? <span className="m-sub">▸</span> : null}
+            <span className="m-key">{it.key ? keyText(it.key) : ''}</span>
+            {it.sub?.length ? <span className="m-sub">▶</span> : null}
           </div>)}
     </div>
     {sub && <QMenuPopup items={sub.items} x={sub.x} y={sub.y} onClose={onClose} />}
-  </>
+  </MenuCloseContext.Provider>, document.body)
 }
 
 export function QMenuBar({ menus, onSearch }: { menus: QMenu[]; onSearch?: (query: string) => void }): ReactNode {
@@ -143,22 +215,38 @@ export function QMenuBar({ menus, onSearch }: { menus: QMenu[]; onSearch?: (quer
 
 export function QToolButton({ item }: { item: QTool }): ReactNode {
   const [drop, setDrop] = useState(false)
-  const title = plainAmp(t(item.tip || item.label || (item.id ? labelFor(item.id) : '')))
+  const [dropPos, setDropPos] = useState({ x: 0, y: 0 })
+  const anchor = useRef<HTMLDivElement>(null)
+  const tip = buttonTip(item)
+  const aria = buttonLabel(item)
   if (item.sep) return <span className="tb-sep" />
-  if (item.combo) return <div className="combo" style={{ width: item.combo.width || 100 }}>
-    <input className="combo-in" value={item.combo.value} onChange={(e) => item.combo!.onChange?.(e.target.value)}
+  if (item.combo) return <div ref={anchor} className="combo" style={{ width: item.combo.width || 100 }} data-tip={item.combo.tip ? plainAmp(t(item.combo.tip)) : undefined}>
+    <input className="combo-in" id={item.combo.id} value={item.combo.value} onChange={(e) => item.combo!.onChange?.(e.target.value)}
       onKeyDown={(e) => { if (e.key === 'Enter') { item.combo!.onChange?.((e.target as HTMLInputElement).value); setDrop(false) } if (e.key === 'Escape') setDrop(false) }} />
-    <button className="combo-btn" aria-label={title} onClick={() => setDrop((v) => !v)}><span className="dd-arrow" /></button>
-    {drop && <QMenuPopup x={0} y={0} onClose={() => setDrop(false)} items={item.combo.options.map((o) => ({ label: o, checked: o === item.combo!.value, run: () => item.combo!.onChange?.(o) }))} />}
+    <button className="combo-btn" type="button" aria-label="Open list" onMouseDown={(e) => e.preventDefault()} onClick={() => { const r = anchor.current?.getBoundingClientRect(); if (r) setDropPos({ x: r.left, y: r.bottom }); setDrop((v) => !v) }}><span className="dd-arrow" /></button>
+    {drop && <QMenuPopup cls="combo-list" x={dropPos.x} y={dropPos.y} onClose={() => setDrop(false)} items={item.combo.options.map((o) => ({ label: o, checked: o === item.combo!.value, run: () => item.combo!.onChange?.(o) }))} />}
   </div>
-  const face = <>{item.icon || item.id ? <QIcon name={item.icon || iconFor(item.id || '')} /> : null}{item.label ? <span className="tb-lbl">{item.label}</span> : null}</>
-  if (item.drop?.length) return <div className="tb-split">
-    <button className="tb-btn" title={title} data-tip={title} data-cmd={item.id} aria-label={title} disabled={item.disabled} onClick={() => void item.run?.()}>{face}</button>
-    <button className="tb-dd" aria-label={`${title} options`} onClick={() => setDrop((v) => !v)}><span className="dd-arrow" /></button>
-    {drop && <QMenuPopup x={0} y={0} onClose={() => setDrop(false)} items={item.drop} />}
+  const face = <>{item.icon || item.id ? <QIcon name={item.icon || iconFor(item.id || '')} /> : null}{item.label ? <span className="tb-lbl" dangerouslySetInnerHTML={ampHTML(item.label)} /> : null}</>
+  /* split button: the action, then a separate arrow that opens the menu */
+  if (item.split) return <div className="tb-split" data-cmd={item.id}>
+    <button className="tb-btn" type="button" title={tip} data-tip={tip} data-cmd={item.id} aria-label={aria} disabled={item.disabled} onMouseDown={(e) => e.preventDefault()} onClick={() => void item.run?.()}>{face}</button>
+    <button className="tb-dd" type="button" aria-label={t('More options')} data-tip={splitArrowTip(item)} onMouseDown={(e) => e.preventDefault()} onClick={(e) => {
+      /* the original opens no menu when the list is empty (the undo history, say) */
+      if (!item.split!.items.length) return
+      const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setDropPos({ x: r.left, y: r.bottom }); setDrop((v) => !v)
+    }}><span className="dd-arrow" /></button>
+    {drop && <QMenuPopup x={dropPos.x} y={dropPos.y} onClose={() => setDrop(false)} items={item.split.items} />}
   </div>
-  return <button className={`tb-btn${item.checked ? ' on' : ''}`} title={title} data-tip={title} data-cmd={item.id} aria-label={title}
-    disabled={item.disabled} onClick={() => void item.run?.()}>{face}</button>
+  /* dropdown button: the icon carries its own arrow (the original's tbDrop names
+   * the button after its tip, not after a command) */
+  if (item.drop) return <button className={`tb-btn tb-drop${item.label ? ' with-label' : ''}`} type="button" title={tip} data-tip={tip} aria-label={tip}
+    disabled={item.disabled} onMouseDown={(e) => e.preventDefault()}
+    onClick={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setDropPos({ x: r.left, y: r.bottom }); setDrop((v) => !v) }}>
+    {face}<span className="dd-arrow" />
+    {drop && <QMenuPopup x={dropPos.x} y={dropPos.y} onClose={() => setDrop(false)} items={item.drop} />}
+  </button>
+  return <button className={`tb-btn${item.checked ? ' on' : ''}`} type="button" title={tip} data-tip={tip} data-cmd={item.id} aria-label={aria}
+    disabled={item.disabled} onMouseDown={(e) => e.preventDefault()} onClick={() => void item.run?.()}>{face}</button>
 }
 
 export function QToolbar({ id, label, items, hidden }: { id: string; label: string; items: QTool[]; hidden?: boolean }): ReactNode {
