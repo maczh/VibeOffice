@@ -449,7 +449,12 @@ export function installWordxPanes(runtime: Window): void {
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); e.stopPropagation(); });
       const back = ui.button('◄ Back', () => { if (hist.length > 1) { hist.pop(); go(hist[hist.length - 1], true); } }, { class: 'btn small' });
       b.append(sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => go(), { class: 'btn small' })), h('div', { class: 'tp-row' }, svc), h('div', { class: 'tp-row' }, back)), out);
-      if (q.value && P.researchAuto !== false) { P.researchAuto = false; setTimeout(() => go(), 0); }
+      if (q.value && P.researchAuto !== false) {
+        P.researchAuto = false;
+        let removeCleanup = () => {};
+        const timer = setTimeout(() => { removeCleanup(); void go(); }, 0);
+        removeCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(() => clearTimeout(timer)) : () => {};
+      }
     },
   });
   function wordMenuButton(w, onLookUp) {

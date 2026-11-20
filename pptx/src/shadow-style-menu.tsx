@@ -58,7 +58,7 @@ export function PptxShadowStyleMenu({ host }: { host: HTMLElement }) {
   const engineRoot = host.querySelector<HTMLElement>('.vibeoffice-legacy-root[data-vibeoffice-engine-root]');
   if (!request || !engineRoot) return null;
   const close = () => { setRequest(null); request.anchor?.focus(); };
-  return createPortal(<div className="menu grid-menu vibeoffice-shadow-style-menu" role="menu" aria-label={L?.t?.('Shadow Styles') || 'Shadow Styles'} tabIndex={-1} style={{ left: position.left, top: position.top }}>
+  return createPortal(<div className="menu grid-menu vibeoffice-shadow-style-menu" data-menu-keyboard-owner="react" role="menu" aria-label={L?.t?.('Shadow Styles') || 'Shadow Styles'} tabIndex={-1} style={{ left: position.left, top: position.top }}>
     <div className="shape-grid" style={{ gridTemplateColumns: 'repeat(4,30px)' }}>
       {request.choices.map((choice) => <button key={choice.id} type="button" role="menuitem" data-shadow-id={choice.id} aria-label={choice.label} title={choice.label} onPointerDown={(event) => event.preventDefault()} onClick={() => { close(); request.choose(choice.value); }}>
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">

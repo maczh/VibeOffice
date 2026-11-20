@@ -27,18 +27,27 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const r = direct ? null : G.radios('br', items, 'page');
     const els = r?.querySelectorAll('.ck');
     const root = h('div', { id: 'react-wordx-break-root' });
+    let selected = 'page';
     const insert = (v) => {
       if (v === 'page' || v === 'column') { E.enter(v); return; }
       if (v === 'wrap') { E.enter('line'); return; }
       A().insertSectionBreak(v);
     };
-    G.reactBreakCatalog = () => items.map(([value, label]) => ({ value, label: L.t(label.replace('&', '')) }));
-    G.reactBreakAction = (value) => insert(value);
+    const catalog = () => items.map(([value, label]) => ({ value, label: L.t(label.replace('&', '')) }));
+    const select = (value) => { if (items.some(([kind]) => kind === value)) selected = value; };
+    const action = (value) => insert(value);
+    G.reactBreakCatalog = catalog;
+    G.reactBreakSelect = select;
+    G.reactBreakAction = action;
     const body = direct ? root : h('div', { class: 'col' }, ui.group('Break types', els[0], els[1], els[2]), ui.group('Section break types', els[3], els[4], els[5], els[6]));
     ui.dialog({ title: 'Break', width: 260, body, buttons: [{ label: 'OK', primary: true, onClick: () => {
-      if (direct) { G.reactBreakAction(root.querySelector('[data-break-type]:checked')?.getAttribute('data-break-type') || 'page'); return; }
+      if (direct) { G.reactBreakAction(selected); return; }
       insert(r.get());
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactBreakCatalog === catalog) delete G.reactBreakCatalog;
+      if (G.reactBreakSelect === select) delete G.reactBreakSelect;
+      if (G.reactBreakAction === action) delete G.reactBreakAction;
+    } });
   };
   A().insertSectionBreak = function (type) {
     const d = doc();
@@ -71,9 +80,14 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const first = direct ? null : ui.check('&Show number on first page', true, null);
     const pv = h('div', { class: 'ps-page', style: 'width:80px;height:104px;margin:4px auto' });
     const root = h('div', { id: 'react-wordx-page-numbers-root' });
+    let reactDraft = { position: 'bottom', alignment: 'right', showFirst: true };
+    const draftState = () => ({ ...reactDraft });
+    const draftSet = (key, value) => { reactDraft = { ...reactDraft, [key]: value }; };
+    G.reactPageNumbersDraftState = draftState;
+    G.reactPageNumbersDraftSet = draftSet;
     const draw = () => { L.clear(pv); const y = pos.value === 'top' ? 'top:6px' : 'bottom:6px'; const x = { left: 'left:8px', right: 'right:8px', center: 'left:36px', inside: 'right:8px', outside: 'right:8px' }[al.value]; pv.appendChild(h('span', { style: `position:absolute;${y};${x};width:8px;height:8px;border:1px solid #000;background:#fff` })); };
     if (!direct) draw();
-    G.reactPageNumberAction = (position, alignment, showFirst) => {
+    const action = (position, alignment, showFirst) => {
       const kind = position === 'top' ? 'hdr' : 'ftr';
       E.edit('Page Numbers', () => {
         D.touchKey(d, 'hf');
@@ -98,14 +112,18 @@ export function installWordxInsertDialogs(runtime: Window): void {
         return E.sel;
       });
     };
+    G.reactPageNumberAction = action;
     ui.dialog({
       title: 'Page Numbers', width: 360, body: direct ? root : G.row(h('div', { class: 'col' }, G.f('&Position:', pos), G.f('&Alignment:', al), first), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)),
       buttons: [{ label: '&Format...', onClick: () => { formatPageNumbers(s); return false; } }, { label: 'OK', primary: true, onClick: () => {
-        const get = (id, fallback) => root.querySelector(`#${id}`)?.value || fallback;
-        const showFirst = direct ? !!root.querySelector('input[type=checkbox]')?.checked : first.input.checked;
-        G.reactPageNumberAction(direct ? get('react-wordx-page-position', 'bottom') : pos.value, direct ? get('react-wordx-page-alignment', 'right') : al.value, showFirst);
+        G.reactPageNumberAction(direct ? reactDraft.position : pos.value, direct ? reactDraft.alignment : al.value, direct ? reactDraft.showFirst : first.input.checked);
       } }, { label: 'Cancel' }],
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
+      onClose: () => {
+        if (G.reactPageNumbersDraftState === draftState) delete G.reactPageNumbersDraftState;
+        if (G.reactPageNumbersDraftSet === draftSet) delete G.reactPageNumbersDraftSet;
+        if (G.reactPageNumberAction === action) delete G.reactPageNumberAction;
+      },
     });
   };
   function formatPageNumbers(s) {
@@ -119,9 +137,12 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const mode = direct ? null : G.radios('pf-m', [['cont', '&Continue from previous section'], ['start', 'Start &at:']], pn.start != null ? 'start' : 'cont');
     const startAt = direct ? null : G.num(pn.start != null ? pn.start : 1, { min: 0, id: 'pf-start' });
     const root = h('div', { id: 'react-wordx-page-number-format-root' });
-    G.reactPageNumberFormatState = () => ({ fmt: pn.fmt, chapter: !!pn.chapStyle, mode: pn.start != null ? 'start' : 'cont', start: pn.start != null ? pn.start : 1 });
-    G.reactPageNumberFormatCatalog = () => formats.map(([value, label]) => ({ value, label: L.t(label) }));
-    G.reactPageNumberFormatAction = (format, chapter, numberingMode, start) => E.edit('Page Number Format', () => {
+    let reactDraft = { format: pn.fmt, chapter: !!pn.chapStyle, mode: pn.start != null ? 'start' : 'cont', start: pn.start != null ? pn.start : 1 };
+    const state = () => ({ fmt: pn.fmt, chapter: !!pn.chapStyle, mode: pn.start != null ? 'start' : 'cont', start: pn.start != null ? pn.start : 1 });
+    const draftState = () => ({ ...reactDraft });
+    const draftSet = (key, value) => { reactDraft = { ...reactDraft, [key]: value }; };
+    const catalog = () => formats.map(([value, label]) => ({ value, label: L.t(label) }));
+    const action = (format, chapter, numberingMode, start) => E.edit('Page Number Format', () => {
         D.touchKey(s.holder, 'sect');
         const sc = s.holder === d ? d.sect : s.holder.sect;
         sc.pgNum = Object.assign({}, sc.pgNum, { fmt: format, start: numberingMode === 'start' ? start : null });
@@ -131,11 +152,20 @@ export function installWordxInsertDialogs(runtime: Window): void {
         }
         return E.sel;
       });
+    G.reactPageNumberFormatState = state;
+    G.reactPageNumberFormatDraftState = draftState;
+    G.reactPageNumberFormatDraftSet = draftSet;
+    G.reactPageNumberFormatCatalog = catalog;
+    G.reactPageNumberFormatAction = action;
     ui.dialog({ title: 'Page Number Format', width: 330, body: direct ? root : h('div', { class: 'col' }, G.f('Number &format:', fmt, 'wide'), chap, ui.group('Page numbering', mode, startAt)), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      const get = (id, fallback) => root.querySelector(`#${id}`)?.value || fallback;
-      const directMode = root.querySelector('[data-page-number-mode]:checked')?.getAttribute('data-page-number-mode') || 'cont';
-      G.reactPageNumberFormatAction(direct ? get('react-wordx-page-number-format', pn.fmt) : fmt.value, direct ? !!root.querySelector('input[type=checkbox]')?.checked : chap.input.checked, direct ? directMode : mode.get(), direct ? +(root.querySelector('#react-wordx-page-number-start')?.value || 1) : startAt.get());
-    } }, { label: 'Cancel' }] });
+      G.reactPageNumberFormatAction(direct ? reactDraft.format : fmt.value, direct ? reactDraft.chapter : chap.input.checked, direct ? reactDraft.mode : mode.get(), direct ? reactDraft.start : startAt.get());
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactPageNumberFormatState === state) delete G.reactPageNumberFormatState;
+      if (G.reactPageNumberFormatDraftState === draftState) delete G.reactPageNumberFormatDraftState;
+      if (G.reactPageNumberFormatDraftSet === draftSet) delete G.reactPageNumberFormatDraftSet;
+      if (G.reactPageNumberFormatCatalog === catalog) delete G.reactPageNumberFormatCatalog;
+      if (G.reactPageNumberFormatAction === action) delete G.reactPageNumberFormatAction;
+    } });
   }
 
   /* ================= Date and Time ================= */
@@ -148,20 +178,34 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const lang = ui.select([['en-US', 'English (U.S.)'], ['en-GB', 'English (U.K.)']], 'en-US', null, { id: 'dt-lang' });
     const auto = ui.check('&Update automatically', !!L.store.get('defDateAuto', false), null);
     const root = h('div', { id: 'react-wordx-date-time-root' });
-    G.reactDateTimeCatalog = () => pics.map((value) => ({ value, label: F().formatDate(now, value) }));
-    G.reactDateTimeState = () => ({ format: def, autoUpdate: !!L.store.get('defDateAuto', false) });
-    G.reactDateTimeAction = (action, pic, autoUpdate) => {
+    let reactDraft = { pic: def, autoUpdate: !!L.store.get('defDateAuto', false) };
+    const catalog = () => pics.map((value) => ({ value, label: F().formatDate(now, value) }));
+    const state = () => ({ format: def, autoUpdate: !!L.store.get('defDateAuto', false) });
+    const draftState = () => ({ ...reactDraft });
+    const draftSet = (key, value) => { reactDraft = { ...reactDraft, [key]: value }; };
+    const action = (action, pic, autoUpdate) => {
       if (action === 'default') { L.store.set('defDatePic', pic); L.store.set('defDateAuto', !!autoUpdate); A().status('Default date format saved.'); return; }
       if (action === 'insert') {
         if (autoUpdate) A().insertFieldNow(`${/[hHms]/.test(pic) && !/[dMy]/.test(pic) ? 'TIME' : 'DATE'} \\@ "${pic}"`, 'Insert Date and Time');
         else E.insertTextAt(F().formatDate(new Date(), pic), 'Insert Date and Time');
       }
     };
-    const current = () => direct ? { pic: root.querySelector('select')?.value || def, autoUpdate: !!root.querySelector('input[type=checkbox]')?.checked } : { pic: lb.get(), autoUpdate: auto.input.checked };
+    G.reactDateTimeCatalog = catalog;
+    G.reactDateTimeState = state;
+    G.reactDateTimeDraftState = draftState;
+    G.reactDateTimeDraftSet = draftSet;
+    G.reactDateTimeAction = action;
+    const current = () => direct ? reactDraft : { pic: lb.get(), autoUpdate: auto.input.checked };
     const dlg = ui.dialog({ title: 'Date and Time', width: 360, body: direct ? root : h('div', { class: 'col' }, h('label', { text: 'Available formats:' }), lb, G.f('&Language:', lang), auto), buttons: [
       { label: '&Default...', onClick: () => { const { pic, autoUpdate } = current(); if (direct) G.reactDateTimeAction('default', pic, autoUpdate); else G.reactDateTimeAction('default', pic, autoUpdate); return false; } },
       { label: 'OK', primary: true, onClick: () => { const { pic, autoUpdate } = current(); G.reactDateTimeAction('insert', pic, autoUpdate); } },
-      { label: 'Cancel' }], onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left') });
+      { label: 'Cancel' }], onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'), onClose: () => {
+      if (G.reactDateTimeCatalog === catalog) delete G.reactDateTimeCatalog;
+      if (G.reactDateTimeState === state) delete G.reactDateTimeState;
+      if (G.reactDateTimeDraftState === draftState) delete G.reactDateTimeDraftState;
+      if (G.reactDateTimeDraftSet === draftSet) delete G.reactDateTimeDraftSet;
+      if (G.reactDateTimeAction === action) delete G.reactDateTimeAction;
+    } });
     const ok = dlg.buttons[1];
   };
 
@@ -185,6 +229,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
       const root = h('div', { id: 'react-wordx-field-root' });
       const initialCode = editing ? fieldRef.it.instr.trim().replace(/\s*\\\*\s*MERGEFORMAT/i, '') : '';
       const initialType = editing ? F().parse(fieldRef.it.instr).type : '';
+      let reactDraft = { code: initialCode, format: '', datePicture: '', keep: true };
       const fullCode = (code, format, datePicture, keep) => {
         let value = code.trim();
         if (format) value += ' \\* ' + format;
@@ -192,19 +237,20 @@ export function installWordxInsertDialogs(runtime: Window): void {
         if (keep && !/MERGEFORMAT/i.test(value) && !/^(TOC|INDEX|=)/i.test(value)) value += ' \\* MERGEFORMAT';
         return value;
       };
-      G.reactFieldState = () => ({ code: initialCode, type: initialType, editing, format: '', datePicture: '', keep: true });
-      G.reactFieldCatalog = (category = 'all') => ({
+      const state = () => ({ code: initialCode, type: initialType, editing, format: '', datePicture: '', keep: true });
+      const draftSet = (draft) => { reactDraft = { ...reactDraft, ...draft }; };
+      const catalog = (category = 'all') => ({
         categories: [{ value: 'all', label: L.t('(All)') }, ...Object.keys(FIELD_CATS).map((value) => ({ value, label: value }))],
         names: (category === 'all' ? Array.from(new Set(Object.values(FIELD_CATS).flat())).sort() : FIELD_CATS[category] || []).map((value) => ({ value, label: value })),
         formats: [['', '(none)'], ['Upper', 'Uppercase'], ['Lower', 'Lowercase'], ['FirstCap', 'First capital'], ['Caps', 'Title case'], ['Arabic', '1, 2, 3, ...'], ['roman', 'i, ii, iii, ...'], ['ROMAN', 'I, II, III, ...'], ['alphabetic', 'a, b, c, ...'], ['ALPHABETIC', 'A, B, C, ...'], ['Ordinal', '1st, 2nd, 3rd ...'], ['CardText', 'One, Two, Three'], ['OrdText', 'First, Second, Third']].map(([value, label]) => ({ value, label: L.t(label) })),
         datePictures: ['', ...F().DATE_PICTURES].map((value) => ({ value, label: value || L.t('(default)') })),
       });
-      G.reactFieldDescription = (name) => L.t(FIELD_DESC[name] || '');
-      G.reactFieldPreview = (code, format, datePicture, keep) => {
+      const description = (name) => L.t(FIELD_DESC[name] || '');
+      const preview = (code, format, datePicture, keep) => {
         try { const result = F().evaluate(fullCode(code, format, datePicture, keep), E.sel ? E.sel.f : null); return result == null ? L.t('(the result is produced when the field is inserted or updated)') : Array.isArray(result) ? L.t('(generated paragraphs)') : String(result); }
         catch (e) { return L.t('Error!'); }
       };
-      G.reactFieldAction = (code, format, datePicture, keep) => {
+      const action = (code, format, datePicture, keep) => {
         const value = fullCode(code, format, datePicture, keep);
         if (!value) return false;
         const type = F().parse(value).type;
@@ -212,10 +258,22 @@ export function installWordxInsertDialogs(runtime: Window): void {
         else if (type === 'TOC' || type === 'INDEX') F().insertGenerated(value);
         else A().insertFieldNow(value);
       };
+      G.reactFieldState = state;
+      G.reactFieldDraftSet = draftSet;
+      G.reactFieldCatalog = catalog;
+      G.reactFieldDescription = description;
+      G.reactFieldPreview = preview;
+      G.reactFieldAction = action;
       ui.dialog({ title: 'Field', width: 560, focus: opts.codes ? root : null, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => {
-        const get = (id) => root.querySelector('#' + id);
-        return G.reactFieldAction(get('react-wordx-field-code')?.value || '', get('react-wordx-field-format')?.value || '', get('react-wordx-field-date-picture')?.value || '', !!get('react-wordx-field-keep')?.checked);
-      } }, { label: 'Cancel' }] });
+        return G.reactFieldAction(reactDraft.code, reactDraft.format, reactDraft.datePicture, reactDraft.keep);
+      } }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactFieldState === state) delete G.reactFieldState;
+        if (G.reactFieldDraftSet === draftSet) delete G.reactFieldDraftSet;
+        if (G.reactFieldCatalog === catalog) delete G.reactFieldCatalog;
+        if (G.reactFieldDescription === description) delete G.reactFieldDescription;
+        if (G.reactFieldPreview === preview) delete G.reactFieldPreview;
+        if (G.reactFieldAction === action) delete G.reactFieldAction;
+      } });
       return;
     }
     const cat = ui.select([['all', '(All)']].concat(Object.keys(FIELD_CATS).map((k) => [k, k])), 'all', () => fillNames(), { id: 'fl-cat' });
@@ -298,8 +356,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
       else { const [, a, b] = SUBSETS[symbolState.subset]; for (let c = a; c <= b; c++) chars.push({ ch: String.fromCodePoint(c), font: symbolState.font }); }
       return { ...symbolState, fonts: ['', 'Symbol', 'Wingdings', 'Webdings', ...G.FONTS()], subsets: SUBSETS.map((s, i) => ({ value: i, label: s[0] })), chars: chars.map((c) => ({ ...c, code: c.ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') })), specials: SPECIALS.map(([ch, label, key]) => ({ value: ch, label: L.t(label) + (key ? '   ' + ui.keyText(key) : '') })) };
     };
-    G.reactSymbolCatalog = symbolCatalog;
-    G.reactSymbolAction = (action, value) => {
+    const symbolAction = (action, value) => {
       if (action === 'font') { symbolState.font = value; symbolState.selected = null; symbolState.code = ''; }
       else if (action === 'subset') { symbolState.subset = Number(value); symbolState.selected = null; symbolState.code = ''; }
       else if (action === 'tab') symbolState.tab = Number(value);
@@ -310,8 +367,13 @@ export function installWordxInsertDialogs(runtime: Window): void {
       else if (action === 'insert') { tabIdx = symbolState.tab; if (tabIdx === 1) spec.set(symbolState.special); doInsert(); if (!opts.pick) { symbolState.recent = L.store.get('recentSymbols', symbolState.recent); L.bus.emit('wordx-symbol-refresh'); } }
       return symbolCatalog();
     };
+    G.reactSymbolCatalog = symbolCatalog;
+    G.reactSymbolAction = symbolAction;
     const reactRoot = h('div', { id: 'react-wordx-symbol-root' });
-    const dlg = ui.dialog({ title: 'Symbol', width: 520, body: direct ? reactRoot : tabs, buttons: [{ label: '&Insert', primary: true, onClick: () => { if (direct) G.reactSymbolAction('insert'); else doInsert(); if (opts.pick) return; return false; } }, { label: opts.pick ? 'Cancel' : 'Close' }] });
+    const dlg = ui.dialog({ title: 'Symbol', width: 520, body: direct ? reactRoot : tabs, buttons: [{ label: '&Insert', primary: true, onClick: () => { if (direct) symbolAction('insert'); else doInsert(); if (opts.pick) return; return false; } }, { label: opts.pick ? 'Cancel' : 'Close' }], onClose: () => {
+      if (G.reactSymbolCatalog === symbolCatalog) delete G.reactSymbolCatalog;
+      if (G.reactSymbolAction === symbolAction) delete G.reactSymbolAction;
+    } });
     const insertBtn = dlg.buttons[0];
   };
 
@@ -333,15 +395,17 @@ export function installWordxInsertDialogs(runtime: Window): void {
         enRestart: (d.settings.enPr && d.settings.enPr.restart) || 'continuous',
         custom: '',
       });
-      G.reactFootnoteState = state;
-      G.reactFootnoteCatalog = () => ({
+      let reactDraft = state();
+      const draftState = () => ({ ...reactDraft });
+      const draftSet = (draft) => { reactDraft = { ...reactDraft, ...draft }; };
+      const catalog = () => ({
         locations: { fn: [['pageBottom', 'Bottom of page'], ['beneathText', 'Below text']], en: [['docEnd', 'End of document'], ['sectEnd', 'End of section']] },
         formats: [['decimal', '1, 2, 3, ...'], ['lowerLetter', 'a, b, c, ...'], ['upperLetter', 'A, B, C, ...'], ['lowerRoman', 'i, ii, iii, ...'], ['upperRoman', 'I, II, III, ...'], ['chicago', '*, †, ‡, §, ...']],
         restarts: [['continuous', 'Continuous'], ['eachSect', 'Restart each section'], ['eachPage', 'Restart each page']],
       });
-      G.reactFootnoteAction = (action, values) => {
+      const action = (action, values) => {
         if (action === 'symbol') {
-          G.symbol({ pick: (character) => { const input = root.querySelector('#react-wordx-footnote-custom'); if (input) { input.value = character; input.dispatchEvent(new Event('input', { bubbles: true })); } } });
+          G.symbol({ pick: (character) => G.reactFootnoteSymbolPick?.(character) });
           return;
         }
         if (action === 'convert') { convert(); return; }
@@ -351,12 +415,22 @@ export function installWordxInsertDialogs(runtime: Window): void {
         if (action === 'insert') L.notes.insert(kind, { mark: values.custom.trim() || null });
         else return false;
       };
-      const values = () => Object.fromEntries(['kind', 'fnPos', 'enPos', 'fnFmt', 'enFmt', 'fnStart', 'enStart', 'fnRestart', 'enRestart', 'custom'].map((key) => [key, (key === 'kind' ? root.querySelector('[name=react-wordx-footnote-kind]:checked') : root.querySelector('#react-wordx-footnote-' + key))?.value || (key.endsWith('Start') ? 1 : '')]).map(([key, value]) => [key, key.endsWith('Start') ? Math.max(1, Number(value)) : value]));
+      G.reactFootnoteState = state;
+      G.reactFootnoteDraftState = draftState;
+      G.reactFootnoteDraftSet = draftSet;
+      G.reactFootnoteCatalog = catalog;
+      G.reactFootnoteAction = action;
       ui.dialog({ title: 'Footnote and Endnote', width: 380, body: root, buttons: [
-        { label: '&Insert', primary: true, onClick: () => G.reactFootnoteAction('insert', values()) },
+        { label: '&Insert', primary: true, onClick: () => action('insert', draftState()) },
         { label: 'Cancel' },
-        { label: '&Apply', onClick: () => G.reactFootnoteAction('apply', values()) },
-      ] });
+        { label: '&Apply', onClick: () => action('apply', draftState()) },
+      ], onClose: () => {
+        if (G.reactFootnoteState === state) delete G.reactFootnoteState;
+        if (G.reactFootnoteDraftState === draftState) delete G.reactFootnoteDraftState;
+        if (G.reactFootnoteDraftSet === draftSet) delete G.reactFootnoteDraftSet;
+        if (G.reactFootnoteCatalog === catalog) delete G.reactFootnoteCatalog;
+        if (G.reactFootnoteAction === action) delete G.reactFootnoteAction;
+      } });
       return;
     }
     const kind = G.radios('fn-k', [['fn', '&Footnotes:'], ['en', '&Endnotes:']], 'fn', () => sync());
@@ -378,7 +452,10 @@ export function installWordxInsertDialogs(runtime: Window): void {
     function convert() {
       if (direct) {
         const convertRoot = h('div', { id: 'react-wordx-convert-notes-root' });
-        ui.dialog({ title: 'Convert Notes', width: 300, body: convertRoot, buttons: [{ label: 'OK', primary: true, onClick: () => L.notes.convertAll(convertRoot.querySelector('[name=react-wordx-convert-notes]:checked')?.value || 'fn') }, { label: 'Cancel' }] });
+        let selectedKind = 'fn';
+        const selectKind = (kind) => { if (kind === 'fn' || kind === 'en') selectedKind = kind; };
+        G.reactConvertNotesSelect = selectKind;
+        ui.dialog({ title: 'Convert Notes', width: 300, body: convertRoot, buttons: [{ label: 'OK', primary: true, onClick: () => L.notes.convertAll(selectedKind) }, { label: 'Cancel' }], onClose: () => { if (G.reactConvertNotesSelect === selectKind) delete G.reactConvertNotesSelect; } });
         return;
       }
       const r = G.radios('fn-conv', [['fn', 'Convert all &footnotes to endnotes'], ['en', 'Convert all &endnotes to footnotes']], 'fn');
@@ -401,13 +478,15 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const upd = () => { if (direct) { txt.value = captionPreview(reactCaption.label, reactCaption.exclude, reactCaption.numbering); return; } txt.value = captionPreview(lab.value, excl.input.checked, num); };
     upd();
     reactCaption.text = txt.value;
-    G.reactCaptionCatalog = () => ({ ...reactCaption, labels: reactCaption.labels.slice() });
-    G.reactCaptionAction = async (action, value) => {
+    const captionCatalog = () => ({ ...reactCaption, labels: reactCaption.labels.slice() });
+    const captionAction = async (action, value) => {
       if (action === 'change') { reactCaption = { ...reactCaption, ...(value || {}) }; num = { ...reactCaption.numbering }; if (!direct) { lab.value = reactCaption.label; pos.value = reactCaption.position; excl.input.checked = reactCaption.exclude; txt.value = reactCaption.text; } }
       else if (action === 'newLabel') { const name = await ui.prompt('Label:', '', 'New Label'); if (!name) return; const list = L.store.get('captionLabels', []); if (!list.includes(name)) { list.push(name); L.store.set('captionLabels', list); } if (!direct) lab.value = name; const text = captionPreview(name, reactCaption.exclude, reactCaption.numbering); if (!direct) { upd(); } reactCaption = { ...reactCaption, labels: Array.from(new Set(F().CAPTION_LABELS.concat(list))), label: name, text: direct ? text : txt.value }; L.bus.emit('wordx-caption-refresh'); }
       else if (action === 'deleteLabel') { if (F().CAPTION_LABELS.includes(reactCaption.label)) return; const list = L.store.get('captionLabels', []).filter((item) => item !== reactCaption.label); L.store.set('captionLabels', list); const label = F().CAPTION_LABELS[0] || 'Figure'; if (!direct) lab.value = label; const text = captionPreview(label, reactCaption.exclude, reactCaption.numbering); if (!direct) { upd(); } reactCaption = { ...reactCaption, labels: Array.from(new Set(F().CAPTION_LABELS.concat(list))), label, text: direct ? text : txt.value }; L.bus.emit('wordx-caption-refresh'); }
       else if (action === 'numbering') numbering();
     };
+    G.reactCaptionCatalog = captionCatalog;
+    G.reactCaptionAction = captionAction;
     ui.dialog({
       title: 'Caption', width: 360, focus: direct ? null : txt,
       body: direct ? h('div', { id: 'react-wordx-caption-root' }) : h('div', { class: 'col' }, h('label', { for: 'cp-text', html: ui.ampHTML('&Caption:') }), txt, ui.group('Options', G.f('&Label:', lab), G.f('&Position:', pos), excl), h('div', { class: 'tp-btns' }, ui.button('&New Label...', async () => { const n = await ui.prompt('Label:', '', 'New Label'); if (!n) return; const list = L.store.get('captionLabels', []); if (!list.includes(n)) { list.push(n); L.store.set('captionLabels', list); } lab.appendChild(G.raw('option', { value: n }, n)); lab.value = n; upd(); }, { class: 'btn small' }), ui.button('&Delete Label', () => { if (F().CAPTION_LABELS.includes(lab.value)) return; L.store.set('captionLabels', L.store.get('captionLabels', []).filter((x) => x !== lab.value)); lab.querySelector(`option[value="${lab.value}"]`).remove(); upd(); }, { class: 'btn small' }), ui.button('N&umbering...', () => numbering(), { class: 'btn small' }))),
@@ -421,19 +500,27 @@ export function installWordxInsertDialogs(runtime: Window): void {
         const m = new RegExp('^' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:[\\dA-Za-z]+' + (currentNum.chapter ? '[-.:—–]?[\\dA-Za-z]+' : '') + ')').exec(rest);
         rest = m ? rest.slice(m[0].length) : '';
         F().insertCaption({ label, position, text: rest, fmt: currentNum.fmt, chapter: currentNum.chapter, chapterStyle: currentNum.chapterStyle, chapterSep: currentNum.sep, noLabel: excluded });
-      } }, { label: 'Cancel' }],
+      } }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactCaptionCatalog === captionCatalog) delete G.reactCaptionCatalog;
+        if (G.reactCaptionAction === captionAction) delete G.reactCaptionAction;
+      },
     });
     function numbering() {
       if (direct) { num = { ...reactCaption.numbering }; }
       let reactNum = { ...num };
-      G.reactCaptionNumberingCatalog = () => ({ ...reactNum });
-      G.reactCaptionNumberingAction = (value) => { reactNum = { ...reactNum, ...(value || {}) }; };
+      const catalog = () => ({ ...reactNum });
+      const action = (value) => { reactNum = { ...reactNum, ...(value || {}) }; };
+      G.reactCaptionNumberingCatalog = catalog;
+      G.reactCaptionNumberingAction = action;
       const fmt = ui.select([['ARABIC', '1, 2, 3, ...'], ['alphabetic', 'a, b, c, ...'], ['ALPHABETIC', 'A, B, C, ...'], ['roman', 'i, ii, iii, ...'], ['ROMAN', 'I, II, III, ...']], num.fmt, null, { id: 'cn-fmt' });
       const chap = ui.check('Include &chapter number', num.chapter, null);
       const style = ui.select([1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => [i, 'Heading ' + i]), num.chapterStyle, null, { id: 'cn-st', translate: 'no' });   // style names
       const sep = ui.select([['-', '- (hyphen)'], ['.', '. (period)'], [':', ': (colon)'], ['—', '— (em dash)'], ['–', '– (en dash)']], num.sep, null, { id: 'cn-sep' });
       const reactRoot = h('div', { id: 'react-wordx-caption-numbering-root' });
-      ui.dialog({ title: 'Caption Numbering', width: 320, body: direct ? reactRoot : h('div', { class: 'col' }, G.f('F&ormat:', fmt), chap, G.f('Chapter starts with style:', style, 'wide'), G.f('Use separator:', sep, 'wide')), buttons: [{ label: 'OK', primary: true, onClick: () => { num = direct ? reactNum : { fmt: fmt.value, chapter: chap.input.checked, chapterStyle: +style.value, sep: sep.value }; if (direct) { reactCaption = { ...reactCaption, numbering: { ...num }, text: captionPreview(reactCaption.label, reactCaption.exclude, num) }; L.bus.emit('wordx-caption-refresh'); } else upd(); } }, { label: 'Cancel' }] });
+      ui.dialog({ title: 'Caption Numbering', width: 320, body: direct ? reactRoot : h('div', { class: 'col' }, G.f('F&ormat:', fmt), chap, G.f('Chapter starts with style:', style, 'wide'), G.f('Use separator:', sep, 'wide')), buttons: [{ label: 'OK', primary: true, onClick: () => { num = direct ? reactNum : { fmt: fmt.value, chapter: chap.input.checked, chapterStyle: +style.value, sep: sep.value }; if (direct) { reactCaption = { ...reactCaption, numbering: { ...num }, text: captionPreview(reactCaption.label, reactCaption.exclude, num) }; L.bus.emit('wordx-caption-refresh'); } else upd(); } }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactCaptionNumberingCatalog === catalog) delete G.reactCaptionNumberingCatalog;
+        if (G.reactCaptionNumberingAction === action) delete G.reactCaptionNumberingAction;
+      } });
     }
   };
 
@@ -451,6 +538,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const list = direct ? null : G.listBox([], null, { height: 200, translate: 'no' });
     const root = h('div', { id: 'react-wordx-cross-reference-root' });
     let items = [];
+    let reactDraft = { type: 'Heading', index: 0, reference: 'text', hyperlink: true, aboveBelow: false };
     const refill = (selectedType = type.value) => {
       L.clear(ref);
       for (const [v, l] of what[selectedType] || capWhat) ref.appendChild(h('option', { value: v, text: l }));
@@ -458,26 +546,37 @@ export function installWordxInsertDialogs(runtime: Window): void {
       list.setItems(items.map((x, i) => ({ value: String(i), label: x.text || L.t('(empty)') })));
       if (items.length) list.set('0');
     };
+    let catalog, action, draftSet;
     if (direct) {
-      G.reactCrossRefCatalog = (selectedType = 'Heading') => ({
+      catalog = (selectedType = 'Heading') => ({
         types: types.map((value) => ({ value, label: kinds.includes(value) ? L.t(value) : value })),
         references: (what[selectedType] || capWhat).map(([value, label]) => ({ value, label: L.t(label) })),
         items: F().xrefItems(selectedType).map((item, index) => ({ value: String(index), label: item.text || L.t('(empty)') })),
       });
-      G.reactCrossRefAction = (selectedType, itemIndex, reference, hyperlink, aboveBelow) => {
+      action = (selectedType, itemIndex, reference, hyperlink, aboveBelow) => {
         const candidates = F().xrefItems(selectedType);
         const item = candidates[itemIndex];
         if (!item) return;
         F().insertXref(selectedType, item, reference, { link: hyperlink, abovebelow: aboveBelow });
       };
+      draftSet = (draft) => { reactDraft = { ...draft }; };
+      G.reactCrossRefCatalog = catalog;
+      G.reactCrossRefAction = action;
+      G.reactCrossRefDraftSet = draftSet;
     } else refill();
     const dlg = ui.dialog({
       title: 'Cross-reference', width: 460, modeless: true,
       body: direct ? root : h('div', { class: 'col' }, G.row(G.f('Reference type:', type), G.f('Insert &reference to:', ref)), G.row(link, ab), h('div', { class: 'cd-cap', text: 'For which item:' }), list),
       buttons: [{ label: '&Insert', primary: true, onClick: () => {
-        if (direct) { const selectedType = root.querySelector('#react-wordx-cross-reference-type')?.value || 'Heading'; G.reactCrossRefAction(selectedType, +(root.querySelector('#react-wordx-cross-reference-items')?.value || 0), root.querySelector('#react-wordx-cross-reference-reference')?.value || 'text', !!root.querySelector('#react-wordx-cross-reference-link')?.checked, !!root.querySelector('#react-wordx-cross-reference-above-below')?.checked); return false; }
+        if (direct) { G.reactCrossRefAction(reactDraft.type, reactDraft.index, reactDraft.reference, reactDraft.hyperlink, reactDraft.aboveBelow); return false; }
         const it = items[+list.get()]; if (!it) return false; F().insertXref(type.value, it, ref.value, { link: link.input.checked, abovebelow: ab.input.checked }); return false;
-      } }, { label: 'Close' }],
+      } }, { label: 'Close' }], onClose: () => {
+        if (direct) {
+          if (G.reactCrossRefCatalog === catalog) delete G.reactCrossRefCatalog;
+          if (G.reactCrossRefAction === action) delete G.reactCrossRefAction;
+          if (G.reactCrossRefDraftSet === draftSet) delete G.reactCrossRefDraftSet;
+        }
+      },
     });
     void dlg;
   };
@@ -489,8 +588,12 @@ export function installWordxInsertDialogs(runtime: Window): void {
       const initialTab = tab === 'tof' ? 'tof' : tab === 'index' ? 'index' : 'toc';
       const root = h('div', { id: 'react-wordx-index-tables-root' });
       const styles = () => Object.keys(doc().styles).filter((id) => doc().styles[id].type === 'paragraph').sort((a,b)=>D.styleDisplayName(doc().styles[a]).localeCompare(D.styleDisplayName(doc().styles[b]))).map((id)=>({ id, name: D.styleDisplayName(doc().styles[id]), level: D.styleProps(doc(),id).pPr.outline }));
-      G.reactIndexTablesCatalog = () => ({ initialTab, styles: styles(), labels: ['Figure','Table','Equation'].concat(L.store.get('captionLabels', [])), leaders: [['dot','.......'],['hyphen','-------'],['underscore','_______'],['none',L.N('(none)')]] });
-      G.reactIndexTablesAction = (action, value) => {
+      const catalog = () => ({ initialTab, styles: styles(), labels: ['Figure','Table','Equation'].concat(L.store.get('captionLabels', [])), leaders: [['dot','.......'],['hyphen','-------'],['underscore','_______'],['none',L.N('(none)')]] });
+      G.reactIndexTablesCatalog = catalog;
+      let reactDraft = { tab: initialTab, toc: { show: true, right: true, links: true, leader: 'dot', levels: 3, format: 'template', styles: null }, figures: { label: 'Figure', include: true, show: true }, index: { type: 'indent', columns: 2, right: false, headings: false } };
+      const draftState = () => ({ ...reactDraft, toc: { ...reactDraft.toc, styles: reactDraft.toc.styles && { ...reactDraft.toc.styles } }, figures: { ...reactDraft.figures }, index: { ...reactDraft.index } });
+      const draftSet = (patch) => { reactDraft = { ...reactDraft, ...patch, toc: patch.toc ? { ...reactDraft.toc, ...patch.toc } : reactDraft.toc, figures: patch.figures ? { ...reactDraft.figures, ...patch.figures } : reactDraft.figures, index: patch.index ? { ...reactDraft.index, ...patch.index } : reactDraft.index }; };
+      const action = (action, value) => {
         if (action === 'modify') { G.style('TOC1'); return; }
         if (action === 'mark') { G.markEntry(); return; }
         if (action !== 'insert') return;
@@ -506,7 +609,18 @@ export function installWordxInsertDialogs(runtime: Window): void {
           let instr=`INDEX \\c "${index.columns}"`; if (index.type==='runin') instr+=' \\r'; if (index.headings) instr+=' \\h "A"'; if (index.right) instr+=' \\e "\\t"'; F().insertGenerated(instr,{columns:index.columns});
         }
       };
-      ui.dialog({ title:'Index and Tables', width:520, body:root, buttons:[{label:'OK',primary:true,onClick:()=>{const body=root.querySelector('#react-wordx-index-tables-body');if(!body)return;const current=body.querySelector('[role=tab][aria-selected=true]')?.dataset.indexTab||initialTab;const read=(id)=>body.querySelector('#'+id);const tocStyles={};body.querySelectorAll('[data-toc-style]').forEach((input)=>{if(input.value.trim())tocStyles[input.dataset.tocStyle]=Number(input.value)});if(body.querySelector('#react-wordx-toc-outline'))tocStyles.__outline=body.querySelector('#react-wordx-toc-outline').checked;if(body.querySelector('#react-wordx-toc-fields'))tocStyles.__fields=body.querySelector('#react-wordx-toc-fields').checked;G.reactIndexTablesAction('insert',{tab:current,toc:{show:read('react-wordx-toc-show')?.checked,right:read('react-wordx-toc-right')?.checked,links:read('react-wordx-toc-links')?.checked,leader:read('react-wordx-toc-leader')?.value,levels:Number(read('react-wordx-toc-levels')?.value)||3,format:read('react-wordx-toc-format')?.value||'template',styles:Object.keys(tocStyles).length?tocStyles:null},figures:{label:read('react-wordx-tof-label')?.value||'Figure',include:read('react-wordx-tof-include')?.checked,show:read('react-wordx-tof-show')?.checked},index:{type:body.querySelector('[name=react-wordx-index-type]:checked')?.value||'indent',columns:Number(read('react-wordx-index-columns')?.value)||2,right:read('react-wordx-index-right')?.checked,headings:read('react-wordx-index-headings')?.checked}})}},{label:'Cancel'}]});
+      G.reactIndexTablesDraftState = draftState;
+      G.reactIndexTablesDraftSet = draftSet;
+      G.reactIndexTablesAction = action;
+      ui.dialog({ title: 'Index and Tables', width: 520, body: root, buttons: [
+        { label: 'OK', primary: true, onClick: () => action('insert', draftState()) },
+        { label: 'Cancel' },
+      ], onClose: () => {
+        if (G.reactIndexTablesCatalog === catalog) delete G.reactIndexTablesCatalog;
+        if (G.reactIndexTablesDraftState === draftState) delete G.reactIndexTablesDraftState;
+        if (G.reactIndexTablesDraftSet === draftSet) delete G.reactIndexTablesDraftSet;
+        if (G.reactIndexTablesAction === action) delete G.reactIndexTablesAction;
+      } });
       return;
     }
     const leaders = [['dot', '.......'], ['hyphen', '-------'], ['underscore', '_______'], ['none', L.N('(none)')]];
@@ -615,10 +729,19 @@ export function installWordxInsertDialogs(runtime: Window): void {
       });
       A().status(n === 1 ? L.t('{0} entry marked.', n) : L.t('{0} entries marked.', n));
     };
-    G.reactMarkEntryState = () => ({ main: sel, sub: '', option: 'cur', xref: 'See ', bold: false, italic: false });
-    G.reactMarkEntryAction = (all, values) => mark(all, values);
-    const values = () => ({ main: root.querySelector('#react-wordx-mark-main')?.value || '', sub: root.querySelector('#react-wordx-mark-sub')?.value || '', option: root.querySelector('[name=react-wordx-mark-option]:checked')?.value || 'cur', xref: root.querySelector('#react-wordx-mark-xref')?.value || '', bold: !!root.querySelector('#react-wordx-mark-bold')?.checked, italic: !!root.querySelector('#react-wordx-mark-italic')?.checked });
-    ui.dialog({ title: 'Mark Index Entry', width: 360, modeless: true, body: direct ? root : h('div', { class: 'col' }, G.f('Main &entry:', main), G.f('&Subentry:', sub), ui.group('Options', opt, xref), ui.group('Page number format', bold, ital)), buttons: [{ label: '&Mark', primary: true, onClick: () => { if (direct) G.reactMarkEntryAction(false, values()); else mark(false); return false; } }, { label: 'Mark &All', onClick: () => { if (direct) G.reactMarkEntryAction(true, values()); else mark(true); return false; } }, { label: 'Close' }] });
+    let reactDraft = { main: sel, sub: '', option: 'cur', xref: 'See ', bold: false, italic: false };
+    const state = () => ({ ...reactDraft });
+    const draftSet = (draft) => { reactDraft = { ...reactDraft, ...draft }; };
+    const action = (all, values) => mark(all, values);
+    G.reactMarkEntryState = state;
+    G.reactMarkEntryDraftSet = draftSet;
+    G.reactMarkEntryAction = action;
+    const values = () => reactDraft;
+    ui.dialog({ title: 'Mark Index Entry', width: 360, modeless: true, body: direct ? root : h('div', { class: 'col' }, G.f('Main &entry:', main), G.f('&Subentry:', sub), ui.group('Options', opt, xref), ui.group('Page number format', bold, ital)), buttons: [{ label: '&Mark', primary: true, onClick: () => { if (direct) action(false, values()); else mark(false); return false; } }, { label: 'Mark &All', onClick: () => { if (direct) action(true, values()); else mark(true); return false; } }, { label: 'Close' }], onClose: () => {
+      if (G.reactMarkEntryState === state) delete G.reactMarkEntryState;
+      if (G.reactMarkEntryDraftSet === draftSet) delete G.reactMarkEntryDraftSet;
+      if (G.reactMarkEntryAction === action) delete G.reactMarkEntryAction;
+    } });
   };
 
   /* ================= Bookmark ================= */
@@ -641,8 +764,8 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const valid = (n) => /^[\p{L}][\p{L}\p{N}_]{0,39}$/u.test(n);
     const go = () => { const n = getName().trim(); if (n) A().gotoBookmark(n); };
     const reactRoot = h('div', { id: 'react-wordx-bookmark-root' });
-    G.reactBookmarkCatalog = () => ({ name: reactName, sort: reactSort, hidden: reactHidden, names: reactNames.slice() });
-    G.reactBookmarkAction = (action, value) => {
+    const catalog = () => ({ name: reactName, sort: reactSort, hidden: reactHidden, names: reactNames.slice() });
+    const action = (action, value) => {
       if (action === 'name') { reactName = value; name.value = value; }
       else if (action === 'select') { reactName = value; name.value = value; }
       else if (action === 'sort') { reactSort = value; fill(); }
@@ -651,10 +774,16 @@ export function installWordxInsertDialogs(runtime: Window): void {
       else if (action === 'delete') { const bm = F().bookmarks().get(getName().trim()); if (bm) E.edit('Delete Bookmark', () => { F().removeBookmarkItems(bm); return E.sel; }); reactName = ''; name.value = ''; fill(); }
       else if (action === 'goto') go();
     };
+    G.reactBookmarkCatalog = catalog;
+    G.reactBookmarkAction = action;
     ui.dialog({
       title: 'Bookmark', width: 320, focus: direct ? undefined : name,
       body: direct ? reactRoot : h('div', { class: 'col' }, h('label', { for: 'bm-name', html: ui.ampHTML('&Bookmark name:') }), name, list, ui.group('Sort by:', sortBy), hidden),
-      buttons: [{ label: '&Add', primary: true, onClick: () => { const n = getName().trim(); if (!valid(n)) { ui.msg('Bookmark names must begin with a letter and contain only letters, numbers and underscores.', { icon: 'warn' }); return false; } const [a, b] = E.range(); E.edit(L.N('Bookmark'), () => { F().addBookmark(n, a, b); return E.sel; }); fill(); if (direct) return false; } }, { label: '&Delete', onClick: () => { G.reactBookmarkAction('delete'); fill(); return false; } }, { label: '&Go To', onClick: () => { go(); return false; } }, { label: 'Cancel' }],
+      buttons: [{ label: '&Add', primary: true, onClick: () => { const n = getName().trim(); if (!valid(n)) { ui.msg('Bookmark names must begin with a letter and contain only letters, numbers and underscores.', { icon: 'warn' }); return false; } const [a, b] = E.range(); E.edit(L.N('Bookmark'), () => { F().addBookmark(n, a, b); return E.sel; }); fill(); if (direct) return false; } }, { label: '&Delete', onClick: () => { action('delete'); fill(); return false; } }, { label: '&Go To', onClick: () => { go(); return false; } }, { label: 'Cancel' }],
+      onClose: () => {
+        if (G.reactBookmarkCatalog === catalog) delete G.reactBookmarkCatalog;
+        if (G.reactBookmarkAction === action) delete G.reactBookmarkAction;
+      },
     });
   };
 
@@ -697,12 +826,14 @@ export function installWordxInsertDialogs(runtime: Window): void {
     ], kind);
     let screenTip = tip;
     let reactHyperlink = { kind, display: disp.value, address: addr.value, place: cur && cur.anchor ? cur.anchor : '', email: mail.value, subject: subj.value, screenTip, places };
-    G.reactHyperlinkCatalog = () => ({ ...reactHyperlink, places: reactHyperlink.places.slice() });
-    G.reactHyperlinkAction = async (action, value) => {
+    const catalog = () => ({ ...reactHyperlink, places: reactHyperlink.places.slice() });
+    const action = async (action, value) => {
       if (action === 'change') { reactHyperlink = { ...reactHyperlink, ...(value || {}) }; kind = reactHyperlink.kind; }
       else if (action === 'screenTip') { const result = await ui.prompt('ScreenTip text:', reactHyperlink.screenTip, 'Set Hyperlink ScreenTip'); if (result != null) { screenTip = result; reactHyperlink = { ...reactHyperlink, screenTip: result }; L.bus.emit('wordx-hyperlink-refresh'); } }
       else if (action === 'remove') A().removeHyperlink();
     };
+    G.reactHyperlinkCatalog = catalog;
+    G.reactHyperlinkAction = action;
     const reactRoot = h('div', { id: 'react-wordx-hyperlink-root' });
     ui.dialog({
       title: cur ? 'Edit Hyperlink' : 'Insert Hyperlink', width: 520, focus: kind === 0 ? addr : null,
@@ -730,6 +861,10 @@ export function installWordxInsertDialogs(runtime: Window): void {
         });
         E.pending = { link: undefined, style: undefined };
       } }, { label: 'Cancel' }]),
+      onClose: () => {
+        if (G.reactHyperlinkCatalog === catalog) delete G.reactHyperlinkCatalog;
+        if (G.reactHyperlinkAction === action) delete G.reactHyperlinkAction;
+      },
     });
   };
 
@@ -740,13 +875,15 @@ export function installWordxInsertDialogs(runtime: Window): void {
     let selected = 'chart', tab = 0, dlg = null;
     const lb = direct ? { get: () => selected } : G.listBox(types.map(([v, l]) => ({ value: v, label: l })), 'chart', { height: 160, onDbl: () => ok.click() });
     const root = h('div', { id: 'react-wordx-object-root' });
-    G.reactObjectCatalog = () => types.map(([value, label]) => ({ value, label: L.t(label) }));
-    G.reactObjectAction = (action, value) => {
+    const catalog = () => types.map(([value, label]) => ({ value, label: L.t(label) }));
+    const action = (action, value) => {
       if (action === 'select') selected = value;
       else if (action === 'tab') tab = value === 'file' ? 1 : 0;
       else if (action === 'browse') { dlg.close(null); A().insertFileDialog(); }
       else if (action === 'insert') insert(selected);
     };
+    G.reactObjectCatalog = catalog;
+    G.reactObjectAction = action;
     const insert = (v) => {
       if (v === 'chart') A().insertChart();
       else if (v === 'equation') G.equation();
@@ -758,7 +895,10 @@ export function installWordxInsertDialogs(runtime: Window): void {
     dlg = ui.dialog({ title: 'Object', width: 360, body: direct ? root : ui.tabs([{ label: '&Create New', body: h('div', { class: 'col' }, h('label', { text: 'Object type:' }), lb) }, { label: 'Create from &File', body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Insert the contents of a .docx, .txt or .htm file, or a picture.' }), ui.button('&Browse...', () => { dlg.close(null); A().insertFileDialog(); })) }]), buttons: [{ label: 'OK', primary: true, onClick: () => {
       const v = lb.get();
       insert(v);
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactObjectCatalog === catalog) delete G.reactObjectCatalog;
+      if (G.reactObjectAction === action) delete G.reactObjectAction;
+    } });
     const ok = dlg.buttons[0];
   };
   /** a simple equation editor: linear format with Unicode math symbols */
@@ -768,14 +908,21 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const pal = h('div', { class: 'sym-recent', style: 'grid-template-columns:repeat(16,26px)' });
     if (!direct) for (const c of '±×÷≠≈≤≥∞√∛∑∏∫∂∆∇πθαβγδλμσφωΩ→⇒∈∉⊂⊃∪∩∀∃¬∧∨²³⁴ⁿ₀₁₂ᵢ½'.split('')) { const b = h('button', { type: 'button', text: c }); b.addEventListener('click', () => { const s = inp.selectionStart; inp.value = inp.value.slice(0, s) + c + inp.value.slice(inp.selectionEnd); inp.focus(); inp.setSelectionRange(s + 1, s + 1); }); pal.appendChild(b); }
     const root = h('div', { id: 'react-wordx-equation-root' });
-    G.reactEquationAction = (action, value) => {
+    let reactDraft = '';
+    const draftSet = (value) => { reactDraft = String(value ?? ''); };
+    const action = (action, value) => {
       if (action !== 'insert' || !String(value || '').trim()) return;
       E.edit('Insert Equation', () => { const pos = E.deleteSelection(); return O.insertText(pos, String(value).trim(), Object.assign(O.inheritRPr(pos), { font: 'Cambria Math', i: true })); });
     };
+    G.reactEquationDraftSet = draftSet;
+    G.reactEquationAction = action;
     ui.dialog({ title: 'Equation', width: 470, focus: inp || root, body: direct ? root : h('div', { class: 'col' }, pal, inp, h('div', { class: 'tp-note', text: 'Type the equation; it is inserted in Cambria Math italics.' })), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      if (direct) G.reactEquationAction('insert', root.querySelector('textarea')?.value || '');
+      if (direct) G.reactEquationAction('insert', reactDraft);
       else if (inp.value.trim()) E.edit('Insert Equation', () => { const pos = E.deleteSelection(); return O.insertText(pos, inp.value.trim(), Object.assign(O.inheritRPr(pos), { font: 'Cambria Math', i: true })); });
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactEquationDraftSet === draftSet) delete G.reactEquationDraftSet;
+      if (G.reactEquationAction === action) delete G.reactEquationAction;
+    } });
   };
 
   /* ================= Diagram Gallery ================= */
@@ -784,9 +931,18 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const direct = !!(window.VO && VO.reactDirectHost);
     if (direct) {
       const root = h('div', { id: 'react-wordx-diagram-root' });
-      G.reactDiagramCatalog = () => kinds.map(([value, label]) => ({ value, label: L.t(label) }));
-      G.reactDiagramAction = (value) => insertDiagram(value);
-      ui.dialog({ title: 'Diagram Gallery', width: 340, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => G.reactDiagramAction(root.querySelector('[data-wordx-diagram].on')?.getAttribute('data-wordx-diagram') || 'org') }, { label: 'Cancel' }] });
+      let selected = 'org';
+      const catalog = () => kinds.map(([value, label]) => ({ value, label: L.t(label) }));
+      const select = (value) => { if (kinds.some(([kind]) => kind === value)) selected = value; };
+      const action = (value) => insertDiagram(value);
+      G.reactDiagramCatalog = catalog;
+      G.reactDiagramSelect = select;
+      G.reactDiagramAction = action;
+      ui.dialog({ title: 'Diagram Gallery', width: 340, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => G.reactDiagramAction(selected) }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactDiagramCatalog === catalog) delete G.reactDiagramCatalog;
+        if (G.reactDiagramSelect === select) delete G.reactDiagramSelect;
+        if (G.reactDiagramAction === action) delete G.reactDiagramAction;
+      } });
       return;
     }
     const svg = { org: '<svg width="56" height="44"><rect x="20" y="2" width="16" height="10" fill="#fdd" stroke="#333"/><path d="M28 12v6M10 18h36M10 18v4M28 18v4M46 18v4" stroke="#333" fill="none"/><rect x="2" y="22" width="16" height="10" fill="#dfd" stroke="#333"/><rect x="20" y="22" width="16" height="10" fill="#dfd" stroke="#333"/><rect x="38" y="22" width="16" height="10" fill="#dfd" stroke="#333"/></svg>', cycle: '<svg width="56" height="44"><circle cx="28" cy="22" r="16" fill="none" stroke="#888" stroke-dasharray="3 2"/><circle cx="28" cy="6" r="5" fill="#9cf" stroke="#333"/><circle cx="42" cy="30" r="5" fill="#fc9" stroke="#333"/><circle cx="14" cy="30" r="5" fill="#cf9" stroke="#333"/></svg>', radial: '<svg width="56" height="44"><path d="M28 22L28 6M28 22L44 32M28 22L12 32" stroke="#333"/><circle cx="28" cy="22" r="7" fill="#fc9" stroke="#333"/><circle cx="28" cy="6" r="5" fill="#9cf" stroke="#333"/><circle cx="44" cy="32" r="5" fill="#9cf" stroke="#333"/><circle cx="12" cy="32" r="5" fill="#9cf" stroke="#333"/></svg>', pyramid: '<svg width="56" height="44"><path d="M28 2L50 42H6z" fill="#fc9" stroke="#333"/><path d="M19 18h18M12 30h32" stroke="#333"/></svg>', venn: '<svg width="56" height="44"><circle cx="22" cy="18" r="12" fill="#9cf" fill-opacity=".6" stroke="#333"/><circle cx="34" cy="18" r="12" fill="#fc9" fill-opacity=".6" stroke="#333"/><circle cx="28" cy="28" r="12" fill="#cf9" fill-opacity=".6" stroke="#333"/></svg>', target: '<svg width="56" height="44"><circle cx="24" cy="24" r="18" fill="#9cf" stroke="#333"/><circle cx="24" cy="24" r="12" fill="#fc9" stroke="#333"/><circle cx="24" cy="24" r="6" fill="#f99" stroke="#333"/></svg>' };
@@ -854,10 +1010,10 @@ export function installWordxInsertDialogs(runtime: Window): void {
       const shape = { t: 'shape', w: 66, h: 40, fill: Object.assign({ a: 1 }, s.fill), line: s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }, warp: s.warp, shadow: s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined, wordart: { text: 'LettersArt', font: 'Arial Black', b: s.b, i: s.i } };
       return L.drawing.wordartSVG(shape).outerHTML;
     };
-    G.reactWordartCatalog = () => ({ selected: pick, previews: WA_STYLES.map(wordartPreview) });
-    G.reactWordartAction = (action, value) => {
-      if (action === 'select') { pick = Number(value); return G.reactWordartCatalog(); }
-      if (action !== 'apply') return G.reactWordartCatalog();
+    const catalog = () => ({ selected: pick, previews: WA_STYLES.map(wordartPreview) });
+    const action = (action, value) => {
+      if (action === 'select') { pick = Number(value); return catalog(); }
+      if (action !== 'apply') return catalog();
       const s = WA_STYLES[pick];
       if (mode === 'gallery' && it) { L.drawing.modifySelected('LettersArt Gallery', (x) => { x.fill = Object.assign({ a: 1 }, s.fill); x.line = s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }; x.warp = s.warp; x.shadow = s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined; }); return; }
       const init = E.sel && !E.collapsed() ? O.textRange(...E.range(), ' ').trim().slice(0, 200) : 'Your Text Here';
@@ -869,6 +1025,8 @@ export function installWordxInsertDialogs(runtime: Window): void {
         E.edit('Insert LettersArt', () => O.insertItem(E.deleteSelection(), shape));
       }, direct), 0);
     };
+    G.reactWordartCatalog = catalog;
+    G.reactWordartAction = action;
     const dlg = ui.dialog({ title: 'LettersArt Gallery', width: 470, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { text: 'Select a LettersArt style:' }), grid), buttons: [{ label: 'OK', primary: true, onClick: () => {
       if (direct) { G.reactWordartAction('apply'); return; }
       const s = WA_STYLES[pick];
@@ -881,7 +1039,10 @@ export function installWordxInsertDialogs(runtime: Window): void {
         const shape = { t: 'shape', geom: 'rect', w: L.round(w, 2), h: L.round(hh, 2), fill: Object.assign({ a: 1 }, s.fill), line: s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }, warp: s.warp, shadow: s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined, wordart: wa, name: 'LettersArt ' + D.nid() };
         E.edit('Insert LettersArt', () => O.insertItem(E.deleteSelection(), shape));
       }, direct), 0);
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactWordartCatalog === catalog) delete G.reactWordartCatalog;
+      if (G.reactWordartAction === action) delete G.reactWordartAction;
+    } });
     const ok = dlg.buttons[0];
   };
   function editText(it, done, reactHost = !!(window.VO && VO.reactDirectHost)) {
@@ -897,13 +1058,18 @@ export function installWordxInsertDialogs(runtime: Window): void {
     let reactValue = { text: wa.text, font: wa.font, sz: wa.sz || 36, b: !!wa.b, i: !!wa.i };
     const sizes = [8, 10, 12, 14, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96];
     const reactRoot = h('div', { id: 'react-wordx-lettersart-text-root' });
-    G.reactLettersArtTextCatalog = () => ({ ...reactValue, fonts: G.FONTS(), sizes });
-    G.reactLettersArtTextAction = (action, value) => {
-      if (action === 'change') { reactValue = { ...reactValue, ...value }; return G.reactLettersArtTextCatalog(); }
+    const catalog = () => ({ ...reactValue, fonts: G.FONTS(), sizes });
+    const action = (action, value) => {
+      if (action === 'change') { reactValue = { ...reactValue, ...value }; return catalog(); }
       if (action === 'accept') done({ text: reactValue.text || ' ', font: reactValue.font, sz: +reactValue.sz, b: reactValue.b || undefined, i: reactValue.i || undefined });
-      return G.reactLettersArtTextCatalog();
+      return catalog();
     };
-    ui.dialog({ title: 'Edit LettersArt Text', width: 440, focus: direct ? null : ta, body: direct ? reactRoot : h('div', { class: 'col' }, G.row(G.f('&Font:', font), G.f('&Size:', size), b, i), h('label', { for: 'wa-text', html: ui.ampHTML('&Text:') }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => { if (direct) G.reactLettersArtTextAction('accept'); else done({ text: ta.value || ' ', font: font.value, sz: +size.value, b: b.input.checked || undefined, i: i.input.checked || undefined }); } }, { label: 'Cancel' }] });
+    G.reactLettersArtTextCatalog = catalog;
+    G.reactLettersArtTextAction = action;
+    ui.dialog({ title: 'Edit LettersArt Text', width: 440, focus: direct ? null : ta, body: direct ? reactRoot : h('div', { class: 'col' }, G.row(G.f('&Font:', font), G.f('&Size:', size), b, i), h('label', { for: 'wa-text', html: ui.ampHTML('&Text:') }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => { if (direct) G.reactLettersArtTextAction('accept'); else done({ text: ta.value || ' ', font: font.value, sz: +size.value, b: b.input.checked || undefined, i: i.input.checked || undefined }); } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactLettersArtTextCatalog === catalog) delete G.reactLettersArtTextCatalog;
+      if (G.reactLettersArtTextAction === action) delete G.reactLettersArtTextAction;
+    } });
   }
 
   /* ================= Table dialogs ================= */
@@ -918,8 +1084,10 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const remember = ui.check('Remember dime&nsions for new tables', false, null);
     const fEls = fit.querySelectorAll('.ck');
     const root = h('div', { id: 'react-wordx-insert-table-root' });
-    G.reactInsertTableState = () => ({ columns: last.c, rows: last.r });
-    G.reactInsertTableAction = (action, options) => {
+    const state = () => ({ columns: last.c, rows: last.r });
+    const draft = { columns: last.c, rows: last.r, fit: 'fixed', width: '', remember: false };
+    const draftSet = (key, value) => { draft[key] = value; };
+    const action = (action, options) => {
       if (action === 'autoFormat') {
         G.tableAutoFormat({ pick: (name, selectedLook) => {
           style = name; look = selectedLook;
@@ -937,13 +1105,16 @@ export function installWordxInsertDialogs(runtime: Window): void {
       L.tables.insert(options.rows, options.columns, insertOptions);
       if (style) L.tables.applyStyle(style, look);
     };
+    G.reactInsertTableState = state;
+    G.reactInsertTableDraft = draft;
+    G.reactInsertTableDraftSet = draftSet;
+    G.reactInsertTableAction = action;
     ui.dialog({
       title: 'Insert Table', width: 330, focus: direct ? root : cols.input,
       body: direct ? root : h('div', { class: 'col' }, ui.group('Table size', G.f('Number of &columns:', cols, 'wide'), G.f('Number of &rows:', rows, 'wide')), ui.group('AutoFit behavior', G.row(fEls[0], cw), fEls[1], fEls[2]), G.row(styleNote, ui.button('&AutoFormat...', () => G.tableAutoFormat({ pick: (s, lk) => { style = s; look = lk; styleNote.textContent = L.t('Table style: {0}', s); } }), { class: 'btn small' })), remember),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         if (direct) {
-          const get = (selector, fallback) => root.querySelector(selector)?.value || fallback;
-          G.reactInsertTableAction('insert', { columns: +get('#react-wordx-table-columns', '5'), rows: +get('#react-wordx-table-rows', '2'), fit: root.querySelector('[data-table-fit]:checked')?.getAttribute('data-table-fit') || 'fixed', width: get('#react-wordx-table-width', ''), remember: !!root.querySelector('input[type=checkbox]')?.checked });
+          G.reactInsertTableAction('insert', { ...G.reactInsertTableDraft });
           return;
         }
         if (remember.input.checked) L.store.set('tableDims', { c: cols.get(), r: rows.get() });
@@ -953,7 +1124,12 @@ export function installWordxInsertDialogs(runtime: Window): void {
         if (style) { o.style = L.tables.styleId(style); o.look = look; }
         L.tables.insert(rows.get(), cols.get(), o);
         if (style) L.tables.applyStyle(style, look);
-      } }, { label: 'Cancel' }],
+      } }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactInsertTableState === state) delete G.reactInsertTableState;
+        if (G.reactInsertTableDraft === draft) delete G.reactInsertTableDraft;
+        if (G.reactInsertTableDraftSet === draftSet) delete G.reactInsertTableDraftSet;
+        if (G.reactInsertTableAction === action) delete G.reactInsertTableAction;
+      },
     });
   };
   G.insertCells = function () {
@@ -962,26 +1138,51 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const deleteItems = [['left', 'Shift cells left'], ['up', 'Shift cells up'], ['row', 'Delete entire row'], ['col', 'Delete entire column']];
     const r = direct ? null : G.radios('ic', [['right', 'Shift cells r&ight'], ['down', 'Shift cells &down'], ['row', 'Insert entire &row'], ['col', 'Insert entire &column']], 'down');
     const root = h('div', { id: 'react-wordx-cell-operation-root' });
-    G.reactCellDialogCatalog = (kind) => kind === 'delete' ? deleteItems : items;
+    const catalog = (kind) => kind === 'delete' ? deleteItems : items;
+    let draft = 'down';
+    const draftSet = (value) => { draft = value; G.reactCellDialogDraft = value; };
+    G.reactCellDialogCatalog = catalog;
     G.reactCellDialogKind = 'insert';
-    ui.dialog({ title: 'Insert Cells', width: 240, body: direct ? root : r, buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.insertCells(direct ? root.querySelector('[data-cell-operation]:checked')?.getAttribute('data-cell-operation') || 'down' : r.get()) }, { label: 'Cancel' }] });
+    G.reactCellDialogDraft = draft;
+    G.reactCellDialogDraftSet = draftSet;
+    ui.dialog({ title: 'Insert Cells', width: 240, body: direct ? root : r, buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.insertCells(direct ? draft || 'down' : r.get()) }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactCellDialogDraftSet !== draftSet) return;
+      delete G.reactCellDialogCatalog; delete G.reactCellDialogKind; delete G.reactCellDialogDraft; delete G.reactCellDialogDraftSet;
+    } });
   };
   G.deleteCells = function () {
     const direct = !!(window.VO && VO.reactDirectHost);
-    G.reactCellDialogCatalog = () => [['left', 'Shift cells left'], ['up', 'Shift cells up'], ['row', 'Delete entire row'], ['col', 'Delete entire column']];
+    const catalog = () => [['left', 'Shift cells left'], ['up', 'Shift cells up'], ['row', 'Delete entire row'], ['col', 'Delete entire column']];
     G.reactCellDialogKind = 'delete';
     const r = direct ? null : G.radios('dc', [['left', 'Shift cells &left'], ['up', 'Shift cells &up'], ['row', 'Delete entire &row'], ['col', 'Delete entire &column']], 'left');
     const root = h('div', { id: 'react-wordx-cell-operation-root' });
+    let draft = 'left';
+    const draftSet = (value) => { draft = value; G.reactCellDialogDraft = value; };
+    G.reactCellDialogCatalog = catalog;
     G.reactCellDialogKind = 'delete';
-    ui.dialog({ title: 'Delete Cells', width: 240, body: direct ? root : r, buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.deleteCells(direct ? root.querySelector('[data-cell-operation]:checked')?.getAttribute('data-cell-operation') || 'left' : r.get()) }, { label: 'Cancel' }] });
+    G.reactCellDialogDraft = draft;
+    G.reactCellDialogDraftSet = draftSet;
+    ui.dialog({ title: 'Delete Cells', width: 240, body: direct ? root : r, buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.deleteCells(direct ? draft || 'left' : r.get()) }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactCellDialogDraftSet !== draftSet) return;
+      delete G.reactCellDialogCatalog; delete G.reactCellDialogKind; delete G.reactCellDialogDraft; delete G.reactCellDialogDraftSet;
+    } });
   };
   G.splitCells = function () {
     const direct = !!(window.VO && VO.reactDirectHost);
     const c = G.num(2, { min: 1, max: 63, id: 'sc-c' }), r = G.num(1, { min: 1, max: 100, id: 'sc-r' });
     const merge = ui.check('&Merge cells before split', !!E.cellSel, null);
     const root = h('div', { id: 'react-wordx-split-cells-root' });
-    G.reactSplitCellsState = () => ({ columns: 2, rows: 1, merge: !!E.cellSel });
-    ui.dialog({ title: 'Split Cells', width: 260, focus: direct ? root : c.input, body: direct ? root : h('div', { class: 'col' }, G.f('Number of &columns:', c, 'wide'), G.f('Number of &rows:', r, 'wide'), merge), buttons: [{ label: 'OK', primary: true, onClick: () => L.tables.split(direct ? +(root.querySelector('#react-wordx-split-rows')?.value || 1) : r.get(), direct ? +(root.querySelector('#react-wordx-split-columns')?.value || 2) : c.get(), direct ? !!root.querySelector('input[type=checkbox]')?.checked : merge.input.checked) }, { label: 'Cancel' }] });
+    const state = () => ({ columns: 2, rows: 1, merge: !!E.cellSel });
+    const draft = { columns: 2, rows: 1, merge: !!E.cellSel };
+    const draftSet = (key, value) => { draft[key] = value; };
+    G.reactSplitCellsState = state;
+    G.reactSplitCellsDraft = draft;
+    G.reactSplitCellsDraftSet = draftSet;
+    ui.dialog({ title: 'Split Cells', width: 260, focus: direct ? root : c.input, body: direct ? root : h('div', { class: 'col' }, G.f('Number of &columns:', c, 'wide'), G.f('Number of &rows:', r, 'wide'), merge), buttons: [{ label: 'OK', primary: true, onClick: () => { L.tables.split(direct ? draft.rows : r.get(), direct ? draft.columns : c.get(), direct ? draft.merge : merge.input.checked); } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactSplitCellsState === state) delete G.reactSplitCellsState;
+      if (G.reactSplitCellsDraft === draft) delete G.reactSplitCellsDraft;
+      if (G.reactSplitCellsDraftSet === draftSet) delete G.reactSplitCellsDraftSet;
+    } });
   };
   G.tableAutoFormat = function (opts) {
     opts = opts || {};
@@ -1013,14 +1214,17 @@ export function installWordxInsertDialogs(runtime: Window): void {
           return { text: v, style: css.join(';') };
       }));
     }
-    G.reactTableAutoFormatCatalog = () => ({ names: names.slice(), selected: reactName, look: { ...reactLook } });
-    G.reactTableAutoFormatPreview = (name, selectedLook) => previewModel(name || reactName, selectedLook || reactLook);
-    G.reactTableAutoFormatAction = (action, next) => {
+    const catalog = () => ({ names: names.slice(), selected: reactName, look: { ...reactLook } });
+    const preview = (name, selectedLook) => previewModel(name || reactName, selectedLook || reactLook);
+    const action = (action, next) => {
       if (action === 'change' && next) { reactName = next.selected; reactLook = { ...next.look }; return; }
       if (action !== 'apply') return;
       if (opts.pick) { opts.pick(reactName, Object.assign({}, reactLook, { noVBand: true })); return; }
       L.tables.applyStyle(reactName, Object.assign({}, reactLook, { noVBand: !/Columns/.test(reactName) }), { clearDirect: true });
     };
+    G.reactTableAutoFormatCatalog = catalog;
+    G.reactTableAutoFormatPreview = preview;
+    G.reactTableAutoFormatAction = action;
     function draw() {
       L.clear(pv);
       const t = h('table', { style: 'border-collapse:collapse;font:10px Arial,Arimo,sans-serif;width:200px' });
@@ -1035,7 +1239,11 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const reactRoot = h('div', { id: 'react-wordx-table-autoformat-root' });
     ui.dialog({
       title: 'Table AutoFormat', width: 480, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { text: 'Category: All table styles' }), G.row(h('div', { class: 'col', style: 'width:200px' }, h('label', { text: 'Table styles:' }), lb), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)), ui.group('Apply special formats to', G.row(...checks))),
-      buttons: [{ label: '&Apply', primary: true, onClick: () => { if (direct) { G.reactTableAutoFormatAction('apply'); return; } if (opts.pick) { opts.pick(lb.get(), Object.assign({}, look, { noVBand: true })); return; } L.tables.applyStyle(lb.get(), Object.assign({}, look, { noVBand: !/Columns/.test(lb.get()) }), { clearDirect: true }); } }, { label: 'Cancel' }],
+      buttons: [{ label: '&Apply', primary: true, onClick: () => { if (direct) { G.reactTableAutoFormatAction('apply'); return; } if (opts.pick) { opts.pick(lb.get(), Object.assign({}, look, { noVBand: true })); return; } L.tables.applyStyle(lb.get(), Object.assign({}, look, { noVBand: !/Columns/.test(lb.get()) }), { clearDirect: true }); } }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactTableAutoFormatCatalog === catalog) delete G.reactTableAutoFormatCatalog;
+        if (G.reactTableAutoFormatPreview === preview) delete G.reactTableAutoFormatPreview;
+        if (G.reactTableAutoFormatAction === action) delete G.reactTableAutoFormatAction;
+      },
     });
   };
   G.tableProps = function (tab) {
@@ -1063,11 +1271,11 @@ export function installWordxInsertDialogs(runtime: Window): void {
         columnLabel: rg.c1 > rg.c0 ? L.t('Columns {0}-{1}:', rg.c0 + 1, rg.c1 + 1) : L.t('Column {0}:', rg.c0 + 1),
       };
       const root = h('div', { id: 'react-wordx-table-properties-root' });
-      G.reactTablePropsCatalog = () => ({ ...state, margins: { ...state.margins }, cellMargins: { ...state.cellMargins } });
-      G.reactTablePropsAction = (action, value) => {
-        if (action === 'change' && value) { state = { ...state, ...value, margins: { ...state.margins, ...(value.margins || {}) }, cellMargins: { ...state.cellMargins, ...(value.cellMargins || {}) } }; return G.reactTablePropsCatalog(); }
-        if (action === 'borders') { G.borders(); return G.reactTablePropsCatalog(); }
-        if (action !== 'apply') return G.reactTablePropsCatalog();
+      const catalog = () => ({ ...state, margins: { ...state.margins }, cellMargins: { ...state.cellMargins } });
+      const action = (action, value) => {
+        if (action === 'change' && value) { state = { ...state, ...value, margins: { ...state.margins, ...(value.margins || {}) }, cellMargins: { ...state.cellMargins, ...(value.cellMargins || {}) } }; return catalog(); }
+        if (action === 'borders') { G.borders(); return catalog(); }
+        if (action !== 'apply') return catalog();
         E.edit('Table Properties', () => {
           D.touchTbl(t);
           const tpp = t.tblPr;
@@ -1105,7 +1313,12 @@ export function installWordxInsertDialogs(runtime: Window): void {
           return E.sel;
         });
       };
-      ui.dialog({ title: 'Table Properties', width: 430, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => G.reactTablePropsAction('apply') }, { label: 'Cancel' }] });
+      G.reactTablePropsCatalog = catalog;
+      G.reactTablePropsAction = action;
+      ui.dialog({ title: 'Table Properties', width: 430, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => G.reactTablePropsAction('apply') }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactTablePropsCatalog === catalog) delete G.reactTablePropsCatalog;
+        if (G.reactTablePropsAction === action) delete G.reactTablePropsAction;
+      } });
       return;
     }
     /* Table tab */
@@ -1195,14 +1408,16 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const fields = inTbl ? ci.tbl.grid.map((_, i) => ['' + i, L.t('Column {0}', i + 1)]) : [['0', L.t('Paragraphs')]].concat([1, 2, 3, 4, 5].map((i) => ['' + i, L.t('Field {0}', i)]));
     const defaults = { inTable: inTbl, fields, keys: [{ by: fields[0][0], type: 'text', dir: 'asc' }, { by: '', type: 'text', dir: 'asc' }, { by: '', type: 'text', dir: 'asc' }], header: inTbl && ci.tbl.rows[0].trPr.header ? 'yes' : 'no', separator: '\t', caseSensitive: false };
     let reactState = defaults;
-    G.reactSortCatalog = () => ({ ...reactState, fields: reactState.fields.map((field) => field.slice()), keys: reactState.keys.map((key) => ({ ...key })) });
-    G.reactSortAction = (action, next) => {
+    const catalog = () => ({ ...reactState, fields: reactState.fields.map((field) => field.slice()), keys: reactState.keys.map((key) => ({ ...key })) });
+    const action = (action, next) => {
       if (action === 'change' && next) { reactState = next; return; }
       if (action !== 'apply') return;
       const keys = reactState.keys.filter((key) => key.by !== '').map((key) => ({ col: +key.by, field: +key.by, type: key.type, desc: key.dir === 'desc' }));
       if (inTbl) L.tables.sortTable(keys, { header: reactState.header === 'yes', caseSensitive: reactState.caseSensitive });
       else L.tables.sortParagraphs(keys, { header: reactState.header === 'yes', sep: reactState.separator === 'other' ? ';' : reactState.separator, caseSensitive: reactState.caseSensitive });
     };
+    G.reactSortCatalog = catalog;
+    G.reactSortAction = action;
     const mk = (n, def) => ({ by: ui.select(n ? [['', '(none)']].concat(fields) : fields, def, null, { id: 'so-b' + n }), type: ui.select([['text', 'Text'], ['number', 'Number'], ['date', 'Date']], 'text', null, { id: 'so-t' + n }), dir: G.radios('so-d' + n, [['asc', '&Ascending'], ['desc', '&Descending']], 'asc') });
     const k1 = mk(0, fields[0][0]), k2 = mk(1, ''), k3 = mk(2, '');
     const hdr = G.radios('so-h', [['yes', 'Header &row'], ['no', 'No header ro&w']], inTbl && ci.tbl.rows[0].trPr.header ? 'yes' : 'no');
@@ -1218,7 +1433,10 @@ export function installWordxInsertDialogs(runtime: Window): void {
         const keys = [k1, k2, k3].filter((k) => k.by.value !== '').map((k) => ({ col: +k.by.value, field: +k.by.value, type: k.type.value, desc: k.dir.get() === 'desc' }));
         if (inTbl) L.tables.sortTable(keys, { header: hdr.get() === 'yes', caseSensitive: caseS.input.checked });
         else L.tables.sortParagraphs(keys, { header: hdr.get() === 'yes', sep: sepSel.value === 'other' ? ';' : sepSel.value, caseSensitive: caseS.input.checked });
-      } }, { label: 'Cancel' }],
+      } }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactSortCatalog === catalog) delete G.reactSortCatalog;
+        if (G.reactSortAction === action) delete G.reactSortAction;
+      },
     });
   };
   G.formula = function () {
@@ -1232,17 +1450,26 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const fn = direct ? null : ui.select([['', L.t('Paste function')]].concat(functions.map((x) => [x, x])), '', (v) => { if (!v) return; inp.value += v + '()'; inp.focus(); inp.setSelectionRange(inp.value.length - 1, inp.value.length - 1); fn.value = ''; }, { id: 'fo-fn', translate: 'no' });
     const bms = direct ? null : ui.select([['', L.t('Paste bookmark')]].concat(Array.from(F().bookmarks().keys()).filter((n) => !n.startsWith('_')).map((n) => [n, n])), '', (v) => { if (v) { inp.value += v; bms.value = ''; } }, { id: 'fo-bm', translate: 'no' });
     const root = h('div', { id: 'react-wordx-formula-root' });
-    G.reactFormulaCatalog = () => ({ guess, functions, bookmarks: Array.from(F().bookmarks().keys()).filter((n) => !n.startsWith('_')), formats: ['#,##0', '#,##0.00', '$#,##0.00;($#,##0.00)', '0', '0%', '0.00', '0.00%'] });
-    G.reactFormulaAction = (formula, numberFormat) => {
+    let reactDraft = { formula: guess, format: '' };
+    const draftSet = (key, value) => { reactDraft = { ...reactDraft, [key]: value }; };
+    const catalog = () => ({ guess, functions, bookmarks: Array.from(F().bookmarks().keys()).filter((n) => !n.startsWith('_')), formats: ['#,##0', '#,##0.00', '$#,##0.00;($#,##0.00)', '0', '0%', '0.00', '0.00%'] });
+    const action = (formula, numberFormat) => {
       let c = formula.trim();
       if (!c.startsWith('=')) c = '=' + c;
       if (numberFormat.trim()) c += ` \\# "${numberFormat.trim()}"`;
       A().insertFieldNow(c, L.N('Formula'));
     };
+    G.reactFormulaDraftSet = draftSet;
+    G.reactFormulaCatalog = catalog;
+    G.reactFormulaAction = action;
     ui.dialog({ title: 'Formula', width: 340, focus: direct ? root : inp, body: direct ? root : h('div', { class: 'col' }, h('label', { for: 'fo-f', html: ui.ampHTML('&Formula:') }), inp, dl, h('label', { for: 'fo-fmt', html: ui.ampHTML('&Number format:') }), fmt, G.row(fn, bms)), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      if (direct) G.reactFormulaAction(root.querySelector('#react-wordx-formula-input')?.value || '', root.querySelector('#react-wordx-formula-format')?.value || '');
+      if (direct) G.reactFormulaAction(reactDraft.formula, reactDraft.format);
       else G.reactFormulaAction(inp.value, fmt.value);
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactFormulaDraftSet === draftSet) delete G.reactFormulaDraftSet;
+      if (G.reactFormulaCatalog === catalog) delete G.reactFormulaCatalog;
+      if (G.reactFormulaAction === action) delete G.reactFormulaAction;
+    } });
   };
   G.textToTable = function () {
     const paras = E.selectedParas();
@@ -1255,8 +1482,13 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const rowsN = h('span');
     const fit = G.radios('tt-fit', [['fixed', 'Fi&xed column width'], ['contents', 'Auto&Fit to contents'], ['window', 'AutoFit to win&dow']], 'fixed');
     const root = h('div', { id: 'react-wordx-text-to-table-root' });
-    G.reactTextToTableState = () => ({ initialSeparator, columns: direct ? initialColumns : cols.get(), paragraphs: paras.map((p) => ({ text: D.plainText(p), tabs: p.runs.filter((it) => it.t === 'tab').length })) });
-    G.reactTextToTableAction = (options) => L.tables.textToTable(options);
+    let reactDraft = { sep: initialSeparator, cols: initialColumns, autofit: 'fixed' };
+    const draftSet = (options) => { reactDraft = { ...options }; };
+    const state = () => ({ initialSeparator, columns: direct ? initialColumns : cols.get(), paragraphs: paras.map((p) => ({ text: D.plainText(p), tabs: p.runs.filter((it) => it.t === 'tab').length })) });
+    const action = (options) => L.tables.textToTable(options);
+    G.reactTextToTableDraftSet = draftSet;
+    G.reactTextToTableState = state;
+    G.reactTextToTableAction = action;
     const upd = (fromCols) => {
       const sep = sepR.get() === 'other' ? other.value || '-' : sepR.get();
       if (!fromCols) cols.set(sep === 'para' ? 1 : Math.max(...paras.map((p) => (sep === '\t' ? p.runs.filter((it) => it.t === 'tab').length : (D.plainText(p).split(sep).length - 1)) + 1)));
@@ -1266,23 +1498,30 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const sEls = sepR?.querySelectorAll('.ck');
     ui.dialog({ title: 'Convert Text to Table', width: 330, body: direct ? root : h('div', { class: 'col' }, ui.group('Table size', G.f('Number of &columns:', cols, 'wide'), G.f('Number of rows:', rowsN, 'wide')), ui.group('AutoFit behavior', fit), ui.group('Separate text at', G.row(sEls[0], sEls[1]), G.row(sEls[2], sEls[3], other))), buttons: [{ label: 'OK', primary: true, onClick: () => {
       if (direct) {
-        const mode = root.querySelector('[data-text-separator]:checked')?.getAttribute('data-text-separator') || initialSeparator;
-        const sep = mode === 'other' ? root.querySelector('#react-wordx-text-separator')?.value || '-' : mode === 'paragraphs' ? 'para' : mode === 'tabs' ? '\t' : ',';
-        G.reactTextToTableAction({ sep, cols: +(root.querySelector('#react-wordx-text-table-columns')?.value || 1), autofit: root.querySelector('[data-text-fit]:checked')?.getAttribute('data-text-fit') || 'fixed' });
+        G.reactTextToTableAction(reactDraft);
       } else L.tables.textToTable({ sep: sepR.get() === 'other' ? other.value || '-' : sepR.get(), cols: cols.get(), autofit: fit.get() });
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactTextToTableDraftSet === draftSet) delete G.reactTextToTableDraftSet;
+      if (G.reactTextToTableState === state) delete G.reactTextToTableState;
+      if (G.reactTextToTableAction === action) delete G.reactTextToTableAction;
+    } });
   };
   G.tableToText = function () {
     const direct = !!(window.VO && VO.reactDirectHost);
     const r = G.radios('tx-s', [['para', '&Paragraph marks'], ['\t', '&Tabs'], [',', '&Commas'], ['other', '&Other:']], '\t');
     const other = h('input', { type: 'text', maxlength: 1, value: '-', style: 'width:30px' });
     const root = h('div', { id: 'react-wordx-table-to-text-root' });
+    let reactDraft = { separator: '\t', custom: '-' };
+    const draftSet = (key, value) => { reactDraft = { ...reactDraft, [key]: value }; };
+    G.reactTableToTextDraftSet = draftSet;
     ui.dialog({ title: 'Convert Table to Text', width: 280, body: direct ? root : ui.group('Separate text with', r, other), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      const mode = direct ? root.querySelector('[data-table-text-separator]:checked')?.getAttribute('data-table-text-separator') || 'tabs' : r.get();
-      const sep = direct ? mode === 'para' ? 'para' : mode === 'tabs' ? '\t' : mode === 'commas' ? ',' : 'other' : mode;
-      const custom = direct ? root.querySelector('#react-wordx-table-text-separator')?.value || '-' : other.value || '-';
+      const mode = direct ? reactDraft.separator : r.get();
+      const sep = mode;
+      const custom = direct ? reactDraft.custom || '-' : other.value || '-';
       L.tables.tableToText(sep === 'other' ? custom : sep);
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactTableToTextDraftSet === draftSet) delete G.reactTableToTextDraftSet;
+    } });
   };
 })();
 }

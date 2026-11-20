@@ -1,4 +1,4 @@
-/* Load Ledger in Chromium, report console errors, take a screenshot. Usage: node smoke.js [out.png] */
+/* Load Excelx in Chromium, report console errors, take a screenshot. Usage: node smoke.js [out.png] */
 const { chromium } = require('playwright');
 (async () => {
   const browser = await chromium.launch();

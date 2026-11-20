@@ -41,6 +41,8 @@ Open https://vibeoffice.work/pptx/ (to run it locally, see [testing.md](testing.
 | `js/templates.js` | Content templates (Project Status Report, Team Meeting, Lesson, Event Announcement) for the Start Center and File ▸ New |
 | `tests/lectern/` | The real-file test harness described below |
 
+In the React workspace, `pptx/src/selection-overlay.tsx` owns slide selection frames, resize/rotate/crop/adjust handles, and table-cell selection; `pptx/src/rulers.tsx` owns both ruler canvases and redraws them when the engine publishes updated geometry; and `pptx/src/grid-layer.tsx` owns the current slide's background paint, grid texture, and guide nodes. The slide rail, Slide Sorter, Slide Master, Notes Page, design-template, slide-layout, IntelliArt, and LettersArt gallery previews reconcile renderer artwork as React element trees instead of injecting serialized HTML; React pane, task-pane, diagram-gallery, and slideshow-control icons/previews follow the same path, and image failures retain their placeholder labels. The engine still supplies preview artwork, slide fill styles, geometry, and document-editing operations; the classic standalone editor keeps its legacy renderers.
+
 ## Opening
 
 File ▸ Open, drag a file onto the window, or *Open a presentation* in the Getting Started pane. `.pptx`, `.pptm`, `.ppsx`, `.potx` and their macro variants open; Strict Open XML files open too. Damaged packages are repaired where possible, and legacy binary `.ppt` files get a clear message.

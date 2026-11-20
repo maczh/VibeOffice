@@ -1,4 +1,4 @@
-// Quire's page count for every Word-saved .docx of a corpus, next to the count Word stored (docProps/app.xml <Pages>,
+// Wordx's page count for every Word-saved .docx of a corpus, next to the count Word stored (docProps/app.xml <Pages>,
 // files whose Application is Microsoft Office Word): run it before and after a layout change and compare.
 //
 //   node tools/quire-pages.mjs [SOURCE] OUT.jsonl [--jobs 4] [--list files.txt] [--limit N]
@@ -27,8 +27,8 @@ if (args[0] === '--compare') {
   const away = moved.filter((f) => Math.abs(b.get(f).quire - b.get(f).word) > Math.abs(a.get(f).quire - a.get(f).word));
   const toward = moved.filter((f) => !away.includes(f));
   console.log(`${both.length} files counted both times. Word's count: ${exact(a)} before, ${exact(b)} after. ${moved.length} changed: ${toward.length} toward Word's count or level, ${away.length} away from it.`);
-  for (const f of away) console.log(`  away: ${f}  Word ${b.get(f).word}, Quire ${a.get(f).quire} -> ${b.get(f).quire}`);
-  if (args.includes('--all')) for (const f of toward) console.log(`  toward: ${f}  Word ${b.get(f).word}, Quire ${a.get(f).quire} -> ${b.get(f).quire}`);
+  for (const f of away) console.log(`  away: ${f}  Word ${b.get(f).word}, Wordx ${a.get(f).quire} -> ${b.get(f).quire}`);
+  if (args.includes('--all')) for (const f of toward) console.log(`  toward: ${f}  Word ${b.get(f).word}, Wordx ${a.get(f).quire} -> ${b.get(f).quire}`);
   process.exit(0);
 }
 

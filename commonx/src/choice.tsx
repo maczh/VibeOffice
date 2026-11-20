@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AccessLabel } from './access-label.js';
 
 interface ChoiceOptions {
   id: string;
@@ -24,7 +25,7 @@ function ChoiceControl({ request }: { request: ChoiceRequest }) {
   };
   return createPortal(<label className="ck" htmlFor={options.id}>
     <input id={options.id} type={options.type} name={options.name} defaultChecked={options.checked} onChange={(event) => changed(event.currentTarget)} />
-    <span dangerouslySetInnerHTML={{ __html: html }} />
+    <span><AccessLabel html={html} /></span>
   </label>, target, target.dataset.reactChoiceId || options.id);
 }
 

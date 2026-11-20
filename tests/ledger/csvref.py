@@ -1,5 +1,5 @@
-"""Reference check for Ledger's CSV parser: parse each file with Python's csv module using the delimiter and
-encoding Ledger chose, and compare the md5 of the rows with Ledger's digest.
+"""Reference check for Excelx's CSV parser: parse each file with Python's csv module using the delimiter and
+encoding Excelx chose, and compare the md5 of the rows with Excelx's digest.
 Usage: python3 -I csvref.py results.jsonl corpus_dir"""
 import csv, hashlib, io, json, sys, os
 

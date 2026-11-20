@@ -1,4 +1,4 @@
-// The styles part keeps what Quire doesn't model: the latent styles, each style's unhideWhenUsed, locked and rsid, a table
+// The styles part keeps what Wordx doesn't model: the latent styles, each style's unhideWhenUsed, locked and rsid, a table
 // style's row properties. A built-in style is written once something uses it or it is changed, with its latent settings,
 // as Word does; the others aren't added. Found on the Fluent Ribbon walkthrough (Heading 2–6 lost unhideWhenUsed).
 // node --test tests/quire/styles-part.test.mjs

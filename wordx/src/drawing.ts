@@ -566,7 +566,11 @@ export function installWordxDrawing(runtime: Window): void {
   DR.reactLayoutDone = () => { if (L.ed.objSel && L.ed.objSel.float) reselect(); else if (handles) DR.clearSelection(); };
   DR.reactObjectSelection = () => { const os = L.ed.objSel; if (!os || !os.float) DR.clearSelection(); };
   if (!window.__VIBE_OFFICE_DIRECT_HOST__) {
-    L.bus.on('layout-done', () => setTimeout(DR.reactLayoutDone, 0));
+    L.bus.on('layout-done', () => {
+      let removeCleanup = () => {};
+      const timer = setTimeout(() => { removeCleanup(); DR.reactLayoutDone(); }, 0);
+      removeCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(() => clearTimeout(timer)) : () => {};
+    });
     L.bus.on('objsel', DR.reactObjectSelection);
   }
   /** convert the float's position so that it moves by (dx,dy) points */

@@ -44,11 +44,7 @@ function HostFixture() {
     return createRemoteFileCallbacks(provider, async () => currentFile(), async (name) => ({ id: file.id, name, revision: currentFile().revision }));
   }, []);
   const engineWindow = window as Window & { VO?: { reactDirectHost?: { open?(): Promise<void>; save?(name: string, blob: Blob): Promise<string> } } };
-  const setLook = (look: typeof office.look) => {
-    document.documentElement.dataset.look = look;
-    document.documentElement.dataset.layout = look === 'paper2016' ? 'ribbon' : 'bars';
-    window.dispatchEvent(new Event('vo-look'));
-  };
+  const setLook = (look: typeof office.look) => office.setLook(look);
   const renderErrorCase = new URLSearchParams(window.location.search).has('error-boundary');
   const failingLayer = renderErrorCase ? () => <FailingHostLayer /> : undefined;
 

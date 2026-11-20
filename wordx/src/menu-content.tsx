@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { SvgArtwork } from '@vibeoffice/core';
 
 interface WordxMenuRuntime {
   app?: {
@@ -158,14 +159,13 @@ function HighlightPalette({ L }: { L: WordxMenuRuntime }) {
 function BorderMenu({ L }: { L: WordxMenuRuntime }) {
   const items = L.app?.reactBorderMenuCatalog?.() || [];
   return <div className="border-grid" id="react-wordx-border-menu">{items.map(({ kind, icon, label }) => <button key={kind} type="button"
-    data-tip={label} aria-label={label} dangerouslySetInnerHTML={{ __html: icon }}
-    onClick={() => L.app?.reactBorderMenuAction?.(kind)} />)}</div>;
+    data-tip={label} aria-label={label} onClick={() => L.app?.reactBorderMenuAction?.(kind)}><SvgArtwork markup={icon} owner="wordx-border" /></button>)}</div>;
 }
 
 function BorderStyleMenu({ L }: { L: WordxMenuRuntime }) {
   const items = L.app?.reactBorderStyleCatalog?.() || [];
   return <div className="style-list" id="react-wordx-border-style-menu">{items.map(({ kind, label, svg }) => <button key={kind} type="button" aria-label={label} title={label}
-    dangerouslySetInnerHTML={{ __html: svg }} onClick={() => L.app?.reactBorderStyleAction?.(kind)} />)}
+    onClick={() => L.app?.reactBorderStyleAction?.(kind)}><SvgArtwork markup={svg} owner="wordx-border-style" /></button>)}
     <button type="button" onClick={() => L.app?.reactBorderStyleAction?.('nil')}>{L.t?.('No Border') || 'No Border'}</button>
   </div>;
 }
@@ -173,13 +173,13 @@ function BorderStyleMenu({ L }: { L: WordxMenuRuntime }) {
 function BorderWeightMenu({ L }: { L: WordxMenuRuntime }) {
   const items = L.app?.reactBorderWeightCatalog?.() || [];
   return <div className="style-list" id="react-wordx-border-weight-menu">{items.map(({ weight, label, svg }) => <button key={weight} type="button" aria-label={label} title={label} onClick={() => L.app?.reactBorderWeightAction?.(weight)}>
-    <span dangerouslySetInnerHTML={{ __html: svg }} /><span>{label}</span></button>)}</div>;
+    <span><SvgArtwork markup={svg} owner="wordx-border-weight" /></span><span>{label}</span></button>)}</div>;
 }
 
 function ObjectWeightMenu({ L }: { L: WordxMenuRuntime }) {
   const items = L.app?.reactObjectWeightCatalog?.() || [];
   return <div className="style-list" id="react-wordx-object-weight-menu">{items.map(({ weight, label, svg }) => <button key={weight} type="button" aria-label={label} title={label}
-    onClick={() => L.app?.reactObjectWeightAction?.(weight)}><span dangerouslySetInnerHTML={{ __html: svg }} /><span>{label}</span></button>)}
+    onClick={() => L.app?.reactObjectWeightAction?.(weight)}><span><SvgArtwork markup={svg} owner="wordx-object-weight" /></span><span>{label}</span></button>)}
     <button type="button" onClick={() => L.app?.reactObjectWeightAction?.('more')}>{L.t?.('More Lines...') || 'More Lines...'}</button>
   </div>;
 }
@@ -187,13 +187,13 @@ function ObjectWeightMenu({ L }: { L: WordxMenuRuntime }) {
 function ObjectDashMenu({ L }: { L: WordxMenuRuntime }) {
   const items = L.app?.reactObjectDashCatalog?.() || [];
   return <div className="style-list" id="react-wordx-object-dash-menu">{items.map(({ kind, label, svg }) => <button key={kind} type="button" aria-label={label} title={label}
-    onClick={() => L.app?.reactObjectDashAction?.(kind)}><span dangerouslySetInnerHTML={{ __html: svg }} /></button>)}</div>;
+    onClick={() => L.app?.reactObjectDashAction?.(kind)}><span><SvgArtwork markup={svg} owner="wordx-object-dash" /></span></button>)}</div>;
 }
 
 function ObjectArrowMenu({ L }: { L: WordxMenuRuntime }) {
   const items = L.app?.reactObjectArrowCatalog?.() || [];
   return <div className="style-list" id="react-wordx-object-arrow-menu">{items.map(({ index, label, svg }) => <button key={index} type="button" aria-label={label} title={label}
-    onClick={() => L.app?.reactObjectArrowAction?.(index)}><span dangerouslySetInnerHTML={{ __html: svg }} /></button>)}</div>;
+    onClick={() => L.app?.reactObjectArrowAction?.(index)}><span><SvgArtwork markup={svg} owner="wordx-object-arrow" /></span></button>)}</div>;
 }
 
 function BackgroundPalette({ L }: { L: WordxMenuRuntime }) {

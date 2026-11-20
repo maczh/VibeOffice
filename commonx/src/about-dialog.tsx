@@ -1,5 +1,6 @@
 import { OfficeDialog } from './dialog.js';
 import { useVibeOffice } from './react-bridge.js';
+import { SvgArtwork } from './svg-artwork.js';
 
 export interface AboutRequest {
   name: string;
@@ -31,7 +32,7 @@ export function AboutDialog({ request, onClose }: AboutDialogProps) {
   return <OfficeDialog title={translate('About {0}', request.name)} className="vibeoffice-about-dialog" onRequestClose={finish}>
     <div className="col about">
       <div className="about-head">
-        {request.icon && <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: request.icon }} />}
+        {request.icon && <span aria-hidden="true"><SvgArtwork markup={request.icon} owner="about-icon" /></span>}
         <div><div className="about-name">{request.name}</div><div>{translate('Version {0}', request.version)}</div></div>
       </div>
       {request.text.map((paragraph) => <p key={paragraph}>{translate(paragraph)}</p>)}

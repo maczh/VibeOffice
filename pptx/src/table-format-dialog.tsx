@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useRef, useState } from 'react';
+import { PptxPreviewArtwork } from './slides-pane.js';
 import './table-format-dialog.css';
 
 type BorderKind = 'all' | 'out' | 'in' | 'none' | 't' | 'b' | 'l' | 'r';
@@ -67,7 +68,7 @@ export function PptxTableFormatDialog() {
       <label>{t('&Width:').replace('&', '')}<select aria-label={t('Border width')} value={catalog.width} onChange={(event) => runtime()?.app?.reactTableFormatSet?.('width', Number(event.currentTarget.value))}>{catalog.widths.map((width) => <option key={width} value={width}>{t('{0} pt', width)}</option>)}</select></label>
       <span>{t('Click a button to apply borders:')}</span>
       <div className="pptx-table-format__borders" role="group" aria-label={t('Apply borders')}>
-        {catalog.borderChoices.map((choice) => <button key={choice.kind} type="button" className="btn small" aria-label={choice.label} title={choice.label} dangerouslySetInnerHTML={{ __html: runtime()?.icons?.get(choice.icon) || '' }} onClick={() => runtime()?.app?.reactTableFormatBorder?.(choice.kind)} />)}
+        {catalog.borderChoices.map((choice) => <button key={choice.kind} type="button" className="btn small" aria-label={choice.label} title={choice.label} onClick={() => runtime()?.app?.reactTableFormatBorder?.(choice.kind)}><PptxPreviewArtwork markup={runtime()?.icons?.get(choice.icon) || ''} /></button>)}
       </div>
     </section>
     <section id={panelId('fill')} aria-labelledby={tabId('fill')} className="pptx-table-format__body" role="tabpanel" hidden={tab !== 'fill'}>

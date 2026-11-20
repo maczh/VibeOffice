@@ -2,6 +2,7 @@ import { Children, createElement, useEffect, useLayoutEffect, useRef, useState, 
 import { createPortal } from 'react-dom';
 import { DraftRecoveryPane } from '@vibeoffice/core';
 import type { PptxRibbonSpec, RibbonContext, RibbonItem } from './ribbon-spec.js';
+import { PptxPreviewArtwork } from './slides-pane.js';
 
 interface TaskContentRuntime {
   app?: { newPresentation(): void; loadSample(): void; autoContent(): void; insertClipArt(item: ClipArtItem): void; applyColorScheme(scheme: ColorScheme, all: boolean): void; editColorScheme(): void; opts?: { autoPreview?: boolean; layoutPaneOnNew?: boolean }; saveOpts?(): void; applyLayoutToSel?(key: string, reapply?: boolean): void; insertSlide?(key: string): void; clipHistory?: Array<{ kind: string; label: string }>; pasteItem?(item: unknown): void };
@@ -68,7 +69,7 @@ export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
   if (!mount || !L || !task || (!toolContext && !['getting-started', 'new', 'help', 'clipart', 'design', 'colors', 'animSchemes', 'layout', 'transition', 'customAnim', 'clipboard', 'diagramText', 'recovery'].includes(current || ''))) return null;
   const goToSearch = (query: string) => { if (L.panes) L.panes.helpQuery = query; task.show('help'); };
   const link = (icon: string, label: string, run: () => void) => <button className="tp-link" type="button" onClick={run}>
-    {icon && <span dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} />}<span>{translate(L, label)}</span>
+    {icon && <span><PptxPreviewArtwork markup={L.icons?.get(icon) || ''} /></span>}<span>{translate(L, label)}</span>
   </button>;
   const section = (title: string, ...children: ReactNode[]) => createElement('section', { className: 'tp-sec' }, createElement('div', { className: 'tp-h' }, translate(L, title)), ...Children.toArray(children));
   const appIcon = L.icons?.app?.(32) || '';
@@ -90,7 +91,7 @@ export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
     {section('Templates', link('slideshow', 'Sample: café expansion plan', () => L.app?.loadSample()))}
   </div>, mount);
   return createPortal(<div className="tp-body">
-    <div className="tp-row"><span dangerouslySetInnerHTML={{ __html: appIcon }} /><b translate="no" style={{ color: 'var(--pane-ink)' }}>{editionName}</b></div>
+    <div className="tp-row"><span><PptxPreviewArtwork markup={appIcon} /></span><b translate="no" style={{ color: 'var(--pane-ink)' }}>{editionName}</b></div>
     {section('Search for:', <div className="tp-row">
       <input id="gs-search" type="text" placeholder={translate(L, 'Search help')} style={{ flex: 1, minWidth: 0 }} onKeyDown={(event) => { if (event.key === 'Enter') goToSearch(event.currentTarget.value); }} />
       <button className="btn small" type="button" onClick={() => goToSearch(host.querySelector<HTMLInputElement>('#gs-search')?.value || '')}>{translate(L, 'Go')}</button>
@@ -122,7 +123,7 @@ function DesignPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLElement })
   const catalog = L.panes?.reactDesignCatalog?.() || { used: [], available: [] };
   const showMenu = (key: string, event: MouseEvent) => { event.preventDefault(); L.panes?.reactDesignMenu?.(key, event.clientX, event.clientY); };
   const card = (design: DesignChoice, used: boolean) => <button className={`dsn-it${(used ? design.id === catalog.currentId : design.name === catalog.currentName) ? ' on' : ''}`} type="button" data-tip={design.name} data-design-key={design.key || design.id} aria-label={design.name} key={`${used ? 'used' : 'available'}-${design.id || design.key}`} onClick={() => used ? design.id && L.panes?.reactApplyUsedDesign?.(design.id) : design.key && L.panes?.reactApplyDesign?.(design.key, true)} onContextMenu={(event) => !used && design.key && showMenu(design.key, event)}>
-    <div className="dsn-preview" aria-hidden="true" dangerouslySetInnerHTML={{ __html: design.preview }} /><span className="dsn-name">{design.name}</span>
+    <div className="dsn-preview" aria-hidden="true"><PptxPreviewArtwork markup={design.preview} /></div><span className="dsn-name">{design.name}</span>
     {!used && <span className="dsn-dd" role="button" tabIndex={0} aria-label={translate(L, 'Apply design options')} onClick={(event) => { event.stopPropagation(); design.key && showMenu(design.key, event); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); const rect=event.currentTarget.getBoundingClientRect(); design.key && L.panes?.reactDesignMenu?.(design.key, rect.left, rect.bottom); } }}><span className="dd-arrow" style={{ margin: 0 }} /></span>}
   </button>;
   return createPortal(<div className="tp-body">
@@ -212,7 +213,7 @@ function SlideLayoutPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLEleme
   return createPortal(<div className="tp-body">
     <div className="tp-note">{translate(L, 'Apply slide layout:')}</div>
     {catalog.groups.map((group) => <section className="tp-sec" key={group.name}><div className="tp-h">{translate(L, group.name)}</div><div className="lay-grid">
-      {group.layouts.map((layout) => <button className={`lay-it${layout.key === catalog.currentKey ? ' on' : ''}`} type="button" data-key={layout.key} data-tip={layout.name} aria-label={translate(L, layout.name)} aria-current={layout.key === catalog.currentKey ? 'true' : undefined} key={layout.key} dangerouslySetInnerHTML={{ __html: layout.preview }} onClick={() => L.panes?.reactApplyLayout?.(layout.key)} onContextMenu={(event) => showMenu(layout.key, event)} />)}
+      {group.layouts.map((layout) => <button className={`lay-it${layout.key === catalog.currentKey ? ' on' : ''}`} type="button" data-key={layout.key} data-tip={layout.name} aria-label={translate(L, layout.name)} aria-current={layout.key === catalog.currentKey ? 'true' : undefined} key={layout.key} onClick={() => L.panes?.reactApplyLayout?.(layout.key)} onContextMenu={(event) => showMenu(layout.key, event)}><PptxPreviewArtwork markup={layout.preview} /></button>)}
     </div></section>)}
     <label className="ck"><input type="checkbox" checked={showWhenInserting} onChange={(event) => { const checked=event.currentTarget.checked; setShowWhenInserting(checked); L.panes?.reactSetLayoutPaneOnNew?.(checked); }} /><span>{translate(L, 'Show when inserting new slides')}</span></label>
   </div>, mount);
@@ -318,7 +319,7 @@ function ClipboardPane({ L, mount }: { L: TaskContentRuntime; mount: HTMLElement
     <div className="tp-btns"><button className="btn small" type="button" onClick={() => L.panes?.reactPasteAllClipboard?.()}>{translate(L, 'Paste All')}</button><button className="btn small" type="button" onClick={() => L.panes?.reactClearClipboard?.()}>{translate(L, 'Clear All')}</button></div>
     <div className="tp-note">{translate(L, '{0} of 24 — Click an item to paste.', items.length)}</div>
     {items.map((item) => <button className="cb-item" type="button" key={`${item.index}-${item.label}`} onClick={() => L.panes?.reactPasteClipboard?.(item.index)}>
-      <span className="cb-ico" dangerouslySetInnerHTML={{ __html: L.icons?.get(item.icon) || '' }} /><span className="cb-t" translate="no">{item.label}</span>
+      <span className="cb-ico"><PptxPreviewArtwork markup={L.icons?.get(item.icon) || ''} /></span><span className="cb-t" translate="no">{item.label}</span>
     </button>)}
   </div>, mount);
 }
@@ -368,7 +369,7 @@ function ContextualRibbonItem({ L, item: value, size }: { L: TaskContentRuntime;
     const rect = anchor.getBoundingClientRect();
     item.menu({ left: rect.left, bottom: rect.bottom }, anchor);
   };
-  const iconLabel = <>{icon && <span className="tb-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: icon }} />}{label && <span className="tb-lbl">{translate(L, label)}</span>}</>;
+  const iconLabel = <>{icon && <span className="tb-icon" aria-hidden="true"><PptxPreviewArtwork markup={icon} /></span>}{label && <span className="tb-lbl">{translate(L, label)}</span>}</>;
 
   if (item.split && commandId) return <div className={`tb-split rb-${actualSize}`}>
     <button type="button" className={`tb-btn${label ? ' with-label' : ''}`} data-cmd={commandId} data-tip={tip} aria-label={L.ui?.stripAmp?.(command?.label || label || commandId) || label || commandId} aria-pressed={command?.checked ? !!command.checked() : undefined} disabled={command?.enabled ? !command.enabled() : false} onPointerDown={(event) => event.preventDefault()} onClick={(event) => L.ui?.exec(commandId, item.arg, event.nativeEvent)}>{iconLabel}</button>
@@ -404,7 +405,7 @@ function IntelliArtTextPane({ L, mount, revision }: { L: TaskContentRuntime; mou
   }, [revision, signature]);
   const operation = (id: string, label: string) => <button className="tb-btn rb-small" type="button" data-cmd={id} aria-label={translate(L, label)} onPointerDown={(event) => event.preventDefault()} onClick={() => L.ui?.exec(id)}>{translate(L, label)}</button>;
   const choices = (items: DiagramTextChoice[], kind: 'layout' | 'colors' | 'style') => <div className={`sa-pick sa-${kind}`}>
-    {items.map((item) => <button className={`sa-cell${item.selected ? ' on' : ''}`} type="button" key={item.id} data-choice={item.id} aria-label={item.name} aria-pressed={item.selected} data-tip={item.name} dangerouslySetInnerHTML={{ __html: item.preview }} onClick={() => L.diagram?.reactTextSet?.(kind, item.id)} />)}
+    {items.map((item) => <button className={`sa-cell${item.selected ? ' on' : ''}`} type="button" key={item.id} data-choice={item.id} aria-label={item.name} aria-pressed={item.selected} data-tip={item.name} onClick={() => L.diagram?.reactTextSet?.(kind, item.id)}><PptxPreviewArtwork markup={item.preview} /></button>)}
   </div>;
   if (!catalog.available) return createPortal(<div className="tp-body">
     <div className="tp-note">{translate(L, 'Select an IntelliArt graphic to type its text here.')}</div>

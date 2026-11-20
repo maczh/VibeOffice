@@ -200,7 +200,7 @@ export function installPptxPanes(runtime: Window): void {
       for (const [kind, label] of kinds) {
         E().masterKind = kind;
         E().buildMaster();
-        choices.push({ kind, label: L.t(kind === 'title' ? '{0} Title Master' : '{0} Slide Master', M.designName(design)), preview: L.render.thumb(L.pres, E().masterSlide, width, { prompts: false }).outerHTML, selected: current === kind });
+        choices.push({ kind, label: L.t(kind === 'title' ? '{0} Title Master' : '{0} Slide Master', M.designName(design)), preview: L.render.thumb(L.pres, E().masterSlide, width, { prompts: false }), selected: current === kind });
       }
     } finally {
       E().masterKind = current;

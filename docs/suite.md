@@ -2,7 +2,7 @@
 
 ## React/Vite workspace
 
-The separate Vite workspace (`commonx/`, `wordx/`, `excelx/`, `pptx/`, `suite/`) exports React editor packages around the existing document engines. `npm run dev` starts its React Start Center; `npm run build` emits typed package artifacts; `npm run build:apps` also emits each standalone app and `suite/dist`. The React Start Center opens on Create File, supports local open/create from the template catalog, and does not read or delete Recent Files data. Its build/runtime adapter rekeys generated legacy template metadata and preview routes to Wordx, Excelx, and PPTX for the React app IDs. React-host editors use the isolated `vibeoffice-react-drafts` database and the same-origin message bridge for Open/Save. See [React package integration](react-packages.md).
+The separate Vite workspace (`commonx/`, `wordx/`, `excelx/`, `pptx/`, `suite/`) exports React editor packages around the existing document engines. `npm run dev` starts its React Start Center; `npm run build` emits typed package artifacts; `npm run build:apps` also emits each standalone app and `suite/dist`. The React Start Center opens on Create File, retains the legacy left navigation and template-gallery layout, adds URL and WebDAV entry points, offers installation only when the supported browser install event is available, and provides Feedback/About links. It does not read or delete Recent Files data. Its build/runtime adapter rekeys generated legacy template metadata and preview routes to Wordx, Excelx, and PPTX for the React app IDs. React-host editors use the isolated `vibeoffice-react-drafts` database and the same-origin message bridge for Open/Save. See [React package integration](react-packages.md).
 
 | File | What it does |
 |---|---|

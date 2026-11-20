@@ -1,4 +1,4 @@
-"""Compare Lectern's slide renderings with LibreOffice's (both 480 px wide PNGs).
+"""Compare PPTX's slide renderings with LibreOffice's (both 480 px wide PNGs).
 For every slide that has both, report a difference score (0 = identical) computed on small blurred images,
 which is tolerant to anti-aliasing and font differences but sensitive to missing or misplaced content,
 wrong colours and wrong backgrounds. Writes a JSONL of scores and side-by-side montages of the worst ones.
@@ -59,6 +59,6 @@ if mdir:
         c = Image.new('RGB', (W, H), (90, 90, 90))
         c.paste(a, (0, 22)); c.paste(b, (a.width + 12, 22))
         d = ImageDraw.Draw(c)
-        d.text((4, 4), ('Lectern  |  LibreOffice   %s s%d  score %.1f' % (r['deck'][:60], r['slide'], r['score'])), fill=(255, 255, 255))
+        d.text((4, 4), ('PPTX  |  LibreOffice   %s s%d  score %.1f' % (r['deck'][:60], r['slide'], r['score'])), fill=(255, 255, 255))
         c.save(os.path.join(mdir, '%03d_%s_s%d.png' % (i, r['deck'][:50], r['slide'])))
     print('montages in', mdir)

@@ -1,4 +1,4 @@
-/* Checks Quire's Markdown parser (public/quire/js/markdown.js) against the spec examples.
+/* Checks Wordx's Markdown parser (public/quire/js/markdown.js) against the spec examples.
  *
  *   node tests/quire/mdspec.js DIR [--verbose] [--section NAME]
  *

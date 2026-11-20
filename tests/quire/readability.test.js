@@ -1,4 +1,4 @@
-// Quire's syllable counter (readability statistics) and ordinal suffixes, written for todos/CLEAN_APACHE2.0.md:
+// Wordx's syllable counter (readability statistics) and ordinal suffixes, written for todos/CLEAN_APACHE2.0.md:
 //   node --test tests/quire/readability.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');

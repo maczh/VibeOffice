@@ -46,6 +46,7 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
       if (target instanceof Node && !panel.current?.contains(target) && !request.anchor?.contains(target)) onClose();
     };
     const keydown = (event: KeyboardEvent) => {
+      if (!(event.target instanceof Node) || !panel.current?.contains(event.target)) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
@@ -101,7 +102,7 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
     return <button key={`${item.label}:${index}`} role="menuitem" className="cp-sw" type="button" style={item.color ? { background: item.color } : undefined} aria-label={item.label} title={item.tip} onClick={action} />;
   };
 
-  return <div ref={panel} className="vibeoffice-color-menu menu color-menu" role="menu">
+  return <div ref={panel} className="vibeoffice-color-menu menu color-menu" data-menu-keyboard-owner="react" role="menu">
     <div className="color-panel">{request.sections.map((section, index) => section.layout === 'separator'
       ? <div key={`separator:${index}`} className="cp-sep" />
       : section.layout === 'wide' ? renderItem(section.item, index)

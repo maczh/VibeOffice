@@ -54,7 +54,7 @@ export function PptxShapeGridMenu({ host }: { host: HTMLElement }) {
       choiceRefs.current[next]?.focus();
     }
   };
-  return createPortal(<div className="shape-grid" role="group" aria-label={t('AutoShapes')}>
+  return createPortal(<div className="shape-grid" data-menu-keyboard-owner="react" role="group" aria-label={t('AutoShapes')}>
     {choices.map((choice, index) => <button key={choice.kind} ref={(element) => { choiceRefs.current[index] = element; }} type="button" tabIndex={index === active ? 0 : -1} data-tip={t(choice.label)} aria-label={t(choice.label)} title={t(choice.label)} onFocus={() => setActiveIndex(index)} onKeyDown={onKeyDown} onClick={() => L?.app?.reactShapeMenuAction?.(choice.kind)} dangerouslySetInnerHTML={{ __html: choice.svg }} />)}
   </div>, slot);
 }

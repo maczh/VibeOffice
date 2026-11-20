@@ -1,6 +1,6 @@
 /* The suite's settings (VO.settings) and the look before the first paint (common/looks.css; suite.js, VO.look);
    loaded first in every page's <head>, a script file rather than inline (the pages' Content-Security-Policy).
-   A setting is a string by key ('vibeoffice.look', 'quire.opts', …), as localStorage keeps it. On the web they are
+   A setting is a string by key ('vibeoffice.look', 'app-specific option', …), as localStorage keeps it. On the web they are
    in localStorage; in the desktop app in ~/.vibeoffice/config.json, which the app serves at the top of this file
    (window.__VO_SETTINGS__, desktop/src/settings.rs) and keeps current in every window ('vo-settings'): its pages have
    no browser storage. */

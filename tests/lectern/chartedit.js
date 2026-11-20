@@ -1,4 +1,4 @@
-/* Charts edited in Lectern are written from the chart model: open each deck, mark every chart as edited
+/* Charts edited in PPTX are written from the chart model: open each deck, mark every chart as edited
  * (optionally switching its type), save, and write the result for external validation.
  * Usage: node chartedit.js <listFile> <outDir> [kind] */
 const { chromium } = require('playwright');

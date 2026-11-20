@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble public/ledger/index.html: a full document with Ledger's CSS inlined (after the shared
+"""Assemble public/ledger/index.html: a full document with Excelx's CSS inlined (after the shared
 public/common/ui.css) and the scripts in load order.
 
     python3 tools/ledger/build/make.py

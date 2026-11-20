@@ -875,11 +875,12 @@
       delete attrs.html;
       const button = h('button', attrs);
       const options = Object.assign({ html: ampHTML(label) }, o || {}, { id, label });
+      const notifyReactButton = () => directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-button', { detail: { target: button, options }, bubbles: true }));
       Object.defineProperties(button, {
-        innerHTML: { configurable: true, get: () => button.querySelector('.vibeoffice-react-button-label')?.innerHTML ?? String(options.html || ''), set: (value) => { const content = button.querySelector('.vibeoffice-react-button-label'); options.html = String(value); if (content) content.innerHTML = options.html; } },
-        textContent: { configurable: true, get: () => button.querySelector('.vibeoffice-react-button-label')?.textContent ?? String(options.label || ''), set: (value) => { const content = button.querySelector('.vibeoffice-react-button-label'); options.html = L.esc(String(value)); options.label = String(value); if (content) content.textContent = String(value); } },
+        innerHTML: { configurable: true, get: () => String(options.html || ''), set: (value) => { options.html = String(value); delete options.textContent; notifyReactButton(); } },
+        textContent: { configurable: true, get: () => String(options.textContent ?? button.querySelector('.vibeoffice-react-button-label')?.textContent ?? options.label ?? ''), set: (value) => { options.html = L.esc(String(value)); options.label = String(value); options.textContent = String(value); notifyReactButton(); } },
       });
-      directRoot.dispatchEvent(new root.CustomEvent('vibeoffice-react-button', { detail: { target: button, options }, bubbles: true }));
+      notifyReactButton();
       if (onClick) button.addEventListener('click', onClick);
       return button;
     }

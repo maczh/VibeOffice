@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState, type KeyboardEvent } from 'react';
+import { PptxPreviewArtwork } from './slides-pane.js';
 
 interface WordArtPreview { label: string; svg: string }
 interface WordArtGalleryCatalog { selected: number; previews: WordArtPreview[] }
@@ -49,7 +50,7 @@ export function PptxWordArtGalleryDialog() {
   };
   return <OfficeDialog title={t('LettersArt Gallery')} className="pptx-wordart-gallery-dialog" style={{ width: 'min(94vw, 520px)' }} onRequestClose={close}>
     <div className="col"><strong>{t('Select a LettersArt style:')}</strong><div className="wa-grid" role="listbox" aria-label={t('LettersArt styles')} aria-orientation="vertical" onKeyDown={onGalleryKeyDown} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, maxHeight: 'min(62vh, 420px)', overflow: 'auto' }}>
-      {catalog.previews.map((preview, index) => <button key={index} type="button" role="option" aria-label={t(preview.label)} aria-selected={catalog.selected === index} tabIndex={catalog.selected === index ? 0 : -1} className={catalog.selected === index ? 'on' : ''} onClick={() => select(index)} onDoubleClick={() => { select(index); apply(); }} dangerouslySetInnerHTML={{ __html: preview.svg }} />)}
+      {catalog.previews.map((preview, index) => <button key={index} type="button" role="option" aria-label={t(preview.label)} aria-selected={catalog.selected === index} tabIndex={catalog.selected === index ? 0 : -1} className={catalog.selected === index ? 'on' : ''} onClick={() => select(index)} onDoubleClick={() => { select(index); apply(); }}><PptxPreviewArtwork markup={preview.svg} /></button>)}
     </div></div>
     <div className="vibeoffice-dialog__actions"><button className="primary" type="button" onClick={apply}>{t('OK')}</button><button type="button" onClick={close}>{t('Cancel')}</button></div>
   </OfficeDialog>;

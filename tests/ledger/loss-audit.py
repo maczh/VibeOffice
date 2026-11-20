@@ -1,4 +1,4 @@
-"""What does an open-and-save in Ledger lose? Compare each original workbook with Ledger's saved copy: count, per
+"""What does an open-and-save in Excelx lose? Compare each original workbook with Excelx's saved copy: count, per
 feature, the workbooks where the original has it and the saved copy has less (or none), and compare every cell's
 value and formula with openpyxl (an independent reader).
 Usage: python3 -I loss-audit.py corpusDir savedDir out.json"""

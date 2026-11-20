@@ -1,5 +1,5 @@
 import { OfficeDialog } from '@vibeoffice/core';
-import { useEffect, useId, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 
 interface Fill { t: string; c?: string; a?: number; [key: string]: unknown }
 interface ColorOption { value: string; label: string; color: string }
@@ -24,9 +24,40 @@ interface Runtime {
 function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 function ColorFill({ label, fill, colors, line = false, onChange }: { label: string; fill: Fill; colors: ColorOption[]; line?: boolean; onChange(value: Fill): void }) {
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const id = `${useId().replaceAll(':', '')}-colors`;
   const t = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
   const swatch = fill.t === 'none' ? 'repeating-linear-gradient(45deg,#fff 0 4px,#eee 4px 8px)' : line ? fill.c || '#111111' : runtime()?.dlg?.reactFormatShapePreview?.(fill) || fill.c || '#FFFFFF';
-  return <div className="col" style={{ position: 'relative' }}><label>{t(label)}</label><button type="button" className="btn small" aria-label={t(label)} aria-expanded={open} onClick={() => setOpen((value) => !value)}><span aria-hidden="true" style={{ display: 'inline-block', width: 70, height: 14, border: '1px solid #555', background: swatch }} /><span className="dd-arrow" /></button>{open && <div role="menu" aria-label={t(`${label} colors`)} style={{ position: 'absolute', zIndex: 2, top: '100%', left: 0, display: 'grid', gridTemplateColumns: 'repeat(8,24px)', gap: 3, padding: 6, border: '1px solid #888', background: '#f4f4f4', width: 'max-content' }}>{line && <button type="button" role="menuitem" className="cp-wide" onClick={() => { onChange({ t: 'none' }); setOpen(false); }}>{t('No Line')}</button>}{colors.map((color, index) => <button key={`${color.value}-${index}`} type="button" role="menuitem" aria-label={color.label} title={color.label} style={{ width: 24, height: 22, padding: 0, background: color.color }} onClick={() => { onChange({ t: 'solid', c: color.value, a: 1 }); setOpen(false); }} />)}<label className="cp-wide" style={{ gridColumn: '1 / -1' }}>{t('More Fill Colors...')}<input type="color" aria-label={t(`${label} custom color`)} value={/^#[0-9a-f]{6}$/i.test(fill.c || '') ? fill.c : '#3366CC'} onChange={(event) => { onChange({ t: 'solid', c: event.currentTarget.value.toUpperCase(), a: 1 }); setOpen(false); }} /></label>{!line && <button type="button" role="menuitem" className="cp-wide" onClick={async () => { const selected = await runtime()?.dlg?.reactFormatShapeEffects?.(fill); if (selected) onChange(selected); setOpen(false); }}>{t('Fill Effects...')}</button>}</div>}</div>;
+  const colorStart = line ? 1 : 0;
+  const lastItem = colorStart + colors.length - 1 + (line ? 0 : 1);
+  useLayoutEffect(() => {
+    if (!open) return;
+    setActiveIndex(0);
+    itemRefs.current[0]?.focus({ preventScroll: true });
+  }, [open]);
+  const close = () => { setOpen(false); trigger.current?.focus(); };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return; }
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const index = itemRefs.current.indexOf(target);
+    if (index < 0) return;
+    let next = index;
+    if (event.key === 'ArrowLeft') next = Math.max(0, index - 1);
+    else if (event.key === 'ArrowRight') next = Math.min(lastItem, index + 1);
+    else if (event.key === 'ArrowUp') next = Math.max(0, index - 8);
+    else if (event.key === 'ArrowDown') next = Math.min(lastItem, index + 8);
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = lastItem;
+    else return;
+    event.preventDefault(); event.stopPropagation();
+    setActiveIndex(next);
+    itemRefs.current[next]?.focus();
+  };
+  const choose = (value: Fill) => { onChange(value); close(); };
+  return <div className="col" style={{ position: 'relative' }}><label>{t(label)}</label><button ref={trigger} type="button" className="btn small" aria-label={t(label)} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen((value) => !value)}><span aria-hidden="true" style={{ display: 'inline-block', width: 70, height: 14, border: '1px solid var(--field-border)', background: swatch }} /><span className="dd-arrow" /></button>{open && <div id={id} className="vibeoffice-format-shape-colors" data-menu-keyboard-owner="react" role="menu" aria-label={t(`${label} colors`)} onKeyDown={onKeyDown} style={{ position: 'absolute', zIndex: 2, top: '100%', left: 0, display: 'grid', gridTemplateColumns: 'repeat(8,24px)', gap: 3, padding: 6, border: '1px solid var(--menu-border)', background: 'var(--surface)', width: 'max-content' }}>{line && <button ref={(element) => { itemRefs.current[0] = element; }} type="button" role="menuitem" className="cp-wide" tabIndex={activeIndex === 0 ? 0 : -1} style={{ gridColumn: '1 / -1' }} onFocus={() => setActiveIndex(0)} onClick={() => choose({ t: 'none' })}>{t('No Line')}</button>}{colors.map((color, index) => { const itemIndex = colorStart + index; return <button ref={(element) => { itemRefs.current[itemIndex] = element; }} key={`${color.value}-${index}`} type="button" role="menuitem" aria-label={color.label} title={color.label} tabIndex={activeIndex === itemIndex ? 0 : -1} style={{ width: 24, height: 22, padding: 0, background: color.color }} onFocus={() => setActiveIndex(itemIndex)} onClick={() => choose({ t: 'solid', c: color.value, a: 1 })} />; })}<label className="cp-wide" style={{ gridColumn: '1 / -1' }}>{t('More Fill Colors...')}<input type="color" aria-label={t(`${label} custom color`)} value={/^#[0-9a-f]{6}$/i.test(fill.c || '') ? fill.c : '#3366CC'} onChange={(event) => choose({ t: 'solid', c: event.currentTarget.value.toUpperCase(), a: 1 })} /></label>{!line && <button ref={(element) => { itemRefs.current[lastItem] = element; }} type="button" role="menuitem" className="cp-wide" tabIndex={activeIndex === lastItem ? 0 : -1} style={{ gridColumn: '1 / -1' }} onFocus={() => setActiveIndex(lastItem)} onClick={async () => { const selected = await runtime()?.dlg?.reactFormatShapeEffects?.(fill); if (selected) onChange(selected); close(); }}>{t('Fill Effects...')}</button>}</div>}</div>;
 }
 
 /** React-owned Format Shape/Picture controls; the legacy model transaction remains authoritative. */

@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { Children, createElement, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { DraftRecoveryPane } from '@vibeoffice/core';
+import { DraftRecoveryPane, SvgArtwork } from '@vibeoffice/core';
 import { EXCELX_HELP } from './help-content.js';
 import { EXCELX_WORKBOOK_TEMPLATES } from './template-catalog.js';
 
@@ -34,6 +34,12 @@ function runtime(): ExcelxTaskRuntime | undefined {
 
 function translate(L: ExcelxTaskRuntime, text: string, ...args: unknown[]): string {
   return L.t?.(text, ...args) || text;
+}
+
+function TaskIcon({ markup, owner, fallback = '' }: { markup: string; owner: string; fallback?: string }) {
+  return /^\s*<svg(?:\s|>)/i.test(markup)
+    ? <SvgArtwork markup={markup} owner={owner} />
+    : <>{fallback}</>;
 }
 
 /** React-owned Excelx task-pane bodies; workbook creation and clipboard operations stay in the engine. */
@@ -136,9 +142,11 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   }, [current, panes]);
 
   if (!L || !task) return null;
-  const section = (title: string, ...children: ReactNode[]) => <section className="tp-sec">{title ? <div className="tp-h">{translate(L, title)}</div> : null}{children}</section>;
-  const link = (icon: string, label: string, run: () => void) => <button className="tp-link" type="button" onClick={run}>
-    {icon && <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} />}<span>{translate(L, label)}</span>
+  const section = (title: string, ...children: ReactNode[]) => createElement('section', { className: 'tp-sec' },
+    title ? createElement('div', { className: 'tp-h' }, translate(L, title)) : null,
+    ...Children.toArray(children));
+  const link = (icon: string, label: string, run: () => void) => <button key={`${icon}:${label}`} className="tp-link" type="button" onClick={run}>
+    {icon && <span aria-hidden="true"><TaskIcon markup={L.icons?.get(icon) || ''} owner={`excelx-task-link-${icon}`} /></span>}<span>{translate(L, label)}</span>
   </button>;
   const currentEntry = task.registry?.[current || ''];
   const title = currentEntry ? translate(L, currentEntry.title) : '';
@@ -149,11 +157,11 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
     L.ui?.openMenu(items, { left: rect.left, bottom: rect.bottom });
   };
   const head = headMount ? createPortal(<div className="tp-head">
-    <button className="tp-nav" type="button" aria-label={translate(L, 'Back')} data-tip={translate(L, 'Back')} disabled={!task.pos || task.pos <= 0} onClick={() => task.pos != null && task.go?.(task.pos - 1)} dangerouslySetInnerHTML={{ __html: L.icons?.get('back') || translate(L, 'Back').slice(0, 1) }} />
-    <button className="tp-nav" type="button" aria-label={translate(L, 'Forward')} data-tip={translate(L, 'Forward')} disabled={task.pos == null || task.pos >= (task.stack?.length || 0) - 1} onClick={() => task.pos != null && task.go?.(task.pos + 1)} dangerouslySetInnerHTML={{ __html: L.icons?.get('forward') || translate(L, 'Forward').slice(0, 1) }} />
-    <button className="tp-nav" type="button" aria-label={translate(L, 'Home')} data-tip={translate(L, 'Home')} onClick={() => task.show('getting-started')} dangerouslySetInnerHTML={{ __html: L.icons?.get('home') || translate(L, 'Home').slice(0, 1) }} />
+    <button className="tp-nav" type="button" aria-label={translate(L, 'Back')} data-tip={translate(L, 'Back')} disabled={!task.pos || task.pos <= 0} onClick={() => task.pos != null && task.go?.(task.pos - 1)}><TaskIcon markup={L.icons?.get('back') || ''} owner="excelx-task-back" fallback={translate(L, 'Back').slice(0, 1)} /></button>
+    <button className="tp-nav" type="button" aria-label={translate(L, 'Forward')} data-tip={translate(L, 'Forward')} disabled={task.pos == null || task.pos >= (task.stack?.length || 0) - 1} onClick={() => task.pos != null && task.go?.(task.pos + 1)}><TaskIcon markup={L.icons?.get('forward') || ''} owner="excelx-task-forward" fallback={translate(L, 'Forward').slice(0, 1)} /></button>
+    <button className="tp-nav" type="button" aria-label={translate(L, 'Home')} data-tip={translate(L, 'Home')} onClick={() => task.show('getting-started')}><TaskIcon markup={L.icons?.get('home') || ''} owner="excelx-task-home" fallback={translate(L, 'Home').slice(0, 1)} /></button>
     <button className="tp-title" type="button" aria-haspopup="menu" onClick={(event) => titleMenu(event.currentTarget)}><span>{title}</span><span className="dd-arrow" /></button>
-    <button className="tp-nav" type="button" aria-label={translate(L, 'Close task pane')} data-tip={translate(L, 'Close')} onClick={() => L.app?.toggleTask?.(false)} dangerouslySetInnerHTML={{ __html: L.icons?.get('close') || '×' }} />
+    <button className="tp-nav" type="button" aria-label={translate(L, 'Close task pane')} data-tip={translate(L, 'Close')} onClick={() => L.app?.toggleTask?.(false)}><TaskIcon markup={L.icons?.get('close') || ''} owner="excelx-task-close" fallback="×" /></button>
   </div>, headMount) : null;
   const withHeader = (content: ReactNode | null) => <>{head}{content}</>;
   if (!mount || !['getting-started', 'new', 'help', 'keys', 'clipboard', 'recovery'].includes(current || '')) return head;
@@ -189,7 +197,7 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
       </div>
       <div className="tp-note">{translate(L, '{0} of 24 - Clipboard. Click an item to paste.', items.length)}</div>
       {items.map((item, index) => <button className="cb-item" type="button" key={`${item.time}:${index}`} onClick={() => paste(item)}>
-        <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.get('sheetIcon') || '' }} /><span className="cb-t" translate="no">{item.text || '[cells]'}</span>
+        <span aria-hidden="true"><TaskIcon markup={L.icons?.get('sheetIcon') || ''} owner="excelx-task-clipboard-sheet" /></span><span className="cb-t" translate="no">{item.text || '[cells]'}</span>
       </button>)}
     </>, mount));
   }
@@ -198,14 +206,14 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
   if (current === 'new') return withHeader(createPortal(<>
     {section('New', link('new', 'Blank workbook', () => L.app?.newWorkbook()), link('open', 'From existing workbook...', () => L.app?.openDialog?.('.xlsx,.xlsm,.xltx,.xltm')))}
     {section('Templates', ...EXCELX_WORKBOOK_TEMPLATES.map(({ id, name }) => <button className="tp-link" type="button" data-template-id={id} key={id} onClick={() => panes?.newFromTemplate?.(id)}>
-      <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.get('sheetIcon') || '' }} /><span>{translate(L, name)}</span>
+      <span aria-hidden="true"><TaskIcon markup={L.icons?.get('sheetIcon') || ''} owner="excelx-task-template-sheet" /></span><span>{translate(L, name)}</span>
     </button>))}
     <div className="tp-note">{translate(L, 'Templates open as new, unsaved workbooks.')}</div>
   </>, mount));
 
   const editionName = (window as Window & { VO?: { editionName?(app: string): string } }).VO?.editionName?.('Excelx') || 'Excelx';
   return withHeader(createPortal(<>
-    <div className="tp-row"><span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.app?.(32) || '' }} /><b translate="no" style={{ color: 'var(--pane-ink)' }}>{editionName}</b></div>
+    <div className="tp-row"><span aria-hidden="true"><TaskIcon markup={L.icons?.app?.(32) || ''} owner="excelx-task-app" /></span><b translate="no" style={{ color: 'var(--pane-ink)' }}>{editionName}</b></div>
     {section('Search for:', <div className="tp-row">
       <input type="text" aria-label={translate(L, 'Search help')} placeholder={translate(L, 'Search help')} value={gettingStartedQuery} style={{ flex: 1, minWidth: 0 }} onChange={(event) => setGettingStartedQuery(event.currentTarget.value)} onKeyDown={(event) => {
         if (event.key === 'Enter') openHelp(gettingStartedQuery);

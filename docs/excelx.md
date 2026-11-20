@@ -521,7 +521,7 @@ support for every formula or external data source.
 
 ## Source layout
 
-The React Excelx package owns the direct-host worksheet chrome and stable grid surface: its shell renders the grid canvas, overlay layer, cell-editor textarea, scrollbars, formula bar, and sheet tabs before engine initialization. The grid service binds its renderer and edit logic to the React canvas/editor nodes in embedded mode; classic standalone pages still create those nodes through the legacy bootstrap. The Vite package and React UI inventory is maintained in [react-packages.md](react-packages.md).
+The React Excelx package owns the direct-host worksheet chrome and stable grid surface: its shell renders the grid canvas, overlay layer, cell-editor textarea, scrollbars, formula bar, and sheet tabs before engine initialization. The grid service binds its renderer and edit logic to the React canvas/editor nodes in embedded mode; classic standalone pages still create those nodes through the legacy bootstrap. The AutoShapes submenu content is also React-rendered in direct-host mode, exposing labeled shape controls with roving keyboard focus; arrow keys move by row and column while geometry and drawing-tool behavior remain supplied by the existing engine service. The Vite package and React UI inventory is maintained in [react-packages.md](react-packages.md).
 
 | File | What it does |
 | --- | --- |
@@ -537,7 +537,7 @@ The React Excelx package owns the direct-host worksheet chrome and stable grid s
 | `../common/sha.js`, `../common/crypto.js` | SHA-1/256/384/512 and AES, Office document encryption (standard and agile) |
 | `js/model.js`, `js/ops.js` | Workbook model (sparse rows, shared styles, names, tables), undo history, every editing operation |
 | `js/formula.js`, `js/calc.js` | Formula language (A1, R1C1, structured references, `@`, spills), calculation engine and dependency graph |
-| `js/fn-core.js`, `js/fn-lookup.js`, `js/fn-stat.js`, `js/fn-fin.js`, `js/fn-eng.js` | Implementations for the 519 worksheet functions; the classic Ledger entry keeps `js/fninfo.js` as its 500-entry Insert Function catalogue fallback, while the React Excelx package installs its typed catalogue from `excelx/src/function-info.ts` |
+| `js/fn-core.js`, `js/fn-lookup.js`, `js/fn-stat.js`, `js/fn-fin.js`, `js/fn-eng.js` | Implementations for the 519 worksheet functions; the classic Excelx entry keeps `js/fninfo.js` as its 500-entry Insert Function catalogue fallback, while the React Excelx package installs its typed catalogue from `excelx/src/function-info.ts` |
 | `../common/numfmt.js`, `js/layout.js`, `js/render.js`, `js/cf.js`, `js/styles.js` | Number formats, text measurement, the canvas renderer (with the 17 cell fill patterns, as Excel draws them: docs/testing.md), conditional formats, list styles |
 | `js/grid.js`, `js/editor.js`, `js/clipboard.js` | Selection, scrolling, keyboard and mouse; in-cell editing and point mode; clipboard |
 | `js/preserve.js` | Package ownership, workbook/property merges and retained style indices |

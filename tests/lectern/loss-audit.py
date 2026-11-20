@@ -1,4 +1,4 @@
-"""What does an open-and-save in Lectern lose? Compare each original deck with Lectern's saved copy and count, per
+"""What does an open-and-save in PPTX lose? Compare each original deck with PPTX's saved copy and count, per
 feature, the decks where the original has it and the saved copy no longer does.
 Usage: python3 -I loss-audit.py corpusDir savedDir out.json"""
 import json, os, re, sys, zipfile, collections

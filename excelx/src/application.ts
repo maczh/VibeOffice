@@ -684,6 +684,7 @@ export function installExcelxApplication(runtime: Window): void {
   A.toggleToolbar = (id, force) => { const cur = A.toolbarVisible(id); A.opts.toolbars[id] = force != null ? force : !cur; A.updateToolbars(); A.saveOpts(); };
   A.updateToolbars = function () {
     const reactHost = window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected;
+    if (reactHost) L.bus.emit('toolbar-visibility');
     if (!reactHost) {
       for (const id in TB) { const v = A.toolbarVisible(id); TB[id].hidden = !v; }
       const r2 = TB.borders && TB.borders.parentElement;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { SvgArtwork } from '@vibeoffice/core';
 import './border-palette.css';
 
 type Catalog = { left: number; top: number; items: { id: string; icon: string; label: string }[] };
@@ -37,7 +38,7 @@ export function ExcelxBorderPalette() {
     buttons[(current + delta + buttons.length) % buttons.length]?.focus();
   };
   return <div ref={rootRef} className="excelx-border-palette" role="group" aria-label={translate('Borders')} onKeyDown={onKeyDown} style={{ left: catalog.left, top: catalog.top }}>
-    <div className="excelx-border-palette__grid">{catalog.items.map((item) => <button key={item.id} type="button" aria-label={translate(item.label)} title={translate(item.label)} onClick={() => choose(item.id)}><span dangerouslySetInnerHTML={{ __html: item.icon }} /></button>)}</div>
+    <div className="excelx-border-palette__grid">{catalog.items.map((item) => <button key={item.id} type="button" aria-label={translate(item.label)} title={translate(item.label)} onClick={() => choose(item.id)}><SvgArtwork markup={item.icon} owner="border-preset" /></button>)}</div>
     <button className="excelx-border-palette__draw" type="button" onClick={() => choose('draw')}>{translate('Draw Borders...')}</button>
   </div>;
 }

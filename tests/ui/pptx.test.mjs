@@ -10,7 +10,7 @@ import { open, pause } from '../lib/input.mjs';
 
 /** a tab on PPTX for one test */
 async function pptx(fn) {
-  const u = await open('lectern');
+  const u = await open('lectern', { look: 'classic' });
   try { await fn(u); } finally { await u.close(); }
 }
 

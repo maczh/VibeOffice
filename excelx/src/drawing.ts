@@ -574,7 +574,11 @@ export function installExcelxDrawing(runtime: Window): void {
     O.tx(wb(), isText ? 'Insert Text Box' : 'Insert AutoShape', () => O.setDrawings(s, s.drawings.concat([d])));
     G().selectObject(d);
     G().syncObjects(true);
-    if (isText) setTimeout(() => DR.editText(d), 0);
+    if (isText) {
+      let removeCleanup = () => {};
+      const timer = setTimeout(() => { removeCleanup(); removeCleanup = () => {}; DR.editText(d); }, 0);
+      removeCleanup = L.addMountCleanup(() => clearTimeout(timer));
+    }
     return d;
   };
   /** AutoShapes menu (Drawing toolbar) */

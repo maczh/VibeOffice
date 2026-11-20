@@ -1,5 +1,5 @@
-"""SmartArt made by PowerPoint in a layout Lectern has (public/lectern/js/smartart-io.js, OFFICE): for every corpus
-deck that has one, open it in Lectern, save it unedited (every diagram part must stay byte-identical), edit one
+"""SmartArt made by PowerPoint in a layout PPTX has (public/lectern/js/smartart-io.js, OFFICE): for every corpus
+deck that has one, open it in PPTX, save it unedited (every diagram part must stay byte-identical), edit one
 such diagram through its items (rename the first, add one) and save (tools/ooxml/package.py must pass), and
 reopen that save (the diagram must be editable). Needs Chromium with CDP, as tools/shot.mjs.
 

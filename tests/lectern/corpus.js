@@ -1,7 +1,7 @@
-/* Real-deck test: in headless Chromium, open each .pptx with Lectern, load it into the application, render
+/* Real-deck test: in headless Chromium, open each .pptx with PPTX, load it into the application, render
  * every slide, rasterise the first slides to PNG, save it back to .pptx and open the saved copy again.
  * Usage: node corpus.js <listFile|dir> <out.jsonl> [--png outDir] [--save outDir] [--shard k/n]
- * Needs Lectern at HOST (default: tools/serve.py, http://127.0.0.1:8760/lectern/) and the decks at
+ * Needs PPTX at HOST (default: tools/serve.py, http://127.0.0.1:8760/lectern/) and the decks at
  * CORPUS_URL (default http://127.0.0.1:8766/pdata/corpus/: python3 -m http.server 8766 in the folder above
  * the corpus). */
 if (process.argv.some(a => ['--lossless', '--edit', '--scenarios'].includes(a))) {

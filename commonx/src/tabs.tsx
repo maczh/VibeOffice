@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
+import { AccessLabel } from './access-label.js';
 
 interface TabItem { label: string; body: HTMLElement; onShow?: () => void }
 interface TabsTarget extends HTMLDivElement { __reactSelect?: (index: number) => void }
@@ -39,13 +40,13 @@ function TabsControl({ request }: { request: TabsRequest }) {
   }, [request]);
   const html = (label: string) => runtime()?.ui.ampHTML(label) || label;
   const panelId = (index: number) => `${request.target.id.replace(/-head$/, '')}-panel-${index}`;
-  const headers = createPortal(<>{request.tabs.map((tab, index) => <button key={`${index}:${tab.label}`} type="button" className={`tab${index === active ? ' on' : ''}`} role="tab" id={`${request.target.id}-tab-${index}`} aria-controls={panelId(index)} aria-selected={index === active} tabIndex={index === active ? 0 : -1} dangerouslySetInnerHTML={{ __html: html(tab.label) }} onClick={() => request.select(index)} onKeyDown={(event) => {
+  const headers = createPortal(<>{request.tabs.map((tab, index) => <button key={`${index}:${tab.label}`} type="button" className={`tab${index === active ? ' on' : ''}`} role="tab" id={`${request.target.id}-tab-${index}`} aria-controls={panelId(index)} aria-selected={index === active} tabIndex={index === active ? 0 : -1} onClick={() => request.select(index)} onKeyDown={(event) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
     event.preventDefault();
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? request.tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : request.tabs.length - 1)) % request.tabs.length;
     request.select(next);
     request.target.querySelector<HTMLButtonElement>(`#${CSS.escape(`${request.target.id}-tab-${next}`)}`)?.focus();
-  }} />)}</>, request.target);
+  }}><AccessLabel html={html(tab.label)} /></button>)}</>, request.target);
   const panels = createPortal(<>{request.tabs.map((tab, index) => <TabPanel key={`${index}:${tab.label}`} request={request} tab={tab} index={index} active={index === active} />)}</>, request.bodyHost);
   return <>{headers}{panels}</>;
 }

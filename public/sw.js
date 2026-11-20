@@ -32,7 +32,7 @@
  *   caches is never done during install, because until the new worker activates, the earlier one still serves the
  *   open pages from its cache. Nothing is deleted while a newer worker is installing or waiting (it is filling a
  *   cache this worker doesn't know about).
- * - Fetch: GET requests for the site's own files are answered from the cache, offline too; a folder (quire/) is
+ * - Fetch: GET requests for the site's own files are answered from the cache, offline too; an app folder is
  *   its index.html. updater/ (the update checks and the zips), sw.js, other sites, other methods and anything not
  *   in the zip go to the network untouched; a navigation to a page not in the zip that the network can't answer
  *   (offline) goes to the Start Center.
@@ -202,7 +202,7 @@ self.addEventListener('activate', (event) => {
 
 /* ------------------------------------------------------------ answering requests */
 /** a file of the site from a version's cache: a folder is its index.html; for a navigation, a folder without
- *  its slash (quire) is sent to it (quire/), and a page without .html is found with it */
+ *  its slash is redirected to that folder, and a page without .html is found with it */
 async function lookup(version, path, navigate, search) {
   const cacheName = cacheOf(version);
   const file = path === '' || path.endsWith('/') ? path + 'index.html' : path;

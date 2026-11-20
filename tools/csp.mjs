@@ -2,8 +2,8 @@
 // <meta http-equiv>, first in <head>, so it travels with the files: the site, the PWA's offline copy (served from
 // the service worker's cache, where a server's header never reaches) and the desktop app's pages.
 //
-//   node tools/csp.mjs           write it into the pages and the sources that make pages (Ledger's template,
-//                                tools/oss-licenses.py), then rebuild Ledger's page
+//   node tools/csp.mjs           write it into the pages and the sources that make pages (Excelx's template,
+//                                tools/oss-licenses.py), then rebuild Excelx's page
 //   node tools/csp.mjs --check   exit 1 if a page or source lacks the policy, has another, has it after a script,
 //                                or has an inline script, an on…= handler or a javascript: URL
 import fs from 'node:fs';
@@ -59,7 +59,7 @@ function write(file) {
   let text = fs.readFileSync(abs, 'utf8');
   if (text.match(FOUND)) text = text.replace(FOUND, META);
   else if (text.includes('<meta charset="utf-8">')) text = text.replace('<meta charset="utf-8">', `<meta charset="utf-8">\n${META}`);
-  else text = META + '\n' + text;   // Ledger's template: the head after make.py's charset and viewport
+  else text = META + '\n' + text;   // Excelx's template: the head after make.py's charset and viewport
   fs.writeFileSync(abs, text);
 }
 

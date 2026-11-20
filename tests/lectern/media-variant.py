@@ -18,7 +18,7 @@ for name, data in parts.items():
     found = next((m for m in re.finditer(r'<p:pic\b[\s\S]*?</p:pic>', text) if re.search(r'<a:(?:videoFile|audioFile)\b', m[0])), None)
     if not found: continue
     pic = found[0]
-    # Known effects are ignored by Lectern's model today. They must survive a
+    # Known effects are ignored by PPTX's model today. They must survive a
     # new outer shadow, including in the unselected compatibility branch.
     effects = '<a:effectLst><a:glow rad="127000"><a:srgbClr val="EEDD11"/></a:glow><a:reflection blurRad="6350" dist="127000" dir="5400000"/></a:effectLst>'
     if strict: effects = effects.replace('<a:reflection', '<a:outerShdw blurRad="12700" dist="12700" dir="5400000"><a:srgbClr val="000000"/></a:outerShdw><a:reflection')

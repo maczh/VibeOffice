@@ -1,5 +1,6 @@
 import { OfficeDialog } from './dialog.js';
 import { useEffect, useState } from 'react';
+import { SvgArtwork } from './svg-artwork.js';
 import './chart-editor-dialog.css';
 
 interface ChartSeries { index: number; name: string; vals: number[]; color: string }
@@ -49,7 +50,7 @@ export function ChartEditorDialog() {
         <label>{t('Legend:')}<select aria-label={t('Legend')} value={catalog.legend} onChange={(event) => update('legend', event.currentTarget.value)}>{catalog.legends.map((legend) => <option key={legend.value} value={legend.value}>{legend.label}</option>)}</select></label>
         <div className="vibeoffice-chart-editor__checks"><label><input type="checkbox" checked={catalog.gridY} onChange={(event) => update('grid', event.currentTarget.checked)} />{t('Major gridlines')}</label><label><input type="checkbox" checked={catalog.labels} onChange={(event) => update('labels', event.currentTarget.checked)} />{t('Show values')}</label></div>
       </div>
-      <div className="vibeoffice-chart-editor__preview"><span>{t('Preview')}</span><div aria-label={t('Chart preview')} dangerouslySetInnerHTML={{ __html: catalog.preview }} /></div>
+      <div className="vibeoffice-chart-editor__preview"><span>{t('Preview')}</span><div aria-label={t('Chart preview')}><SvgArtwork markup={catalog.preview} owner="chart-preview" /></div></div>
       <fieldset className="vibeoffice-chart-editor__datasheet"><legend>{t('Datasheet')}</legend>
         <div className="vibeoffice-chart-editor__table-scroll"><table><thead><tr><th className="corner" />{catalog.cats.map((category, index) => <th key={`category-${index}`}><input aria-label={t('Category {0}', index + 1)} value={category} onChange={(event) => update('category', index, event.currentTarget.value)} /></th>)}</tr></thead>
           <tbody>{catalog.series.map((series) => <tr key={`series-${series.index}`}><th><button type="button" className="vibeoffice-chart-editor__swatch" aria-label={t('Series color: {0}', series.name)} title={t('Choose series color')} style={{ background: series.color }} onClick={(event) => runtime()?.chart?.reactEditorColorMenu?.(series.index, event.currentTarget)} /><input aria-label={t('Series name {0}', series.index + 1)} value={series.name} onChange={(event) => update('series-name', series.index, event.currentTarget.value)} /></th>{series.vals.map((value, category) => <td key={`${series.index}-${category}`}><input aria-label={t('{0}, {1}', series.name, catalog.cats[category])} inputMode="decimal" value={value} onChange={(event) => { const parsed = Number.parseFloat(event.currentTarget.value); update('value', series.index, { category, value: Number.isFinite(parsed) ? parsed : 0 }); }} /></td>)}</tr>)}</tbody>

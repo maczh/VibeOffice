@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { createElement, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 interface SlideLike { id?: string; hidden?: boolean; trans?: { type?: string; after?: number }; anims?: unknown[] }
@@ -9,11 +9,13 @@ interface PptxPaneRuntime {
   app?: { slideSel: Set<number>; focusArea?: string | null; reactMounted?: boolean; opts?: { outlinePlain?: boolean; spell?: boolean }; contextThumb(event: MouseEvent): void; moveSlides?(indices: number[], target: number): void; setView(view: string): void; toggleLeft(show: boolean): void; toggleTask(show: boolean): void };
   render?: { thumb(presentation: NonNullable<PptxPaneRuntime['pres']>, slide: SlideLike, width: number, options: { index: number }): HTMLElement };
   panes?: {
-    left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; outline?: HTMLElement | null; setTab(tab: string): void; render?(): void; reactOutlineRows?(): Array<{ kind: string; slideId?: string; level: number; text: string }>; reactMasterCatalog?(): Array<{ kind: string; label: string; preview: string; selected: boolean }> | null; reactSelectMaster?(kind: string): void; reactSelectThumb?(event: PointerEvent, index: number): boolean | undefined; onOutlineInput?(): void; onOutlinePaste?(event: ClipboardEvent): void; onOutlineKey?(event: KeyboardEvent): void; syncOutlineSlide?(): void; styleOutline?(): void; commitOutline?(keepFocus?: boolean): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
+    left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; outline?: HTMLElement | null; setTab(tab: string): void; render?(): void; reactOutlineRows?(): Array<{ kind: string; slideId?: string; level: number; text: string }>; reactMasterCatalog?(): Array<{ kind: string; label: string; preview: HTMLElement; selected: boolean }> | null; reactSelectMaster?(kind: string): void; reactSelectThumb?(event: PointerEvent, index: number): boolean | undefined; onOutlineInput?(): void; onOutlinePaste?(event: ClipboardEvent): void; onOutlineKey?(event: KeyboardEvent): void; syncOutlineSlide?(): void; styleOutline?(): void; commitOutline?(keepFocus?: boolean): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
     sorter?: { el?: HTMLElement; reactMounted?: boolean; attachReactSurface?(root: HTMLElement): () => void; reactSelectThumb?(event: PointerEvent, index: number): boolean | undefined; onDown?(event: PointerEvent, index: number, item: HTMLElement): void; mark(): void };
     task?: { stack: string[]; pos: number; current?: string; registry: Record<string, { id: string; title: string; hidden?: boolean }>; show(id: string): void; go(position: number): void };
   };
   ui?: { openMenu(items: Array<{ label: string; run(): void; checked(): boolean }>, position: { left: number; bottom: number }): void };
+  media?: { get(id: string): { type?: string } | null };
+  mimeToExt?(mime: string): string;
   show?: { previewTransition(frame: Element | null, presentation: NonNullable<PptxPaneRuntime['pres']>, slide: SlideLike, previous?: SlideLike): void };
   anim?: { transName(transition: NonNullable<SlideLike['trans']>): string };
   bus?: { on(event: string, listener: () => void): () => void; emit(event: string): void };
@@ -22,6 +24,96 @@ interface PptxPaneRuntime {
 }
 
 function runtime(): PptxPaneRuntime | undefined { return (window as Window & { L?: PptxPaneRuntime }).L; }
+
+type FailedThumbnailImages = Map<HTMLImageElement, string>;
+
+const reactSvgAttributes: Record<string, string> = {
+  'clip-path': 'clipPath', 'fill-opacity': 'fillOpacity', 'fill-rule': 'fillRule', 'font-family': 'fontFamily', 'font-size': 'fontSize', 'font-style': 'fontStyle', 'font-weight': 'fontWeight',
+  'gradienttransform': 'gradientTransform', 'gradientunits': 'gradientUnits', 'lengthadjust': 'lengthAdjust', 'marker-end': 'markerEnd', 'marker-mid': 'markerMid', 'marker-start': 'markerStart', 'markerheight': 'markerHeight', 'markerunits': 'markerUnits', 'markerwidth': 'markerWidth',
+  'paint-order': 'paintOrder', 'pointer-events': 'pointerEvents', 'preserveaspectratio': 'preserveAspectRatio', 'patterncontentunits': 'patternContentUnits', 'patterntransform': 'patternTransform', 'patternunits': 'patternUnits', 'refx': 'refX', 'refy': 'refY', 'shape-rendering': 'shapeRendering',
+  'stop-color': 'stopColor', 'stop-opacity': 'stopOpacity', 'stroke-dasharray': 'strokeDasharray', 'stroke-dashoffset': 'strokeDashoffset', 'stroke-linecap': 'strokeLinecap', 'stroke-linejoin': 'strokeLinejoin', 'stroke-miterlimit': 'strokeMiterlimit', 'stroke-opacity': 'strokeOpacity', 'stroke-width': 'strokeWidth',
+  'text-anchor': 'textAnchor', 'text-decoration': 'textDecoration', 'textlength': 'textLength', 'viewbox': 'viewBox', 'writing-mode': 'writingMode', 'xlink:href': 'xlinkHref', 'xml:space': 'xmlSpace',
+};
+
+function reactAttributeName(name: string): string {
+  if (name === 'class') return 'className';
+  if (name === 'for') return 'htmlFor';
+  if (name === 'tabindex') return 'tabIndex';
+  if (name === 'colspan') return 'colSpan';
+  if (name === 'rowspan') return 'rowSpan';
+  if (name === 'contenteditable') return 'contentEditable';
+  return reactSvgAttributes[name.toLowerCase()] || name;
+}
+
+function reactStyle(element: HTMLElement | SVGElement): CSSProperties {
+  const output: Record<string, string> = {};
+  for (let index = 0; index < element.style.length; index++) {
+    const property = element.style.item(index);
+    const name = property.startsWith('--') ? property : property.replace(/^-ms-/, 'ms-').replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
+    output[name] = element.style.getPropertyValue(property);
+  }
+  return output as CSSProperties;
+}
+
+function thumbnailNodeToReact(node: Node, key: string, failures: FailedThumbnailImages, onImageError: (image: HTMLImageElement) => void, root = false, owner = 'pptx-slide-artwork'): ReactNode {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+  if (!(node instanceof Element)) return null;
+  if (node instanceof HTMLImageElement && failures.has(node)) return null;
+  const props: Record<string, unknown> = { key };
+  for (const attribute of Array.from(node.attributes)) {
+    if (/^on/i.test(attribute.name)) continue;
+    if (attribute.name === 'style') {
+      props.style = reactStyle(node as HTMLElement | SVGElement);
+      continue;
+    }
+    const name = reactAttributeName(attribute.name);
+    if (name === 'draggable' && node instanceof HTMLImageElement) props[name] = node.draggable;
+    else if (name === 'hidden' && node instanceof HTMLElement) props[name] = node.hidden;
+    else if (name === 'tabIndex' && node instanceof HTMLElement) props[name] = node.tabIndex;
+    else props[name] = attribute.value;
+  }
+  if (root) props['data-react-owned'] = owner;
+  if (node instanceof HTMLImageElement && node.dataset.mediaId) props.onError = () => onImageError(node);
+  const failedPicture = node instanceof HTMLElement && node.classList.contains('pic')
+    ? [...failures].find(([image]) => node.contains(image))
+    : undefined;
+  if (failedPicture) props.className = `${node.getAttribute('class') || ''} missing`.trim();
+  const children = Array.from(node.childNodes, (child, index) => thumbnailNodeToReact(child, `${key}.${index}`, failures, onImageError));
+  if (failedPicture) children.push(createElement('div', { className: 'pic-missing', key: `${key}.missing` }, failedPicture[1]));
+  return createElement(node.localName, props, ...children);
+}
+
+export function PptxThumbnailArtwork({ element }: { element: HTMLElement }) {
+  const [state, setState] = useState<{ element: HTMLElement; failures: FailedThumbnailImages }>(() => ({ element, failures: new Map() }));
+  const failures = state.element === element ? state.failures : new Map<HTMLImageElement, string>();
+  const onImageError = (image: HTMLImageElement) => {
+    const mediaId = image.dataset.mediaId || '';
+    const media = runtime()?.media?.get(mediaId);
+    const ext = media?.type ? runtime()?.mimeToExt?.(media.type) || '' : '';
+    const L = runtime();
+    const label = ext && ext !== 'png' ? L?.t?.('Picture (.{0})', ext) || `Picture (.${ext})` : L?.t?.('Picture') || 'Picture';
+    setState((current) => {
+      const next = current.element === element ? new Map(current.failures) : new Map<HTMLImageElement, string>();
+      next.set(image, label);
+      return { element, failures: next };
+    });
+  };
+  return thumbnailNodeToReact(element, 'artwork', failures, onImageError, true);
+}
+
+/** Reconcile engine-generated preview markup as a React element tree. */
+export function PptxPreviewArtwork({ markup }: { markup: string }) {
+  const element = useMemo(() => {
+    const parsed = new DOMParser().parseFromString(markup, 'text/html');
+    const root = parsed.body.firstElementChild;
+    if (parsed.body.children.length !== 1 || !root) return null;
+    const validSvg = root.namespaceURI === 'http://www.w3.org/2000/svg' && root.localName === 'svg';
+    const validThumbnail = root instanceof HTMLElement && root.localName === 'div' && root.classList.contains('thumb-box');
+    return validSvg || validThumbnail ? root : null;
+  }, [markup]);
+  if (!element) return null;
+  return thumbnailNodeToReact(element, 'svg', new Map(), () => {}, true, 'pptx-svg-preview');
+}
 
 /** React-owned slide thumbnails and selection/reorder gestures; the document engine supplies artwork and mutation commands. */
 export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
@@ -289,25 +381,25 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const taskId = task ? task.stack[task.pos] : undefined;
   const taskTitle = taskId ? task?.registry[taskId]?.title : undefined;
   const taskHeader = taskMount && task && createPortal(<div className="tp-head">
-    <button className="tp-nav" type="button" aria-label={L.t?.('Back') || 'Back'} disabled={task.pos <= 0} dangerouslySetInnerHTML={{ __html: L.icons?.get('back') || '' }} onClick={() => task.go(task.pos - 1)} />
-    <button className="tp-nav" type="button" aria-label={L.t?.('Forward') || 'Forward'} disabled={task.pos >= task.stack.length - 1} dangerouslySetInnerHTML={{ __html: L.icons?.get('forward') || '' }} onClick={() => task.go(task.pos + 1)} />
-    <button className="tp-nav" type="button" aria-label={L.t?.('Home') || 'Home'} dangerouslySetInnerHTML={{ __html: L.icons?.get('home') || '' }} onClick={() => task.show('getting-started')} />
+    <button className="tp-nav" type="button" aria-label={L.t?.('Back') || 'Back'} disabled={task.pos <= 0} onClick={() => task.go(task.pos - 1)}><PptxPreviewArtwork markup={L.icons?.get('back') || ''} /></button>
+    <button className="tp-nav" type="button" aria-label={L.t?.('Forward') || 'Forward'} disabled={task.pos >= task.stack.length - 1} onClick={() => task.go(task.pos + 1)}><PptxPreviewArtwork markup={L.icons?.get('forward') || ''} /></button>
+    <button className="tp-nav" type="button" aria-label={L.t?.('Home') || 'Home'} onClick={() => task.show('getting-started')}><PptxPreviewArtwork markup={L.icons?.get('home') || ''} /></button>
     <button className="tp-title" type="button" aria-haspopup="menu" onClick={(event) => {
       const rect = event.currentTarget.getBoundingClientRect();
       L.ui?.openMenu(Object.values(task.registry).filter((item) => !item.hidden).map((item) => ({ label: item.title, run: () => task.show(item.id), checked: () => task.current === item.id })), { left: rect.left, bottom: rect.bottom });
     }}><span>{taskTitle ? L.t?.(taskTitle) || taskTitle : ''}</span><span className="dd-arrow" /></button>
-    <button className="tp-nav" type="button" aria-label={L.t?.('Close task pane') || 'Close task pane'} dangerouslySetInnerHTML={{ __html: L.icons?.get('close', 12) || '' }} onClick={() => L.app?.toggleTask(false)} />
+    <button className="tp-nav" type="button" aria-label={L.t?.('Close task pane') || 'Close task pane'} onClick={() => L.app?.toggleTask(false)}><PptxPreviewArtwork markup={L.icons?.get('close', 12) || ''} /></button>
   </div>, taskMount);
   const tabs = tabsMount && createPortal(<div className="lp-tabs" role="tablist" aria-label="Presentation panes">
     <button className={`lp-tab${pane.tab === 'outline' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'outline'} tabIndex={pane.tab === 'outline' ? 0 : -1} data-pane-tab="outline" onKeyDown={(event) => paneTabKeyDown(event, 'outline')} onClick={() => selectPaneTab('outline')}>{L.t?.('Outline|pane') || 'Outline'}</button>
     <button className={`lp-tab${pane.tab === 'slides' ? ' on' : ''}`} type="button" role="tab" aria-selected={pane.tab === 'slides'} tabIndex={pane.tab === 'slides' ? 0 : -1} data-pane-tab="slides" onKeyDown={(event) => paneTabKeyDown(event, 'slides')} onClick={() => selectPaneTab('slides')}>{L.t?.('Slides') || 'Slides'}</button>
-    <button className="lp-close" type="button" aria-label={L.t?.('Close pane') || 'Close pane'} dangerouslySetInnerHTML={{ __html: L.icons?.get('close', 12) || '' }} onClick={() => L.app?.toggleLeft(false)} />
+    <button className="lp-close" type="button" aria-label={L.t?.('Close pane') || 'Close pane'} onClick={() => L.app?.toggleLeft(false)}><PptxPreviewArtwork markup={L.icons?.get('close', 12) || ''} /></button>
   </div>, tabsMount);
   const renderSlide = L.render?.thumb;
   const sorterView = sorterMount && sorter && presentation && slides && renderSlide && createPortal(<div className="sorter-grid" role="listbox" aria-label={L.t?.('Slide Sorter') || 'Slide Sorter'}>
     {slides.map((slide, index) => {
       const width = Math.max(90, Math.round(sorterMount.clientWidth ? Math.min(260, (sorterMount.clientWidth - 60) / 4) : 180));
-      const markup = renderSlide(presentation, slide, width, { index }).outerHTML;
+      const artwork = renderSlide(presentation, slide, width, { index });
       return <div className={`so-it${L.app?.slideSel?.has(index) ? ' sel' : ''}${slide.hidden ? ' hiddenslide' : ''}`} data-i={index} key={slide.id || index} role="option" aria-selected={L.app?.slideSel?.has(index) || false} onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => {
         const handled = sorter.reactSelectThumb?.(event.nativeEvent, index);
         if (!handled || !sorterMount || !L.app) return;
@@ -321,7 +413,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
             event.preventDefault(); event.stopPropagation(); setSorterFocusIndex(destination);
             sorterMount?.querySelectorAll<HTMLButtonElement>('.so-frame')[destination]?.focus();
           } else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); selectFromKeyboard(index, event, true); }
-        }} onClick={(event) => { if (event.detail === 0) selectFromKeyboard(index, event, true); }} dangerouslySetInnerHTML={{ __html: markup }} />
+        }} onClick={(event) => { if (event.detail === 0) selectFromKeyboard(index, event, true); }}><PptxThumbnailArtwork element={artwork} /></button>
         <div className="so-foot">{slide.trans?.type && slide.trans.type !== 'none' && <button type="button" className="th-star" title={L.anim?.transName(slide.trans)} aria-label={L.t?.('Preview transition') || 'Preview transition'} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); const frame = event.currentTarget.closest('.so-it')?.querySelector('.so-frame') || null; L.show?.previewTransition(frame, presentation, slide, slides[index - 1]); }}><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .8l1.5 3.2 3.4.4-2.5 2.3.7 3.4L6 8.4 2.9 10.1l.7-3.4L1.1 4.4l3.4-.4z" fill="none" stroke="#333" /></svg></button>}{slide.trans?.after != null && <span>{formatTransitionDelay(slide.trans.after)}</span>}<span className={`so-num${slide.hidden ? ' hid' : ''}`}>{String(index + (presentation.firstNum || 1))}</span></div>
       </div>;
     })}
@@ -339,7 +431,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const masterView = mount && masterChoices && createPortal(<div className="thumbs" role="listbox" aria-label={L.t?.('Slide Masters') || 'Slide Masters'}>
     {masterChoices.map((choice, index) => <div className={`th${choice.selected ? ' cur' : ''}`} key={choice.kind} data-master-kind={choice.kind} role="option" aria-selected={choice.selected}>
       <div className="th-meta"><span className="th-num">{String(index + 1)}</span></div>
-      <button className="th-frame" type="button" aria-label={choice.label} data-tip={choice.label} onClick={() => pane.reactSelectMaster?.(choice.kind)} dangerouslySetInnerHTML={{ __html: choice.preview }} />
+      <button className="th-frame" type="button" aria-label={choice.label} data-tip={choice.label} onClick={() => pane.reactSelectMaster?.(choice.kind)}><PptxThumbnailArtwork element={choice.preview} /></button>
     </div>)}
   </div>, mount);
   if (mount && L.ed?.view === 'master') return <>{taskHeader}{tabs}{masterView}{sorterView}</>;
@@ -350,7 +442,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   if (!renderSlide) return <>{taskHeader}{tabs}{sorterView}</>;
   return <>{taskHeader}{tabs}{sorterView}{createPortal(<div className="thumbs" role="listbox" aria-label="Slides" ref={(element) => { pane.list = element; }}>
     {slides.map((slide, index) => {
-      const markup = renderSlide(presentation, slide, width, { index }).outerHTML;
+      const artwork = renderSlide(presentation, slide, width, { index });
       const selected = L.app?.slideSel?.has(index) || false;
       const current = L.ed?.idx === index;
       const hasAnimation = (slide.trans?.type && slide.trans.type !== 'none') || !!slide.anims?.length;
@@ -360,7 +452,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
         slideDrag.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, dragging: false, target: null, line: null, body: pane.body, list: pane.list, indices: [...L.app.slideSel].sort((a, b) => a - b) };
       }} onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => pane.onThumbContext?.(event.nativeEvent, index)} onDoubleClick={() => pane.onThumbDoubleClick?.()}>
         <div className="th-meta"><span className="th-num">{String(index + (presentation.firstNum || 1))}</span>{hasAnimation && <button type="button" className="th-star" data-tip="Play animations" aria-label="Play animations" onClick={(event) => { event.stopPropagation(); const frame = event.currentTarget.closest('.th')?.querySelector('.th-frame') || null; L.show?.previewTransition(frame, presentation, slide, slides[index - 1]); }}><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .8l1.5 3.2 3.4.4-2.5 2.3.7 3.4L6 8.4 2.9 10.1l.7-3.4L1.1 4.4l3.4-.4z" fill="none" stroke="#333" /></svg></button>}</div>
-        <button className="th-frame" type="button" aria-label={L.t?.('Slide {0}', index + 1) || `Slide ${index + 1}`} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); selectFromKeyboard(index, event, false); } }} onClick={(event) => { if (event.detail === 0) selectFromKeyboard(index, event, false); }} dangerouslySetInnerHTML={{ __html: markup }} />
+        <button className="th-frame" type="button" aria-label={L.t?.('Slide {0}', index + 1) || `Slide ${index + 1}`} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); selectFromKeyboard(index, event, false); } }} onClick={(event) => { if (event.detail === 0) selectFromKeyboard(index, event, false); }}><PptxThumbnailArtwork element={artwork} /></button>
       </div>;
     })}
   </div>, mount)}</>;

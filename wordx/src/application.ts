@@ -789,7 +789,7 @@ export function installWordxApplication(runtime: Window): void {
   ]));
   A.updateToolbars = function () {
     if (!A.toolbarsEl) return;
-    if (window.VO && VO.reactDirectHost) { ui.refresh(); return; }
+    if (window.VO && VO.reactDirectHost) { L.bus.emit('toolbar-visibility'); ui.refresh(); return; }
     for (const id of Object.keys(A.toolbarsEl)) if (id !== 'drawing') A.toolbarsEl[id].hidden = !A.tbShown(id) || A.view === 'preview';
     if (A.view === 'reading') for (const id of Object.keys(A.toolbarsEl)) if (id !== 'drawing') A.toolbarsEl[id].hidden = id !== 'standard';
     A.tbRows.forEach((r) => { r.hidden = Array.from(r.children).every((c) => c.hidden); });

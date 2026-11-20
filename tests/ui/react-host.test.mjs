@@ -45,7 +45,7 @@ test('legacy app keyboard handlers ignore events outside the mounted editor host
         outside.remove(); return { keyboard, clipboard, tableEscape, textDrag, extendEscape, drawEscape };
       })()`);
       assert.equal(calls.keyboard, 0, `${app} must ignore keyboard input outside its mount`);
-      if (app === 'lectern') assert.equal(calls.clipboard, 0, 'Lectern ignores clipboard input outside its mount');
+      if (app === 'lectern') assert.equal(calls.clipboard, 0, 'PPTX ignores clipboard input outside its mount');
       if (app === 'quire') {
         assert.equal(calls.tableEscape, 0);
         assert.equal(calls.textDrag, 0);

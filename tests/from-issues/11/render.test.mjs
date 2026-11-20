@@ -1,4 +1,4 @@
-// Issue #11, as Quire draws it: linegrid.docx (tools/linegrid.py) against Word's PDF of it (word.json). The lines of
+// Issue #11, as Wordx lays it out: linegrid.docx (tools/linegrid.py) against Word's PDF of it (word.json). The lines of
 // each of the 90 cases are as far apart as Word puts them (runs that fit keep their own line height and don't stretch
 // the grid line), and pages break where Word's do: on a grid, Word centres the text in its line, and only the space
 // below the text may run into the bottom margin (public/quire/js/layout.js). Pages 1 to 5 and the 18pt grid's; the

@@ -401,7 +401,7 @@ export function installPptxApp(runtime: Window): void {
   A.updateToolbars = function () {
     if (!A.toolbarsEl) return;
     if (E.holdLayout && E.holdLayout(A.updateToolbars)) return;   /* not under a press on the slide (editor.js) */
-    if (window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected) { ui.refresh(); E.layout(); return; }
+    if (window.VO && VO.reactDirectHost && VO.reactDirectHost.root && VO.reactDirectHost.root.isConnected) { L.bus.emit('toolbar-visibility'); ui.refresh(); E.layout(); return; }
     for (const id of ['standard', 'formatting', 'drawing', 'outlining', 'picture', 'tables', 'wordart', 'diagram']) A.toolbarsEl[id].hidden = !A.tbShown(id) || (A.view === 'preview');
     A.toolbarsEl.outlining.hidden = !(A.opts.toolbars.outlining === true || (L.panes.left.tab === 'outline' && A.view === 'normal' && A.opts.toolbars.outlining !== false && false));
     A.toolbarsEl.master.hidden = A.view !== 'master';

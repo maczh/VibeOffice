@@ -36,6 +36,8 @@ test('each editor production package runs independently from its standalone dire
         const mounted = await page.evaluate(`new Promise((resolve) => { const end=Date.now()+10000; const poll=()=>document.querySelector('.vibe-editor__engine #app') && (${editor.ready}) ? resolve(true) : Date.now()>end ? resolve(false) : setTimeout(poll,50); poll(); })`);
         const diagnostic = mounted ? null : await page.evaluate("({url:location.href,title:document.title,body:document.body.innerText.slice(0,1000),editor:!!document.querySelector('.vibe-editor__engine #app'),scriptErrors:window.__capturedErrors||[]})");
         assert.equal(mounted, true, `${editor.id} standalone loads its React editor and document engine: ${JSON.stringify({ diagnostic, errors: page.errors, requests: page.requests })}`);
+        assert.deepEqual(await page.evaluate(`window.__VIBE_OFFICE_DIRECT_HOST__?.loadedLegacyScripts.filter((path)=>path.startsWith('/${editor.id}/js/')) || []`), [], `${editor.id} standalone does not load the app-specific legacy JavaScript runtime`);
+        assert.equal(await page.evaluate("document.querySelectorAll('iframe').length"), 0, `${editor.id} standalone mounts directly without an iframe`);
         if (editor.id === 'wordx') {
           await page.evaluate("(()=>{const d=L.D.newDoc();d.main.blocks=[L.D.para([L.D.text('Sep')])];L.app.opts.autoComplete=true;L.app.loadDoc(d,'Standalone AutoComplete');const p=L.D.firstPara(L.D.doc.main.blocks);L.ed.setSel(L.D.pos(p,L.D.plen(p)));L.ed.focus()})()");
           const caretReady = await page.evaluate("new Promise((resolve)=>{const end=Date.now()+3000;const poll=()=>{L.ed.caretRect()?resolve(true):Date.now()>end?resolve(false):setTimeout(poll,20)};poll()})");

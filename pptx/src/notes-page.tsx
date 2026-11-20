@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { PptxThumbnailArtwork } from './slides-pane.js';
 
 interface NotesPageSlide { id?: string; notes?: string }
 interface NotesPagePresentation { slides: NotesPageSlide[]; W: number; H: number; firstNum?: number }
@@ -57,9 +58,9 @@ export function PptxNotesPageLayer({ host }: { host: HTMLElement }) {
   const slideWidth = pageWidth * 0.67;
   const slideHeight = (slideWidth * presentation.H) / presentation.W;
   const notesTop = pageHeight * 0.075 + slideHeight + pageHeight * 0.05;
-  const markup = thumb(presentation, slide, slideWidth, { index }).outerHTML;
+  const artwork = thumb(presentation, slide, slideWidth, { index });
   const page = <div className="np-page" style={{ width: pageWidth, height: pageHeight }}>
-    <div className="np-slide" style={{ left: (pageWidth - slideWidth) / 2, top: pageHeight * 0.075, width: slideWidth, height: slideHeight }} dangerouslySetInnerHTML={{ __html: markup }} />
+    <div className="np-slide" style={{ left: (pageWidth - slideWidth) / 2, top: pageHeight * 0.075, width: slideWidth, height: slideHeight }}><PptxThumbnailArtwork element={artwork} /></div>
     <div className="np-notes" contentEditable suppressContentEditableWarning spellCheck role="textbox" aria-label={L?.t?.('Notes') || 'Notes'} style={{ left: pageWidth * 0.1, top: notesTop, width: pageWidth * 0.8, height: pageHeight - notesTop - pageHeight * 0.08, fontSize: Math.max(11, pageWidth / 48) }} onInput={(event) => L?.panes?.notesView?.updateNotes(slide, event.currentTarget.innerText.replace(/\n$/, ''))} onPaste={(event) => { event.preventDefault(); document.execCommand('insertText', false, event.clipboardData.getData('text/plain')); }}>{slide.notes || ''}</div>
     <div className="pv-hdr" style={{ right: pageWidth * 0.05, bottom: pageHeight * 0.03 }}>{String(index + (presentation.firstNum || 1))}</div>
   </div>;

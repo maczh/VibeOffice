@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 
 type ListItem = string | number | { value?: string | number; label?: string; style?: string; group?: boolean };
@@ -20,6 +20,7 @@ function itemStyle(text?: string): CSSProperties | undefined {
 function ListBoxControl({ request }: { request: ListBoxRequest }) {
   const [value, setValue] = useState(request.value);
   const [inputValue, setInputValue] = useState(request.inputValue);
+  const selectedOptionRef = useRef<HTMLDivElement>(null);
   const translate = request.options.translate === 'no' ? 'no' : request.options.translate === 'yes' ? 'yes' : undefined;
   useEffect(() => { setValue(request.value); }, [request]);
   useEffect(() => { setInputValue(request.inputValue); }, [request.inputValue]);
@@ -35,6 +36,17 @@ function ListBoxControl({ request }: { request: ListBoxRequest }) {
   const options = request.items.filter((item) => !(typeof item === 'object' && item.group) && itemValue(item) !== undefined);
   const activeIndex = Math.max(0, options.findIndex((item) => String(itemValue(item)) === String(value)));
   const activeId = request.target.id ? `${request.target.id}-option-${activeIndex}` : undefined;
+  useEffect(() => {
+    const option = selectedOptionRef.current;
+    if (!option) return;
+    const list = request.target;
+    const listBounds = list.getBoundingClientRect();
+    const optionBounds = option.getBoundingClientRect();
+    const visibleTop = listBounds.top + list.clientTop;
+    const visibleBottom = visibleTop + list.clientHeight;
+    if (optionBounds.top < visibleTop) list.scrollTop -= visibleTop - optionBounds.top;
+    else if (optionBounds.bottom > visibleBottom) list.scrollTop += optionBounds.bottom - visibleBottom;
+  }, [request, value]);
   const move = (key: string, event: { preventDefault(): void }) => {
     if (!options.length) return;
     let nextIndex = activeIndex;
@@ -48,19 +60,6 @@ function ListBoxControl({ request }: { request: ListBoxRequest }) {
     const next = options[nextIndex];
     if (!next) return;
     choose(next);
-    const nextId = request.target.id ? `${request.target.id}-option-${nextIndex}` : undefined;
-    if (nextId) {
-      const option = request.target.querySelector<HTMLElement>(`#${CSS.escape(nextId)}`);
-      if (option) {
-        const list = request.target;
-        const listBounds = list.getBoundingClientRect();
-        const optionBounds = option.getBoundingClientRect();
-        const visibleTop = listBounds.top + list.clientTop;
-        const visibleBottom = visibleTop + list.clientHeight;
-        if (optionBounds.top < visibleTop) list.scrollTop -= visibleTop - optionBounds.top;
-        else if (optionBounds.bottom > visibleBottom) list.scrollTop += optionBounds.bottom - visibleBottom;
-      }
-    }
   };
   useEffect(() => {
     const target = request.target;
@@ -83,7 +82,7 @@ function ListBoxControl({ request }: { request: ListBoxRequest }) {
     const grouped = typeof item === 'object' && !!item.group;
     const selected = !grouped && value != null && String(itemValue(item)) === String(value);
     const optionIndex = grouped ? -1 : options.findIndex((option) => String(itemValue(option)) === String(itemValue(item)));
-    return <div id={optionIndex < 0 || !request.target.id ? undefined : `${request.target.id}-option-${optionIndex}`} key={`${String(itemValue(item))}:${index}`} className={grouped ? 'li-group' : `li${selected ? ' on' : ''}`} role={grouped ? undefined : 'option'} aria-selected={grouped ? undefined : selected} style={itemStyle(typeof item === 'object' ? item.style : undefined)} onClick={grouped ? undefined : () => choose(item)} onDoubleClick={grouped ? undefined : () => choose(item, true)}>{itemLabel(item, request.options.translate)}</div>;
+    return <div ref={selected ? selectedOptionRef : undefined} id={optionIndex < 0 || !request.target.id ? undefined : `${request.target.id}-option-${optionIndex}`} key={`${String(itemValue(item))}:${index}`} className={grouped ? 'li-group' : `li${selected ? ' on' : ''}`} role={grouped ? undefined : 'option'} aria-selected={grouped ? undefined : selected} style={itemStyle(typeof item === 'object' ? item.style : undefined)} onClick={grouped ? undefined : () => choose(item)} onDoubleClick={grouped ? undefined : () => choose(item, true)}>{itemLabel(item, request.options.translate)}</div>;
   })}</>, request.target, request.target.id || undefined)}</>;
 }
 

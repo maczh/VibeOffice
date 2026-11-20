@@ -1,7 +1,7 @@
 // The quick check, about a minute: the Start Center and each app load clean (no errors, nothing from outside), and the
 // basic round of real input works in each: a click puts the keyboard in the document and typing lands there; a menu
 // from the menu bar and a dialog from its shortcut open and close with Esc and give the keyboard back; a drop-down
-// inside a dialog opens above it (Ledger); Undo takes the typing back. Run it after every change, with the change's
+// inside a dialog opens above it (Excelx); Undo takes the typing back. Run it after every change, with the change's
 // own test; the whole of tests/ui/ before a release (docs/testing.md, UI checks):
 //
 //   node --test --test-concurrency=1 tests/ui/smoke.test.mjs

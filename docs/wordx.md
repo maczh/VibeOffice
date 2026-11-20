@@ -453,6 +453,7 @@ compatibility results are archived with the run history rather than mixed into c
 | `js/mailmerge.js`, `js/templates.js` | Mail Merge wizard and toolbar, document templates |
 | `../common/ui.js`, `../common/search.js`, `../common/icons.js`, `../common/looks.css`, `../common/ui.css` | Menus, toolbars, dialogs, colour pickers, Search commands, original 16×16 icon set, the looks (shared) |
 | `js/commands.js`, `js/dialogs*.js`, `js/find.js`, `js/app.js` | Command registry, all dialogs, Find and Replace, application controller |
+| `wordx/src/find.ts` | Find and Replace's engine-facing search state, history, and operations remain in the compatibility module; the direct React host supplies the Find/Replace/Go To tabs, formatting menu, and Find/Replace Style picker through shared React surfaces |
 | `js/ribbon.js`, `../common/ribbon.js` | The Paper 2016 look's ribbon: Word's tabs and groups over Wordx's commands ([suite.md](suite.md#the-ribbon)) |
 | `../common/scout/` | Scout, the assistant: Help ▸ Show the Assistant ([suite.md](suite.md#the-assistant-scout)) |
 

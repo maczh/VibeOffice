@@ -107,6 +107,11 @@ test('React packages expose the same-document direct engine mount adapter', () =
   assert.doesNotMatch(frame, /iframe|contentWindow|postMessage/);
   assert.match(runtime, /mountLegacyEngineDocument/);
   assert.doesNotMatch(runtime, /createElement\(['"]iframe/);
+  assert.match(runtime, /shellOwnedByReact && scriptUrl\.pathname\.endsWith\('\/common\/ribbon\.js'\)/, 'React-owned editor shells skip the classic shared Ribbon module');
+  const services = readFileSync(new URL('../../commonx/src/runtime-services.ts', import.meta.url), 'utf8');
+  const ribbon = readFileSync(new URL('../../commonx/src/ribbon-service.ts', import.meta.url), 'utf8');
+  assert.match(services, /scriptUrl\.pathname\.endsWith\('\/common\/ribbon\.js'\).*installReactRibbonService/);
+  for (const method of ['init', 'select', 'collapse', 'built', 'follow']) assert.match(ribbon, new RegExp(`ribbonUI\\.${method}\\s*=`), `React Ribbon adapter provides ${method}`);
 });
 
 test('the Vite host runtime leaves React package source routes to Vite when no legacy asset matches', async () => {
@@ -496,5 +501,6 @@ test('suite CSP only adds explicitly configured remote origins', () => {
   const html = plugin.transformIndexHtml('<head></head>');
   assert.match(html, /connect-src 'self' https:\/\/dav\.example https:\/\/api\.example/);
   assert.match(html, /script-src 'self'/);
+  assert.match(html, /frame-src 'none'/, 'the React suite must prohibit nested browsing contexts');
   assert.throws(() => reactCsp('https://dav.example/path'), /Invalid remote origin/);
 });

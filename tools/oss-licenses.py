@@ -142,14 +142,14 @@ def main():
 
     site = ''.join([
         work('VibeOffice.work', 'Apache License 2.0', [('github.com/tcchen2026/VibeOffice', 'https://github.com/tcchen2026/VibeOffice')],
-             'Quire, Ledger, Lectern, the Start Center and everything they share, including the PDF writer, ZIP engine, metafile player, icons and clip art; and the desktop app around them. The parts that come from the projects below say so in their files.',
+             'Wordx, Excelx, PPTX, the Start Center and everything they share, including the PDF writer, ZIP engine, metafile player, icons and clip art; and the desktop app around them. The parts that come from the projects below say so in their files.',
              texts_=[apache]),
         # code and data derived from other projects: each file says "Derived from <name> …" (tests/licenses.test.mjs)
         work('Apache OpenOffice', 'Apache License 2.0', [('openoffice.org', 'https://www.openoffice.org'), ('github.com/apache/openoffice', 'https://github.com/apache/openoffice')],
-             'Rewritten in JavaScript from its spreadsheet code: the depreciation and interest functions DDB, IPMT, AMORLINC and AMORDEGRC, and the scroll bars\' range. Quire sizes each line by what it holds following its text layout (Writer\'s line portions). Its English AutoCorrect list is the base of the default list.',
+             'Rewritten in JavaScript from its spreadsheet code: the depreciation and interest functions DDB, IPMT, AMORLINC and AMORDEGRC, and the scroll bars\' range. Wordx sizes each line by what it holds following its text layout (Writer\'s line portions). Its English AutoCorrect list is the base of the default list.',
              files='public/ledger/js/fn-fin.js, public/ledger/js/grid.js, public/quire/js/portions.js, public/common/spell.js', texts_=[apache, notice('apache-openoffice-NOTICE.txt')], derived=True),
         work('commonmark.js', 'BSD-2-Clause', [('github.com/commonmark/commonmark.js', 'https://github.com/commonmark/commonmark.js')],
-             'Quire\'s Markdown reader is a condensed translation of its block and inline parsers. Copyright (c) 2014 John MacFarlane.',
+             'Wordx\'s Markdown reader is a condensed translation of its block and inline parsers. Copyright (c) 2014 John MacFarlane.',
              files='public/quire/js/markdown.js', texts_=[notice('commonmark.js-LICENSE.txt')], derived=True),
         work('puff', 'zlib License', [('github.com/madler/zlib', 'https://github.com/madler/zlib/tree/develop/contrib/puff')],
              'The ZIP engine\'s JavaScript inflater, used where the browser can\'t decompress, is an altered translation of puff.c. Copyright (C) 2002-2013 Mark Adler.',
@@ -158,7 +158,7 @@ def main():
              'Two helpers of the General number format, for trailing zeros and exponents. Copyright (C) 2013-present SheetJS LLC.',
              files='public/common/numfmt.js', texts_=[apache, notice('sheetjs-ssf-NOTICE.txt')], derived=True),
         work('Microsoft VBA documentation', 'CC BY 4.0', [('github.com/MicrosoftDocs/VBA-Docs', 'https://github.com/MicrosoftDocs/VBA-Docs')],
-             'Ledger\'s function descriptions and argument help follow the Excel WorksheetFunction pages of this documentation, in places shortened or adapted to Ledger. Copyright (c) Microsoft Corporation.',
+             'Excelx\'s function descriptions and argument help follow the Excel WorksheetFunction pages of this documentation, in places shortened or adapted to Excelx. Copyright (c) Microsoft Corporation.',
              files='public/ledger/js/fninfo.js', texts_=[notice('microsoft-vba-docs-LICENSE.txt')], derived=True),
         work('Open XML SDK', 'MIT License', [('github.com/dotnet/Open-XML-SDK', 'https://github.com/dotnet/Open-XML-SDK')],
              'From its schema data (commit 431ab05), the order of Word\'s run properties with their Office 2010 effects, and the limits of Word\'s revision and numbering IDs, in the generated element order. Copyright (c) .NET Foundation and Contributors.',

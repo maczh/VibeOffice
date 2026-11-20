@@ -1,4 +1,4 @@
-/* Ledger engine fuzz campaign, October 2026. All generators and cases live here.
+/* Excelx engine fuzz campaign, October 2026. All generators and cases live here.
  *
  *   node tests/ledger-fuzz/202610/fuzz.cjs
  *   node tests/ledger-fuzz/202610/fuzz.cjs --libreoffice
@@ -26,7 +26,7 @@
  *
  * --libreoffice needs soffice and a Python with python3-uno (/usr/bin/python3;
  * override LEDGER_FUZZ_PYTHON / LEDGER_FUZZ_SOFFICE). The embedded helper writes
- * XLSX with Python's standard library, independently of Ledger's writer/reader,
+ * XLSX with Python's standard library, independently of Excelx's writer/reader,
  * opens it in an isolated headless Calc profile, forces calculateAll(), and
  * reads values/errors through UNO. It verifies every pinned expectation and
  * directly compares each generated formula's value AND result type. Broad
@@ -368,7 +368,7 @@ function legacyBatch(seed) {
 // text and legacy CSE shape/coercion. Like legacyBatch, every value is paired
 // with a result-type assertion; complex outputs use components, not formatting.
 // Failed domains were minimized into round 2 below, not repeated per seed.
-// Do not turn these Calc differences into Ledger bugs: CONVERT uses different
+// Do not turn these Calc differences into Excelx bugs: CONVERT uses different
 // constants for lbm/atm; BESSELK has coarser reference accuracy; collinear LINEST
 // and extreme MINVERSE have different error behavior; zero-success HYPGEOMDIST
 // is allowed in Calc but explicitly rejected by Excel's documented domain:

@@ -34,7 +34,7 @@ The browser profile keeps IndexedDB between runs of `shot.mjs`, so a test can ha
     node tools/shot.mjs quire/ '[{"js":"const b = await L.docx.write(L.D.doc, { stats: L.app.docStats() }); setTimeout(() => VO.handoff(new File([b], \"t.docx\")), 50)"},{"wait":3500,"js":"return document.title"}]'
     node tools/shot.mjs "" '[{"wait":800,"shot":"start.png"}]'
 
-Check after a change to `suite.js` or to an app's start, open or save code: `<app>/?new` starts blank; a handed-over file opens in place of the blank document (one window); the file and a thumbnail appear under Recent Files; clicking it reopens it. Clear the list with `await VO.recent.clear()`.
+For the React suite, check after changing Start Center or app-launch code with `node --test --test-concurrency=1 tests/ui/react-suite.test.mjs`: the Start Center opens on Create File with no Recent Files surface, `<app>/?new` starts a blank document, and a handed-over file opens directly in its editor. The legacy `shot.mjs` handoff above remains useful for document-engine tests; Recent Files are not part of the React product and existing browser data is left untouched.
 
 Plain http: `node --test tests/insecure.test.mjs` checks that only the shared helpers call `crypto.randomUUID` and `crypto.subtle`, which a page served over plain http lacks, and that their fallbacks work: random UUIDs, and a password-protected file opening without WebCrypto (docs/suite.md, Plain http). To see such a page, serve the site on an address that isn't loopback, for example the Docker image (docs/suite.md, Self-hosting with Docker) published on a port and opened at the machine's LAN address: the Start Center shows its bar.
 
@@ -114,7 +114,7 @@ another tab and back. Two runs at once each need a Chromium of their own: `CDP=h
   indexed paragraph and maps to a position and back with the model's text; in PPTX the text of every placeholder,
   text box, shape, table cell and group or diagram node, each edited in turn, does the same. Check 2 clicks into text
   of each kind with real input: the caret is at the clicked character, and a letter typed goes there. Generated
-  documents with every kind of text; `node tools/textmap-corpus.mjs quire|lectern DIR N OUT.json [--hf]` runs check 1
+  documents with every kind of text; `node tools/textmap-corpus.mjs wordx|excelx|pptx DIR N OUT.json [--hf]` runs check 1
   over corpus files (`--hf`: Wordx's headers and footers, opened for editing).
 - `painter.test.mjs`: the Format Painter in each app (docs/suite.md, Brushes): it paints the dragged text, cells or
   object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in PPTX

@@ -75,6 +75,7 @@ export function installWordxAppDialogs(runtime: Window): void {
     const sizeBody = direct ? h('div', { class: 'col' }, sizeRoot) : null;
     let directSize = null;
     G.reactFormatObjectSizeCatalog = () => ({ width:it.w||72,height:it.h||72,rotation:it.rot||0,locked:aspectLocked,naturalWidth:it.natW||it.w||72,naturalHeight:it.natH||it.h||72,hasNatural:!!it.natW });
+    G.reactFormatObjectSizeSet = (value) => { directSize = { width:Number(value.width),height:Number(value.height),rotation:Number(value.rotation)||0,locked:!!value.locked }; };
     /* Layout */
     let wrap = it.float ? it.float.wrap || 'none' : 'inline';
     const wrapBox = h('div', { class: 'preset-grid' });
@@ -110,7 +111,8 @@ export function installWordxAppDialogs(runtime: Window): void {
           L.bus.emit('wordx-format-object-layout-refresh');
           return catalog();
         };
-        ui.dialog({title:'Advanced Layout',width:460,body:root,buttons:[{label:'OK',primary:true,onClick:()=>G.reactFormatObjectAdvancedAction()},{label:'Cancel'}]});
+        const advancedCatalog=G.reactFormatObjectAdvancedCatalog,advancedSet=G.reactFormatObjectAdvancedSet,advancedAction=G.reactFormatObjectAdvancedAction;
+        ui.dialog({title:'Advanced Layout',width:460,body:root,buttons:[{label:'OK',primary:true,onClick:()=>G.reactFormatObjectAdvancedAction()},{label:'Cancel'}],onClose:()=>{if(G.reactFormatObjectAdvancedCatalog===advancedCatalog)delete G.reactFormatObjectAdvancedCatalog;if(G.reactFormatObjectAdvancedSet===advancedSet)delete G.reactFormatObjectAdvancedSet;if(G.reactFormatObjectAdvancedAction===advancedAction)delete G.reactFormatObjectAdvancedAction;}});
         return;
       }
       const rels = [['column', L.N('Column|layout')], ['margin', L.N('Margin')], ['page', L.N('Page')], ['character', L.N('Character')]];
@@ -146,6 +148,9 @@ export function installWordxAppDialogs(runtime: Window): void {
     const pictureBody = direct && isImg ? h('div', { class: 'col' }, pictureRoot) : null;
     let directPicture = null;
     G.reactFormatObjectPictureCatalog = () => ({ crop:{left:(crop.l||0)*(it.natW||it.w),right:(crop.r||0)*(it.natW||it.w),top:(crop.t||0)*(it.natH||it.h),bottom:(crop.b||0)*(it.natH||it.h)},mode:it.gray?'gray':it.bw?'bw':it.washout?'washout':'',brightness:Math.round(((it.bright||0)+1)*50),contrast:Math.round(((it.contrast||0)+1)*50),naturalWidth:it.natW||it.w,naturalHeight:it.natH||it.h });
+    const pictureInitial = G.reactFormatObjectPictureCatalog();
+    directPicture = { left:pictureInitial.crop.left,right:pictureInitial.crop.right,top:pictureInitial.crop.top,bottom:pictureInitial.crop.bottom,mode:pictureInitial.mode,brightness:pictureInitial.brightness,contrast:pictureInitial.contrast };
+    G.reactFormatObjectPictureSet = (value) => { directPicture = { left:Number(value.crop.left),right:Number(value.crop.right),top:Number(value.crop.top),bottom:Number(value.crop.bottom),mode:String(value.mode),brightness:Number(value.brightness),contrast:Number(value.contrast) }; };
     /* Text Box */
     const ins = Object.assign({ l: 7.2, t: 3.6, r: 7.2, b: 3.6 }, it.ins || {});
     const iL = G.len(ins.l, { id: 'fo-il', min: 0 }), iR = G.len(ins.r, { id: 'fo-ir', min: 0 }), iT = G.len(ins.t, { id: 'fo-it', min: 0 }), iB = G.len(ins.b, { id: 'fo-ib', min: 0 });
@@ -153,14 +158,17 @@ export function installWordxAppDialogs(runtime: Window): void {
     const autofit = ui.check('Resize AutoShape to &fit text', !!it.autofit, null);
     const textBoxRoot = direct ? h('div', { id: 'react-wordx-format-object-textbox-root' }) : null;
     const textBoxBody = direct ? h('div', { class: 'col' }, textBoxRoot) : null;
-    let directTextBox = null;
+    let directTextBox = { left:ins.l,right:ins.r,top:ins.t,bottom:ins.b,anchor:it.anchor||'t',autofit:!!it.autofit };
     G.reactFormatObjectTextBoxCatalog = () => ({ margins:{left:ins.l,right:ins.r,top:ins.t,bottom:ins.b},anchor:it.anchor||'t',autofit:!!it.autofit });
+    G.reactFormatObjectTextBoxSet = (value) => { directTextBox = { left:Number(value.margins.left),right:Number(value.margins.right),top:Number(value.margins.top),bottom:Number(value.margins.bottom),anchor:String(value.anchor),autofit:!!value.autofit }; };
     /* Web */
     const alt = h('textarea', { rows: 4, id: 'fo-alt', style: 'width:100%' });
     alt.value = it.alt || it.descr || '';
     const webRoot = direct ? h('div', { id: 'react-wordx-format-object-web-root' }) : null;
     const webBody = direct ? h('div', { class: 'col' }, webRoot) : null;
-    G.reactFormatObjectWebCatalog = () => ({ alt: alt.value });
+    G.reactFormatObjectWebCatalog = () => ({ alt: directAlt });
+    let directAlt = alt.value;
+    G.reactFormatObjectWebSet = (value) => { directAlt = String(value); };
     const tabsDef = [
       { label: 'Colors and Lines', body: direct ? colorsBody : h('div', { class: 'col' }, isImg ? null : ui.group('Fill', G.row(G.f('C&olor:', fillBtn), fx), G.f('&Transparency:', transp)), ui.group('Line', G.row(G.f('Co&lor:', lineBtn), G.f('&Dashed:', dash)), G.f('&Weight:', weight)), isLine || (isShape && !isTb && !isWA) ? ui.group('Arrows', G.row(G.f('&Begin style:', head), G.f('&End style:', tail))) : null) },
       { label: 'Size', body: direct ? sizeBody : h('div', { class: 'col' }, ui.group('Size and rotate', G.row(G.f('H&eight:', hgt, 'narrow'), G.f('Wi&dth:', wid, 'narrow')), G.f('Ro&tation:', rot)), ui.group('Scale', G.row(G.f('&Height:', scH, 'narrow'), G.f('&Width:', scW, 'narrow')), lock), it.natW ? h('div', { class: 'tp-note', text: L.t('Original size — Height: {0}, Width: {1}', D.fmtLen(it.natH), D.fmtLen(it.natW)) }) : null, h('div', { class: 'tp-btns' }, reset)) },
@@ -170,14 +178,11 @@ export function installWordxAppDialogs(runtime: Window): void {
     if (isTb) tabsDef.push({ label: 'Text Box', body: direct ? textBoxBody : h('div', { class: 'col' }, ui.group('Internal margin', G.row(G.f('&Left:', iL, 'narrow'), G.f('&Top:', iT, 'narrow')), G.row(G.f('&Right:', iR, 'narrow'), G.f('&Bottom:', iB, 'narrow'))), G.f('&Vertical alignment:', anchor), autofit) });
     tabsDef.push({ label: 'Web', body: direct ? webBody : h('div', { class: 'col' }, h('label', { for: 'fo-alt', html: ui.ampHTML('&Alternative text:') }), alt, h('div', { class: 'tp-note', text: 'Web browsers display alternative text while pictures are loading or if they are missing. Screen readers read it aloud.' })) });
     const tabIdx = tab === 'picture' ? tabsDef.findIndex((t) => t.label === 'Picture') : tab === 'layout' ? 2 : tab === 'size' ? 1 : 0;
+    const reactFormatObjectBridges = direct ? Object.keys(G).filter((key) => key.startsWith('reactFormatObject') && key !== 'reactFormatObjectAdvancedCatalog' && key !== 'reactFormatObjectAdvancedSet' && key !== 'reactFormatObjectAdvancedAction').map((key) => [key, G[key]]) : [];
     ui.dialog({
       title, width: 470, body: ui.tabs(tabsDef, Math.max(0, tabIdx)),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         if (direct) {
-          const size = sizeRoot.querySelector('#react-wordx-format-object-size-body');
-          if (size) directSize = { height:Number(size.querySelector('[data-size-field=height]').value)||1,width:Number(size.querySelector('[data-size-field=width]').value)||1,rotation:Number(size.querySelector('[data-size-field=rotation]').value)||0,locked:size.querySelector('[data-size-field=locked]').checked };
-          if (isTb) { const box=textBoxRoot.querySelector('#react-wordx-format-object-textbox-body'); if(box)directTextBox={left:Number(box.querySelector('[data-box-margin=left]').value),right:Number(box.querySelector('[data-box-margin=right]').value),top:Number(box.querySelector('[data-box-margin=top]').value),bottom:Number(box.querySelector('[data-box-margin=bottom]').value),anchor:box.querySelector('#react-wordx-format-object-anchor').value,autofit:box.querySelector('[data-box-autofit]').checked}; }
-            if (isImg) { const picture=pictureRoot.querySelector('#react-wordx-format-object-picture-body');if(picture)directPicture={left:Number(picture.querySelector('[data-picture-crop=left]').value)||0,right:Number(picture.querySelector('[data-picture-crop=right]').value)||0,top:Number(picture.querySelector('[data-picture-crop=top]').value)||0,bottom:Number(picture.querySelector('[data-picture-crop=bottom]').value)||0,mode:picture.querySelector('#react-wordx-format-object-picture-mode').value,brightness:Number(picture.querySelector('[data-picture-tone=brightness]').value),contrast:Number(picture.querySelector('[data-picture-tone=contrast]').value)}; }
         }
         L.drawing.modifySelected(title, (x) => {
           if (!isImg) { if (fill.t === 'solid') fill.a = 1 - (direct ? directColors.transparency : transp.get()) / 100; x.fill = fill; }
@@ -209,9 +214,10 @@ export function installWordxAppDialogs(runtime: Window): void {
             x.bright = L.round(brightness / 50 - 1, 2) || undefined; x.contrast = L.round(contrastValue / 50 - 1, 2) || undefined;
           }
           if (isTb) { x.ins = directTextBox ? { l:directTextBox.left,r:directTextBox.right,t:directTextBox.top,b:directTextBox.bottom } : { l: iL.get(), r: iR.get(), t: iT.get(), b: iB.get() }; const vertical=directTextBox?directTextBox.anchor:anchor.value; x.anchor = vertical === 't' ? undefined : vertical; x.autofit = (directTextBox?directTextBox.autofit:autofit.input.checked) || undefined; }
-          x.alt = (direct ? webRoot.querySelector('#react-wordx-format-object-alt')?.value : alt.value) || undefined;
+          x.alt = (direct ? directAlt : alt.value) || undefined;
         });
       } }, { label: 'Cancel' }],
+      onClose: () => { for (const [key, bridge] of reactFormatObjectBridges) if (G[key] === bridge) delete G[key]; },
     });
   };
   /** Fill Effects: resolves with a fill object or null */
@@ -235,8 +241,9 @@ export function installWordxAppDialogs(runtime: Window): void {
           }
           return catalog();
         };
+        const fillCatalog=G.reactFillEffectsCatalog,fillSet=G.reactFillEffectsSet,fillAction=G.reactFillEffectsAction;
         const root = h('div',{id:'react-wordx-fill-effects-root'});
-        ui.dialog({title:'Fill Effects',width:420,body:root,buttons:[{label:'OK',primary:true,onClick:()=>G.reactFillEffectsAction('accept')},{label:'Cancel'}],onClose:()=>resolve(result)});
+        ui.dialog({title:'Fill Effects',width:420,body:root,buttons:[{label:'OK',primary:true,onClick:()=>G.reactFillEffectsAction('accept')},{label:'Cancel'}],onClose:()=>{if(G.reactFillEffectsCatalog===fillCatalog)delete G.reactFillEffectsCatalog;if(G.reactFillEffectsSet===fillSet)delete G.reactFillEffectsSet;if(G.reactFillEffectsAction===fillAction)delete G.reactFillEffectsAction;resolve(result);}});
       });
     }
     return new Promise((resolve) => {
@@ -281,7 +288,14 @@ export function installWordxAppDialogs(runtime: Window): void {
       const root = h('div', { id: 'react-wordx-drawing-grid-root' });
       G.reactDrawingGridCatalog = () => ({ snap: !!A().opts.snapGrid, horizontal: A().opts.gridH || 9, vertical: A().opts.gridV || 9 });
       G.reactDrawingGridAction = (value) => { const opts = A().opts; opts.snapGrid = !!value.snap; opts.gridH = Math.max(1, Number(value.horizontal) || 1); opts.gridV = Math.max(1, Number(value.vertical) || 1); A().saveOpts(); return G.reactDrawingGridCatalog(); };
-      ui.dialog({ title: 'Drawing Grid', width: 300, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => { const body = root.querySelector('#react-wordx-drawing-grid-body'); if (body) G.reactDrawingGridAction({ snap: body.querySelector('[name=react-wordx-grid-snap]').checked, horizontal: body.querySelector('#react-wordx-grid-horizontal').value, vertical: body.querySelector('#react-wordx-grid-vertical').value }); } }, { label: 'Cancel' }] });
+      let draft = G.reactDrawingGridCatalog();
+      G.reactDrawingGridSet = (value) => { draft = { snap: !!value.snap, horizontal: Number(value.horizontal) || 1, vertical: Number(value.vertical) || 1 }; };
+      const catalog = G.reactDrawingGridCatalog, action = G.reactDrawingGridAction, set = G.reactDrawingGridSet;
+      ui.dialog({ title: 'Drawing Grid', width: 300, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => G.reactDrawingGridAction(draft) }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactDrawingGridCatalog === catalog) delete G.reactDrawingGridCatalog;
+        if (G.reactDrawingGridAction === action) delete G.reactDrawingGridAction;
+        if (G.reactDrawingGridSet === set) delete G.reactDrawingGridSet;
+      } });
       return;
     }
     const snap = ui.check('&Snap objects to grid', !!A().opts.snapGrid, null);
@@ -303,16 +317,23 @@ export function installWordxAppDialogs(runtime: Window): void {
         if (value.mode === 'review') {
           const reviewRoot=h('div',{id:'react-wordx-autoformat-review-root'});
           G.reactAutoFormatReviewCatalog=()=>({changes:n});
-          ui.dialog({ title: 'AutoFormat', width: 380, body: reviewRoot, buttons: [{ label: '&Accept All', primary: true }, { label: '&Reject All', onClick: () => { D.undo(); LY.update(); E.restoreDom(true); } }] });
+          const reviewCatalog=G.reactAutoFormatReviewCatalog;
+          ui.dialog({ title: 'AutoFormat', width: 380, body: reviewRoot, buttons: [{ label: '&Accept All', primary: true }, { label: '&Reject All', onClick: () => { D.undo(); LY.update(); E.restoreDom(true); } }], onClose: () => { if(G.reactAutoFormatReviewCatalog===reviewCatalog)delete G.reactAutoFormatReviewCatalog; } });
         }
         else A().status(n === 1 ? L.t('AutoFormat made {0} change.', n) : L.t('AutoFormat made {0} changes.', n), 6000);
         return n;
       };
+      let draft = G.reactAutoFormatCatalog();
+      G.reactAutoFormatSet = (value) => { draft = { mode: value.mode, kind: value.kind, options: { ...value.options } }; };
+      const catalog=G.reactAutoFormatCatalog,set=G.reactAutoFormatSet,action=G.reactAutoFormatAction;
+      // Tie the adapter lifetime to the parent dialog, including its cancel path.
       ui.dialog({ title: 'AutoFormat', width: 400, body: root, buttons: [{ label: 'OK', primary: true, onClick: () => {
-        const body = root.querySelector('#react-wordx-autoformat-body'); if (!body) return;
-        const options = Object.fromEntries(Array.from(body.querySelectorAll('[data-autoformat-option]'), (input) => [input.dataset.autoformatOption, input.checked]));
-        G.reactAutoFormatAction({ mode: body.querySelector('[name=react-wordx-autoformat-mode]:checked')?.value || 'now', kind: body.querySelector('#react-wordx-autoformat-kind').value, options });
-      } }, { label: 'Cancel' }] });
+        G.reactAutoFormatAction(draft);
+      } }, { label: 'Cancel' }], onClose: () => {
+        if(G.reactAutoFormatCatalog===catalog)delete G.reactAutoFormatCatalog;
+        if(G.reactAutoFormatSet===set)delete G.reactAutoFormatSet;
+        if(G.reactAutoFormatAction===action)delete G.reactAutoFormatAction;
+      } });
       return;
     }
     const mode = G.radios('af-m', [['now', '&AutoFormat now'], ['review', 'AutoFormat and &review each change']], 'now');
@@ -445,6 +466,7 @@ export function installWordxAppDialogs(runtime: Window): void {
     let includeNotes = !!L.store.get('wcNotes', false);
     const incl = direct ? null : ui.check('Include &footnotes and endnotes', includeNotes, () => { includeNotes = incl.input.checked; L.store.set('wcNotes', includeNotes); draw(); });
     const tbl = h('table', { class: 'wc-table' });
+    let rows = [];
     const draw = () => {
       L.clear(tbl);
       let paras;
@@ -453,14 +475,19 @@ export function installWordxAppDialogs(runtime: Window): void {
       const st = D.stats(paras);
       let lines = 0;
       if (LY.pages.length) for (const pg of LY.pages) for (const f of pg.el.querySelectorAll('.pg-body .p')) { if (f.closest('.balloons')) continue; lines += LY.lineCount(f); }
-      const rows = [[L.N('Pages'), selOnly ? '' : LY.pages.length || 1], [L.N('Words'), st.words], ['Characters (no spaces)', st.charsNoSp], ['Characters (with spaces)', st.chars], [L.N('Paragraphs'), st.paras], [L.N('Lines'), selOnly ? '' : lines || st.paras]];
-      for (const [k, v] of rows) if (v !== '') tbl.appendChild(h('tr', null, h('td', { text: k }), h('td', { text: Number(v).toLocaleString() })));
+      rows = [[L.N('Pages'), selOnly ? '' : LY.pages.length || 1], [L.N('Words'), st.words], ['Characters (no spaces)', st.charsNoSp], ['Characters (with spaces)', st.chars], [L.N('Paragraphs'), st.paras], [L.N('Lines'), selOnly ? '' : lines || st.paras]].filter(([, value]) => value !== '').map(([label, value]) => [label, Number(value).toLocaleString()]);
+      if (!direct) for (const [label, value] of rows) tbl.appendChild(h('tr', null, h('td', { text: label }), h('td', { text: value })));
     };
-    G.reactWordCountCatalog = () => ({ selection: !!selOnly, includeNotes, rows: Array.from(tbl.querySelectorAll('tr'), (row) => Array.from(row.cells, (cell) => cell.textContent)) });
-    G.reactWordCountAction = (value) => { includeNotes = !!value; L.store.set('wcNotes', includeNotes); draw(); return G.reactWordCountCatalog(); };
+    const catalog = () => ({ selection: !!selOnly, includeNotes, rows: rows.map((row) => row.slice()) });
+    const action = (value) => { includeNotes = !!value; L.store.set('wcNotes', includeNotes); draw(); return catalog(); };
+    G.reactWordCountCatalog = catalog;
+    G.reactWordCountAction = action;
     const reactRoot = h('div', { id: 'react-wordx-word-count-root' });
     draw();
-    ui.dialog({ title: 'Word Count', width: 300, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: selOnly ? L.t('Statistics: (selection)') : 'Statistics:' }), tbl, incl), buttons: [{ label: 'Close', primary: true }] });
+    ui.dialog({ title: 'Word Count', width: 300, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: selOnly ? L.t('Statistics: (selection)') : 'Statistics:' }), tbl, incl), buttons: [{ label: 'Close', primary: true }], onClose: () => {
+      if (G.reactWordCountCatalog === catalog) delete G.reactWordCountCatalog;
+      if (G.reactWordCountAction === action) delete G.reactWordCountAction;
+    } });
   };
 
   /* ================= AutoSummarize ================= */
@@ -470,7 +497,15 @@ export function installWordxAppDialogs(runtime: Window): void {
     const pct = ui.select([[10, '10 sentences'], [20, '20 sentences'], [100, '100 words or less'], [500, '500 words or less'], ['10%', '10%'], ['25%', '25%'], ['50%', '50%'], ['75%', '75%']], '25%', null, { id: 'as-pct' });
     const upd = ui.check('&Update document statistics', true, null);
     const reactRoot = h('div', { id: 'react-wordx-summarize-root' });
-    ui.dialog({ title: 'AutoSummarize', width: 460, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Wordx has examined the document and picked the sentences most relevant to the main theme.' }), ui.group('Type of summary', kind), ui.group('Length of summary', G.f('&Percent of original:', pct, 'wide')), upd), buttons: [{ label: 'OK', primary: true, onClick: () => direct ? summarize(reactRoot.querySelector('input[name=react-wordx-summary-kind]:checked')?.value || 'highlight', reactRoot.querySelector('#react-wordx-summary-length')?.value || '25%', !!reactRoot.querySelector('#react-wordx-summary-update')?.checked) : summarize(kind.get(), pct.value, upd.input.checked) }, { label: 'Cancel' }] });
+    let draft = { kind: 'highlight', length: '25%', update: true };
+    const draftSet = (value) => { draft = { kind: value.kind, length: value.length, update: !!value.update }; };
+    const action = (value) => summarize(value.kind, value.length, value.update);
+    G.reactAutoSummarizeSet = draftSet;
+    G.reactAutoSummarizeAction = action;
+    ui.dialog({ title: 'AutoSummarize', width: 460, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Wordx has examined the document and picked the sentences most relevant to the main theme.' }), ui.group('Type of summary', kind), ui.group('Length of summary', G.f('&Percent of original:', pct, 'wide')), upd), buttons: [{ label: 'OK', primary: true, onClick: () => direct ? G.reactAutoSummarizeAction(draft) : summarize(kind.get(), pct.value, upd.input.checked) }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactAutoSummarizeSet === draftSet) delete G.reactAutoSummarizeSet;
+      if (G.reactAutoSummarizeAction === action) delete G.reactAutoSummarizeAction;
+    } });
   };
   function summarize(kind, len, updStats) {
     const d = doc();
@@ -534,7 +569,19 @@ export function installWordxAppDialogs(runtime: Window): void {
     const limit = direct ? null : G.num(d.settings.consecHyphen || null, { id: 'hy-l', min: 0, autoLabel: L.t('No limit') });
     const reactRoot = h('div', { id: 'react-wordx-hyphenation-root' });
     G.reactHyphenationCatalog = () => ({ auto: !!d.settings.autoHyphen, caps: d.settings.hyphenCaps !== false, zone: d.settings.hyphenZone || 18, limit: d.settings.consecHyphen || '' });
-    ui.dialog({ title: 'Hyphenation', width: 320, body: direct ? reactRoot : h('div', { class: 'col' }, auto, caps, G.f('Hyphenation &zone:', zone, 'wide'), G.f('&Limit consecutive hyphens to:', limit, 'wide')), buttons: [{ label: 'OK', primary: true, onClick: () => { const value = direct ? { auto: !!reactRoot.querySelector('#react-wordx-hyphen-auto')?.checked, caps: !!reactRoot.querySelector('#react-wordx-hyphen-caps')?.checked, zone: Number(reactRoot.querySelector('#react-wordx-hyphen-zone')?.value || 18), limit: Number(reactRoot.querySelector('#react-wordx-hyphen-limit')?.value) || undefined } : { auto: auto.input.checked, caps: caps.input.checked, zone: zone.get(), limit: limit.get() || undefined }; E.edit('Hyphenation', () => { D.touchKey(d, 'settings'); d.settings.autoHyphen = value.auto; d.settings.hyphenCaps = value.caps; d.settings.hyphenZone = value.zone; d.settings.consecHyphen = value.limit; return E.sel; }); LY.root.classList.toggle('hyphens', value.auto); } }, { label: '&Manual...', onClick: () => { ui.msg('Manual hyphenation: place the insertion point inside a long word and press Ctrl+- to insert an optional hyphen.', { icon: 'info' }); return false; } }, { label: 'Cancel' }] });
+    let draft = G.reactHyphenationCatalog();
+    G.reactHyphenationSet = (value) => { draft = { auto: !!value.auto, caps: !!value.caps, zone: value.zone === '' ? 18 : Number(value.zone), limit: Number(value.limit) || '' }; };
+    G.reactHyphenationAction = (value) => {
+      const current = { auto: !!value.auto, caps: !!value.caps, zone: value.zone === '' ? 18 : Number(value.zone), limit: Number(value.limit) || undefined };
+      E.edit('Hyphenation', () => { D.touchKey(d, 'settings'); d.settings.autoHyphen = current.auto; d.settings.hyphenCaps = current.caps; d.settings.hyphenZone = current.zone; d.settings.consecHyphen = current.limit; return E.sel; });
+      LY.root.classList.toggle('hyphens', current.auto);
+    };
+    const hyphenationCatalog = G.reactHyphenationCatalog, hyphenationSet = G.reactHyphenationSet, hyphenationAction = G.reactHyphenationAction;
+    ui.dialog({ title: 'Hyphenation', width: 320, body: direct ? reactRoot : h('div', { class: 'col' }, auto, caps, G.f('Hyphenation &zone:', zone, 'wide'), G.f('&Limit consecutive hyphens to:', limit, 'wide')), buttons: [{ label: 'OK', primary: true, onClick: () => { if (direct) G.reactHyphenationAction(draft); else G.reactHyphenationAction({ auto: auto.input.checked, caps: caps.input.checked, zone: zone.get(), limit: limit.get() || undefined }); } }, { label: '&Manual...', onClick: () => { ui.msg('Manual hyphenation: place the insertion point inside a long word and press Ctrl+- to insert an optional hyphen.', { icon: 'info' }); return false; } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactHyphenationCatalog === hyphenationCatalog) delete G.reactHyphenationCatalog;
+      if (G.reactHyphenationSet === hyphenationSet) delete G.reactHyphenationSet;
+      if (G.reactHyphenationAction === hyphenationAction) delete G.reactHyphenationAction;
+    } });
   };
 
   /* ================= Envelopes and Labels ================= */
@@ -559,19 +606,26 @@ export function installWordxAppDialogs(runtime: Window): void {
     const reactEnvelopeState = { tab: cur, selectedText: sel, address: sel, returnAddress: ret.value, omit: false, size: '10', labelAddress: sel, product: '5160', printMode: 'full', row: 1, column: 1 };
     G.reactEnvelopeCatalog = () => ({ ...reactEnvelopeState, products: LABELS.map(([id, name]) => ({ id, name })) });
     G.reactEnvelopeTab = (value) => { cur = value === 'labels' ? 1 : 0; reactEnvelopeState.tab = cur; };
+    G.reactEnvelopeSet = (value) => { Object.assign(reactEnvelopeState, value); };
     G.reactEnvelopeAction = (action, value) => {
       cur = value.tab === 'labels' ? 1 : 0;
-      Object.assign(reactEnvelopeState, value);
+      Object.assign(reactEnvelopeState, value, { tab: cur });
       if (action === 'add') { if (cur === 0) addEnvelope(value); else newLabels(value); }
       else if (action === 'print') { if (cur === 0) { addEnvelope(value); setTimeout(() => A().printPDF(), 100); } else newLabels(value); }
       return G.reactEnvelopeCatalog();
     };
+    const envelopeCatalog = G.reactEnvelopeCatalog, envelopeTab = G.reactEnvelopeTab, envelopeSet = G.reactEnvelopeSet, envelopeAction = G.reactEnvelopeAction;
     const tabs = ui.tabs([
       { label: '&Envelopes', body: h('div', { class: 'col' }, h('label', { for: 'el-addr', html: ui.ampHTML('&Delivery address:') }), addr, G.row(h('label', { for: 'el-ret', html: ui.ampHTML('&Return address:') }), omit), ret, G.f('Envelope si&ze:', size)), onShow: () => { cur = 0; } },
       { label: '&Labels', body: h('div', { class: 'col' }, h('label', { for: 'el-laddr', html: ui.ampHTML('&Address:') }), laddr, G.f('Label &product:', lprod), ui.group('Print', full, G.row(G.f('Ro&w:', row, 'narrow'), G.f('Colu&mn:', colN, 'narrow')))), onShow: () => { cur = 1; } },
     ], cur);
-    ui.dialog({ title: 'Envelopes and Labels', width: 420, body: direct ? reactRoot : tabs, buttons: [{ label: '&Add to Document', primary: true, onClick: () => { if (direct) G.reactEnvelopeAction('add', envelopeValues()); else if (cur === 0) addEnvelope(); else newLabels(); } }, { label: cur === 0 ? '&Print (PDF)...' : 'New &Document', onClick: () => { if (direct) G.reactEnvelopeAction('print', envelopeValues()); else if (cur === 0) { addEnvelope(); setTimeout(() => A().printPDF(), 100); } else newLabels(); } }, { label: 'Cancel' }] });
-    function envelopeValues() { const body = reactRoot.querySelector('#react-wordx-envelopes-body'); return { tab: reactEnvelopeState.tab === 1 ? 'labels' : 'envelopes', address: body?.querySelector('#react-wordx-envelope-address')?.value || '', returnAddress: body?.querySelector('#react-wordx-envelope-return')?.value || '', omit: !!body?.querySelector('#react-wordx-envelope-omit')?.checked, size: body?.querySelector('#react-wordx-envelope-size')?.value || '10', labelAddress: body?.querySelector('#react-wordx-label-address')?.value || '', product: body?.querySelector('#react-wordx-label-product')?.value || '5160', printMode: body?.querySelector('[name=react-wordx-label-mode]:checked')?.value || 'full', row: Number(body?.querySelector('#react-wordx-label-row')?.value) || 1, column: Number(body?.querySelector('#react-wordx-label-column')?.value) || 1 }; }
+    ui.dialog({ title: 'Envelopes and Labels', width: 420, body: direct ? reactRoot : tabs, buttons: [{ label: '&Add to Document', primary: true, onClick: () => { if (direct) G.reactEnvelopeAction('add', envelopeValues()); else if (cur === 0) addEnvelope(); else newLabels(); } }, { label: cur === 0 ? '&Print (PDF)...' : 'New &Document', onClick: () => { if (direct) G.reactEnvelopeAction('print', envelopeValues()); else if (cur === 0) { addEnvelope(); setTimeout(() => A().printPDF(), 100); } else newLabels(); } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactEnvelopeCatalog === envelopeCatalog) delete G.reactEnvelopeCatalog;
+      if (G.reactEnvelopeTab === envelopeTab) delete G.reactEnvelopeTab;
+      if (G.reactEnvelopeSet === envelopeSet) delete G.reactEnvelopeSet;
+      if (G.reactEnvelopeAction === envelopeAction) delete G.reactEnvelopeAction;
+    } });
+    function envelopeValues() { return { ...reactEnvelopeState, tab: reactEnvelopeState.tab === 1 ? 'labels' : 'envelopes' }; }
     function addEnvelope(values) {
       const returnAddress = values ? values.returnAddress : ret.value, omitReturn = values ? values.omit : omit.input.checked, delivery = values ? values.address : addr.value, envelopeSize = values ? values.size : size.value;
       L.store.set('userAddress', returnAddress);
@@ -645,8 +699,14 @@ export function installWordxAppDialogs(runtime: Window): void {
     ]);
     G.reactLetterWizardCatalog = () => ({ dates:L.fields.DATE_PICTURES.slice(0,6).map((value)=>({value,label:L.fields.formatDate(new Date(),value)})), styles:[['full','Full block'],['modified','Modified block'],['semi','Semi-block']], salutations:['Dear ','Dear Sir or Madam:','Ladies and Gentlemen:','To Whom It May Concern:'], closings:L.autocorrect.AUTOTEXT.Closing, name:L.store.get('userName',''), address:L.store.get('userAddress','') });
     G.reactLetterWizardAction = (v) => createLetter(v);
-    function reactValues() { const body=reactRoot.querySelector('#react-wordx-letter-wizard-body'), read=(id)=>body?.querySelector('#'+id); return { date:!!read('react-wordx-letter-date')?.checked, datePic:read('react-wordx-letter-date-format')?.value||'MMMM d, yyyy', style:read('react-wordx-letter-style')?.value||'full', recipient:read('react-wordx-letter-recipient')?.value||'', delivery:read('react-wordx-letter-delivery')?.value||'', salutation:read('react-wordx-letter-salutation')?.value||'Dear ', reference:read('react-wordx-letter-reference')?.value||'', subject:read('react-wordx-letter-subject')?.value||'', cc:read('react-wordx-letter-cc')?.value||'', sender:read('react-wordx-letter-sender')?.value||'', returnAddress:read('react-wordx-letter-return')?.value||'', closing:read('react-wordx-letter-closing')?.value||'Sincerely,', title:read('react-wordx-letter-title')?.value||'', enclosures:Number(read('react-wordx-letter-enclosures')?.value)||0 }; }
-    ui.dialog({ title: 'Letter Wizard', width: 460, body: direct ? reactRoot : tabs, buttons: [{ label: 'OK', primary: true, onClick: () => createLetter(direct ? reactValues() : null) }, { label: 'Cancel' }] });
+    let letterDraft = { date: date.input?.checked ?? true, datePic: datePic.value, style: style.value, recipient: rname.value, delivery: raddr.value, salutation: sal.value, reference: refLine.value, subject: subj.value, cc: cc.value, sender: sname.value, returnAddress: saddr.value, closing: closing.value, title: title.value, enclosures: encl.get() };
+    G.reactLetterWizardSet = (value) => { letterDraft = { ...letterDraft, ...value }; };
+    const letterCatalog = G.reactLetterWizardCatalog, letterAction = G.reactLetterWizardAction, letterSet = G.reactLetterWizardSet;
+    ui.dialog({ title: 'Letter Wizard', width: 460, body: direct ? reactRoot : tabs, buttons: [{ label: 'OK', primary: true, onClick: () => createLetter(direct ? letterDraft : null) }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactLetterWizardCatalog === letterCatalog) delete G.reactLetterWizardCatalog;
+      if (G.reactLetterWizardAction === letterAction) delete G.reactLetterWizardAction;
+      if (G.reactLetterWizardSet === letterSet) delete G.reactLetterWizardSet;
+    } });
     function createLetter(values) {
       const recipient=values?values.recipient:rname.value, delivery=values?values.delivery:raddr.value, salutation=values?values.salutation:sal.value, reference=values?values.reference:refLine.value, subject=values?values.subject:subj.value, copies=values?values.cc:cc.value, sender=values?values.sender:sname.value, returnAddress=values?values.returnAddress:saddr.value, close=values?values.closing:closing.value, jobTitle=values?values.title:title.value, enclosureCount=values?values.enclosures:encl.get(), dateEnabled=values?values.date:date.input.checked, dateFormat=values?values.datePic:datePic.value, letterStyle=values?values.style:style.value;
       L.store.set('userAddress', returnAddress);
@@ -685,6 +745,8 @@ export function installWordxAppDialogs(runtime: Window): void {
     const name = h('input', { type: 'text', value: d.props.template || 'Normal', style: 'width:100%', readonly: true });
     const reactRoot = h('div', { id: 'react-wordx-templates-root' });
     G.reactTemplatesCatalog = () => ({ name: d.props.template || 'Normal', update: !!d.settings.attachedTemplateUpdate });
+    let updateDraft = !!d.settings.attachedTemplateUpdate;
+    G.reactTemplatesSet = (value) => { updateDraft = !!value; };
     G.reactTemplatesAction = async (action, value) => {
       if (action === 'attach') {
         const f = (await L.pickFiles('.dotx,.dotm,.docx'))[0];
@@ -697,7 +759,12 @@ export function installWordxAppDialogs(runtime: Window): void {
       else if (action === 'save') d.settings.attachedTemplateUpdate = value || undefined;
       return G.reactTemplatesCatalog();
     };
-    ui.dialog({ title: 'Templates and Add-ins', width: 400, body: direct ? reactRoot : h('div', { class: 'col' }, ui.group('Document template', name, auto, h('div', { class: 'tp-btns' }, ui.button('&Attach...', async () => { const f = (await L.pickFiles('.dotx,.dotm,.docx'))[0]; if (!f) return; const res = await L.docx.read(await L.readAsArrayBuffer(f)); d.props.template = f.name; name.value = f.name; if (auto.input.checked) A().mergeStylesFrom(res.doc, true); A().status(L.t('Template attached: {0}', f.name)); }, { class: 'btn small' }), ui.button('&Organizer...', () => G.organizer(), { class: 'btn small' }))), h('div', { class: 'tp-note', text: 'Attaching a template with "Automatically update document styles" copies its styles into this document.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { d.settings.attachedTemplateUpdate = direct ? !!reactRoot.querySelector('#react-wordx-template-update')?.checked : auto.input.checked; } }, { label: 'Cancel' }] });
+    const templatesCatalog = G.reactTemplatesCatalog, templatesSet = G.reactTemplatesSet, templatesAction = G.reactTemplatesAction;
+    ui.dialog({ title: 'Templates and Add-ins', width: 400, body: direct ? reactRoot : h('div', { class: 'col' }, ui.group('Document template', name, auto, h('div', { class: 'tp-btns' }, ui.button('&Attach...', async () => { const f = (await L.pickFiles('.dotx,.dotm,.docx'))[0]; if (!f) return; const res = await L.docx.read(await L.readAsArrayBuffer(f)); d.props.template = f.name; name.value = f.name; if (auto.input.checked) A().mergeStylesFrom(res.doc, true); A().status(L.t('Template attached: {0}', f.name)); }, { class: 'btn small' }), ui.button('&Organizer...', () => G.organizer(), { class: 'btn small' }))), h('div', { class: 'tp-note', text: 'Attaching a template with "Automatically update document styles" copies its styles into this document.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { d.settings.attachedTemplateUpdate = direct ? updateDraft : auto.input.checked; } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactTemplatesCatalog === templatesCatalog) delete G.reactTemplatesCatalog;
+      if (G.reactTemplatesSet === templatesSet) delete G.reactTemplatesSet;
+      if (G.reactTemplatesAction === templatesAction) delete G.reactTemplatesAction;
+    } });
   };
   G.organizer = function () {
     if (window.VO && VO.reactDirectHost) {
@@ -720,7 +787,11 @@ export function installWordxAppDialogs(runtime: Window): void {
         return catalog();
       };
       const root = h('div', { id: 'react-wordx-organizer-root' });
-      ui.dialog({ title: 'Organizer', width: 560, body: root, buttons: [{ label: 'Close', primary: true }] });
+      const organizerAction = G.reactOrganizerAction;
+      ui.dialog({ title: 'Organizer', width: 560, body: root, buttons: [{ label: 'Close', primary: true }], onClose: () => {
+        if (G.reactOrganizerCatalog === catalog) delete G.reactOrganizerCatalog;
+        if (G.reactOrganizerAction === organizerAction) delete G.reactOrganizerAction;
+      } });
       return;
     }
     const d = doc();
@@ -762,23 +833,35 @@ export function installWordxAppDialogs(runtime: Window): void {
       const ta = h('textarea', { rows: 10, style: 'width:100%' }); ta.value = ac.exceptions().join('\n');
       const root = h('div', { id: 'react-wordx-autocorrect-exceptions-root' });
       G.reactAutoCorrectExceptionsCatalog = () => ({ words: ac.exceptions().join('\n') });
+      let draft = G.reactAutoCorrectExceptionsCatalog().words;
+      G.reactAutoCorrectExceptionsSet = (value) => { draft = String(value); };
       G.reactAutoCorrectExceptionsAction = (value) => { ac.setExceptions(String(value || '').split(/\s+/).filter(Boolean)); return G.reactAutoCorrectExceptionsCatalog(); };
-      ui.dialog({ title: 'AutoCorrect Exceptions', width: 300, body: direct ? root : h('div', { class: 'col' }, h('div', { text: "Don't capitalize after:" }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => { if (direct) G.reactAutoCorrectExceptionsAction(root.querySelector('textarea')?.value || ''); else ac.setExceptions(ta.value.split(/\s+/).filter(Boolean)); } }, { label: 'Cancel' }] });
+      const catalog = G.reactAutoCorrectExceptionsCatalog;
+      const set = G.reactAutoCorrectExceptionsSet;
+      const action = G.reactAutoCorrectExceptionsAction;
+      ui.dialog({ title: 'AutoCorrect Exceptions', width: 300, body: direct ? root : h('div', { class: 'col' }, h('div', { text: "Don't capitalize after:" }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => { if (direct) G.reactAutoCorrectExceptionsAction(draft); else ac.setExceptions(ta.value.split(/\s+/).filter(Boolean)); } }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactAutoCorrectExceptionsCatalog === catalog) delete G.reactAutoCorrectExceptionsCatalog;
+        if (G.reactAutoCorrectExceptionsSet === set) delete G.reactAutoCorrectExceptionsSet;
+        if (G.reactAutoCorrectExceptionsAction === action) delete G.reactAutoCorrectExceptionsAction;
+      } });
     };
     const atName = h('input', { type: 'text', id: 'at-name', style: 'width:100%' });
     const atList = G.listBox(L.store.get('autoText', []).map((x) => x.name), null, { height: 120, translate: 'no', onChange: (v) => { const e = L.store.get('autoText', []).find((x) => x.name === v); atName.value = v; atPv.textContent = e ? e.text : ''; } });
     const atPv = h('div', { class: 'tp-box', style: 'min-height:40px;white-space:pre-wrap', translate: 'no' });
     const autoTextRoot = h('div', { id: 'react-wordx-autotext-root' });
     let selectedAutoText = '';
-    G.reactAutoTextCatalog = () => ({ entries: L.store.get('autoText', []).map((entry) => ({ name: entry.name, text: entry.text })), selected: selectedAutoText, name: atName.value, preview: L.store.get('autoText', []).find((entry) => entry.name === selectedAutoText)?.text || '', autoComplete: o.autoComplete !== false });
+    let autoTextName = '';
+    G.reactAutoTextCatalog = () => ({ entries: L.store.get('autoText', []).map((entry) => ({ name: entry.name, text: entry.text })), selected: selectedAutoText, name: autoTextName, preview: L.store.get('autoText', []).find((entry) => entry.name === selectedAutoText)?.text || '', autoComplete: o.autoComplete !== false });
+    G.reactAutoTextSetName = (value) => { autoTextName = String(value); };
     G.reactAutoTextAction = (action, value) => {
-      if (action === 'select') { selectedAutoText = value || ''; atName.value = selectedAutoText; }
+      if (action === 'select') { selectedAutoText = value || ''; autoTextName = selectedAutoText; atName.value = selectedAutoText; }
       else if (action === 'add') {
-        atName.value = value || atName.value;
+        autoTextName = String(value || autoTextName);
+        atName.value = autoTextName;
         const text = E.sel && !E.collapsed() ? O.textRange(...E.range(), '\n') : '';
         if (!text) ui.msg('Select the text you want to store as AutoText first.', { icon: 'info' });
-        else { const name = atName.value.trim() || text.slice(0, 32); ac.addAutoText(name, text); selectedAutoText = name; atName.value = name; }
-      } else if (action === 'delete' && (value || selectedAutoText)) { selectedAutoText = value || selectedAutoText; ac.deleteAutoText(selectedAutoText); selectedAutoText = ''; atName.value = ''; atPv.textContent = ''; }
+        else { const name = autoTextName.trim() || text.slice(0, 32); ac.addAutoText(name, text); selectedAutoText = name; autoTextName = name; atName.value = name; }
+      } else if (action === 'delete' && (value || selectedAutoText)) { selectedAutoText = value || selectedAutoText; ac.deleteAutoText(selectedAutoText); selectedAutoText = ''; autoTextName = ''; atName.value = ''; atPv.textContent = ''; }
       else if (action === 'insert') { const entry = L.store.get('autoText', []).find((item) => item.name === (value || selectedAutoText)); if (entry) E.insertTextAt(entry.text, L.N('AutoText')); }
       return G.reactAutoTextCatalog();
     };
@@ -792,7 +875,10 @@ export function installWordxAppDialogs(runtime: Window): void {
       { label: 'AutoFormat As You T&ype', body: direct ? h('div', { class: 'col' }, formatRoot) : h('div', { class: 'col' }, ui.group('Replace as you type', chk('smartQuotes', L.N('"&Straight quotes" with “smart quotes”')), chk('ordinals', '&Ordinals (1st) with superscript'), chk('fractions', '&Fractions (1/2) with fraction character (½)'), chk('dashes', '&Hyphens (--) with dash (—)'), chk('autoFormat', L.N('*&Bold* and _italic_ with real formatting')), chk('autoUrl', '&Internet and network paths with hyperlinks')), ui.group('Apply as you type', chk('autoBullets', 'Automatic b&ulleted lists'), chk('autoBorders', 'Border &lines'), chk('autoTables', '&Tables'), chk('autoNumbers', 'Automatic &numbered lists'), chk('autoHeadings', 'Built-in Heading st&yles', false))) },
       { label: 'Auto&Text', body: direct ? h('div', { class: 'col' }, autoTextRoot) : h('div', { class: 'col' }, chk('autoComplete', 'Show &AutoComplete suggestions'), h('label', { for: 'at-name', text: 'Enter AutoText entries here:' }), atName, atList, h('div', { class: 'cd-cap', text: 'Preview' }), atPv, h('div', { class: 'tp-btns' }, ui.button('&Add', () => { const t = E.sel && !E.collapsed() ? O.textRange(...E.range(), '\n') : ''; if (!t) { ui.msg('Select the text you want to store as AutoText first.', { icon: 'info' }); return; } const n = atName.value.trim() || t.slice(0, 32); ac.addAutoText(n, t); atList.setItems(L.store.get('autoText', []).map((x) => x.name)); }, { class: 'btn small' }), ui.button('&Delete', () => { ac.deleteAutoText(atName.value); atList.setItems(L.store.get('autoText', []).map((x) => x.name)); atPv.textContent = ''; }, { class: 'btn small' }), ui.button('&Insert', () => { const e = L.store.get('autoText', []).find((x) => x.name === atName.value); if (e) E.insertTextAt(e.text, L.N('AutoText')); }, { class: 'btn small' }))) },
     ], tab === 'autotext' ? 2 : tab === 'format' ? 1 : 0);
-    ui.dialog({ title: 'AutoCorrect: English (U.S.)', width: 460, body: direct ? mainRoot : tabs, buttons: [{ label: 'OK', primary: true }, { label: 'Cancel' }] });
+    const reactAutoCorrectBridges = direct ? Object.keys(G).filter((key) => key.startsWith('reactAutoCorrect') || key.startsWith('reactAutoText')).map((key) => [key, G[key]]) : [];
+    ui.dialog({ title: 'AutoCorrect: English (U.S.)', width: 460, body: direct ? mainRoot : tabs, buttons: [{ label: 'OK', primary: true }, { label: 'Cancel' }], onClose: () => {
+      for (const [key, bridge] of reactAutoCorrectBridges) if (G[key] === bridge) delete G[key];
+    } });
   };
 
   /* ================= Customize ================= */
@@ -814,7 +900,11 @@ export function installWordxAppDialogs(runtime: Window): void {
         else if (action === 'command' && value?.id) ui.exec(value.id);
         return catalog();
       };
-      ui.dialog({ title: 'Customize', width: 460, body: root, buttons: [{ label: 'Close', primary: true }] });
+      const action = G.reactCustomizeAction;
+      ui.dialog({ title: 'Customize', width: 460, body: root, buttons: [{ label: 'Close', primary: true }], onClose: () => {
+        if (G.reactCustomizeCatalog === catalog) delete G.reactCustomizeCatalog;
+        if (G.reactCustomizeAction === action) delete G.reactCustomizeAction;
+      } });
       return;
     }
     const tbs = ['standard', 'formatting', 'drawing', 'tables', 'reviewing', 'picture', 'outlining', 'headerFooter', 'mailMerge', 'wordart'].map((k) => ui.check(ui.cmds['tb_' + k].label, A().tbShown(k), () => A().toggleToolbar(k)));
@@ -922,14 +1012,18 @@ export function installWordxAppDialogs(runtime: Window): void {
     G.reactOptionsPrintCatalog = () => ({ printing: printOptions.slice(0,2).map(([key,label,fallback])=>({key,label,checked:o[key]===undefined?fallback:!!o[key]})), include: printOptions.slice(2).map(([key,label,fallback])=>({key,label,checked:o[key]===undefined?fallback:!!o[key]})) });
     G.reactOptionsPrintSet = (key, value) => { if(printOptions.some(([id])=>id===key))o[key]=!!value;return G.reactOptionsPrintCatalog(); };
     G.reactOptionsSaveCatalog = () => ({ promptProps:o.promptProps!==undefined?!!o.promptProps:false,autoRecover:o.autoRecover!==false,autoSaveMin:o.autoSaveMin||10,formats:[['docx','Word Document (*.docx)'],['dotx','Word Template (*.dotx)']] });
-    G.reactOptionsSaveSet = (key, value) => { if(key==='promptProps'||key==='autoRecover')o[key]=!!value;return G.reactOptionsSaveCatalog(); };
+    let saveDraft = G.reactOptionsSaveCatalog();
+    G.reactOptionsSaveSet = (key, value) => { if(key==='promptProps'||key==='autoRecover')o[key]=!!value;else if(key==='autoSaveMin'){saveDraft={...saveDraft,autoSaveMin:Number(value)};o.autoSaveMin=Number(value);}return G.reactOptionsSaveCatalog(); };
     G.reactOptionsTrackCatalog = () => ({ color:o.insColor||'author',colors:[['author','By author'],['red','Red'],['blue','Blue'],['green','Green']],balloons:LY.opts.balloons===false?'never':'comments',balloonOptions:[['always','Always'],['never','Never'],['comments','Only for comments/formatting']] });
     G.reactOptionsTrackSet = (key, value) => { if(key==='color')o.insColor=value;else if(key==='balloons'){LY.opts.balloons=value!=='never';rerender=true;}return G.reactOptionsTrackCatalog(); };
     G.reactOptionsUserCatalog = () => ({ name:o.userName||'',initials:o.userInitials||'',address:L.store.get('userAddress','') });
+    let userDraft = G.reactOptionsUserCatalog();
+    G.reactOptionsUserSet = (value) => { userDraft = { name: String(value.name), initials: String(value.initials), address: String(value.address) }; };
     G.reactOptionsCompatCatalog = () => ({ version:String(d.settings.compat||11),versions:[['11','Microsoft Word 2003'],['12','Microsoft Word 2007'],['14','Microsoft Word 2010'],['15','Microsoft Word 2013 and later']] });
     G.reactOptionsCompatSet = (value) => { d.settings.compat=+value;d.dirty=true;rerender=true;return G.reactOptionsCompatCatalog(); };
     G.reactOptionsSecurityCatalog = () => ({ removePersonal:o.removePersonal===true,warnTracked:o.warnTracked===true,password:d.openPassword||'' });
-    G.reactOptionsSecuritySet = (key, value) => { if(key==='removePersonal'||key==='warnTracked')o[key]=!!value;return G.reactOptionsSecurityCatalog(); };
+    let securityDraft = G.reactOptionsSecurityCatalog().password;
+    G.reactOptionsSecuritySet = (key, value) => { if(key==='removePersonal'||key==='warnTracked')o[key]=!!value;else if(key==='password')securityDraft=String(value);return { ...G.reactOptionsSecurityCatalog(), password: securityDraft }; };
     const spellOptions = [['spell','Check spelling as you type',true],['ignoreUpper','Ignore words in UPPERCASE',true],['ignoreNum','Ignore words with numbers',true],['ignoreUrl','Ignore Internet and file addresses',true],['grammarAsType','Check grammar as you type',true],['grammar','Check grammar with spelling',true]];
     G.reactOptionsSpellingCatalog = () => ({ spelling:spellOptions.slice(0,4).map(([key,label,fallback])=>({key,label,checked:o[key]===undefined?fallback:!!o[key]})),grammar:spellOptions.slice(4).map(([key,label,fallback])=>({key,label,checked:o[key]===undefined?fallback:!!o[key]})),hidden:!!(L.spell&&L.spell.hidden) });
     G.reactOptionsSpellingSet = (key,value) => { if(key==='hidden'){if(L.spell)L.spell.hidden=!!value;}else if(spellOptions.some(([id])=>id===key))o[key]=!!value;return G.reactOptionsSpellingCatalog(); };
@@ -938,8 +1032,11 @@ export function installWordxAppDialogs(runtime: Window): void {
         if(window.VO&&VO.reactDirectHost){
           const root=h('div',{id:'react-wordx-custom-dictionary-root'});
           G.reactCustomDictionaryCatalog=()=>({words:L.store.get('customDict',[]).join('\n')});
+          let draft=G.reactCustomDictionaryCatalog().words;
+          G.reactCustomDictionarySet=(words)=>{draft=String(words);};
           G.reactCustomDictionaryAction=(words)=>{L.store.set('customDict',String(words).split(/\s+/).filter(Boolean).map((word)=>word.toLowerCase()));if(L.spell)L.spell.reloadCustom();return G.reactCustomDictionaryCatalog();};
-          ui.dialog({title:'Custom Dictionary',width:340,body:root,buttons:[{label:'OK',primary:true,onClick:()=>G.reactCustomDictionaryAction(root.querySelector('textarea')?.value||'')},{label:'Cancel'}]});
+          const catalog=G.reactCustomDictionaryCatalog,set=G.reactCustomDictionarySet,action=G.reactCustomDictionaryAction;
+          ui.dialog({title:'Custom Dictionary',width:340,body:root,buttons:[{label:'OK',primary:true,onClick:()=>G.reactCustomDictionaryAction(draft)},{label:'Cancel'}],onClose:()=>{if(G.reactCustomDictionaryCatalog===catalog)delete G.reactCustomDictionaryCatalog;if(G.reactCustomDictionarySet===set)delete G.reactCustomDictionarySet;if(G.reactCustomDictionaryAction===action)delete G.reactCustomDictionaryAction;}});
         }else{const ta=h('textarea',{rows:12,style:'width:100%'});ta.value=L.store.get('customDict',[]).join('\n');ui.dialog({title:'CUSTOM.DIC',width:300,body:ta,buttons:[{label:'OK',primary:true,onClick:()=>{L.store.set('customDict',ta.value.split(/\s+/).filter(Boolean).map((x)=>x.toLowerCase()));if(L.spell)L.spell.reloadCustom();}},{label:'Cancel'}]});}
       }
       else if(action==='readability'){const r=L.spell.readability();ui.msg(L.t('Words: {0}\nCharacters: {1}\nParagraphs: {2}\nSentences: {3}\n\nSentences per Paragraph: {4}\nWords per Sentence: {5}\nCharacters per Word: {6}\n\nPassive Sentences: {7}%\nFlesch Reading Ease: {8}\nFlesch-Kincaid Grade Level: {9}',r.words,r.chars,r.paras,r.sentences,r.sPerPara,r.wPerS,r.cPerW,r.passive,r.ease,r.grade),{icon:'info',title:'Readability Statistics'});}
@@ -958,8 +1055,9 @@ export function installWordxAppDialogs(runtime: Window): void {
       { label: 'Compatibility', body: direct ? compatBody : h('div', { class: 'col' }, G.f('Lay out this document as if created in:', compat, 'wide'), h('div', { class: 'tp-note', text: 'Word 2003 layout positions tables by their cell margins and keeps legacy spacing rules; later versions align tables with the text.' })) },
     ], { view: 0, general: 1, edit: 2, print: 3, save: 4, security: 5, spelling: 6, track: 7, user: 8, compat: 9 }[tab] || 0);
     tabs.classList.add('options-tabs');
+    const reactOptionBridges = direct ? Object.keys(G).filter((key) => key.startsWith('reactOptions')).map((key) => [key, G[key]]) : [];
     ui.dialog({ title: 'Options', width: 560, body: tabs, buttons: [{ label: 'OK', primary: true, onClick: () => {
-      const newPw = direct ? securityRoot.querySelector('#react-wordx-options-password')?.value || '' : pwInp.value;
+      const newPw = direct ? securityDraft : pwInp.value;
       if (newPw !== (d.openPassword || '')) {
         if (!newPw) { d.openPassword = null; A().status(L.N('The password to open was removed; the next save is not encrypted.')); }
         else {
@@ -967,7 +1065,9 @@ export function installWordxAppDialogs(runtime: Window): void {
           const confirmRoot = direct ? h('div', { id: 'react-wordx-confirm-password-root' }) : null;
           const again = direct ? null : h('input', { type: 'password', id: 'op-pw2', style: 'width:100%' });
           let val = null;
-          const confirm = ui.dialog({ title: 'Confirm Password', width: 340, body: direct ? confirmRoot : h('div', { class: 'col' }, h('label', { for: 'op-pw2', text: 'Reenter password to open:' }), again, h('div', { class: 'tp-note', text: 'Caution: If you lose or forget the password, it cannot be recovered.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { val = direct ? confirmRoot.querySelector('#react-wordx-confirm-password')?.value || '' : again.value; } }, { label: 'Cancel' }] });
+          G.reactConfirmPasswordSet = (value) => { val = String(value); };
+          const setPassword = G.reactConfirmPasswordSet;
+          const confirm = ui.dialog({ title: 'Confirm Password', width: 340, body: direct ? confirmRoot : h('div', { class: 'col' }, h('label', { for: 'op-pw2', text: 'Reenter password to open:' }), again, h('div', { class: 'tp-note', text: 'Caution: If you lose or forget the password, it cannot be recovered.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { if (!direct) val = again.value; } }, { label: 'Cancel' }], onClose: () => { if (G.reactConfirmPasswordSet === setPassword) delete G.reactConfirmPasswordSet; } });
           confirm.done.then(() => {
             if (val == null) return;
             if (val !== newPw) { ui.msg('The password confirmation does not match.', { icon: 'warn' }); return; }
@@ -978,10 +1078,10 @@ export function installWordxAppDialogs(runtime: Window): void {
           if (!direct) setTimeout(() => again.focus(), 0);
         }
       }
-      o.userName = ((direct ? userRoot.querySelector('#react-wordx-options-user-name')?.value : uname.value) || '').trim() || 'Wordx User';
-      o.userInitials = ((direct ? userRoot.querySelector('#react-wordx-options-user-initials')?.value : uinit.value) || '').trim();
-      o.autoSaveMin = direct ? (+saveRoot.querySelector('#react-wordx-options-autorecover-min')?.value || 10) : autoRec.get();
-      L.store.set('userAddress', direct ? userRoot.querySelector('#react-wordx-options-user-address')?.value || '' : uaddr.value);
+      o.userName = ((direct ? userDraft.name : uname.value) || '').trim() || 'Wordx User';
+      o.userInitials = ((direct ? userDraft.initials : uinit.value) || '').trim();
+      o.autoSaveMin = direct ? saveDraft.autoSaveMin : autoRec.get();
+      L.store.set('userAddress', direct ? userDraft.address : uaddr.value);
       A().saveOpts();
       A().applyOpts();
       if (direct) {
@@ -989,7 +1089,9 @@ export function installWordxAppDialogs(runtime: Window): void {
         if (suitePrefs && suitePrefs.lang && generalLanguage !== suitePrefs.lang.get()) { suitePrefs.lang.set(generalLanguage); ui.toast(L.t('The new language is used in the windows you open from now on.')); }
       } else if (look) look.apply();
       if (rerender) { LY.root.classList.toggle('marks', !!LY.opts.showMarks); LY.render(); E.restoreDom(true); }
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      for (const [key, bridge] of reactOptionBridges) if (G[key] === bridge) delete G[key];
+    } });
   };
 
   /* ================= Properties ================= */
@@ -998,7 +1100,7 @@ export function installWordxAppDialogs(runtime: Window): void {
     const d = doc();
     const p = d.props;
     const st = D.stats(D.allParas(d));
-    const fld = (k, l) => { const inp = h('input', { type: 'text', id: 'pr-' + k, value: p[k] || '', style: 'width:100%' }); return { k, inp, el: G.f(l, inp, 'wide') }; };
+    const fld = (k, l) => { const inp = h('input', { type: 'text', id: 'pr-' + k, value: p[k] || '', style: 'width:100%' }); return { k, label: ui.stripAmp(l).replace(/:$/, ''), inp, el: G.f(l, inp, 'wide') }; };
     const fields = [fld('title', '&Title:'), fld('subject', '&Subject:'), fld('creator', '&Author:'), fld('manager', '&Manager:'), fld('company', 'C&ompany:'), fld('category', 'Cat&egory:'), fld('keywords', '&Keywords:')];
     const comments = h('textarea', { rows: 3, id: 'pr-desc', style: 'width:100%' });
     comments.value = p.description || '';
@@ -1020,7 +1122,8 @@ export function installWordxAppDialogs(runtime: Window): void {
     const cList = G.listBox([], null, { height: 110, translate: 'no', onChange: (v) => { const c = custom[v]; cName.value = v; cVal.value = c && c.v != null ? c.v : c; cType.value = (c && c.type) || 'text'; } });
     const fillC = () => cList.setItems(Object.keys(custom).map((k) => ({ value: k, label: `${k}: ${custom[k] && custom[k].v != null ? custom[k].v : custom[k]}` })));
     fillC();
-    const propertiesCatalog = () => ({ fileName: A().fileName, general: [['Type:', L.t('Microsoft Word Document')], ['Created:', fmt(p.created)], ['Modified:', fmt(p.modified)], ['Last printed:', fmt(p.printed)]], summary: fields.map((f) => ({ key: f.k, label: f.el.querySelector('label')?.textContent.replace(/:$/, '') || f.k, value: f.inp.value })), comments: comments.value, hyperlinkBase: hb.inp.value, template: p.template || 'Normal', statistics: [['Created:', fmt(p.created)], ['Modified:', fmt(p.modified)], ['Last saved by:', p.lastModifiedBy || ''], ['Revision number:', String(p.revision || 1)], ['Total editing time:', L.t('{0} Minutes', p.totalTime || 0)], ['Pages:', LY.pages.length || 1], ['Paragraphs:', st.paras], ['Lines:', A().docStats().lines], ['Words:', st.words], ['Characters:', st.charsNoSp], ['Characters (with spaces):', st.chars]], headings: d.main.paras.flatMap((para) => { const level = D.headingLevel(d, para); return level ? [{ level, text: D.plainText(para).trim() }] : []; }), custom: Object.entries(custom).map(([name, item]) => ({ name, type: item && item.type || 'text', value: item && item.v != null ? item.v : item })) });
+    let propertiesDraft = { fields: fields.map(({ k }) => ({ key: k, value: String(p[k] || '') })), comments: String(p.description || ''), hyperlinkBase: String(p.hyperlinkBase || '') };
+    const propertiesCatalog = () => ({ fileName: A().fileName, general: [['Type:', L.t('Microsoft Word Document')], ['Created:', fmt(p.created)], ['Modified:', fmt(p.modified)], ['Last printed:', fmt(p.printed)]], summary: fields.map((f) => ({ key: f.k, label: f.label || f.k, value: propertiesDraft.fields.find((field) => field.key === f.k)?.value || '' })), comments: propertiesDraft.comments, hyperlinkBase: propertiesDraft.hyperlinkBase, template: p.template || 'Normal', statistics: [['Created:', fmt(p.created)], ['Modified:', fmt(p.modified)], ['Last saved by:', p.lastModifiedBy || ''], ['Revision number:', String(p.revision || 1)], ['Total editing time:', L.t('{0} Minutes', p.totalTime || 0)], ['Pages:', LY.pages.length || 1], ['Paragraphs:', st.paras], ['Lines:', A().docStats().lines], ['Words:', st.words], ['Characters:', st.charsNoSp], ['Characters (with spaces):', st.chars]], headings: d.main.paras.flatMap((para) => { const level = D.headingLevel(d, para); return level ? [{ level, text: D.plainText(para).trim() }] : []; }), custom: Object.entries(custom).map(([name, item]) => ({ name, type: item && item.type || 'text', value: item && item.v != null ? item.v : item })) });
     G.reactPropertiesCatalog = propertiesCatalog;
     G.reactPropertiesAction = (action, value) => {
       if (action === 'addCustom' && value && value.name.trim()) { custom[value.name.trim()] = { type: value.type, v: value.type === 'number' ? +value.value : value.type === 'bool' ? /^(y|yes|true|1)$/i.test(value.value) : value.value }; fillC(); }
@@ -1031,6 +1134,7 @@ export function installWordxAppDialogs(runtime: Window): void {
       }
       return propertiesCatalog();
     };
+    G.reactPropertiesSet = (value) => { propertiesDraft = { fields: value.fields.map(({ key, value: fieldValue }) => ({ key: String(key), value: String(fieldValue) })), comments: String(value.comments), hyperlinkBase: String(value.hyperlinkBase) }; };
     const reactRoot = h('div', { id: 'react-wordx-properties-root' });
     /* a label and its value as shown (translated where it is set, else the document's own) */
     const prop = ([a, b]) => h('tr', null, h('td', { text: a }), h('td', { translate: 'no' }, document.createTextNode(b)));
@@ -1041,11 +1145,16 @@ export function installWordxAppDialogs(runtime: Window): void {
       { label: 'Contents', body: h('div', { class: 'col' }, h('div', { text: 'Document contents:' }), heads) },
       { label: 'Custom', body: h('div', { class: 'col' }, cnl, G.f('&Name:', cName, 'wide'), G.f('&Type:', cType, 'wide'), G.f('&Value:', cVal, 'wide'), h('div', { class: 'tp-btns' }, ui.button('&Add', () => { if (!cName.value.trim()) return; custom[cName.value.trim()] = { type: cType.value, v: cType.value === 'number' ? +cVal.value : cType.value === 'bool' ? /^(y|yes|true|1)$/i.test(cVal.value) : cVal.value }; fillC(); }, { class: 'btn small' }), ui.button('&Delete', () => { delete custom[cName.value.trim()]; fillC(); }, { class: 'btn small' })), h('label', { text: 'Properties:' }), cList) },
     ], 1);
+    const propertiesBridgeCatalog = G.reactPropertiesCatalog, propertiesBridgeAction = G.reactPropertiesAction, propertiesBridgeSet = G.reactPropertiesSet;
     ui.dialog({ title: L.t('{0} Properties', A().fileName), width: 420, body: direct ? reactRoot : tabs, buttons: [{ label: 'OK', primary: true, onClick: () => {
-      if (direct) { G.reactPropertiesAction('save', { fields: propertiesCatalog().summary.map(({ key }) => ({ key, value: reactRoot.querySelector('#react-wordx-property-' + key)?.value || '' })), comments: reactRoot.querySelector('#react-wordx-properties-comments')?.value || '', hyperlinkBase: reactRoot.querySelector('#react-wordx-properties-hyperlink-base')?.value || '' }); return; }
+      if (direct) { G.reactPropertiesAction('save', propertiesDraft); return; }
       E.edit('Properties', () => { D.touchKey(d, 'props'); D.touchKey(d, 'custom'); for (const f of fields) d.props[f.k] = f.inp.value; d.props.description = comments.value; d.props.hyperlinkBase = hb.inp.value || undefined; d.custom = custom; return E.sel; });
       A().updateTitle();
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactPropertiesCatalog === propertiesBridgeCatalog) delete G.reactPropertiesCatalog;
+      if (G.reactPropertiesAction === propertiesBridgeAction) delete G.reactPropertiesAction;
+      if (G.reactPropertiesSet === propertiesBridgeSet) delete G.reactPropertiesSet;
+    } });
   };
 
   /* ================= Zoom ================= */
@@ -1057,10 +1166,16 @@ export function installWordxAppDialogs(runtime: Window): void {
     const pv = h('div', { class: 'preview-box', style: 'width:150px;height:110px', translate: 'no' }, document.createTextNode('AaBbCcDdEeXxYyZz'));
     const reactRoot = h('div', { id: 'react-wordx-zoom-root' });
     G.reactZoomCatalog = () => ({ current: cur, preset: [200, 100, 75].includes(cur) ? String(cur) : 'pct' });
+    let zoomDraft = { preset: [200, 100, 75].includes(cur) ? String(cur) : 'pct', percent: cur };
+    G.reactZoomSet = (value) => { zoomDraft = { preset: String(value.preset), percent: Number(value.percent) }; };
+    const zoomCatalog = G.reactZoomCatalog, zoomSet = G.reactZoomSet;
     ui.dialog({ title: 'Zoom', width: 360, body: direct ? reactRoot : G.row(ui.group('Zoom to', r), h('div', { class: 'col' }, G.f('Percen&t:', pct), h('div', { class: 'cd-cap', text: 'Preview' }), pv)), buttons: [{ label: 'OK', primary: true, onClick: () => {
-      if (direct) { const v = reactRoot.querySelector('input[name=react-wordx-zoom]:checked')?.value || 'pct'; const value = reactRoot.querySelector('#react-wordx-zoom-percent')?.value || String(cur); if (v === 'pw') A().zoomTo('Page Width'); else if (v === 'tw') A().zoomTo('Text Width'); else if (v === 'wp') A().zoomTo('Whole Page'); else if (v === 'many') A().zoomTo('Two Pages'); else A().zoomTo((v === 'pct' ? value : v) + '%'); return; }
+      if (direct) { const { preset: v, percent } = zoomDraft; if (v === 'pw') A().zoomTo('Page Width'); else if (v === 'tw') A().zoomTo('Text Width'); else if (v === 'wp') A().zoomTo('Whole Page'); else if (v === 'many') A().zoomTo('Two Pages'); else A().zoomTo((v === 'pct' ? percent : v) + '%'); return; }
       const v = r.get(); if (v === 'pw') A().zoomTo('Page Width'); else if (v === 'tw') A().zoomTo('Text Width'); else if (v === 'wp') A().zoomTo('Whole Page'); else if (v === 'many') A().zoomTo('Two Pages'); else A().zoomTo(pct.get() + '%');
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactZoomCatalog === zoomCatalog) delete G.reactZoomCatalog;
+      if (G.reactZoomSet === zoomSet) delete G.reactZoomSet;
+    } });
   };
 
   /* ================= Print (to PDF) ================= */
@@ -1075,21 +1190,25 @@ export function installWordxAppDialogs(runtime: Window): void {
     const perSheet = ui.select([[1, '1 page'], [2, '2 pages'], [4, '4 pages'], [6, '6 pages'], [8, '8 pages'], [16, '16 pages']], 1, null, { id: 'pr-pps' });
     const copies = G.num(1, { min: 1, max: 99, id: 'pr-copies' });
     const root = h('div', { id: 'react-wordx-print-root' });
+    let printDraft = { range: 'all', pages: '', what: 'doc', which: 'all', copies: 1, perSheet: '1' };
+    G.reactPrintSet = (value) => { printDraft = { ...printDraft, ...value }; };
+    const printSet = G.reactPrintSet;
     ui.dialog({
       title: 'Print', width: 470,
       body: direct ? root : h('div', { class: 'col' }, ui.group('Printer', G.f('&Name:', ui.select([['pdf', 'Save as PDF (Wordx)']], 'pdf', null, { id: 'pr-printer' }), 'wide'), h('div', { class: 'tp-note', text: 'Status: Ready — the pages are saved as a PDF that you can print from any viewer.' })), G.row(ui.group('Page range', range, pagesIn, h('div', { class: 'tp-note', text: 'Enter page numbers and/or page ranges separated by commas. For example, 1,3,5–12' })), ui.group('Copies', G.f('Number of &copies:', copies))), G.row(G.f('Print &what:', what, 'wide'), G.f('P&rint:', which)), ui.group('Zoom', G.f('Pages per s&heet:', perSheet, 'wide'))),
       buttons: [{ label: '&Options...', onClick: () => { G.options('print'); return false; } }, { label: 'OK', primary: true, onClick: () => { doPrint(); } }, { label: 'Cancel' }],
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
+      onClose: () => { if (G.reactPrintSet === printSet) delete G.reactPrintSet; },
     });
     async function doPrint() {
-      const w = direct ? root.querySelector('#react-wordx-print-what')?.value || 'doc' : what.value;
+      const w = direct ? printDraft.what : what.value;
       if (w !== 'doc' && w !== 'markup') { printList(w); return; }
       let pages = null;
-      const rv = direct ? root.querySelector('input[name=react-wordx-print-range]:checked')?.value || 'all' : range.get();
+      const rv = direct ? printDraft.range : range.get();
       if (rv === 'current') pages = [Math.max(0, LY.pageOf(E.sel.f)) + 1];
       else if (rv === 'selection' && E.sel && !E.collapsed()) { const [a, b] = E.range(); const p0 = LY.pageOf(a), p1 = LY.pageOf(b); pages = []; for (let i = p0; i <= p1; i++) pages.push(i + 1); }
-      else if (rv === 'pages') { pages = []; for (const part of (direct ? root.querySelector('#react-wordx-print-pages')?.value || '' : pagesIn.value).split(',')) { const m = /^\s*(\d+)\s*(?:[-–]\s*(\d+))?\s*$/.exec(part); if (m) { const a = +m[1], b = m[2] ? +m[2] : a; for (let i = a; i <= b; i++) if (i >= 1 && i <= n) pages.push(i); } } }
-      const whichValue = direct ? root.querySelector('#react-wordx-print-which')?.value || 'all' : which.value;
+      else if (rv === 'pages') { pages = []; for (const part of (direct ? printDraft.pages : pagesIn.value).split(',')) { const m = /^\s*(\d+)\s*(?:[-–]\s*(\d+))?\s*$/.exec(part); if (m) { const a = +m[1], b = m[2] ? +m[2] : a; for (let i = a; i <= b; i++) if (i >= 1 && i <= n) pages.push(i); } } }
+      const whichValue = direct ? printDraft.which : which.value;
       if (whichValue !== 'all') pages = (pages || Array.from({ length: n }, (_, i) => i + 1)).filter((i) => (whichValue === 'odd' ? i % 2 === 1 : i % 2 === 0));
       const prevMarkup = LY.opts.markup;
       if (w === 'doc' && prevMarkup !== 'final') { LY.opts.markup = 'final'; LY.render(); }
@@ -1112,7 +1231,7 @@ export function installWordxAppDialogs(runtime: Window): void {
       else if (kind === 'keys') { for (const [k, id] of Object.entries(A().SHORTCUTS)) if (ui.cmds[id]) lines.push(`${ui.keyText(k)}\t${ui.stripAmp(ui.cmds[id].label)}`); }
       else if (kind === 'list') { for (const r of L.review.list(d.main)) lines.push(`${L.t(KINDS[r.type] || r.type)} — ${r.stamp.author || ''}: ${r.text}`); for (const k in d.comments) lines.push(L.t('Comment {0}: {1}', d.comments[k].author, d.comments[k].blocks.map((b) => (b.t === 'p' ? D.plainText(b) : '')).join(' '))); }
       const nd = D.newDoc();
-      const whatLabel = direct ? root.querySelector('#react-wordx-print-what')?.selectedOptions[0]?.textContent || kind : what.selectedOptions[0].text;
+      const whatLabel = direct ? L.t(({ props: 'Document properties', list: 'List of markup', styles: 'Styles', autotext: 'AutoText entries', keys: 'Key assignments' })[printDraft.what] || kind) : what.selectedOptions[0].text;
       nd.main.blocks = [D.para([D.text(A().fileName + ' — ' + whatLabel, { b: true, sz: 14 })])].concat(lines.map((l) => D.para([D.text(l)])));
       const keep = D.doc;
       D.doc = nd;
@@ -1130,8 +1249,15 @@ export function installWordxAppDialogs(runtime: Window): void {
     const note = h('div', { class: 'tp-note', text: 'Your browser asks where to save the file, or saves it to the Downloads folder.' });
     const root = h('div', { id: 'react-wordx-save-as-root' });
     G.reactSaveAsCatalog = () => ({ name: A().fileName, type: initialType, types: L.file.types.map((item) => ({ id: item.id, label: item.label })), note: L.t('Your browser asks where to save the file, or saves it to the Downloads folder.') });
+    let draft = { name: A().fileName, type: initialType };
+    G.reactSaveAsSet = (value) => { draft = { name: String(value.name), type: String(value.type) }; };
     G.reactSaveAsAction = (fileName, fileType) => { const normalized = String(fileName || '').trim().replace(/\.(docx|docm|dotx|dotm|htm|html|rtf|txt|md|zip|pdf)$/i, '') || 'Document'; cb(normalized, fileType); };
-    return ui.dialog({ title: 'Save As', width: 430, focus: direct ? root : name, body: direct ? root : h('div', { class: 'col' }, G.f('File &name:', name, 'wide'), G.f('Save as &type:', type, 'wide'), note), buttons: [{ label: '&Save', primary: true, onClick: () => { if (direct) { G.reactSaveAsAction(root.querySelector('#react-wordx-save-as-name')?.value || '', root.querySelector('#react-wordx-save-as-type')?.value || initialType); return; } const n = name.value.trim().replace(/\.(docx|docm|dotx|dotm|htm|html|rtf|txt|md|zip|pdf)$/i, '') || 'Document'; cb(n, type.value); } }, { label: 'Cancel' }] });
+    const saveAsCatalog = G.reactSaveAsCatalog, saveAsSet = G.reactSaveAsSet, saveAsAction = G.reactSaveAsAction;
+    return ui.dialog({ title: 'Save As', width: 430, focus: direct ? root : name, body: direct ? root : h('div', { class: 'col' }, G.f('File &name:', name, 'wide'), G.f('Save as &type:', type, 'wide'), note), buttons: [{ label: '&Save', primary: true, onClick: () => { if (direct) { G.reactSaveAsAction(draft.name, draft.type); return; } const n = name.value.trim().replace(/\.(docx|docm|dotx|dotm|htm|html|rtf|txt|md|zip|pdf)$/i, '') || 'Document'; cb(n, type.value); } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactSaveAsCatalog === saveAsCatalog) delete G.reactSaveAsCatalog;
+      if (G.reactSaveAsSet === saveAsSet) delete G.reactSaveAsSet;
+      if (G.reactSaveAsAction === saveAsAction) delete G.reactSaveAsAction;
+    } });
   };
   G.pasteSpecial = function () {
     const direct = !!(window.VO && VO.reactDirectHost);
@@ -1139,12 +1265,18 @@ export function installWordxAppDialogs(runtime: Window): void {
     const clip = E.clip;
     const root = h('div', { id: 'react-wordx-paste-special-root' });
     G.reactPasteSpecialCatalog = () => ({ hasClipboard: !!clip });
+    let formatDraft = 'rich';
+    G.reactPasteSpecialSet = (value) => { formatDraft = String(value); };
+    const pasteSpecialCatalog = G.reactPasteSpecialCatalog, pasteSpecialSet = G.reactPasteSpecialSet;
     ui.dialog({ title: 'Paste Special', width: 380, body: direct ? root : h('div', { class: 'col' }, h('div', { text: clip ? 'Source: Wordx document' : 'Source: (the Wordx clipboard is empty — copy something first, or press Ctrl+V)' }), G.radios('ps-m', [['paste', '&Paste:'], ['link', 'Paste &link:']], 'paste'), lb, h('div', { class: 'tp-note', text: 'Formatted text keeps fonts and formatting; unformatted text takes the formatting of the destination.' })), buttons: [{ label: 'OK', primary: true, onClick: () => {
       if (!clip) return;
-      const v = direct ? root.querySelector('#react-wordx-paste-special-format')?.value || 'rich' : lb.get();
+      const v = direct ? formatDraft : lb.get();
       if (v === 'text' || v === 'utext') E.pasteText(clip.text);
       else E.pasteBlocks(clip.blocks, { keepFormat: v === 'rich' || v === 'html' });
-    } }, { label: 'Cancel' }] });
+    } }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactPasteSpecialCatalog === pasteSpecialCatalog) delete G.reactPasteSpecialCatalog;
+      if (G.reactPasteSpecialSet === pasteSpecialSet) delete G.reactPasteSpecialSet;
+    } });
   };
   G.about = () => ui.about({ name: 'Wordx', text: [
     L.N('A word processor that runs entirely in your browser. Documents are read and written as Office Open XML (.docx, .docm), RTF, HTML, text and Markdown; nothing is uploaded.'),
@@ -1153,14 +1285,21 @@ export function installWordxAppDialogs(runtime: Window): void {
     const direct = !!(window.VO && VO.reactDirectHost);
     const cats = L.templates.categories();
     let pick = 'blank';
+    let reactSelected = 'blank';
+    let okButton = null;
     const create = (id) => { if (id === 'blank') A().newDocument(); else if (id === 'web') { A().newDocument().then(() => A().setView('web')); } else if (id === 'mail') A().newDocument({ build: (d) => { d.main.blocks = [D.para([D.text('To: ')]), D.para([D.text('Subject: ')]), D.para()]; } }); else L.templates.create(id); };
     const reactRoot = h('div', { id: 'react-wordx-template-picker-root' });
-    G.reactTemplatePickerCatalog = () => ({ categories: cats.map((category) => ({ name: category, items: category === 'General' ? [{ id: 'blank', name: 'Blank Document' }, { id: 'web', name: 'Web Page' }, { id: 'mail', name: 'E-mail Message' }] : L.templates.list().filter((template) => template.cat === category).map(({ id, name }) => ({ id, name })) })) });
-    let okButton = null;
-    reactRoot.dataset.selected = 'blank';
-    G.reactTemplatePickerAction = (action, id) => { if (action === 'select' && id) reactRoot.dataset.selected = id; else if (action === 'accept' && id) { reactRoot.dataset.selected = id; okButton?.click(); } };
+    G.reactTemplatePickerCatalog = () => ({ categories: cats.map((category) => ({ name: category, items: category === 'General' ? [{ id: 'blank', name: 'Blank Document' }, { id: 'web', name: 'Web Page' }, { id: 'mail', name: 'E-mail Message' }] : L.templates.list().filter((template) => template.cat === category).map(({ id, name }) => ({ id, name })) })), selected: reactSelected });
+    G.reactTemplatePickerAction = (action, id) => {
+      if (action === 'select' && id) reactSelected = id;
+      else if (action === 'accept') { if (id) reactSelected = id; okButton?.click(); }
+    };
+    const templatePickerCatalog = G.reactTemplatePickerCatalog, templatePickerAction = G.reactTemplatePickerAction;
     if (direct) {
-      const dlg = ui.dialog({ title: 'Templates', width: 520, body: reactRoot, buttons: [{ label: 'OK', primary: true, onClick: () => create(reactRoot.dataset.selected || 'blank') }, { label: 'Cancel' }] });
+      const dlg = ui.dialog({ title: 'Templates', width: 520, body: reactRoot, buttons: [{ label: 'OK', primary: true, onClick: () => create(reactSelected || 'blank') }, { label: 'Cancel' }], onClose: () => {
+        if (G.reactTemplatePickerCatalog === templatePickerCatalog) delete G.reactTemplatePickerCatalog;
+        if (G.reactTemplatePickerAction === templatePickerAction) delete G.reactTemplatePickerAction;
+      } });
       okButton = dlg.buttons[0];
       return;
     }
@@ -1173,7 +1312,10 @@ export function installWordxAppDialogs(runtime: Window): void {
       return { label: c, body: grid };
     }));
     drawPv('blank');
-    const dlg = ui.dialog({ title: 'Templates', width: 520, body: G.row(h('div', { style: 'flex:1;min-width:240px' }, tabs), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)), buttons: [{ label: 'OK', primary: true, onClick: () => create(pick) }, { label: 'Cancel' }] });
+    const dlg = ui.dialog({ title: 'Templates', width: 520, body: G.row(h('div', { style: 'flex:1;min-width:240px' }, tabs), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)), buttons: [{ label: 'OK', primary: true, onClick: () => create(pick) }, { label: 'Cancel' }], onClose: () => {
+      if (G.reactTemplatePickerCatalog === templatePickerCatalog) delete G.reactTemplatePickerCatalog;
+      if (G.reactTemplatePickerAction === templatePickerAction) delete G.reactTemplatePickerAction;
+    } });
     const ok = dlg.buttons[0];
   };
 })();

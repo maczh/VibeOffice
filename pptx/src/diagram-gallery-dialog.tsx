@@ -1,6 +1,7 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import type { KeyboardEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { PptxPreviewArtwork } from './slides-pane.js';
 
 interface DiagramLayout { id: string; category: string; name: string; description: string; preview: string }
 interface DiagramGalleryCatalog { current: string; categories: Array<[string, string]>; layouts: DiagramLayout[] }
@@ -65,11 +66,11 @@ export function PptxDiagramGalleryDialog() {
         {catalog.categories.map(([id, label]) => <button key={id} type="button" className={`sa-cat${category === id ? ' on' : ''}`} role="option" aria-selected={category === id} tabIndex={category === id ? 0 : -1} onClick={() => setCategory(id)}>{label}</button>)}
       </div>
       <div className="sa-grid" role="listbox" aria-label={t('Layouts')} aria-orientation="vertical" onKeyDownCapture={handleOptionKeys}>
-        {visible.map((layout) => <button key={layout.id} type="button" className={`sa-cell${selected === layout.id ? ' on' : ''}`} data-layout-id={layout.id} role="option" aria-label={layout.name} aria-selected={selected === layout.id} tabIndex={selected === layout.id ? 0 : -1} title={layout.name} onClick={() => setSelected(layout.id)} onDoubleClick={apply} dangerouslySetInnerHTML={{ __html: layout.preview }} />)}
+        {visible.map((layout) => <button key={layout.id} type="button" className={`sa-cell${selected === layout.id ? ' on' : ''}`} data-layout-id={layout.id} role="option" aria-label={layout.name} aria-selected={selected === layout.id} tabIndex={selected === layout.id ? 0 : -1} title={layout.name} onClick={() => setSelected(layout.id)} onDoubleClick={apply}><PptxPreviewArtwork markup={layout.preview} /></button>)}
       </div>
       <div className="sa-side">
         {detail && <>
-          <div className="sa-big" dangerouslySetInnerHTML={{ __html: detail.preview }} />
+          <div className="sa-big"><PptxPreviewArtwork markup={detail.preview} /></div>
           <b>{detail.name}</b>
           <div className="sa-desc">{detail.description}</div>
         </>}

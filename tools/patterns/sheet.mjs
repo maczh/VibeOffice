@@ -1,6 +1,6 @@
 // The 17 SpreadsheetML cell-fill patterns (ECMA-376 ST_PatternType, without none and solid), black on white, each in a
 // wide cell of its own row beside its name, saved as tmp/patterns/cellpatterns.xlsx. Open it in Excel, save it as PDF,
-// and read the tiles with read-pdf.py --cells (Ledger's js/render.js; tests/patterns.test.mjs):
+// and read the tiles with read-pdf.py --cells (Excelx's js/render.js; tests/patterns.test.mjs):
 //   node tools/patterns/sheet.mjs
 import fs from 'node:fs';
 import { ensureServer, openPage } from '../ooxml/cdp.mjs';

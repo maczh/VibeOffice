@@ -21,7 +21,7 @@ import collections, os, re, sys, zipfile
 
 CORPORA = os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else '~/corpora')
 LANGS = ['ja', 'ko', 'zh-CN', 'zh-Hant', 'fr', 'de']
-# the built-in styles whose font or size Quire's English set names (public/quire/js/dmodel.js, D.builtinStyles)
+# the built-in styles whose font or size Wordx's English set names (public/quire/js/dmodel.js, D.builtinStyles)
 STYLES = ['heading %d' % i for i in range(1, 10)] + ['Title', 'Subtitle', 'Body Text 3', 'Plain Text', 'caption', 'footnote text',
           'endnote text', 'annotation text', 'Balloon Text', 'envelope address', 'envelope return', 'index heading',
           'Document Map', 'macro', 'HTML Preformatted', 'annotation reference', 'header', 'footer', 'toc 1']

@@ -6,7 +6,7 @@ export function reactCsp(origins = process.env.VITE_REMOTE_ORIGINS || '') {
     }
     return url.origin;
   });
-  const policy = `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ${allowed.join(' ')}; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'`;
+  const policy = `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ${allowed.join(' ')}; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'`;
   return {
     name: 'vibeoffice-react-csp',
     transformIndexHtml(html) {

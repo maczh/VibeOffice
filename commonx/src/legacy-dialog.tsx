@@ -1,6 +1,7 @@
 import { createElement, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
+import { AccessLabel } from './access-label.js';
 
 export interface LegacyDialogButton {
   label: string;
@@ -137,12 +138,11 @@ function LegacyDialog({ request }: { request: LegacyDialogMountRequest }) {
         ref={(element) => { buttonRefs.current[index] = element; }}
         className={`btn${button.primary ? ' primary' : ''}`}
         type="button"
-        dangerouslySetInnerHTML={{ __html: button.labelHtml }}
         onClick={(event) => {
           const result = button.onClick?.(request.close, event.currentTarget);
           if (result !== false) request.close(index);
         }}
-      />)}</div>
+      ><AccessLabel html={button.labelHtml} /></button>)}</div>
     </div>
   </div>;
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initializeSharedRuntime } from '@vibeoffice/core';
-import { AppearanceControls, createUrlReadProvider, createWebDavProvider, OfficeDialog, saveLocalDocument, VibeOfficeProvider, useVibeOffice } from '@vibeoffice/core';
+import { AboutDialog, AppearanceControls, createUrlReadProvider, createWebDavProvider, OfficeDialog, saveLocalDocument, VibeOfficeProvider, useVibeOffice } from '@vibeoffice/core';
 import { createIndexedDbDraftStore } from '@vibeoffice/core';
 import type { LocalDocument, LocalDraft, RemoteFile, RemoteStorageProvider, SaveFileOperation } from '@vibeoffice/core';
 import { WordxEditor } from '@vibeoffice/wordx';
@@ -16,12 +16,13 @@ initializeSharedRuntime();
 const mark = (message: string) => window.VO?.N?.(message) ?? message;
 
 type AppId = 'wordx' | 'excelx' | 'pptx';
-type Entry = { id: AppId; label: string; folder: string; extensions: string[] };
+type Entry = { id: AppId; label: string; description: string; folder: string; extensions: string[] };
 type Template = { id: string; name: string; img?: string | null };
+type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform?: string }> };
 const apps: Entry[] = [
-  { id: 'wordx', label: 'Wordx', folder: 'wordx', extensions: ['docx', 'docm', 'dotx', 'dotm', 'rtf', 'txt', 'md', 'markdown', 'html', 'htm', 'zip'] },
-  { id: 'excelx', label: 'Excelx', folder: 'excelx', extensions: ['xlsx', 'xlsm', 'xltx', 'xltm', 'csv', 'tsv', 'txt', 'xml', 'html', 'htm'] },
-  { id: 'pptx', label: 'PPTX', folder: 'pptx', extensions: ['pptx', 'pptm', 'ppsx', 'ppsm', 'potx', 'potm'] },
+  { id: 'wordx', label: 'Wordx', description: 'Word processor', folder: 'wordx', extensions: ['docx', 'docm', 'dotx', 'dotm', 'rtf', 'txt', 'md', 'markdown', 'html', 'htm', 'zip'] },
+  { id: 'excelx', label: 'Excelx', description: 'Spreadsheet', folder: 'excelx', extensions: ['xlsx', 'xlsm', 'xltx', 'xltm', 'csv', 'tsv', 'txt', 'xml', 'html', 'htm'] },
+  { id: 'pptx', label: 'PPTX', description: 'Presentations', folder: 'pptx', extensions: ['pptx', 'pptm', 'ppsx', 'ppsm', 'potx', 'potm'] },
 ];
 const UI_TEXT = {
   openUrl: mark('Open URL…'), webdav: mark('WebDAV…'), changed: mark('The remote file changed since it was opened. Replace it anyway?'),
@@ -66,6 +67,9 @@ function Suite() {
   const onTitleChange = useCallback((title: string) => { document.title = title; }, []);
   useEffect(() => { if (!active) document.title = initialTitle.current; }, [active]);
   const [templates, setTemplates] = useState<Record<string, Template[]>>({});
+  const [canInstall, setCanInstall] = useState(false);
+  const installPrompt = useRef<InstallPromptEvent | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const [credentialAsk, setCredentialAsk] = useState<{ label: string; secret: boolean; finish: (value: string | null) => void } | null>(null);
   const [credentialInput, setCredentialInput] = useState('');
@@ -94,6 +98,25 @@ function Suite() {
     if ('serviceWorker' in navigator && !navigator.webdriver && window.isSecureContext) {
       void navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch((error: unknown) => console.warn('Service worker:', error));
     }
+  }, []);
+
+  useEffect(() => {
+    const supportedOrigin = (location.protocol === 'https:' && location.hostname === 'vibeoffice.work')
+      || (location.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(location.hostname));
+    if (!supportedOrigin
+      || matchMedia('(display-mode: standalone), (display-mode: window-controls-overlay)').matches) return;
+    const onBeforeInstall = (event: Event) => {
+      event.preventDefault();
+      installPrompt.current = event as InstallPromptEvent;
+      setCanInstall(true);
+    };
+    const onInstalled = () => { installPrompt.current = null; setCanInstall(false); };
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -272,19 +295,45 @@ function Suite() {
     </main>;
   }
 
-  return <main className="suite-start">
-    <header><img src="/icons/icon.svg" alt="" /><h1 translate="no">VibeOffice</h1>
+  return <div className="suite-start">
+    <nav className="suite-side" aria-label={translate('Start')}>
+      <div className="suite-brand"><img src="/icons/icon.svg" alt="" /><span><b translate="no">VibeOffice.work</b><small>{translate('A free office suite')}</small></span></div>
+      <button className="suite-action" type="button" onClick={() => picker.current?.click()}>{translate('Open File…')}</button>
+      <button className="suite-action suite-action-on" type="button" aria-current="page">{translate('Create File')}</button>
+      <section className="suite-app-links" aria-label={translate('Create a blank file')}>
+        <h2>{translate('Create a blank file')}</h2>
+        {apps.map((app) => <button type="button" key={app.id} onClick={() => create(app)}><span className={`suite-app-mark ${app.id}`} aria-hidden="true" /><span><b>{translate(app.label)}</b><small>{translate(app.description)}</small></span></button>)}
+      </section>
+      <div className="suite-side-grow" />
+      <div className="suite-side-links">
+        {canInstall && <button type="button" onClick={() => {
+          const prompt = installPrompt.current;
+          if (!prompt) return;
+          void prompt.prompt().then(() => prompt.userChoice).finally(() => { installPrompt.current = null; setCanInstall(false); });
+        }}>{translate('Install VibeOffice.work')}</button>}
+        <a href="https://github.com/tcchen2026/VibeOffice" target="_blank" rel="noopener">{translate('Feedback on our GitHub')}</a>
+        <button type="button" onClick={() => setAboutOpen(true)}>{translate('About')}</button>
+      </div>
+      <p className="suite-local-note">{translate('Your files stay on this computer.')}</p>
       <AppearanceControls onLanguageChange={() => location.reload()} />
-      <button type="button" onClick={() => picker.current?.click()}>{translate('Open File…')}</button><button type="button" onClick={openUrl}>{translate(UI_TEXT.openUrl)}</button><button type="button" onClick={() => openWebDav()}>{translate(UI_TEXT.webdav)}</button><input ref={picker} type="file" hidden onChange={(event) => { const selected = event.currentTarget.files?.[0]; event.currentTarget.value = ''; openFile(selected); }} /></header>
-    <section><h2>{translate('Create File')}</h2>{apps.map((app) => <section className="app" key={app.id}><h3>{translate(app.label)}</h3><div className="cards">
-      <button type="button" onClick={() => create(app)}><b>{translate('Blank')}</b></button>
-      {(templates[app.id] || []).map((template) => <button type="button" key={template.id} onClick={() => create(app, template.id)}>{template.img && <img src={template.img} alt="" loading="lazy" />}<b>{translate(template.name)}</b></button>)}
-    </div></section>)}</section>
-    <footer>{apps.map((app) => <button type="button" key={app.id} onClick={() => create(app)}>{translate(app.label)}</button>)}</footer>
+      <input ref={picker} type="file" hidden onChange={(event) => { const selected = event.currentTarget.files?.[0]; event.currentTarget.value = ''; openFile(selected); }} />
+    </nav>
+    <main className="suite-main">
+      <header className="suite-bar"><h1>{translate('Create File')}</h1><span className="suite-bar-spacer" />
+        <button type="button" onClick={openUrl}>{translate(UI_TEXT.openUrl)}</button><button type="button" onClick={() => openWebDav()}>{translate(UI_TEXT.webdav)}</button>
+      </header>
+      <section className="suite-gallery" aria-label={translate('Create File')}>
+      {apps.map((app) => <section className="app" key={app.id}><h2><span className={`suite-app-mark ${app.id}`} aria-hidden="true" />{translate(app.label)}</h2><div className="cards">
+        <button type="button" onClick={() => create(app)}><span className={`suite-template-thumb suite-blank-preview ${app.id}`} aria-hidden="true"><span /></span><span className="suite-template-name">{translate('Blank')}</span></button>
+        {(templates[app.id] || []).map((template) => <button type="button" key={template.id} onClick={() => create(app, template.id)}><span className="suite-template-thumb">{template.img && <img src={template.img} alt="" loading="lazy" />}</span><span className="suite-template-name">{translate(template.name)}</span></button>)}
+      </div></section>)}
+      </section>
+    </main>
     {urlOpen && <OfficeDialog title={translate(UI_TEXT.openUrl)} className="credential" onRequestClose={() => setUrlOpen(false)}><form onSubmit={(event) => void submitUrl(event)}><label>{translate('URL')}<input autoFocus required type="url" aria-label={translate('URL')} value={urlValue} onChange={(event) => setUrlValue(event.currentTarget.value)} /></label><button type="button" onClick={() => setUrlOpen(false)}>{translate(UI_TEXT.cancel)}</button><button type="submit" disabled={urlBusy}>{translate('Open')}</button></form>{urlError && <p role="alert">{urlError}</p>}</OfficeDialog>}
+    {aboutOpen && <AboutDialog request={{ name: 'VibeOffice.work', version: translate('Web edition'), text: ['A browser office suite with Wordx, Excelx, and PPTX. Your documents stay on this computer.'], licensesUrl: '/oss-licenses.html' }} onClose={() => setAboutOpen(false)} />}
     {webDavDialog}
     {credentialAsk && <OfficeDialog title={credentialAsk.label} className="credential" onRequestClose={() => finishCredential(null)}><form onSubmit={(event) => { event.preventDefault(); finishCredential(credentialInput); }}><label>{credentialAsk.label}<input autoFocus type={credentialAsk.secret ? 'password' : 'text'} value={credentialInput} onChange={(event) => setCredentialInput(event.currentTarget.value)} /></label><button type="button" onClick={() => finishCredential(null)}>{translate(UI_TEXT.cancel)}</button><button type="submit">{translate(UI_TEXT.continue)}</button></form></OfficeDialog>}
-  </main>;
+  </div>;
 }
 
 const root = document.getElementById('root');

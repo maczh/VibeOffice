@@ -1,5 +1,5 @@
 /* CSV import / export test for one file.
- * 1. decode + sniff + parse with Ledger's parser, report the delimiter, encoding and a digest of the parsed rows
+ * 1. decode + sniff + parse with Excelx's parser, report the delimiter, encoding and a digest of the parsed rows
  *    (test/csvref.py parses the same file with Python's csv module and compares the digests);
  * 2. build the workbook as File > Open does, write it back as CSV, re-import that, and compare every cell value.
  * Usage: node csvtest.js file.csv */

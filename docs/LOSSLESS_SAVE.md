@@ -44,7 +44,7 @@ The contracts are in [suite.md, Preservation](suite.md#preservation); the per-fe
   - the Compatibility Checker;
   - signatures reported, because saving invalidates them;
   - VBA kept in macro-enabled formats.
-- **Quire:**
+- **Wordx:**
   - content controls and bindings;
   - text, paragraph and section properties;
   - opaque objects (OLE, SmartArt, controls, altChunk);
@@ -52,7 +52,7 @@ The contracts are in [suite.md, Preservation](suite.md#preservation); the per-fe
   - row and cell alternatives;
   - watermarks;
   - comments.
-- **Ledger:**
+- **Excelx:**
   - pivot tables (source and output edits, refresh, shared caches);
   - threaded comments with mentions;
   - controls, OLE objects and VML;
@@ -60,7 +60,7 @@ The contracts are in [suite.md, Preservation](suite.md#preservation); the per-fe
   - extensions;
   - query tables;
   - custom XML.
-- **Lectern:**
+- **PPTX:**
   - media;
   - sections and custom shows;
   - comments;
@@ -95,21 +95,21 @@ These are in addition to AGENTS.md.
 ## To do
 
 1. **Silent losses** (2026-11-01; the alarm plus a count of drawing objects per sheet, story and slide in every
-   original and its save). Fixed: SmartArt, Office add-ins and other objects Ledger can't show are kept (Ledger
+   original and its save). Fixed: SmartArt, Office add-ins and other objects Excelx can't show are kept (Excelx
    kept frames); part names compare case-insensitively (17 Word template thumbnails); a relationship to a part the
    original lacks no longer drops its owner (a glossary, nine charts; Office's `Target="NULL"` written back, nine
    Excel templates' themes); fields whose code holds nested fields or pictures; bookmarks and permission ranges
-   between table rows or cells; a picture's PowerPoint-for-Mac PDF version; Quire's built-in styles written beside
+   between table rows or cells; a picture's PowerPoint-for-Mac PDF version; Wordx's built-in styles written beside
    a file's own styles of the same name (Word in other languages: `berschrift1` is heading 1), 565 of 2,768 saves,
    where LibreOffice gave the file's paragraphs the second one's look; a PowerPoint 97-2003 organization chart
-   (`com:legacyDrawing`) that became an "Embedded object" rectangle; Lectern's ActiveX controls, saved as dead
+   (`com:legacyDrawing`) that became an "Embedded object" rectangle; PPTX's ActiveX controls, saved as dead
    pictures (84 in 14 decks), now kept unedited, moved or resized; what the user deletes is recorded as
-   `deleted:`, so `unreferenced:` stays exact in edit runs too (Lectern 44 cases, Ledger 13, Quire 9 → 0); Quire's
+   `deleted:`, so `unreferenced:` stays exact in edit runs too (PPTX 44 cases, Excelx 13, Wordx 9 → 0); Wordx's
    tracked moves, which became a deletion and an insertion (`w:moveFrom`/`w:moveTo` and their named ranges; 16 of 17
    files now keep every move, the 17th has no ranges; moved-away text stays `w:t`, which Word requires), a simple field's lock (a locked PRINTDATE showed today's date),
    link ScreenTips with quotes (cut at the first `\"`) and a link's target frame (`w:tgtFrame`); a Word file
    that names no default formatting (119 corpus files) is shown and saved with Word's, Calibri 11 pt, 8 pt after and
-   1.08 lines (Word 2016), where Times New Roman 10 pt was written; the styles part, which Quire rebuilt on every save
+   1.08 lines (Word 2016), where Times New Roman 10 pt was written; the styles part, which Wordx rebuilt on every save
    (found on the Fluent Ribbon walkthrough): the latent styles (2,088 of 2,132 Word-authored files), each style's
    `w:unhideWhenUsed` (2,083; without it Heading 2–6 stay hidden in Word's gallery where used), `w:locked`, `w:rsid` and
    a table style's row properties are kept, the styles stay in the file's order, and a built-in style the file doesn't
@@ -118,12 +118,12 @@ These are in addition to AGENTS.md.
    lines differing from the original to 41,908 (1,299 within 3 lines), with no new package findings or losses; Word
    2016 also opens `fdo76101` again (4,091 styles: the 47 added built-ins passed its limit of 4,092, rule
    `too-many-styles`), and `fdo78904` gets its table styles' repeated header rows back; the ids of paragraphs, runs and
-   table rows (`w:rsid*` in 2,029 of those files; `w14:paraId`/`w14:textId`, 572), which Quire dropped and merged runs
+   table rows (`w:rsid*` in 2,029 of those files; `w14:paraId`/`w14:textId`, 572), which Wordx dropped and merged runs
    across: Word 2016 places text per rsid run, so the save's text moved by fractions of a pixel (the walkthrough: 18 of
    19 pages, 18 → 3 after the fix; removing only the rsids from the original gave the same shift), and Compare, Combine
    and comments use them; a copied paragraph doesn't repeat its paragraph id. Text is written with `xml:space="preserve"`
    only where it needs it, as Word does: on every `w:t`, it moved Word's text a fraction too (7 of the walkthrough's
-   pages); what rows and cells have that Quire doesn't model (`w:cnfStyle`, `w:wBefore`/`w:wAfter`, a row's
+   pages); what rows and cells have that Wordx doesn't model (`w:cnfStyle`, `w:wBefore`/`w:wAfter`, a row's
    `w:tblCellSpacing`, cell revisions and property changes), a cell's width as the file gives it (a percentage, auto:
    written in twips before; kept while the table's grid is unchanged), a row's exceptions to the table's properties
    (`w:tblPrEx`, 1,146 in 39 files: Word moved a row's text 54 pt without them) and the columns' tracked change
@@ -132,7 +132,7 @@ These are in addition to AGENTS.md.
    other complex-script text (27,025 times in 683 files; 1,715 left, on runs the file gave no properties). Intern's review
    of these (I20) found five edit and copy cases, fixed with them: a changed style's base style, a new style's own
    settings, Insert Rows copying cell history, a copy before its source taking its ids, a row exception's revision id. The
-   comment extensions Quire adds (`commentsExtended.xml`) use the draft w15 namespace in a file from Word 2013's
+   comment extensions Wordx adds (`commentsExtended.xml`) use the draft w15 namespace in a file from Word 2013's
    preview that binds it (64 Word files, 3 with comments and no extensions of their own): Word 2016 refused the three
    saves (`Comment012`, `Comment035`, `Comment050`), which now open, rule `w15-namespaces`. A comment's reference run
    keeps its properties and ids (all 1,340 in the 110 Word files with comments, from 846 ids and 990 properties) and its
@@ -143,44 +143,44 @@ These are in addition to AGENTS.md.
    as the original, from 1,048; most of the rest in one file and in HYPERLINK fields, which become hyperlinks): they
    were one run with the field's first run's properties, and Word formats the result from the code (`wDateValueFormat`'s
    page numbers printed at 12 pt, every page) and places text by their ids (`form_footnotes`, found by Intern, I21); a
-   comment read without a date gets none (57 in the corpus got the save's time). Ledger keeps a drawing's whole
+   comment read without a date gets none (57 in the corpus got the save's time). Excelx keeps a drawing's whole
    anchors in an AlternateContent whose Choice is empty: LibreOffice draws a comment in VML and, as that Fallback, in
    DrawingML, and the comment's `commentPr` names the shape; without it Excel 2016 refused the save
    (`universal-content-strict`, found by the Office 2016 sweep, the only one of 729 saves that failed where its
    original opens; rule `comment-shape`, which no original trips). Unedited
-   saves losing a part the original used: Ledger 22 files → 1, Quire 31 → 2, Lectern 4 → 1, all damaged originals. The alarm now reports
+   saves losing a part the original used: Excelx 22 files → 1, Wordx 31 → 2, PPTX 4 → 1, all damaged originals. The alarm now reports
    `unreferenced:` only for parts the original used (`orphan:` for the rest), so that count is direct.
    Still to do:
-   - **Lectern ActiveX copies:** a copied control (the shape or its slide) is saved as its picture, with a notice;
-     keeping it needs new ids across the slide, its VML drawing and its ActiveX parts, as Ledger does.
-   - **Quire field codes** Word wouldn't write that way (one run, across paragraphs, around a bookmark) and
+   - **PPTX ActiveX copies:** a copied control (the shape or its slide) is saved as its picture, with a notice;
+     keeping it needs new ids across the slide, its VML drawing and its ActiveX parts, as Excelx does.
+   - **Wordx field codes** Word wouldn't write that way (one run, across paragraphs, around a bookmark) and
      **direction wrappers** (`w:dir`, `w:bdo`) are converted, now with a notice.
    - `tdf93284.docx`: the original gives two relationships the same id (a picture and the font table); the save
      keeps the picture's reference pointing at the font table.
-   - Quire: text pasted as HTML, RTF or Markdown into a file from Word in another language keeps the built-in
-     styles' ids (Heading 1, Table Grid, Quote); it is saved with the file's own style of that name, but Quire shows
+   - Wordx: text pasted as HTML, RTF or Markdown into a file from Word in another language keeps the built-in
+     styles' ids (Heading 1, Table Grid, Quote); it is saved with the file's own style of that name, but Wordx shows
      the built-in's look until the file is reopened.
    - Damaged originals Office repairs and refuses as saves (Office 2016 sweep, 2026-11-03): `tdf92157-1-minimized`
      (Word), `54764-2` (Excel). Every other save Office refuses, its original is refused too.
-   - Quire text Word places differently, from Intern's bisections (I21, `tmp/losses/i21/REPORT.md`): adjacent runs
+   - Wordx text Word places differently, from Intern's bisections (I21, `tmp/losses/i21/REPORT.md`): adjacent runs
      with the same formatting and ids are merged (`D.normalize`; `tdf81345`, `Strict01`); a field's code runs go
      outside the hyperlink that holds the field (`docx-write.js` hyperlink groups leave field markers out; `Strict01`'s
      table of contents, and `stress004`'s: there, keeping the code's own runs crosses some limit in Word that moves
      Persian text on 12 later pages by a fraction, which any four fields written as one run undo); text with an
      interior double space gets `xml:space="preserve"` (`form_footnotes`).
-   - Quire revision history it doesn't model, dropped silently on an unedited save: a HYPERLINK field whose address
+   - Wordx revision history it doesn't model, dropped silently on an unedited save: a HYPERLINK field whose address
      was changed with Track Changes (`tdf124472`: the old address and the instruction's revisions go); a revision on
      a comment's reference mark (`tdf105485`, `Comment024`); a bound content control's cached text with revisions,
      replaced by one deletion of the bound value (`SdtContent`'s header). Keeping them needs the reference mark and
      the field instruction to carry revisions in the model, and Accept/Reject to handle them.
-   - Quire, a damaged original that LibreOffice recovers and the save doesn't: footnotes whose ids don't match their
+   - Wordx, a damaged original that LibreOffice recovers and the save doesn't: footnotes whose ids don't match their
      references (`tdf153255`: LibreOffice shows six, the save three). Word 2016 repairs the original and opens the save
      cleanly, so it waits. (Two final section definitions, `tdf108849`: fixed, the last one wins, as in Word 2016.)
-2. **Lectern checker numbers:** run the Lectern corpus driver, which needs Playwright, to measure how
-   often unedited saves show the checker. Ledger shows it for 5 of 888 files, and the Quire sample
+2. **PPTX checker numbers:** run the PPTX corpus driver, which needs Playwright, to measure how
+   often unedited saves show the checker. Excelx shows it for 5 of 888 files, and the Wordx sample
    for 3 of 106.
 3. **Office conventions** (low risk; fix when touching that code):
    - A hyperlink containing `w:del`/`w:ins`: checked in Word 2016 on 2026-11-03 (`tdf115212`, `tdf150443`): the saves
      open without repair and their PDFs match the originals' pixel for pixel.
-4. **Related, separate plan:** SmartArt editing in Lectern. It replaces the `frames.js`
+4. **Related, separate plan:** SmartArt editing in PPTX. It replaces the `frames.js`
    "edited preview → plain group" path and is waiting on the PowerPoint spike results.

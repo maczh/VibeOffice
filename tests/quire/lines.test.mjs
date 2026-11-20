@@ -17,7 +17,7 @@ const BOUND = 0.75;
 const refDir = process.env.QUIRE_WORD_REF || path.join(os.homedir(), 'corpora/word-ref');
 const walkthrough = path.join(refDir, 'fluent-walkthrough.docx');
 
-/** open a .docx in Quire and return its rows (tests/lib/lines.mjs) */
+/** open a .docx in Wordx and return its rows (tests/lib/lines.mjs) */
 async function quireRows(file) {
   const page = await openPage('quire', { persistence: false, automated: true });
   try {

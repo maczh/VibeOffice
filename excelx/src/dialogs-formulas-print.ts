@@ -11,11 +11,16 @@ export function installExcelxFormulaPrintDialogs(runtime: Window): void {
   const { h } = L;
   const ui = L.ui;
   const D = (L.dlg = L.dlg || {});
+  function onMountTimeout(callback, delay = 0) {
+    let removeCleanup = () => {};
+    const timer = setTimeout(() => { removeCleanup(); callback(); }, delay);
+    removeCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(() => clearTimeout(timer)) : () => {};
+  }
   let reactPrint = null, reactPrintAction = null, reactPrintResolve = null;
   D.reactPrintCatalog = () => reactPrint;
   D.reactPrintAction = (action, options) => {
     if (!reactPrint || !reactPrintAction) return false;
-    if (action === 'preview') { setTimeout(() => L.print.preview(), 0); return true; }
+    if (action === 'preview') { onMountTimeout(() => L.print.preview()); return true; }
     if (action !== 'print' && action !== 'cancel') return false;
     const run = reactPrintAction, resolve = reactPrintResolve;
     reactPrint = reactPrintAction = reactPrintResolve = null;
@@ -688,7 +693,7 @@ export function installExcelxFormulaPrintDialogs(runtime: Window): void {
           try { for (const n of names) if (/^_xlnm/.test(n.name)) F.parse(n.ref); } catch (_) { state.error = L.t('Reference is not valid.'); L.bus.emit('excelx-page-setup'); return false; }
           tryRun(() => O.tx(w, 'Page Setup', () => { O.setPrint(s, state.p); O.setNames(w, names); }));
           L.print.computeBreaks(s);
-          if (action !== 'apply') setTimeout(() => action === 'print' ? D.print() : L.print.preview(), 0);
+          if (action !== 'apply') onMountTimeout(() => action === 'print' ? D.print() : L.print.preview());
           const resolve = state.resolve; state = null; if (resolve) resolve(1);
         } else return false;
         L.bus.emit('excelx-page-setup'); return true;
@@ -742,7 +747,7 @@ export function installExcelxFormulaPrintDialogs(runtime: Window): void {
     };
     return new Promise((res) => {
       ui.dialog({ title: 'Page Setup', width: 470, body: ui.tabs([{ label: 'Page', body: pageTab }, { label: 'Margins', body: marTab }, { label: 'Header/Footer', body: hfTab }, { label: 'Sheet', body: sheetTab }], tab || 0),
-        buttons: [{ label: '&Print...', onClick: () => { if (apply() === false) return false; setTimeout(() => D.print(), 0); } }, { label: 'Print Previe&w', onClick: () => { if (apply() === false) return false; setTimeout(() => L.print.preview(), 0); } }, { label: 'OK', primary: true, onClick: () => apply() }, { label: 'Cancel' }] }).done.then(res);
+        buttons: [{ label: '&Print...', onClick: () => { if (apply() === false) return false; onMountTimeout(() => D.print()); } }, { label: 'Print Previe&w', onClick: () => { if (apply() === false) return false; onMountTimeout(() => L.print.preview()); } }, { label: 'OK', primary: true, onClick: () => apply() }, { label: 'Cancel' }] }).done.then(res);
     });
   };
   /** Custom Header / Footer: three sections with the field buttons */
@@ -795,7 +800,7 @@ export function installExcelxFormulaPrintDialogs(runtime: Window): void {
           ui.group('Print range', ui.radio('pr-r', '&All', true, () => { st.range = 'all'; }), h('div', { class: 'row', style: 'gap:6px' }, ui.radio('pr-r', 'Pa&ge(s)', false, () => { st.range = 'pages'; }), h('span', { text: 'From:' }), from, h('span', { text: 'To:' }), to)),
           ui.group('Print what', ui.radio('pr-w', 'Selectio&n', false, () => { st.what = 'selection'; }), ui.radio('pr-w', 'Active s&heet(s)', true, () => { st.what = 'sheets'; }), ui.radio('pr-w', '&Entire workbook', false, () => { st.what = 'workbook'; }))),
         ui.field('Number of &copies:', ui.spin({ value: 1, min: 1, max: 99, step: 1, dec: 0 }))),
-      buttons: [{ label: 'Pre&view', onClick: () => { setTimeout(() => L.print.preview(), 0); } }, { label: 'OK', primary: true, onClick: () => { const o = { what: st.what }; if (st.range === 'pages') { o.from = parseInt(from.value, 10) || 1; o.to = parseInt(to.value, 10) || o.from; } L.print.exportPDF(o); } }, { label: 'Cancel' }] }).done.then(res);
+      buttons: [{ label: 'Pre&view', onClick: () => { onMountTimeout(() => L.print.preview()); } }, { label: 'OK', primary: true, onClick: () => { const o = { what: st.what }; if (st.range === 'pages') { o.from = parseInt(from.value, 10) || 1; o.to = parseInt(to.value, 10) || o.from; } L.print.exportPDF(o); } }, { label: 'Cancel' }] }).done.then(res);
     });
   };
 

@@ -22,7 +22,7 @@
 // gather is a static scan: a string literal is UI text when it sits where the UI takes text (a label, tip or
 // title property, an argument of L.t, L.N (text in a table, translated where shown) or of the ui.* helpers, a child of h(), the label of a ui.select option, an
 // AutoShape name), or when it reads as an English sentence or label (several words, or ending in "...", ":" or
-// "?", beginning with a capital); plus the pages' own HTML text and Ledger's function descriptions. A string the
+// "?", beginning with a capital); plus the pages' own HTML text and Excelx's function descriptions. A string the
 // scan misses shows in English in the pseudo-locale (?lang=qps), which is how to find it.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,7 +42,7 @@ const SKIP = new Set(['oss-licenses.js', 'common/crypto.js', 'common/sha.js', 'c
   'ledger/js/formula.js', 'ledger/js/calc.js', 'ledger/js/fn-core.js', 'ledger/js/fn-lookup.js', 'ledger/js/fn-stat.js', 'ledger/js/fn-fin.js',
   'ledger/js/fn-eng.js', 'ledger/js/xlsx-read.js', 'ledger/js/xlsx-write.js', 'ledger/js/xml.js', 'ledger/js/xmlss.js', 'ledger/js/extensions.js', 'ledger/js/preserve.js',
   'lectern/js/pptx-read.js', 'lectern/js/pptx-write.js', 'lectern/js/preserve.js', 'lectern/js/properties.js', 'lectern/js/smartart-io.js']);
-const HTML = ['index.html', 'quire/index.html', 'lectern/index.html'];   // Ledger's page is built from its template
+const HTML = ['index.html', 'quire/index.html', 'lectern/index.html'];   // Excelx's page is built from its template
 const LEDGER_TEMPLATE = 'tools/ledger/build/template.html';
 
 /* where the UI takes text */
@@ -174,7 +174,7 @@ function scanJS(file, src, add, fragment, markedOnly) {
     if (top && top.kind === '{' && HIDDEN.has(top.key)) continue;
     if ((prev && prev.type === 'p' && prev.value === '=' && toks[i - 2] && toks[i - 2].type === 'p' && '=!'.includes(toks[i - 2].value)) || (next && next.type === 'p' && '=!'.includes(next.value) && toks[i + 2] && toks[i + 2].value === '=')) continue;   // compared: x === 'formats'
     if (tpl && tk.line >= tpl[0] && tk.line <= tpl[1]) {
-      /* not the sheets' names of Ledger's templates, which go into the workbook */
+      /* not the sheets' names of Excelx's templates, which go into the workbook */
       if (top && top.kind === '{' && (top.key === 'name' || top.key === 'cat') && !stack.some((x) => x.kind === '{' && x.key === 'sheets')) add(s, file + ':' + tk.line);
       continue;
     }
@@ -204,7 +204,7 @@ function scanJS(file, src, add, fragment, markedOnly) {
   }
 }
 
-/* Ledger's function descriptions: NAME|arguments|description lines (ledger/js/fninfo.js) */
+/* Excelx function descriptions: NAME|arguments|description lines (ledger/js/fninfo.js) */
 function scanFninfo(file, src, add) {
   for (const m of src.matchAll(/^\s*[A-Z][A-Z0-9.]*\|[^|\n]*\|([^\n`]+)$/gm)) add(m[1].trim(), file + ':' + (src.slice(0, m.index).split('\n').length));
 }

@@ -423,6 +423,7 @@ export function installPptxRender(runtime: Window): void {
     const c = sh.crop || { l: 0, t: 0, r: 0, b: 0 };
     const iw = sh.w / Math.max(0.01, 1 - c.l - c.r), ih = sh.h / Math.max(0.01, 1 - c.t - c.b);
     const img = h('img', { src: L.media.url(sh.img && sh.img.view && L.media.has(sh.img.view) ? sh.img.view : sh.media), alt: sh.alt || '', draggable: 'false' });
+    if (sh.media) img.dataset.mediaId = sh.media;
     img.style.cssText = `position:absolute;left:${L.round(-c.l * iw, 2)}px;top:${L.round(-c.t * ih, 2)}px;width:${L.round(iw, 2)}px;height:${L.round(ih, 2)}px;max-width:none`;
     const f = [];
     const im = sh.img || {};

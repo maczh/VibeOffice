@@ -2,7 +2,7 @@
 // out. After any of them no drag is left and the cursor is the pointer's own; a gesture that ended with the release
 // changed what it drags and is one undo step that brings back exactly what was there before; any other ending changed
 // nothing and recorded nothing (the pattern behind R1–R4, todos/UI_MOUSE_LOGIC_IMPROVE.md). Each starting state is
-// made from scratch: a click on a shape already selected means something else (Lectern edits its text).
+// made from scratch: a click on a shape already selected means something else (PPTX edits its text).
 //
 //   node --test --test-concurrency=1 tests/ui/gestures.test.mjs
 import { test } from 'node:test';
@@ -48,7 +48,7 @@ function matrix(name, o) {
   });
 }
 
-/* ---------------------------------------------------------------- Quire: moving a floating shape */
+/* ---------------------------------------------------------------- Wordx: moving a floating shape */
 const quire = async (mode) => {
   const t = await open('quire');
   await t.evaluate(`(async () => {
@@ -65,7 +65,7 @@ const quire = async (mode) => {
 const quireText = (t, b, o) => t.evaluate(`(() => { const m = L.layout.posToDom(L.D.pos(L.D.doc.main.blocks[${b}], ${o})), r = document.createRange();
   r.setStart(m.node, m.offset); r.collapse(true); const x = r.getClientRects()[0] || r.getBoundingClientRect(); return { x: x.left + 1, y: x.top + x.height / 2 }; })()`);
 const flt = (t) => t.evaluate(`(() => { const r = document.querySelector('#pages .flt').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), l: Math.round(r.left), t: Math.round(r.top) }; })()`);
-matrix('Quire: moving a floating shape', {
+matrix('Wordx: moving a floating shape', {
   open: quire,
   starts: [
     { name: 'the caret in the text', run: async (t) => t.click(await quireText(t, 0, 5)), check: (t) => t.evaluate(`!L.ed.objSel && L.ed.collapsed()`) },
@@ -74,7 +74,7 @@ matrix('Quire: moving a floating shape', {
   ],
   from: flt,
   to: (t, a) => ({ x: a.x + 80, y: a.y + 40 }),
-  state: async (t) => ({ box: await flt(t), text: await t.evaluate(`L.D.doc.main.blocks.map((b) => L.D.ptext(b)).join('|')`) }),
+  state: async (t) => ({ box: await t.evaluate(`(() => { const r = document.querySelector('#pages .flt').getBoundingClientRect(), p = document.querySelector('#pages .flt').closest('.pg').getBoundingClientRect(); return { l: Math.round(r.left - p.left), t: Math.round(r.top - p.top), w: Math.round(r.width), h: Math.round(r.height) }; })()`), text: await t.evaluate(`L.D.doc.main.blocks.map((b) => L.D.ptext(b)).join('|')`) }),
   steps: (t) => t.evaluate('L.D.histState().undo.length'),
   modes: [
     { name: 'Track Changes', on: (t) => t.evaluate(`L.ui.exec('trackChanges')`) },   // the command: its toolbar comes at once
@@ -82,7 +82,7 @@ matrix('Quire: moving a floating shape', {
   ],
 });
 
-/* ---------------------------------------------------------------- Ledger: moving a shape, the fill handle */
+/* ---------------------------------------------------------------- Excelx: moving a shape, the fill handle */
 const cell = (t, r, c) => t.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(${r}, ${c});
   return { x: Math.round(w.left + b.x + b.w / 2), y: Math.round(w.top + b.y + b.h / 2), r: Math.round(w.left + b.x + b.w), b: Math.round(w.top + b.y + b.h) }; })()`);
 const gobj = (t) => t.evaluate(`(() => { const r = document.querySelector('#glayer .gobj').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), l: Math.round(r.left), t: Math.round(r.top) }; })()`);
@@ -90,7 +90,7 @@ const gobj = (t) => t.evaluate(`(() => { const r = document.querySelector('#glay
 const oneCell = (t) => t.evaluate(`(() => { const s = L.grid.sel(), r = s.ranges[0]; return !L.grid.selectedObject() && s.ranges.length === 1 && r.r1 === 0 && r.c1 === 0 && r.r2 === 0 && r.c2 === 0; })()`);
 const ledgerSteps = (t) => t.evaluate('L.grid.wb.undo.stack.length');
 const ledgerCells = (t) => t.evaluate(`[0, 1, 2, 3, 4].map((r) => L.editor.cellText(L.grid.sheet(), r, 0))`);
-matrix('Ledger: moving a shape', {
+matrix('Excelx: moving a shape', {
   open: async (mode) => {
     const t = await open('ledger');
     if (mode) { await mode.on(t); await pause(300); }
@@ -113,7 +113,7 @@ matrix('Ledger: moving a shape', {
     { name: 'zoom 150%', on: (t) => t.evaluate(`L.grid.setZoom(150)`) },
   ],
 });
-matrix('Ledger: the fill handle', {
+matrix('Excelx: the fill handle', {
   open: async (mode) => {
     const t = await open('ledger');
     if (mode) { await mode.on(t); await pause(300); }
@@ -132,7 +132,7 @@ matrix('Ledger: the fill handle', {
   ],
 });
 
-/* ---------------------------------------------------------------- Lectern: moving and resizing a shape */
+/* ---------------------------------------------------------------- PPTX: moving and resizing a shape */
 const lectern = async (mode) => {
   const t = await open('lectern');
   if (mode) { await mode.on(t); await pause(300); }
@@ -163,7 +163,7 @@ const slideBlank = async (t) => {
   return p;
 };
 const rectSelected = (t) => t.evaluate(`L.ed.sel.length === 1 && L.ed.sel[0] === 'rectR' && !L.te.active()`);
-matrix('Lectern: moving a shape', {
+matrix('PPTX: moving a shape', {
   open: lectern,
   modes: [
     { name: 'a slide with a transition', on: (t) => t.evaluate(`L.ed.slide().trans = { type: 'fade', spd: 'slow', click: true }`) },
@@ -181,7 +181,7 @@ matrix('Lectern: moving a shape', {
   state: lstate,
   steps: lsteps,
 });
-matrix('Lectern: resizing a shape', {
+matrix('PPTX: resizing a shape', {
   open: lectern,
   modes: [
     { name: 'a slide with a transition', on: (t) => t.evaluate(`L.ed.slide().trans = { type: 'fade', spd: 'slow', click: true }`) },

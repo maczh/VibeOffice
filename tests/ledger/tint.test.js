@@ -1,5 +1,5 @@
 // Theme-colour tints (M.applyTint) use the suite's HSL conversions in common/core.js (L.color), with no copy of
-// their own in Ledger, and keep their results:  node --test tests/ledger/tint.test.js
+// their own in Excelx, and keep their results:  node --test tests/ledger/tint.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
 require('../../public/common/core.js');

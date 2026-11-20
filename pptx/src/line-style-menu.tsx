@@ -52,7 +52,7 @@ export function PptxLineStyleMenu({ host }: { host: HTMLElement }) {
   const close = () => { setRequest(null); request.anchor?.focus(); };
   const borderGrid = request.kind === 'table-borders';
   const title = request.kind === 'weight' ? 'Line Style' : request.kind === 'dash' ? 'Dash Style' : request.kind === 'arrow' ? 'Arrow Style' : request.kind === 'table-weight' ? 'Border Width' : request.kind === 'table-dash' ? 'Border Style' : 'Borders';
-  return createPortal(<div className={`menu vibeoffice-line-style-menu ${borderGrid ? 'grid-menu shape-grid' : 'style-list'}`} role="menu" aria-label={L?.t?.(title) || title} tabIndex={-1} style={{ left: position.left, top: position.top, ...(borderGrid ? { gridTemplateColumns: 'repeat(4,24px)' } : {}) }}>
+  return createPortal(<div className={`menu vibeoffice-line-style-menu ${borderGrid ? 'grid-menu shape-grid' : 'style-list'}`} data-menu-keyboard-owner="react" role="menu" aria-label={L?.t?.(title) || title} tabIndex={-1} style={{ left: position.left, top: position.top, ...(borderGrid ? { gridTemplateColumns: 'repeat(4,24px)' } : {}) }}>
     {request.choices.map((choice) => <button key={choice.id} type="button" role="menuitem" data-line-choice={choice.id} aria-label={choice.label} title={choice.label} onPointerDown={(event) => event.preventDefault()} onClick={() => { close(); request.choose(choice.value); }}>
       <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: choice.svg }} />{borderGrid || request.kind === 'arrow' && choice.id !== 'more' ? null : <span>{choice.label}</span>}
     </button>)}

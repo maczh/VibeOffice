@@ -1,5 +1,6 @@
 import { OfficeDialog } from './dialog.js';
 import { useVibeOffice } from './react-bridge.js';
+import { SvgArtwork } from './svg-artwork.js';
 
 export interface MessageRequest {
   title: string;
@@ -36,7 +37,7 @@ export function MessageDialog({ request, onClose }: MessageDialogProps) {
 
   return <OfficeDialog title={translate(request.title)} className={`vibeoffice-message-dialog vibeoffice-message-dialog--${request.icon}`} style={{ width: `min(92vw, ${request.width}px)` }} onRequestClose={cancel}>
     <div className="vibeoffice-message-dialog__body">
-      <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: request.iconSvg }} />
+      <span aria-hidden="true"><SvgArtwork markup={request.iconSvg} owner="message-icon" /></span>
       <div role="document">{lines.map((line, index) => <span key={`${index}:${line}`}>{index > 0 && <br />}{line}</span>)}</div>
     </div>
     <div className="vibeoffice-message-dialog__actions">

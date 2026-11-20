@@ -25,7 +25,7 @@ if (ref) {
   console.log('\nslide count vs python-pptx: compared', opened.filter((r) => ref.get(r.file) && ref.get(r.file).slides != null).length, 'mismatch', mism.length);
   show('slide count mismatches', mism, (r) => r.slides + ' vs python-pptx ' + ref.get(r.file).slides + (r.repaired ? ' (repaired)' : ''));
   const notOpenedButPyOk = rs.filter((r) => r.readError && ref.get(r.file) && ref.get(r.file).slides != null);
-  show('python-pptx opens but Lectern does not', notOpenedButPyOk, (r) => r.readError);
+  show('python-pptx opens but PPTX does not', notOpenedButPyOk, (r) => r.readError);
 }
 const ms = opened.map((r) => r.readMs + (r.renderMs || 0)).sort((a, b) => a - b);
 console.log('\nopen+render ms: median', ms[Math.floor(ms.length / 2)], 'p90', ms[Math.floor(ms.length * 0.9)], 'max', ms[ms.length - 1]);

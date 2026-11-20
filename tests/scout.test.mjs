@@ -4,7 +4,7 @@
 // wait, with manners (one act waits for the one under way; a nap ends first); his idling follows the user (small
 // things while they work, more once they are quiet, a nap after five minutes that they wake him from); at rest
 // nothing is drawn but a blink and now and then the tail's sway, a window in the background draws nothing (he stands
-// still), and once hidden the frame loop stops. Then, in Quire: he comes in by himself on a desktop, not on an
+// still), and once hidden the frame loop stops. Then, in Wordx: he comes in by himself on a desktop, not on an
 // iPhone, in an automated browser (tools/shot.mjs) or on a day the user hid him; and nothing of his own covers his face
 // in any action. Leaves the settings as it found them.
 //

@@ -48,7 +48,7 @@ test('the production React suite can edit and save Office files entirely offline
         const startReady = await page.evaluate("new Promise((resolve)=>{const end=Date.now()+10000;const poll=()=>document.querySelector('.suite-start .app .cards button')?resolve(true):Date.now()>end?resolve(false):setTimeout(poll,30);poll()})");
         assert.equal(startReady, true, 'the cached React Start Center returns while offline');
         t.diagnostic(`${app}: Start Center available offline`);
-        await page.evaluate(`(() => [...document.querySelectorAll('.suite-start .app')].find((section)=>section.querySelector('h3')?.textContent.trim()==='${app === 'pptx' ? 'PPTX' : app[0].toUpperCase() + app.slice(1)}')?.querySelector('.cards button')?.click())()`);
+        await page.evaluate(`(() => [...document.querySelectorAll('.suite-start .app')].find((section)=>section.querySelector('.suite-app-mark.${app}'))?.querySelector('.cards button')?.click())()`);
       }
       const documentReady = app === 'wordx' ? '!!L.D?.doc?.main' : app === 'excelx' ? '!!L.grid?.wb?.sheets?.length' : '!!L.pres?.slides?.length';
       const ready = await page.evaluate(`new Promise((resolve)=>{const end=Date.now()+15000;const poll=()=>document.querySelector('.vibe-editor__engine #app')&&window.L?.APP_ID==='${app}'&&window.L?.app&&(${documentReady})?resolve({app:L.APP_ID,name:L.APP_NAME}):Date.now()>end?resolve(false):setTimeout(poll,50);poll()})`);

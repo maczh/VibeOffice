@@ -67,7 +67,7 @@ function CustomMenuContent({ item, close }: { item: ReactMenuItem; close: () => 
     slot.current.append(content);
     return () => content.remove();
   }, [item, close]);
-  return <div ref={slot} />;
+  return <div ref={slot} data-menu-keyboard-owner="react" />;
 }
 
 /** React-owned shared menu surfaces; command data and dynamic enabled state remain in the engine. */
@@ -147,6 +147,9 @@ export function MenuLayer({ host }: MenuLayerProps) {
       close();
     };
     const keydown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('dialog, [role="dialog"]')) return;
+      if (event.key !== 'Escape' && target instanceof Element && target.closest('[data-menu-keyboard-owner="react"]')) return;
       const depth = stack.length - 1;
       const menu = stack[depth];
       if (!menu) return;

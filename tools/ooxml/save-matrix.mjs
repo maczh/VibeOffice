@@ -124,7 +124,7 @@ function install(app) {
   };
   VO.opened = VO.saved = () => {};
   L.saveFile = async (name, blob) => { M.saved.push({ name, blob }); return M.decision; };
-  // Ledger's dialog starts this asynchronous call but returns when the dialog
+  // Excelx's dialog starts this asynchronous call but returns when the dialog
   // closes. Capture its completion without replacing the real implementation.
   if (app === 'ledger') {
     const save = A.saveAs;

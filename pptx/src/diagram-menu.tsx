@@ -51,7 +51,7 @@ export function PptxDiagramMenu({ host }: { host: HTMLElement }) {
   const engineRoot = host.querySelector<HTMLElement>('.vibeoffice-legacy-root[data-vibeoffice-engine-root]');
   if (!request || !engineRoot) return null;
   const close = () => { setRequest(null); request.anchor?.focus(); };
-  return createPortal(<div className="menu sa-menu-grid vibeoffice-diagram-menu" role="menu" tabIndex={-1} style={{ left: position.left, top: position.top }}>
+  return createPortal(<div className="menu sa-menu-grid vibeoffice-diagram-menu" data-menu-keyboard-owner="react" role="menu" tabIndex={-1} style={{ left: position.left, top: position.top }}>
     {request.groups.map((group) => <section key={group.id} aria-label={group.label}>
       {group.label ? <div className="sa-sub">{group.label}</div> : null}
       <div className="sa-pick" style={{ gridTemplateColumns: `repeat(${request.kind === 'layout' ? 5 : 4}, 1fr)` }}>

@@ -67,7 +67,7 @@ interface WordxRuntime {
   layout?: { zoom?: number; root?: HTMLElement; scroller?: HTMLElement };
   outline?: { reactPointerDown?(event: MouseEvent): void };
   find?: { reactGoToCatalog?(): Array<{ id: string; label: string; prompt: string }>; reactGoToAction?(kind: string, value: string, dir: number): boolean; reactCloseDialog?(): void; reactFindTab?(): number; reactFindCommand?(action: string, anchor?: HTMLElement): void; reactFindFormatState?(): { find: string; replace: string }; reactFindFormatMenuCatalog?(): Array<{ id: string; label: string }>; reactFindFormatMenuAction?(id: string): void; reactFindSpecialMenuCatalog?(): Array<{ code: string; label: string }>; reactFindSpecialMenuAction?(code: string): void };
-  dlg?: { reactTablePropsCatalog?(): TablePropertiesState; reactTablePropsAction?(action: string, value?: Partial<TablePropertiesState>): TablePropertiesState | void; reactBordersCatalog?(): BordersDialogState; reactBordersAction?(action: string, value?: any): BordersDialogState | void; reactParagraphCatalog?(): ParagraphDialogState; reactParagraphAction?(action: string, value?: unknown): ParagraphDialogState | void; reactCaptionNumberingCatalog?(): CaptionNumbering; reactCaptionNumberingAction?(value: Partial<CaptionNumbering>): void; reactCaptionCatalog?(): CaptionDialogState; reactCaptionAction?(action: string, value?: Partial<CaptionDialogState>): Promise<void> | void; reactPageSetupCatalog?(): PageSetupState; reactPageSetupAction?(action: string, value?: Partial<PageSetupState>): void; reactColumnsCatalog?(): ColumnsDialogState; reactColumnsAction?(action: string, value?: Partial<ColumnsDialogState> | { n: number; eq: boolean; fractions?: number[] }): void; reactLineNumbersCatalog?(): { enabled: boolean; start: number; distance: string; countBy: number; restart: string; restarts: Array<[string, string]> }; reactLineNumbersAction?(action: string, value?: Record<string, unknown>): void; reactDropCapCatalog?(): { position: string; positions: Array<[string, string]>; fonts: string[]; font: string; lines: number; distanceText: string }; reactDropCapAction?(action: string, value?: string): void; reactLanguageCatalog?(): { languages: Array<{ value: string; label: string }>; language: string; noProof: boolean; detect: boolean }; reactLanguageAction?(action: string, value?: string): void; reactBookmarkCatalog?(): { name: string; sort: string; hidden: boolean; names: string[] }; reactBookmarkAction?(action: string, value?: string): boolean | void; reactObjectCatalog?(): Array<{ value: string; label: string }>; reactObjectAction?(action: string, value?: string): void; reactEquationAction?(action: string, value?: string): void; reactBreakCatalog?(): Array<{ value: string; label: string }>; reactBreakAction?(value: string): void; reactDateTimeCatalog?(): Array<{ value: string; label: string }>; reactDateTimeState?(): { format: string; autoUpdate: boolean }; reactPageNumberAction?(position: string, alignment: string, showFirst: boolean): void; reactPageNumberFormatState?(): { fmt: string; chapter: boolean; mode: string; start: number }; reactPageNumberFormatCatalog?(): Array<{ value: string; label: string }>; reactPageNumberFormatAction?(format: string, chapter: boolean, mode: string, start: number): void; reactCellDialogCatalog?(kind?: string): Array<[string, string]>; reactCellDialogKind?: string; reactInsertTableState?(): { columns: number; rows: number }; reactInsertTableAction?(action: string, options?: { columns: number; rows: number; fit: string; width: string; remember: boolean }): void; reactSplitCellsState?(): { columns: number; rows: number; merge: boolean }; reactTextToTableState?(): { initialSeparator: string; columns: number; paragraphs: Array<{ text: string; tabs: number }> }; reactTextToTableAction?(options: { sep: string; cols: number; autofit: string }): void; reactFormulaCatalog?(): { guess: string; functions: string[]; bookmarks: string[]; formats: string[] }; reactFormulaAction?(formula: string, format: string): void; reactCrossRefCatalog?(type?: string): { types: Array<{ value: string; label: string }>; references: Array<{ value: string; label: string }>; items: Array<{ value: string; label: string }> }; reactCrossRefAction?(type: string, index: number, reference: string, hyperlink: boolean, aboveBelow: boolean): void; reactMarkEntryState?(): { main: string; sub: string; option: string; xref: string; bold: boolean; italic: boolean }; reactMarkEntryAction?(all: boolean, values: { main: string; sub: string; option: string; xref: string; bold: boolean; italic: boolean }): void };
+  dlg?: { reactTablePropsCatalog?(): TablePropertiesState; reactTablePropsAction?(action: string, value?: Partial<TablePropertiesState>): TablePropertiesState | void; reactBordersCatalog?(): BordersDialogState; reactBordersAction?(action: string, value?: any): BordersDialogState | void; reactParagraphCatalog?(): ParagraphDialogState; reactParagraphAction?(action: string, value?: unknown): ParagraphDialogState | void; reactCaptionNumberingCatalog?(): CaptionNumbering; reactCaptionNumberingAction?(value: Partial<CaptionNumbering>): void; reactCaptionCatalog?(): CaptionDialogState; reactCaptionAction?(action: string, value?: Partial<CaptionDialogState>): Promise<void> | void; reactPageSetupCatalog?(): PageSetupState; reactPageSetupAction?(action: string, value?: Partial<PageSetupState>): void; reactColumnsCatalog?(): ColumnsDialogState; reactColumnsAction?(action: string, value?: Partial<ColumnsDialogState> | { n: number; eq: boolean; fractions?: number[] }): void; reactLineNumbersCatalog?(): { enabled: boolean; start: number; distance: string; countBy: number; restart: string; restarts: Array<[string, string]> }; reactLineNumbersAction?(action: string, value?: Record<string, unknown>): void; reactDropCapCatalog?(): { position: string; positions: Array<[string, string]>; fonts: string[]; font: string; lines: number; distanceText: string }; reactDropCapAction?(action: string, value?: string): void; reactLanguageCatalog?(): { languages: Array<{ value: string; label: string }>; language: string; noProof: boolean; detect: boolean }; reactLanguageAction?(action: string, value?: string): void; reactBookmarkCatalog?(): { name: string; sort: string; hidden: boolean; names: string[] }; reactBookmarkAction?(action: string, value?: string): boolean | void; reactObjectCatalog?(): Array<{ value: string; label: string }>; reactObjectAction?(action: string, value?: string): void; reactEquationAction?(action: string, value?: string): void; reactEquationDraftSet?(value: string): void; reactBreakCatalog?(): Array<{ value: string; label: string }>; reactBreakSelect?(value: string): void; reactBreakAction?(value: string): void; reactDateTimeCatalog?(): Array<{ value: string; label: string }>; reactDateTimeState?(): { format: string; autoUpdate: boolean }; reactDateTimeDraftState?(): { pic: string; autoUpdate: boolean }; reactDateTimeDraftSet?(key: string, value: string | boolean): void; reactPageNumberAction?(position: string, alignment: string, showFirst: boolean): void; reactPageNumbersDraftState?(): { position: string; alignment: string; showFirst: boolean }; reactPageNumbersDraftSet?(key: string, value: string | boolean): void; reactPageNumberFormatState?(): { fmt: string; chapter: boolean; mode: string; start: number }; reactPageNumberFormatDraftState?(): { format: string; chapter: boolean; mode: string; start: number }; reactPageNumberFormatDraftSet?(key: string, value: string | number | boolean): void; reactPageNumberFormatCatalog?(): Array<{ value: string; label: string }>; reactPageNumberFormatAction?(format: string, chapter: boolean, mode: string, start: number): void; reactCellDialogCatalog?(kind?: string): Array<[string, string]>; reactCellDialogKind?: string; reactCellDialogDraft?: string; reactCellDialogDraftSet?(value: string): void; reactInsertTableState?(): { columns: number; rows: number }; reactInsertTableDraft?: { columns: number; rows: number; fit: string; width: string; remember: boolean }; reactInsertTableDraftSet?(key: 'columns' | 'rows' | 'fit' | 'width' | 'remember', value: number | string | boolean): void; reactInsertTableAction?(action: string, options?: { columns: number; rows: number; fit: string; width: string; remember: boolean }): void; reactSplitCellsState?(): { columns: number; rows: number; merge: boolean }; reactSplitCellsDraft?: { columns: number; rows: number; merge: boolean }; reactSplitCellsDraftSet?(key: 'columns' | 'rows' | 'merge', value: number | boolean): void; reactTextToTableState?(): { initialSeparator: string; columns: number; paragraphs: Array<{ text: string; tabs: number }> }; reactTextToTableAction?(options: { sep: string; cols: number; autofit: string }): void; reactFormulaCatalog?(): { guess: string; functions: string[]; bookmarks: string[]; formats: string[] }; reactFormulaAction?(formula: string, format: string): void; reactCrossRefCatalog?(type?: string): { types: Array<{ value: string; label: string }>; references: Array<{ value: string; label: string }>; items: Array<{ value: string; label: string }> }; reactCrossRefAction?(type: string, index: number, reference: string, hyperlink: boolean, aboveBelow: boolean): void; reactMarkEntryState?(): { main: string; sub: string; option: string; xref: string; bold: boolean; italic: boolean }; reactMarkEntryAction?(all: boolean, values: { main: string; sub: string; option: string; xref: string; bold: boolean; italic: boolean }): void };
   rulers?: { draw?(): void; reactTabState?(): { kind: string; label: string }; reactTabNext?(): { kind: string; label: string }; reactMarkers?(): Array<{ className: string; tip: string; left: number; top?: number; width?: number; kind?: string; pos?: number; cid?: string; html: string }>; reactVerticalMarkers?(): Array<{ kind: string; top: number; left: number; width: number }>; reactMarkerDown?(event: PointerEvent): void; reactVerticalMarginDown?(event: PointerEvent, which: string): void; reactRulerDown?(event: PointerEvent): void; reactRulerDoubleClick?(event: MouseEvent): void; reactVerticalDoubleClick?(): void };
   app?: { fileName?: string; view?: string; prevView?: string; toggleDocMap?(): void; toggleThumbs?(): void; setView?(view: string): void; reactMapSplitterDown?(event: PointerEvent): void; reactSplitDown?(event: PointerEvent): void; reactSplitPageClick?(index: number): void; reactResize?(): void; reactScroll?(): void; reactBeforeUnload?(event: globalThis.BeforeUnloadEvent): void; reactAppKeydown?(event: globalThis.KeyboardEvent): void; reactExtendEscape?(event: globalThis.KeyboardEvent): void; reactModifierKey?(event: globalThis.KeyboardEvent): void; reactDropHintActive?: boolean; reactDropEvent?(kind: string, event: globalThis.DragEvent): void; painter?: { release(): boolean; start(sticky?: boolean, value?: unknown): boolean; on(): boolean }; highlighter?: { release(): boolean; start(sticky?: boolean, value?: unknown): boolean; on(): boolean; stop(): void }; reactStatusState?(): Array<{ id: string; text: string; className: string; tip: string; html: string }>; reactStatusAction?(action: string): void; reactShapeMenuCatalog?(): Array<{ kind: string; label: string; line: boolean; svg: string }>; reactShapeMenuAction?(kind: string): void; reactShadowMenuCatalog?(): Array<{ index: number; label: string; svg: string }>; reactShadowMenuAction?(index: number): void };
   ed?: { reactEvent?(type: string, event: Event): void; reactInlineHandleDown?(event: PointerEvent): void; reactLayoutSelection?(): void; reactPagePointerDown?(event: PointerEvent): void; reactSelectionChange?(): void; reactDragEnd?(): void; pressing?(): boolean };
@@ -82,7 +82,7 @@ interface WordxRuntime {
   ui?: { keyText(key: string): string; colorMenu?(anchor: HTMLElement, options: { mode: string }, onPick: (value: unknown) => void): void; moreColors?(initial: string | null, onPick: (color: string | null) => void): void };
   color?: { STANDARD: string[] };
   t?(text: string, ...args: unknown[]): string;
-  bus?: { on(event: string, listener: () => void): () => void };
+  bus?: { on(event: string, listener: () => void): () => void; emit?(event: string, ...args: unknown[]): void };
 }
 function runtime(): WordxRuntime | undefined { return (window as Window & { L?: WordxRuntime }).L; }
 function tr(L: WordxRuntime, text: string): string { return L.t?.(text) || text; }
@@ -743,7 +743,7 @@ function TaskPaneHeader({ L }: { L: WordxRuntime }) {
     {button('back', 'back', 'Back', state.backDisabled)}{button('forward', 'forward', 'Forward', state.forwardDisabled)}{button('home', 'home', 'Home')}
     <button ref={trigger} className="tp-title" type="button" aria-haspopup="menu" aria-expanded={menuOpen} aria-controls="react-wordx-task-pane-menu" aria-label={tr(L, state.title)} onClick={openMenu}><span>{tr(L, state.title)}</span><span className="dd-arrow" /></button>
     {button('close', 'close', 'Close task pane')}
-    {menuOpen ? <div ref={menu} id="react-wordx-task-pane-menu" className="menu" role="menu" aria-label={tr(L, 'Task Pane')} style={{ left: menuPosition.left, top: menuPosition.top }} onKeyDown={handleMenuKey}>
+    {menuOpen ? <div ref={menu} id="react-wordx-task-pane-menu" className="menu" data-menu-keyboard-owner="react" role="menu" aria-label={tr(L, 'Task Pane')} style={{ left: menuPosition.left, top: menuPosition.top }} onKeyDown={handleMenuKey}>
       {state.items.map((item) => <button key={item.id} type="button" role="menuitemradio" aria-checked={item.current} className="m-item" style={{ background: 'none', width: '100%', textAlign: 'left' }} onClick={() => { L.panes?.reactTaskShellAction?.('show', undefined, item.id); setMenuOpen(false); }}>
         <span className="m-ico">{item.current ? <span className="m-check">✓</span> : null}</span><span className="m-lbl">{tr(L, item.title)}</span><span /><span />
       </button>)}
@@ -784,6 +784,7 @@ function GoToPane({ L }: { L: WordxRuntime }) {
 
 type FindInputAdapter = {
   reactFindState?(): { text: string; replace: string; highlight: boolean; scope: string; matchCase: boolean; wholeWord: boolean; wildcards: boolean; soundsLike: boolean; allForms: boolean; dir: string; more: boolean };
+  reactFindHistoryCatalog?(): { find: string[]; replace: string[] };
   reactFindAction?(action: string, field?: string | Record<string, unknown>): void;
   reactFindCommand?(action: string, anchor?: HTMLElement): void;
   reactFindTab?(): number;
@@ -792,6 +793,9 @@ type FindInputAdapter = {
   reactFindFormatMenuAction?(id: string): void;
   reactFindSpecialMenuCatalog?(): Array<{ code: string; label: string }>;
   reactFindSpecialMenuAction?(code: string): void;
+  reactFindSetSpecialInsertHandler?(field: 'find' | 'replace', handler: ((code: string) => void) | null): void;
+  reactFindStyleCatalog?(): { title: string; styles: Array<{ id: string; label: string }>; selected: string };
+  reactFindStyleAction?(action: string, value?: string): void;
 };
 
 function FindReplaceInput({ L, replace }: { L: WordxRuntime; replace: boolean }) {
@@ -799,12 +803,38 @@ function FindReplaceInput({ L, replace }: { L: WordxRuntime; replace: boolean })
   const initial = adapter?.reactFindState?.() || { text: '', replace: '' };
   const id = replace ? 'fr-repl' : 'fr-find';
   const label = replace ? 'Replace with:' : 'Find what:';
+  const listId = replace ? 'fr-rhist' : 'fr-fhist';
   const [value, setValue] = useState(replace ? initial.replace : initial.text);
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const [history, setHistory] = useState(() => adapter?.reactFindHistoryCatalog?.()[replace ? 'replace' : 'find'] || []);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { input.current?.focus(); return L.bus?.on('wordx-find-focus', () => input.current?.focus()); }, [L]);
+  useEffect(() => L.bus?.on('wordx-find-history', () => setHistory(adapter?.reactFindHistoryCatalog?.()[replace ? 'replace' : 'find'] || [])), [L, adapter, replace]);
+  useEffect(() => {
+    const field = replace ? 'replace' : 'find';
+    const insert = (code: string) => {
+      const node = input.current;
+      if (!node) return;
+      const start = node.selectionStart ?? valueRef.current.length;
+      const end = node.selectionEnd ?? start;
+      const next = valueRef.current.slice(0, start) + code + valueRef.current.slice(end);
+      valueRef.current = next;
+      setValue(next);
+      adapter?.reactFindAction?.('value', { [replace ? 'replace' : 'text']: next });
+      requestAnimationFrame(() => {
+        if (!node.isConnected) return;
+        node.focus();
+        node.setSelectionRange(start + code.length, start + code.length);
+      });
+    };
+    adapter?.reactFindSetSpecialInsertHandler?.(field, insert);
+    return () => adapter?.reactFindSetSpecialInsertHandler?.(field, null);
+  }, [adapter, replace]);
   return <div className="row" style={{ alignItems: 'center', flexWrap: 'nowrap' }}>
     <label htmlFor={id} style={{ width: 80 }}>{tr(L, label)}</label>
-    <input ref={input} id={id} type="text" list={replace ? 'fr-rhist' : 'fr-fhist'} value={value} style={{ flex: 1, minWidth: 0 }} onFocus={() => adapter?.reactFindAction?.('focus', replace ? 'repl' : 'find')} onChange={(event) => { setValue(event.currentTarget.value); adapter?.reactFindAction?.('input'); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); adapter?.reactFindCommand?.('find-next'); } }} />
+    <input ref={input} id={id} type="text" list={listId} value={value} style={{ flex: 1, minWidth: 0 }} onFocus={() => adapter?.reactFindAction?.('focus', replace ? 'repl' : 'find')} onChange={(event) => { const next=event.currentTarget.value;setValue(next);adapter?.reactFindAction?.('value',{[replace?'replace':'text']:next}); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); adapter?.reactFindCommand?.('find-next'); } }} />
+    <datalist id={listId}>{history.map((item, index) => <option key={`${item}-${index}`} value={item} />)}</datalist>
   </div>;
 }
 
@@ -816,6 +846,30 @@ function FindFooterActions({ L }: { L: WordxRuntime }) {
   const button = (label: string, action: string, primary = false) => <button key={action} type="button" className={`btn${primary ? ' primary' : ''}`} onPointerDown={(event) => event.preventDefault()} onClick={() => command(action)}>{tr(L, label)}</button>;
   if (tab === 2) return null;
   return <>{tab === 1 ? button('Replace', 'replace-one') : null}{tab === 1 ? button('Replace All', 'replace-all') : null}{button('Find Next', 'find-next', true)}{button('Cancel', 'close')}</>;
+}
+
+function FindTabs({ L }: { L: WordxRuntime }) {
+  const adapter = L.find as FindInputAdapter | undefined;
+  const [active, setActive] = useState(() => adapter?.reactFindTab?.() ?? 0);
+  useEffect(() => L.bus?.on('wordx-find-tab', () => setActive(adapter?.reactFindTab?.() ?? 0)), [L, adapter]);
+  const tabs = ['Find', 'Replace', 'Go To'];
+  return <div role="tablist" aria-label={tr(L, 'Find and Replace')} className="tp-btns">
+    {tabs.map((label, index) => <button key={label} id={`react-wordx-find-tab-${index}`} type="button" role="tab" aria-selected={active === index} aria-controls={`react-wordx-find-panel-${index}`} tabIndex={active === index ? 0 : -1} className="btn" onClick={() => adapter?.reactFindAction?.('tab', String(index))} onKeyDown={(event) => {
+      const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+      if (next >= 0) { event.preventDefault(); adapter?.reactFindAction?.('tab', String(next)); document.getElementById(`react-wordx-find-tab-${next}`)?.focus(); }
+    }}>{tr(L, label)}</button>)}
+  </div>;
+}
+
+function FindStyleDialogBody({ L }: { L: WordxRuntime }) {
+  const adapter = L.find as FindInputAdapter | undefined;
+  const catalog = adapter?.reactFindStyleCatalog?.() || { title: 'Find Style', styles: [], selected: '' };
+  const [selected, setSelected] = useState(catalog.selected);
+  return <label className="col" id="react-wordx-find-style-body">{tr(L, catalog.title)}
+    <select size={8} aria-label={tr(L, catalog.title)} value={selected} onChange={(event) => { setSelected(event.currentTarget.value); adapter?.reactFindStyleAction?.('select', event.currentTarget.value); }}>
+      {catalog.styles.map((style) => <option key={style.id} value={style.id}>{tr(L, style.label)}</option>)}
+    </select>
+  </label>;
 }
 
 function FindAuxiliaryControls({ L }: { L: WordxRuntime }) {
@@ -959,25 +1013,33 @@ function FindOptionsControls({ L }: { L: WordxRuntime }) {
   const adapter = L.find as FindInputAdapter | undefined;
   const initial = adapter?.reactFindState?.() || { text: '', replace: '', highlight: false, scope: 'main', matchCase: false, wholeWord: false, wildcards: false, soundsLike: false, allForms: false, dir: 'all' };
   const [state, setState] = useState(initial);
+  const [expanded, setExpanded] = useState(() => adapter?.reactFindState?.().more || false);
+  const [tab, setTab] = useState(() => adapter?.reactFindTab?.() ?? 0);
+  useEffect(() => L.bus?.on('wordx-find-more', () => setExpanded(!!adapter?.reactFindState?.().more)), [L, adapter]);
+  useEffect(() => L.bus?.on('wordx-find-tab', () => setTab(adapter?.reactFindTab?.() ?? 0)), [L, adapter]);
   const update = (key: 'matchCase' | 'wholeWord' | 'wildcards' | 'soundsLike' | 'allForms' | 'dir', value: boolean | string) => {
     const next = { ...state, [key]: value };
     if (key === 'wildcards' && value) { next.soundsLike = false; next.allForms = false; }
     setState(next);
     adapter?.reactFindAction?.('options', next);
   };
-  return <fieldset className="col"><legend>{tr(L, 'Search Options')}</legend>
+  return <div hidden={!expanded || tab === 2}><fieldset className="col"><legend>{tr(L, 'Search Options')}</legend>
     <label>{tr(L, 'Search:')} <select id="fr-dir" value={state.dir} onChange={(event) => update('dir', event.currentTarget.value)}><option value="all">{tr(L, 'All')}</option><option value="down">{tr(L, 'Down')}</option><option value="up">{tr(L, 'Up')}</option></select></label>
     <label><input type="checkbox" checked={state.matchCase} onChange={(event) => update('matchCase', event.currentTarget.checked)} />{tr(L, 'Match case')}</label>
     <label><input type="checkbox" checked={state.wholeWord} onChange={(event) => update('wholeWord', event.currentTarget.checked)} />{tr(L, 'Find whole words only')}</label>
     <label><input type="checkbox" checked={state.wildcards} onChange={(event) => update('wildcards', event.currentTarget.checked)} />{tr(L, 'Use wildcards')}</label>
     <label><input type="checkbox" checked={state.soundsLike} disabled={state.wildcards} onChange={(event) => update('soundsLike', event.currentTarget.checked)} />{tr(L, 'Sounds like (English)')}</label>
     <label><input type="checkbox" checked={state.allForms} disabled={state.wildcards} onChange={(event) => update('allForms', event.currentTarget.checked)} />{tr(L, 'Find all word forms (English)')}</label>
-  </fieldset>;
+  </fieldset></div>;
 }
 
 function FindFormatControls({ L }: { L: WordxRuntime }) {
   const adapter = L.find as FindInputAdapter | undefined;
-  return <div className="tp-btns">
+  const [expanded, setExpanded] = useState(() => adapter?.reactFindState?.().more || false);
+  const [tab, setTab] = useState(() => adapter?.reactFindTab?.() ?? 0);
+  useEffect(() => L.bus?.on('wordx-find-more', () => setExpanded(!!adapter?.reactFindState?.().more)), [L, adapter]);
+  useEffect(() => L.bus?.on('wordx-find-tab', () => setTab(adapter?.reactFindTab?.() ?? 0)), [L, adapter]);
+  return <div className="tp-btns" hidden={!expanded || tab === 2}>
     <button type="button" className="btn small" onClick={() => adapter?.reactFindCommand?.('clear-format')}>{tr(L, 'No Formatting')}</button>
     <button type="button" className="btn small" onClick={(event) => adapter?.reactFindCommand?.('format', event.currentTarget)}>{tr(L, 'Format')} ▾</button>
     <button type="button" className="btn small" onClick={(event) => adapter?.reactFindCommand?.('special', event.currentTarget)}>{tr(L, 'Special')} ▾</button>
@@ -994,7 +1056,7 @@ function FindFormatSummary({ L, replace }: { L: WordxRuntime; replace: boolean }
 function FindMoreToggle({ L }: { L: WordxRuntime }) {
   const adapter = L.find as FindInputAdapter | undefined;
   const [expanded, setExpanded] = useState(adapter?.reactFindState?.().more || false);
-  const toggle = () => { const next = !expanded; setExpanded(next); adapter?.reactFindAction?.('more', String(next)); };
+  const toggle = () => { const next = !expanded; setExpanded(next); adapter?.reactFindAction?.('more', String(next)); L.bus?.emit?.('wordx-find-more', next); };
   return <button type="button" className="btn small" aria-expanded={expanded} onClick={toggle}>{expanded ? '« ' + tr(L, '&Less') : tr(L, '&More') + ' »'}</button>;
 }
 
@@ -1240,17 +1302,17 @@ function TabsDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 function ChangeCaseDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactChangeCaseCatalog?(): Array<[string, string]> }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactChangeCaseCatalog?(): Array<[string, string]>; reactChangeCaseSelect?(value: string): void }) | undefined;
   const options = adapter?.reactChangeCaseCatalog?.() || [['sentence', 'Sentence case.'], ['lower', 'lowercase'], ['upper', 'UPPERCASE'], ['title', 'Title Case'], ['toggle', 'tOGGLE cASE']];
   const [selected, setSelected] = useState('sentence');
-  return <fieldset>{options.map(([value, label]) => <label key={value}><input type="radio" name="react-wordx-change-case" value={value} checked={selected === value} onChange={() => setSelected(value)} />{tr(L, label)}</label>)}</fieldset>;
+  return <fieldset>{options.map(([value, label]) => <label key={value}><input type="radio" name="react-wordx-change-case" value={value} checked={selected === value} onChange={() => { setSelected(value); adapter?.reactChangeCaseSelect?.(value); }} />{tr(L, label)}</label>)}</fieldset>;
 }
 
 function TextDirectionDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactTextDirectionState?(): string }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactTextDirectionState?(): string; reactTextDirectionSelect?(value: string): void }) | undefined;
   const [direction, setDirection] = useState(adapter?.reactTextDirectionState?.() || 'horz');
   const options: Array<[string, string]> = [['horz', 'Horizontal'], ['vert', 'Vertical (top to bottom)'], ['vert270', 'Vertical (bottom to top)']];
-  return <div className="col"><div className="tp-note">{tr(L, 'Text direction applies to text boxes and table cells.')}</div><fieldset>{options.map(([value, label]) => <label key={value}><input type="radio" name="react-wordx-text-direction" value={value} checked={direction === value} onChange={() => setDirection(value)} />{tr(L, label)}</label>)}</fieldset></div>;
+  return <div className="col"><div className="tp-note">{tr(L, 'Text direction applies to text boxes and table cells.')}</div><fieldset>{options.map(([value, label]) => <label key={value}><input type="radio" name="react-wordx-text-direction" value={value} checked={direction === value} onChange={() => { setDirection(value); adapter?.reactTextDirectionSelect?.(value); }} />{tr(L, label)}</label>)}</fieldset></div>;
 }
 
 type ThemeOption = { value: string; label: string; body: string; head: string; headingColor: string; background: string | null; bodyStack: string; headStack: string };
@@ -1571,38 +1633,50 @@ function WordCountDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 function AutoSummarizeDialogBody({ L }: { L: WordxRuntime }) {
+  const adapter = L.dlg as (typeof L.dlg & { reactAutoSummarizeSet?(value: { kind: string; length: string; update: boolean }): void }) | undefined;
   const [kind, setKind] = useState('highlight');
   const [length, setLength] = useState('25%');
   const [update, setUpdate] = useState(true);
+  const change = (next: { kind: string; length: string; update: boolean }) => {
+    setKind(next.kind);
+    setLength(next.length);
+    setUpdate(next.update);
+    adapter?.reactAutoSummarizeSet?.(next);
+  };
   const types: Array<[string, string]> = [['highlight', 'Highlight key points'], ['top', 'Insert an executive summary or abstract at the top of the document'], ['new', 'Create a new document and put the summary there'], ['hide', 'Hide everything but the summary without leaving the original document']];
   const lengths: Array<[string, string]> = [['10','10 sentences'],['20','20 sentences'],['100','100 words or less'],['500','500 words or less'],['10%','10%'],['25%','25%'],['50%','50%'],['75%','75%']];
-  return <div className="col" id="react-wordx-summarize-body"><div className="tp-note">{tr(L, 'Wordx has examined the document and picked the sentences most relevant to the main theme.')}</div><fieldset><legend>{tr(L, 'Type of summary')}</legend>{types.map(([value, label]) => <label key={value}><input type="radio" name="react-wordx-summary-kind" value={value} checked={kind === value} onChange={() => setKind(value)} />{tr(L, label)}</label>)}</fieldset><fieldset><legend>{tr(L, 'Length of summary')}</legend><label htmlFor="react-wordx-summary-length">{tr(L, 'Percent of original:')}</label><select id="react-wordx-summary-length" value={length} onChange={(event) => setLength(event.currentTarget.value)}>{lengths.map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></fieldset><label><input id="react-wordx-summary-update" type="checkbox" checked={update} onChange={(event) => setUpdate(event.currentTarget.checked)} />{tr(L, 'Update document statistics')}</label></div>;
+  return <div className="col" id="react-wordx-summarize-body"><div className="tp-note">{tr(L, 'Wordx has examined the document and picked the sentences most relevant to the main theme.')}</div><fieldset><legend>{tr(L, 'Type of summary')}</legend>{types.map(([value, label]) => <label key={value}><input type="radio" name="react-wordx-summary-kind" value={value} checked={kind === value} onChange={() => change({ kind:value, length, update })} />{tr(L, label)}</label>)}</fieldset><fieldset><legend>{tr(L, 'Length of summary')}</legend><label htmlFor="react-wordx-summary-length">{tr(L, 'Percent of original:')}</label><select id="react-wordx-summary-length" value={length} onChange={(event) => change({ kind, length:event.currentTarget.value, update })}>{lengths.map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></fieldset><label><input id="react-wordx-summary-update" type="checkbox" checked={update} onChange={(event) => change({ kind, length, update:event.currentTarget.checked })} />{tr(L, 'Update document statistics')}</label></div>;
 }
 
 function ZoomDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactZoomCatalog?(): { current: number; preset: string } }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactZoomCatalog?(): { current: number; preset: string }; reactZoomSet?(value: { preset: string; percent: number }): void }) | undefined;
   const initial = adapter?.reactZoomCatalog?.() || { current: 100, preset: '100' };
   const [preset, setPreset] = useState(initial.preset);
   const [percent, setPercent] = useState(initial.current);
   const options: Array<[string, string]> = [['200','200%'],['100','100%'],['75','75%'],['pw','Page width'],['tw','Text width'],['wp','Whole page'],['many','Many pages'],['pct','Percent']];
-  return <div className="row" id="react-wordx-zoom-body"><fieldset><legend>{tr(L, 'Zoom to')}</legend>{options.map(([value, label]) => <label key={value}><input type="radio" name="react-wordx-zoom" value={value} checked={preset === value} onChange={() => setPreset(value)} />{tr(L, label)}</label>)}</fieldset><div className="col"><label htmlFor="react-wordx-zoom-percent">{tr(L, 'Percent:')}</label><div className="row"><input id="react-wordx-zoom-percent" type="number" min={10} max={500} step={10} value={percent} onChange={(event) => { setPercent(Number(event.currentTarget.value)); setPreset('pct'); }} />%</div><div className="cd-cap">{tr(L, 'Preview')}</div><div className="preview-box" style={{ width: 150, height: 110, overflow: 'hidden' }}><span style={{ transform: `scale(${Math.max(10, Math.min(500, percent)) / 100})`, transformOrigin: 'center' }}>AaBbCcDdEeXxYyZz</span></div></div></div>;
+  const update = (nextPreset: string, nextPercent: number) => adapter?.reactZoomSet?.({ preset: nextPreset, percent: nextPercent });
+  return <div className="row" id="react-wordx-zoom-body"><fieldset><legend>{tr(L, 'Zoom to')}</legend>{options.map(([value, label]) => <label key={value}><input type="radio" name="react-wordx-zoom" value={value} checked={preset === value} onChange={() => { setPreset(value); update(value, percent); }} />{tr(L, label)}</label>)}</fieldset><div className="col"><label htmlFor="react-wordx-zoom-percent">{tr(L, 'Percent:')}</label><div className="row"><input id="react-wordx-zoom-percent" type="number" min={10} max={500} step={10} value={percent} onChange={(event) => { const value=Number(event.currentTarget.value);setPercent(value);setPreset('pct');update('pct',value); }} />%</div><div className="cd-cap">{tr(L, 'Preview')}</div><div className="preview-box" style={{ width: 150, height: 110, overflow: 'hidden' }}><span style={{ transform: `scale(${Math.max(10, Math.min(500, percent)) / 100})`, transformOrigin: 'center' }}>AaBbCcDdEeXxYyZz</span></div></div></div>;
 }
 
-type HyphenationState = { auto: boolean; caps: boolean; zone: number; limit: number | '' };
+type HyphenationState = { auto: boolean; caps: boolean; zone: number | ''; limit: number | '' };
 function HyphenationDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactHyphenationCatalog?(): HyphenationState }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactHyphenationCatalog?(): HyphenationState; reactHyphenationSet?(value: HyphenationState): void }) | undefined;
   const [state, setState] = useState<HyphenationState>(adapter?.reactHyphenationCatalog?.() || { auto: false, caps: true, zone: 18, limit: '' });
-  const update = (next: Partial<HyphenationState>) => setState((current) => ({ ...current, ...next }));
-  return <div className="col" id="react-wordx-hyphenation-body"><label><input id="react-wordx-hyphen-auto" type="checkbox" checked={state.auto} onChange={(event) => update({ auto: event.currentTarget.checked })} />{tr(L, 'Automatically hyphenate document')}</label><label><input id="react-wordx-hyphen-caps" type="checkbox" checked={state.caps} onChange={(event) => update({ caps: event.currentTarget.checked })} />{tr(L, 'Hyphenate words in CAPS')}</label><label htmlFor="react-wordx-hyphen-zone">{tr(L, 'Hyphenation zone:')}</label><input id="react-wordx-hyphen-zone" type="number" min={0} step={1} value={state.zone} onChange={(event) => update({ zone: Number(event.currentTarget.value) })} /><label htmlFor="react-wordx-hyphen-limit">{tr(L, 'Limit consecutive hyphens to:')}</label><input id="react-wordx-hyphen-limit" type="number" min={0} value={state.limit} placeholder={tr(L, 'No limit')} onChange={(event) => update({ limit: event.currentTarget.value === '' ? '' : Number(event.currentTarget.value) })} /></div>;
+  const update = (next: Partial<HyphenationState>) => {
+    const value = { ...state, ...next };
+    setState(value);
+    adapter?.reactHyphenationSet?.(value);
+  };
+  return <div className="col" id="react-wordx-hyphenation-body"><label><input id="react-wordx-hyphen-auto" type="checkbox" checked={state.auto} onChange={(event) => update({ auto: event.currentTarget.checked })} />{tr(L, 'Automatically hyphenate document')}</label><label><input id="react-wordx-hyphen-caps" type="checkbox" checked={state.caps} onChange={(event) => update({ caps: event.currentTarget.checked })} />{tr(L, 'Hyphenate words in CAPS')}</label><label htmlFor="react-wordx-hyphen-zone">{tr(L, 'Hyphenation zone:')}</label><input id="react-wordx-hyphen-zone" type="number" min={0} step={1} value={state.zone} onChange={(event) => update({ zone: event.currentTarget.value === '' ? '' : Number(event.currentTarget.value) })} /><label htmlFor="react-wordx-hyphen-limit">{tr(L, 'Limit consecutive hyphens to:')}</label><input id="react-wordx-hyphen-limit" type="number" min={0} value={state.limit} placeholder={tr(L, 'No limit')} onChange={(event) => update({ limit: event.currentTarget.value === '' ? '' : Number(event.currentTarget.value) })} /></div>;
 }
 
 function PasteSpecialDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactPasteSpecialCatalog?(): { hasClipboard: boolean } }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactPasteSpecialCatalog?(): { hasClipboard: boolean }; reactPasteSpecialSet?(format: string): void }) | undefined;
   const [mode, setMode] = useState('paste');
   const [format, setFormat] = useState('rich');
   const hasClipboard = adapter?.reactPasteSpecialCatalog?.().hasClipboard || false;
   const formats: Array<[string, string]> = [['rich','Formatted Text (RTF)'],['html','HTML Format'],['text','Unformatted Text'],['utext','Unformatted Unicode Text']];
-  return <div className="col" id="react-wordx-paste-special-body"><div className="tp-note">{tr(L, hasClipboard ? 'Source: Wordx document' : 'Source: (the Wordx clipboard is empty — copy something first, or press Ctrl+V)')}</div><fieldset><legend>{tr(L, 'Paste Special')}</legend><label><input type="radio" name="react-wordx-paste-special-mode" value="paste" checked={mode === 'paste'} onChange={() => setMode('paste')} />{tr(L, 'Paste:')}</label><label><input type="radio" name="react-wordx-paste-special-mode" value="link" checked={mode === 'link'} onChange={() => setMode('link')} />{tr(L, 'Paste link:')}</label></fieldset><label htmlFor="react-wordx-paste-special-format">{tr(L, 'Format:')}</label><select id="react-wordx-paste-special-format" size={4} value={format} onChange={(event) => setFormat(event.currentTarget.value)}>{formats.map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select><div className="tp-note">{tr(L, 'Formatted text keeps fonts and formatting; unformatted text takes the formatting of the destination.')}</div></div>;
+  return <div className="col" id="react-wordx-paste-special-body"><div className="tp-note">{tr(L, hasClipboard ? 'Source: Wordx document' : 'Source: (the Wordx clipboard is empty — copy something first, or press Ctrl+V)')}</div><fieldset><legend>{tr(L, 'Paste Special')}</legend><label><input type="radio" name="react-wordx-paste-special-mode" value="paste" checked={mode === 'paste'} onChange={() => setMode('paste')} />{tr(L, 'Paste:')}</label><label><input type="radio" name="react-wordx-paste-special-mode" value="link" checked={mode === 'link'} onChange={() => setMode('link')} />{tr(L, 'Paste link:')}</label></fieldset><label htmlFor="react-wordx-paste-special-format">{tr(L, 'Format:')}</label><select id="react-wordx-paste-special-format" size={4} value={format} onChange={(event) => { const next=event.currentTarget.value;setFormat(next);adapter?.reactPasteSpecialSet?.(next); }}>{formats.map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select><div className="tp-note">{tr(L, 'Formatted text keeps fonts and formatting; unformatted text takes the formatting of the destination.')}</div></div>;
 }
 
 function MacrosDialogBody({ L }: { L: WordxRuntime }) {
@@ -1650,10 +1724,10 @@ function OptionsPrintDialogBody({ L }: { L: WordxRuntime }) {
 
 type OptionsSaveState = { promptProps: boolean; autoRecover: boolean; autoSaveMin: number; formats: Array<[string,string]> };
 function OptionsSaveDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactOptionsSaveCatalog?(): OptionsSaveState; reactOptionsSaveSet?(key: string, value: boolean): OptionsSaveState }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactOptionsSaveCatalog?(): OptionsSaveState; reactOptionsSaveSet?(key: string, value: boolean | number): OptionsSaveState }) | undefined;
   const [state, setState] = useState<OptionsSaveState>(adapter?.reactOptionsSaveCatalog?.() || { promptProps: false, autoRecover: true, autoSaveMin: 10, formats: [] });
-  const change = (key: string, value: boolean) => { const next = adapter?.reactOptionsSaveSet?.(key, value); if (next) setState(next); };
-  return <div className="col" id="react-wordx-options-save-body"><label><input type="checkbox" data-option-key="promptProps" checked={state.promptProps} onChange={(event)=>change('promptProps',event.currentTarget.checked)}/>{tr(L,'Prompt for document properties')}</label><div className="row"><label><input type="checkbox" data-option-key="autoRecover" checked={state.autoRecover} onChange={(event)=>change('autoRecover',event.currentTarget.checked)}/>{tr(L,'Save AutoRecover info every:')}</label><input id="react-wordx-options-autorecover-min" type="number" min={1} max={120} value={state.autoSaveMin} onChange={(event)=>setState({...state,autoSaveMin:Number(event.currentTarget.value)})}/><span>{tr(L,'minutes')}</span></div><div className="tp-note">{tr(L,'AutoRecover keeps a copy in this browser only; it is offered when Wordx opens after an unexpected close.')}</div><label htmlFor="react-wordx-options-save-format">{tr(L,'Save Word files as:')}<select id="react-wordx-options-save-format" defaultValue="docx">{state.formats.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label></div>;
+  const change = (key: string, value: boolean | number) => { const next = adapter?.reactOptionsSaveSet?.(key, value); if (next) setState(next); };
+  return <div className="col" id="react-wordx-options-save-body"><label><input type="checkbox" data-option-key="promptProps" checked={state.promptProps} onChange={(event)=>change('promptProps',event.currentTarget.checked)}/>{tr(L,'Prompt for document properties')}</label><div className="row"><label><input type="checkbox" data-option-key="autoRecover" checked={state.autoRecover} onChange={(event)=>change('autoRecover',event.currentTarget.checked)}/>{tr(L,'Save AutoRecover info every:')}</label><input id="react-wordx-options-autorecover-min" type="number" min={1} max={120} value={state.autoSaveMin} onChange={(event)=>change('autoSaveMin',Number(event.currentTarget.value))}/><span>{tr(L,'minutes')}</span></div><div className="tp-note">{tr(L,'AutoRecover keeps a copy in this browser only; it is offered when Wordx opens after an unexpected close.')}</div><label htmlFor="react-wordx-options-save-format">{tr(L,'Save Word files as:')}<select id="react-wordx-options-save-format" defaultValue="docx">{state.formats.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label></div>;
 }
 
 type OptionsTrackState = { color: string; colors: Array<[string,string]>; balloons: string; balloonOptions: Array<[string,string]> };
@@ -1666,9 +1740,11 @@ function OptionsTrackDialogBody({ L }: { L: WordxRuntime }) {
 
 type OptionsUserState = { name: string; initials: string; address: string };
 function OptionsUserDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactOptionsUserCatalog?(): OptionsUserState }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactOptionsUserCatalog?(): OptionsUserState; reactOptionsUserSet?(value: OptionsUserState): void }) | undefined;
   const state = adapter?.reactOptionsUserCatalog?.() || { name: '', initials: '', address: '' };
-  return <div className="col" id="react-wordx-options-user-body"><label htmlFor="react-wordx-options-user-name">{tr(L,'Name:')}<input id="react-wordx-options-user-name" type="text" defaultValue={state.name} /></label><label htmlFor="react-wordx-options-user-initials">{tr(L,'Initials:')}<input id="react-wordx-options-user-initials" type="text" defaultValue={state.initials} /></label><label htmlFor="react-wordx-options-user-address">{tr(L,'Mailing address:')}<textarea id="react-wordx-options-user-address" rows={3} defaultValue={state.address} /></label></div>;
+  const [draft,setDraft]=useState(state);
+  const update=(value:Partial<OptionsUserState>)=>{const next={...draft,...value};setDraft(next);adapter?.reactOptionsUserSet?.(next);};
+  return <div className="col" id="react-wordx-options-user-body"><label htmlFor="react-wordx-options-user-name">{tr(L,'Name:')}<input id="react-wordx-options-user-name" type="text" value={draft.name} onChange={(event)=>update({name:event.currentTarget.value})} /></label><label htmlFor="react-wordx-options-user-initials">{tr(L,'Initials:')}<input id="react-wordx-options-user-initials" type="text" value={draft.initials} onChange={(event)=>update({initials:event.currentTarget.value})} /></label><label htmlFor="react-wordx-options-user-address">{tr(L,'Mailing address:')}<textarea id="react-wordx-options-user-address" rows={3} value={draft.address} onChange={(event)=>update({address:event.currentTarget.value})} /></label></div>;
 }
 
 type OptionsCompatState = { version: string; versions: Array<[string,string]> };
@@ -1681,14 +1757,17 @@ function OptionsCompatDialogBody({ L }: { L: WordxRuntime }) {
 
 type OptionsSecurityState = { removePersonal: boolean; warnTracked: boolean; password: string };
 function OptionsSecurityDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactOptionsSecurityCatalog?(): OptionsSecurityState; reactOptionsSecuritySet?(key: string, value: boolean): OptionsSecurityState }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactOptionsSecurityCatalog?(): OptionsSecurityState; reactOptionsSecuritySet?(key: string, value: boolean | string): OptionsSecurityState }) | undefined;
   const [state, setState] = useState<OptionsSecurityState>(adapter?.reactOptionsSecurityCatalog?.() || { removePersonal: false, warnTracked: false, password: '' });
   const change = (key: string, value: boolean) => { const next = adapter?.reactOptionsSecuritySet?.(key, value); if (next) setState(next); };
-  return <div className="col" id="react-wordx-options-security-body"><fieldset className="col"><legend>{tr(L,'Privacy options')}</legend><label><input type="checkbox" data-option-key="removePersonal" checked={state.removePersonal} onChange={(event)=>change('removePersonal',event.currentTarget.checked)}/>{tr(L,'Remove personal information from file properties on save')}</label><label><input type="checkbox" data-option-key="warnTracked" checked={state.warnTracked} onChange={(event)=>change('warnTracked',event.currentTarget.checked)}/>{tr(L,'Warn before printing, saving or sending a file that contains tracked changes or comments')}</label></fieldset><fieldset className="col"><legend>{tr(L,'File encryption options for this document')}</legend><label htmlFor="react-wordx-options-password">{tr(L,'Password to open:')}<input id="react-wordx-options-password" type="password" autoComplete="new-password" defaultValue={state.password} /></label><div className="tp-note">{tr(L,'Saved .docx files are encrypted with AES-256, as Word 2010 and later do. Passwords are case-sensitive; if you forget it, the document cannot be recovered.')}</div></fieldset><div className="tp-note">{tr(L,'To restrict editing instead, use Tools ▸ Protect Document.')}</div></div>;
+  const [password,setPassword]=useState(state.password);
+  return <div className="col" id="react-wordx-options-security-body"><fieldset className="col"><legend>{tr(L,'Privacy options')}</legend><label><input type="checkbox" data-option-key="removePersonal" checked={state.removePersonal} onChange={(event)=>change('removePersonal',event.currentTarget.checked)}/>{tr(L,'Remove personal information from file properties on save')}</label><label><input type="checkbox" data-option-key="warnTracked" checked={state.warnTracked} onChange={(event)=>change('warnTracked',event.currentTarget.checked)}/>{tr(L,'Warn before printing, saving or sending a file that contains tracked changes or comments')}</label></fieldset><fieldset className="col"><legend>{tr(L,'File encryption options for this document')}</legend><label htmlFor="react-wordx-options-password">{tr(L,'Password to open:')}<input id="react-wordx-options-password" type="password" autoComplete="new-password" value={password} onChange={(event)=>{const value=event.currentTarget.value;setPassword(value);adapter?.reactOptionsSecuritySet?.('password',value);}} /></label><div className="tp-note">{tr(L,'Saved .docx files are encrypted with AES-256, as Word 2010 and later do. Passwords are case-sensitive; if you forget it, the document cannot be recovered.')}</div></fieldset><div className="tp-note">{tr(L,'To restrict editing instead, use Tools ▸ Protect Document.')}</div></div>;
 }
 
 function ConfirmPasswordDialogBody({ L }: { L: WordxRuntime }) {
-  return <div className="col" id="react-wordx-confirm-password-body"><label htmlFor="react-wordx-confirm-password">{tr(L,'Reenter password to open:')}<input id="react-wordx-confirm-password" type="password" autoComplete="new-password" /></label><div className="tp-note">{tr(L,'Caution: If you lose or forget the password, it cannot be recovered.')}</div></div>;
+  const adapter=L.dlg as (typeof L.dlg & {reactConfirmPasswordSet?(value:string):void})|undefined;
+  const [password,setPassword]=useState('');
+  return <div className="col" id="react-wordx-confirm-password-body"><label htmlFor="react-wordx-confirm-password">{tr(L,'Reenter password to open:')}<input id="react-wordx-confirm-password" type="password" autoComplete="new-password" value={password} onChange={(event)=>{const value=event.currentTarget.value;setPassword(value);adapter?.reactConfirmPasswordSet?.(value);}} /></label><div className="tp-note">{tr(L,'Caution: If you lose or forget the password, it cannot be recovered.')}</div></div>;
 }
 
 type OptionsSpellingState = { spelling: OptionsEditItem[]; grammar: OptionsEditItem[]; hidden: boolean };
@@ -1701,15 +1780,17 @@ function OptionsSpellingDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 function CustomDictionaryDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter=L.dlg as (typeof L.dlg & {reactCustomDictionaryCatalog?():{words:string}})|undefined;
-  const state=adapter?.reactCustomDictionaryCatalog?.()||{words:''};
-  return <div className="col" id="react-wordx-custom-dictionary-body"><label htmlFor="react-wordx-custom-dictionary-words">{tr(L,'Words (one per line):')}</label><textarea id="react-wordx-custom-dictionary-words" rows={12} defaultValue={state.words}/></div>;
+  const adapter=L.dlg as (typeof L.dlg & {reactCustomDictionaryCatalog?():{words:string};reactCustomDictionarySet?(words:string):void})|undefined;
+  const initial=adapter?.reactCustomDictionaryCatalog?.()||{words:''};
+  const [words,setWords]=useState(initial.words);
+  return <div className="col" id="react-wordx-custom-dictionary-body"><label htmlFor="react-wordx-custom-dictionary-words">{tr(L,'Words (one per line):')}</label><textarea id="react-wordx-custom-dictionary-words" rows={12} value={words} onChange={(event)=>{const next=event.currentTarget.value;setWords(next);adapter?.reactCustomDictionarySet?.(next);}}/></div>;
 }
 
 function FormatObjectWebDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactFormatObjectWebCatalog?(): { alt: string } }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactFormatObjectWebCatalog?(): { alt: string }; reactFormatObjectWebSet?(value: string): void }) | undefined;
   const state = adapter?.reactFormatObjectWebCatalog?.() || { alt: '' };
-  return <div className="col" id="react-wordx-format-object-web-body"><label htmlFor="react-wordx-format-object-alt">{tr(L,'Alternative text:')}<textarea id="react-wordx-format-object-alt" rows={4} defaultValue={state.alt} /></label><div className="tp-note">{tr(L,'Web browsers display alternative text while pictures are loading or if they are missing. Screen readers read it aloud.')}</div></div>;
+  const [alt,setAlt]=useState(state.alt);
+  return <div className="col" id="react-wordx-format-object-web-body"><label htmlFor="react-wordx-format-object-alt">{tr(L,'Alternative text:')}<textarea id="react-wordx-format-object-alt" rows={4} value={alt} onChange={(event)=>{const value=event.currentTarget.value;setAlt(value);adapter?.reactFormatObjectWebSet?.(value);}} /></label><div className="tp-note">{tr(L,'Web browsers display alternative text while pictures are loading or if they are missing. Screen readers read it aloud.')}</div></div>;
 }
 
 type FormatObjectColorsState = { fill: string | null; fillType: string; line: string | null; transparency: number; dash: string; dashes: Array<{value:string;label:string}>; weight: number; head: string; tail: string; arrows: Array<{value:string;label:string}>; showFill: boolean; showArrows: boolean };
@@ -1720,9 +1801,9 @@ function FormatObjectColorsDialogBody({ L }: { L: WordxRuntime }) {
   const update=(key:string,value:string|number)=>{const next=adapter?.reactFormatObjectColorsSet?.(key,value);if(next)setState(next);};
   const colorButton=(kind:'fill'|'line',color:string|null)=> <button type="button" className="btn small" aria-label={tr(L,'Color:')} onClick={(event)=>adapter?.reactFormatObjectColorsAction?.(kind,event.currentTarget)}><span className="cpk-sw" style={{background:color||'transparent'}}/>{tr(L,color?'Color':kind==='fill'?'No Fill':'No Line')}</button>;
   return <div className="col" id="react-wordx-format-object-colors-body">
-    {state.showFill&&<fieldset className="col"><legend>{tr(L,'Fill')}</legend><div className="row">{colorButton('fill',state.fill)}<button type="button" className="btn small" onClick={(event)=>adapter?.reactFormatObjectColorsAction?.('effects',event.currentTarget)}>{tr(L,'Fill Effects...')}</button></div>{state.fillType!=='solid'&&state.fillType!=='none'&&<div className="tp-note">{tr(L,'Current fill:')} {tr(L,({grad:'Gradient',patt:'Pattern',img:'Picture'} as Record<string,string>)[state.fillType]||state.fillType)}</div>}<label>{tr(L,'Transparency:')}<input type="number" min={0} max={100} step={5} value={state.transparency} onChange={(event)=>update('transparency',Number(event.currentTarget.value))}/>%</label></fieldset>}
-    <fieldset className="col"><legend>{tr(L,'Line')}</legend><div className="row">{colorButton('line',state.line)}</div><label>{tr(L,'Dashed:')}<select value={state.dash} onChange={(event)=>update('dash',event.currentTarget.value)}>{state.dashes.map((item)=><option key={item.value} value={item.value}>{tr(L,item.label)}</option>)}</select></label><label>{tr(L,'Weight:')}<input type="number" min={0} max={1584} step={0.25} value={state.weight} onChange={(event)=>update('weight',Number(event.currentTarget.value))}/> pt</label></fieldset>
-    {state.showArrows&&<fieldset className="col"><legend>{tr(L,'Arrows')}</legend><label>{tr(L,'Begin style:')}<select value={state.head} onChange={(event)=>update('head',event.currentTarget.value)}>{state.arrows.map((item)=><option key={item.value} value={item.value}>{tr(L,item.label)}</option>)}</select></label><label>{tr(L,'End style:')}<select value={state.tail} onChange={(event)=>update('tail',event.currentTarget.value)}>{state.arrows.map((item)=><option key={item.value} value={item.value}>{tr(L,item.label)}</option>)}</select></label></fieldset>}
+    {state.showFill&&<fieldset className="col"><legend>{tr(L,'Fill')}</legend><div className="row">{colorButton('fill',state.fill)}<button type="button" className="btn small" onClick={(event)=>adapter?.reactFormatObjectColorsAction?.('effects',event.currentTarget)}>{tr(L,'Fill Effects...')}</button></div>{state.fillType!=='solid'&&state.fillType!=='none'&&<div className="tp-note">{tr(L,'Current fill:')} {tr(L,({grad:'Gradient',patt:'Pattern',img:'Picture'} as Record<string,string>)[state.fillType]||state.fillType)}</div>}<label>{tr(L,'Transparency:')}<input type="number" data-format-object-color-field="transparency" min={0} max={100} step={5} value={state.transparency} onChange={(event)=>update('transparency',Number(event.currentTarget.value))}/>%</label></fieldset>}
+    <fieldset className="col"><legend>{tr(L,'Line')}</legend><div className="row">{colorButton('line',state.line)}</div><label>{tr(L,'Dashed:')}<select data-format-object-color-field="dash" value={state.dash} onChange={(event)=>update('dash',event.currentTarget.value)}>{state.dashes.map((item)=><option key={item.value} value={item.value}>{tr(L,item.label)}</option>)}</select></label><label>{tr(L,'Weight:')}<input type="number" data-format-object-color-field="weight" min={0} max={1584} step={0.25} value={state.weight} onChange={(event)=>update('weight',Number(event.currentTarget.value))}/> pt</label></fieldset>
+    {state.showArrows&&<fieldset className="col"><legend>{tr(L,'Arrows')}</legend><label>{tr(L,'Begin style:')}<select data-format-object-color-field="head" value={state.head} onChange={(event)=>update('head',event.currentTarget.value)}>{state.arrows.map((item)=><option key={item.value} value={item.value}>{tr(L,item.label)}</option>)}</select></label><label>{tr(L,'End style:')}<select data-format-object-color-field="tail" value={state.tail} onChange={(event)=>update('tail',event.currentTarget.value)}>{state.arrows.map((item)=><option key={item.value} value={item.value}>{tr(L,item.label)}</option>)}</select></label></fieldset>}
   </div>;
 }
 
@@ -1752,19 +1833,20 @@ function FillEffectsDialogBody({ L }: { L: WordxRuntime }) {
 
 type FormatObjectSizeState = { width: number; height: number; rotation: number; locked: boolean; naturalWidth: number; naturalHeight: number; hasNatural: boolean };
 function FormatObjectSizeDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactFormatObjectSizeCatalog?(): FormatObjectSizeState }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactFormatObjectSizeCatalog?(): FormatObjectSizeState; reactFormatObjectSizeSet?(value: FormatObjectSizeState): void }) | undefined;
   const [state,setState] = useState<FormatObjectSizeState>(adapter?.reactFormatObjectSizeCatalog?.() || {width:72,height:72,rotation:0,locked:false,naturalWidth:72,naturalHeight:72,hasNatural:false});
   const ratio=state.height/state.width;
-  const update=(key:'width'|'height'|'rotation'|'locked'|'scaleWidth'|'scaleHeight',value:number|boolean)=>setState((current)=>{
-    if(key==='locked')return {...current,locked:!!value};
-    if(key==='rotation')return {...current,rotation:Number(value)||0};
-    if(key==='width'){const width=Math.max(1,Number(value)||1);return {...current,width,height:current.locked?width*ratio:current.height};}
-    if(key==='height'){const height=Math.max(1,Number(value)||1);return {...current,height,width:current.locked?height/ratio:current.width};}
+  const commit=(next:FormatObjectSizeState)=>{setState(next);adapter?.reactFormatObjectSizeSet?.(next);};
+  const update=(key:'width'|'height'|'rotation'|'locked'|'scaleWidth'|'scaleHeight',value:number|boolean)=>{
+    if(key==='locked'){commit({...state,locked:!!value});return;}
+    if(key==='rotation'){commit({...state,rotation:Number(value)||0});return;}
+    if(key==='width'){const width=Math.max(1,Number(value)||1);commit({...state,width,height:state.locked?width*ratio:state.height});return;}
+    if(key==='height'){const height=Math.max(1,Number(value)||1);commit({...state,height,width:state.locked?height/ratio:state.width});return;}
     const percent=Math.max(1,Number(value)||1)/100;
-    return key==='scaleWidth'?{...current,width:current.naturalWidth*percent,height:current.locked?current.naturalHeight*percent:current.height}:{...current,height:current.naturalHeight*percent,width:current.locked?current.naturalWidth*percent:current.width};
-  });
+    commit(key==='scaleWidth'?{...state,width:state.naturalWidth*percent,height:state.locked?state.naturalHeight*percent:state.height}:{...state,height:state.naturalHeight*percent,width:state.locked?state.naturalWidth*percent:state.width});
+  };
   const scaleWidth=state.width/state.naturalWidth*100,scaleHeight=state.height/state.naturalHeight*100;
-  return <div className="col" id="react-wordx-format-object-size-body"><fieldset className="col"><legend>{tr(L,'Size and rotate')}</legend><div className="row"><label>{tr(L,'Height:')}<input type="number" min={1} step={0.1} data-size-field="height" value={state.height} onChange={(e)=>update('height',Number(e.currentTarget.value))}/></label><label>{tr(L,'Width:')}<input type="number" min={1} step={0.1} data-size-field="width" value={state.width} onChange={(e)=>update('width',Number(e.currentTarget.value))}/></label></div><label>{tr(L,'Rotation:')}<input type="number" min={-3600} max={3600} step={0.1} data-size-field="rotation" value={state.rotation} onChange={(e)=>update('rotation',Number(e.currentTarget.value))}/>°</label></fieldset><fieldset className="col"><legend>{tr(L,'Scale')}</legend><div className="row"><label>{tr(L,'Height:')}<input type="number" min={1} max={5000} data-size-field="scale-height" value={Math.round(scaleHeight)} onChange={(e)=>update('scaleHeight',Number(e.currentTarget.value))}/>%</label><label>{tr(L,'Width:')}<input type="number" min={1} max={5000} data-size-field="scale-width" value={Math.round(scaleWidth)} onChange={(e)=>update('scaleWidth',Number(e.currentTarget.value))}/>%</label></div><label><input type="checkbox" data-size-field="locked" checked={state.locked} onChange={(e)=>update('locked',e.currentTarget.checked)}/>{tr(L,'Lock aspect ratio')}</label></fieldset>{state.hasNatural&&<div className="tp-note">{L.t?.('Original size — Height: {0}, Width: {1}',state.naturalHeight,state.naturalWidth)}</div>}<div className="tp-btns"><button type="button" className="btn small" onClick={()=>setState((current)=>({...current,width:current.hasNatural?current.naturalWidth:current.width,height:current.hasNatural?current.naturalHeight:current.height,rotation:0}))}>{tr(L,'Reset')}</button></div></div>;
+  return <div className="col" id="react-wordx-format-object-size-body"><fieldset className="col"><legend>{tr(L,'Size and rotate')}</legend><div className="row"><label>{tr(L,'Height:')}<input type="number" min={1} step={0.1} data-size-field="height" value={state.height} onChange={(e)=>update('height',Number(e.currentTarget.value))}/></label><label>{tr(L,'Width:')}<input type="number" min={1} step={0.1} data-size-field="width" value={state.width} onChange={(e)=>update('width',Number(e.currentTarget.value))}/></label></div><label>{tr(L,'Rotation:')}<input type="number" min={-3600} max={3600} step={0.1} data-size-field="rotation" value={state.rotation} onChange={(e)=>update('rotation',Number(e.currentTarget.value))}/>°</label></fieldset><fieldset className="col"><legend>{tr(L,'Scale')}</legend><div className="row"><label>{tr(L,'Height:')}<input type="number" min={1} max={5000} data-size-field="scale-height" value={Math.round(scaleHeight)} onChange={(e)=>update('scaleHeight',Number(e.currentTarget.value))}/>%</label><label>{tr(L,'Width:')}<input type="number" min={1} max={5000} data-size-field="scale-width" value={Math.round(scaleWidth)} onChange={(e)=>update('scaleWidth',Number(e.currentTarget.value))}/>%</label></div><label><input type="checkbox" data-size-field="locked" checked={state.locked} onChange={(e)=>update('locked',e.currentTarget.checked)}/>{tr(L,'Lock aspect ratio')}</label></fieldset>{state.hasNatural&&<div className="tp-note">{L.t?.('Original size — Height: {0}, Width: {1}',state.naturalHeight,state.naturalWidth)}</div>}<div className="tp-btns"><button type="button" className="btn small" onClick={()=>commit({...state,width:state.hasNatural?state.naturalWidth:state.width,height:state.hasNatural?state.naturalHeight:state.height,rotation:0})}>{tr(L,'Reset')}</button></div></div>;
 }
 
 type FormatObjectLayoutState = { wrap: string; alignment: string; wraps: Array<{ id: string; label: string }> };
@@ -1791,36 +1873,47 @@ function FormatObjectAdvancedDialogBody({ L }: { L: WordxRuntime }) {
     const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index-1+tabs.length)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:-1;
     if(next<0)return;event.preventDefault();const nextTab=tabs[next];if(nextTab)update('tab',nextTab[0]);event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
   }}>{tr(L,label)}</button>)}</div>
-    {state.tab==='position'?<div id={panelId} aria-labelledby={tabId(Math.max(0,tabs.findIndex(([value])=>value===state.tab)))} className="col" role="tabpanel"><fieldset className="col"><legend>{tr(L,'Horizontal')}</legend>{mode('hMode','align','Alignment')}{mode('hMode','abs','Absolute position')}<div className="row"><select aria-label={tr(L,'Horizontal alignment')} value={state.hAlign} disabled={state.hMode!=='align'} onChange={(event)=>update('hAlign',event.currentTarget.value)}>{([['left','Left'],['center','Centered'],['right','Right']] as const).map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select><span>{tr(L,'relative to')}</span><select aria-label={tr(L,'Horizontal relative position')} value={state.hRel} onChange={(event)=>update('hRel',event.currentTarget.value)}>{state.hRels.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></div>{state.hMode==='abs'&&<label>{tr(L,'to the right of')}<input type="number" min={0} step={0.1} value={state.hOff} onChange={(event)=>update('hOff',Number(event.currentTarget.value))}/></label>}</fieldset><fieldset className="col"><legend>{tr(L,'Vertical')}</legend>{mode('vMode','align','Alignment')}{mode('vMode','abs','Absolute position')}<div className="row"><select aria-label={tr(L,'Vertical alignment')} value={state.vAlign} disabled={state.vMode!=='align'} onChange={(event)=>update('vAlign',event.currentTarget.value)}>{([['top','Top'],['center','Centered'],['bottom','Bottom']] as const).map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select><span>{tr(L,'relative to')}</span><select aria-label={tr(L,'Vertical relative position')} value={state.vRel} onChange={(event)=>update('vRel',event.currentTarget.value)}>{state.vRels.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></div>{state.vMode==='abs'&&<label>{tr(L,'below')}<input type="number" min={0} step={0.1} value={state.vOff} onChange={(event)=>update('vOff',Number(event.currentTarget.value))}/></label>}</fieldset><fieldset className="col"><legend>{tr(L,'Options')}</legend><label><input type="checkbox" checked={state.moveWith} onChange={(event)=>update('moveWith',event.currentTarget.checked)}/>{tr(L,'Move object with text')}</label><label><input type="checkbox" checked={state.overlap} onChange={(event)=>update('overlap',event.currentTarget.checked)}/>{tr(L,'Allow overlap')}</label></fieldset></div>:<fieldset id={panelId} aria-labelledby={tabId(Math.max(0,tabs.findIndex(([value])=>value===state.tab)))} className="col" role="tabpanel"><legend>{tr(L,'Distance from text')}</legend>{([['top','Top'],['left','Left'],['bottom','Bottom'],['right','Right']] as const).map(([key,label])=><label key={key}>{tr(L,label)}<input type="number" min={0} step={0.1} value={state[key]} onChange={(event)=>update(key,Number(event.currentTarget.value))}/></label>)}</fieldset>}
+    {state.tab==='position'?<div id={panelId} aria-labelledby={tabId(Math.max(0,tabs.findIndex(([value])=>value===state.tab)))} className="col" role="tabpanel"><fieldset className="col"><legend>{tr(L,'Horizontal')}</legend>{mode('hMode','align','Alignment')}{mode('hMode','abs','Absolute position')}<div className="row"><select aria-label={tr(L,'Horizontal alignment')} value={state.hAlign} disabled={state.hMode!=='align'} onChange={(event)=>update('hAlign',event.currentTarget.value)}>{([['left','Left'],['center','Centered'],['right','Right']] as const).map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select><span>{tr(L,'relative to')}</span><select aria-label={tr(L,'Horizontal relative position')} value={state.hRel} onChange={(event)=>update('hRel',event.currentTarget.value)}>{state.hRels.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></div>{state.hMode==='abs'&&<label>{tr(L,'to the right of')}<input type="number" min={0} step={0.1} data-format-object-advanced-offset="horizontal" value={state.hOff} onChange={(event)=>update('hOff',Number(event.currentTarget.value))}/></label>}</fieldset><fieldset className="col"><legend>{tr(L,'Vertical')}</legend>{mode('vMode','align','Alignment')}{mode('vMode','abs','Absolute position')}<div className="row"><select aria-label={tr(L,'Vertical alignment')} value={state.vAlign} disabled={state.vMode!=='align'} onChange={(event)=>update('vAlign',event.currentTarget.value)}>{([['top','Top'],['center','Centered'],['bottom','Bottom']] as const).map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select><span>{tr(L,'relative to')}</span><select aria-label={tr(L,'Vertical relative position')} value={state.vRel} onChange={(event)=>update('vRel',event.currentTarget.value)}>{state.vRels.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></div>{state.vMode==='abs'&&<label>{tr(L,'below')}<input type="number" min={0} step={0.1} data-format-object-advanced-offset="vertical" value={state.vOff} onChange={(event)=>update('vOff',Number(event.currentTarget.value))}/></label>}</fieldset><fieldset className="col"><legend>{tr(L,'Options')}</legend><label><input type="checkbox" data-format-object-advanced-option="move-with-text" checked={state.moveWith} onChange={(event)=>update('moveWith',event.currentTarget.checked)}/>{tr(L,'Move object with text')}</label><label><input type="checkbox" data-format-object-advanced-option="overlap" checked={state.overlap} onChange={(event)=>update('overlap',event.currentTarget.checked)}/>{tr(L,'Allow overlap')}</label></fieldset></div>:<fieldset id={panelId} aria-labelledby={tabId(Math.max(0,tabs.findIndex(([value])=>value===state.tab)))} className="col" role="tabpanel"><legend>{tr(L,'Distance from text')}</legend>{([['top','Top'],['left','Left'],['bottom','Bottom'],['right','Right']] as const).map(([key,label])=><label key={key}>{tr(L,label)}<input type="number" min={0} step={0.1} data-format-object-advanced-distance={key} value={state[key]} onChange={(event)=>update(key,Number(event.currentTarget.value))}/></label>)}</fieldset>}
   </div>;
 }
 
 type FormatObjectTextBoxState = { margins: {left:number;right:number;top:number;bottom:number}; anchor: string; autofit: boolean };
 function FormatObjectTextBoxDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter=L.dlg as (typeof L.dlg & {reactFormatObjectTextBoxCatalog?():FormatObjectTextBoxState})|undefined;
+  const adapter=L.dlg as (typeof L.dlg & {reactFormatObjectTextBoxCatalog?():FormatObjectTextBoxState;reactFormatObjectTextBoxSet?(value:FormatObjectTextBoxState):void})|undefined;
   const state=adapter?.reactFormatObjectTextBoxCatalog?.()||{margins:{left:7.2,right:7.2,top:3.6,bottom:3.6},anchor:'t',autofit:false};
-  return <div className="col" id="react-wordx-format-object-textbox-body"><fieldset className="col"><legend>{tr(L,'Internal margin')}</legend><div className="row">{([['left','Left'],['top','Top'],['right','Right'],['bottom','Bottom']] as const).map(([key,label])=><label key={key}>{tr(L,label)}<input type="number" min={0} step={0.1} data-box-margin={key} defaultValue={state.margins[key]}/></label>)}</div></fieldset><label htmlFor="react-wordx-format-object-anchor">{tr(L,'Vertical alignment:')}<select id="react-wordx-format-object-anchor" defaultValue={state.anchor}>{([['t','Top'],['ctr','Center'],['b','Bottom']] as const).map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label><label><input type="checkbox" data-box-autofit defaultChecked={state.autofit}/>{tr(L,'Resize AutoShape to fit text')}</label></div>;
+  const [draft,setDraft]=useState(state);
+  const update=(value:Partial<FormatObjectTextBoxState>)=>{const next={...draft,...value,margins:{...draft.margins,...value.margins}};setDraft(next);adapter?.reactFormatObjectTextBoxSet?.(next);};
+  return <div className="col" id="react-wordx-format-object-textbox-body"><fieldset className="col"><legend>{tr(L,'Internal margin')}</legend><div className="row">{([['left','Left'],['top','Top'],['right','Right'],['bottom','Bottom']] as const).map(([key,label])=><label key={key}>{tr(L,label)}<input type="number" min={0} step={0.1} data-box-margin={key} value={draft.margins[key]} onChange={(event)=>update({margins:{...draft.margins,[key]:Number(event.currentTarget.value)}})}/></label>)}</div></fieldset><label htmlFor="react-wordx-format-object-anchor">{tr(L,'Vertical alignment:')}<select id="react-wordx-format-object-anchor" value={draft.anchor} onChange={(event)=>update({anchor:event.currentTarget.value})}>{([['t','Top'],['ctr','Center'],['b','Bottom']] as const).map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label><label><input type="checkbox" data-box-autofit checked={draft.autofit} onChange={(event)=>update({autofit:event.currentTarget.checked})}/>{tr(L,'Resize AutoShape to fit text')}</label></div>;
 }
 
 type FormatObjectPictureState={crop:{left:number;right:number;top:number;bottom:number};mode:string;brightness:number;contrast:number;naturalWidth:number;naturalHeight:number};
+type FormatObjectPictureUpdate=Omit<Partial<FormatObjectPictureState>,'crop'>&{crop?:Partial<FormatObjectPictureState['crop']>};
 function FormatObjectPictureDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter=L.dlg as (typeof L.dlg & {reactFormatObjectPictureCatalog?():FormatObjectPictureState})|undefined;
+  const adapter=L.dlg as (typeof L.dlg & {reactFormatObjectPictureCatalog?():FormatObjectPictureState;reactFormatObjectPictureSet?(value:FormatObjectPictureState):void})|undefined;
   const state=adapter?.reactFormatObjectPictureCatalog?.()||{crop:{left:0,right:0,top:0,bottom:0},mode:'',brightness:50,contrast:50,naturalWidth:72,naturalHeight:72};
-  const [mode,setMode]=useState(state.mode),[brightness,setBrightness]=useState(state.brightness),[contrast,setContrast]=useState(state.contrast);
-  return <div className="col" id="react-wordx-format-object-picture-body"><fieldset className="col"><legend>{tr(L,'Crop from')}</legend><div className="row">{([['left','Left'],['top','Top'],['right','Right'],['bottom','Bottom']] as const).map(([key,label])=><label key={key}>{tr(L,label)}<input type="number" min={0} step={0.1} data-picture-crop={key} defaultValue={state.crop[key]}/></label>)}</div></fieldset><fieldset className="col"><legend>{tr(L,'Image control')}</legend><label htmlFor="react-wordx-format-object-picture-mode">{tr(L,'Color:')}<select id="react-wordx-format-object-picture-mode" value={mode} onChange={(e)=>setMode(e.currentTarget.value)}>{([['','Automatic'],['gray','Grayscale'],['bw','Black & White'],['washout','Washout']] as const).map(([value,label])=><option key={value||'auto'} value={value}>{tr(L,label)}</option>)}</select></label><label>{tr(L,'Brightness:')}<input type="number" min={0} max={100} step={3} data-picture-tone="brightness" value={brightness} onChange={(e)=>setBrightness(Number(e.currentTarget.value))}/>%</label><label>{tr(L,'Contrast:')}<input type="number" min={0} max={100} step={3} data-picture-tone="contrast" value={contrast} onChange={(e)=>setContrast(Number(e.currentTarget.value))}/>%</label></fieldset></div>;
+  const [draft,setDraft]=useState(state);
+  const update=(value:FormatObjectPictureUpdate)=>{const next={...draft,...value,crop:{...draft.crop,...value.crop}};setDraft(next);adapter?.reactFormatObjectPictureSet?.(next);};
+  return <div className="col" id="react-wordx-format-object-picture-body"><fieldset className="col"><legend>{tr(L,'Crop from')}</legend><div className="row">{([['left','Left'],['top','Top'],['right','Right'],['bottom','Bottom']] as const).map(([key,label])=><label key={key}>{tr(L,label)}<input type="number" min={0} step={0.1} data-picture-crop={key} value={draft.crop[key]} onChange={(event)=>update({crop:{[key]:Number(event.currentTarget.value)}})}/></label>)}</div></fieldset><fieldset className="col"><legend>{tr(L,'Image control')}</legend><label htmlFor="react-wordx-format-object-picture-mode">{tr(L,'Color:')}<select id="react-wordx-format-object-picture-mode" value={draft.mode} onChange={(event)=>update({mode:event.currentTarget.value})}>{([['','Automatic'],['gray','Grayscale'],['bw','Black & White'],['washout','Washout']] as const).map(([value,label])=><option key={value||'auto'} value={value}>{tr(L,label)}</option>)}</select></label><label>{tr(L,'Brightness:')}<input type="number" min={0} max={100} step={3} data-picture-tone="brightness" value={draft.brightness} onChange={(event)=>update({brightness:Number(event.currentTarget.value)})}/>%</label><label>{tr(L,'Contrast:')}<input type="number" min={0} max={100} step={3} data-picture-tone="contrast" value={draft.contrast} onChange={(event)=>update({contrast:Number(event.currentTarget.value)})}/>%</label></fieldset></div>;
 }
 
 function AutoCorrectExceptionsDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactAutoCorrectExceptionsCatalog?(): { words: string }; reactAutoCorrectExceptionsAction?(value: string): { words: string } }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactAutoCorrectExceptionsCatalog?(): { words: string }; reactAutoCorrectExceptionsSet?(value: string): void; reactAutoCorrectExceptionsAction?(value: string): { words: string } }) | undefined;
   const [words, setWords] = useState(adapter?.reactAutoCorrectExceptionsCatalog?.().words || '');
-  return <div className="col" id="react-wordx-autocorrect-exceptions-body"><label htmlFor="react-wordx-autocorrect-exceptions">{tr(L, "Don't capitalize after:")}</label><textarea id="react-wordx-autocorrect-exceptions" rows={10} value={words} onChange={(event) => setWords(event.currentTarget.value)} style={{ width: '100%' }} /></div>;
+  return <div className="col" id="react-wordx-autocorrect-exceptions-body"><label htmlFor="react-wordx-autocorrect-exceptions">{tr(L, "Don't capitalize after:")}</label><textarea id="react-wordx-autocorrect-exceptions" rows={10} value={words} onChange={(event) => { const next=event.currentTarget.value;setWords(next);adapter?.reactAutoCorrectExceptionsSet?.(next); }} style={{ width: '100%' }} /></div>;
 }
 
 type AutoCorrectMainState={options:Record<string,boolean>;entries:Array<[string,string]>;selected:string};
 function AutoCorrectDialogBody({ L, initialTab = 0 }: { L: WordxRuntime; initialTab?: number }) {
   const [tab, setTab] = useState(initialTab);
   const focusFrame = useRef<number | null>(null);
+  const pendingTabFocus = useRef<number | null>(null);
   const removeFocusCleanup = useRef<() => void>(() => {});
+  useLayoutEffect(() => {
+    const index = pendingTabFocus.current;
+    if (index === null || index !== tab) return;
+    document.getElementById(`react-wordx-autocorrect-tab-${index}`)?.focus();
+    pendingTabFocus.current = null;
+  }, [tab]);
   const tabs = ['AutoCorrect', 'AutoFormat As You Type', 'AutoText'];
   const panelIds = tabs.map((_, index) => `react-wordx-autocorrect-panel-${index}`);
   useEffect(() => () => {
@@ -1835,6 +1928,7 @@ function AutoCorrectDialogBody({ L, initialTab = 0 }: { L: WordxRuntime; initial
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
+        pendingTabFocus.current = next;
         setTab(next);
         if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
         removeFocusCleanup.current();
@@ -1876,11 +1970,11 @@ function AutoCorrectFormatDialogBody({ L }: { L: WordxRuntime }) {
 
 type AutoTextState={entries:Array<{name:string;text:string}>;selected:string;name:string;preview:string;autoComplete:boolean};
 function AutoTextDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter=L.dlg as (typeof L.dlg & {reactAutoTextCatalog?():AutoTextState;reactAutoTextAction?(action:string,value?:string):AutoTextState;reactAutoCorrectMainAction?(action:string,value?:any):unknown})|undefined;
+  const adapter=L.dlg as (typeof L.dlg & {reactAutoTextCatalog?():AutoTextState;reactAutoTextSetName?(value:string):void;reactAutoTextAction?(action:string,value?:string):AutoTextState;reactAutoCorrectMainAction?(action:string,value?:any):unknown})|undefined;
   const catalog=adapter?.reactAutoTextCatalog?.()||{entries:[],selected:'',name:'',preview:'',autoComplete:true};
   const [state,setState]=useState<AutoTextState>(catalog),[name,setName]=useState(catalog.name);
   const act=(action:string,value?:string)=>{const next=adapter?.reactAutoTextAction?.(action,value);if(next){setState(next);setName(next.name);}};
-  return <div className="col" id="react-wordx-autotext-body"><label><input type="checkbox" checked={catalog.autoComplete!==false} onChange={(event)=>adapter?.reactAutoCorrectMainAction?.('option',{key:'autoComplete',enabled:event.currentTarget.checked})}/>{tr(L,'Show AutoComplete suggestions')}</label><label htmlFor="react-wordx-autotext-name">{tr(L,'Enter AutoText entries here:')}</label><input id="react-wordx-autotext-name" value={name} onChange={(event)=>setName(event.currentTarget.value)}/><select aria-label={tr(L,'AutoText entries')} size={7} value={state.selected} onChange={(event)=>act('select',event.currentTarget.value)}>{state.entries.map((entry)=><option key={entry.name} value={entry.name}>{entry.name}</option>)}</select><div className="cd-cap">{tr(L,'Preview')}</div><div className="tp-box" style={{minHeight:40,whiteSpace:'pre-wrap'}} translate="no">{state.preview}</div><div className="tp-btns"><button type="button" className="btn small" onClick={()=>act('add',name)}>{tr(L,'Add')}</button><button type="button" className="btn small" disabled={!state.selected} onClick={()=>act('delete',state.selected)}>{tr(L,'Delete')}</button><button type="button" className="btn small" disabled={!state.selected} onClick={()=>act('insert',state.selected)}>{tr(L,'Insert')}</button></div></div>;
+  return <div className="col" id="react-wordx-autotext-body"><label><input type="checkbox" checked={catalog.autoComplete!==false} onChange={(event)=>adapter?.reactAutoCorrectMainAction?.('option',{key:'autoComplete',enabled:event.currentTarget.checked})}/>{tr(L,'Show AutoComplete suggestions')}</label><label htmlFor="react-wordx-autotext-name">{tr(L,'Enter AutoText entries here:')}</label><input id="react-wordx-autotext-name" value={name} onChange={(event)=>{const value=event.currentTarget.value;setName(value);adapter?.reactAutoTextSetName?.(value);}}/><select aria-label={tr(L,'AutoText entries')} size={7} value={state.selected} onChange={(event)=>act('select',event.currentTarget.value)}>{state.entries.map((entry)=><option key={entry.name} value={entry.name}>{entry.name}</option>)}</select><div className="cd-cap">{tr(L,'Preview')}</div><div className="tp-box" style={{minHeight:40,whiteSpace:'pre-wrap'}} translate="no">{state.preview}</div><div className="tp-btns"><button type="button" className="btn small" onClick={()=>act('add',name)}>{tr(L,'Add')}</button><button type="button" className="btn small" disabled={!state.selected} onClick={()=>act('delete',state.selected)}>{tr(L,'Delete')}</button><button type="button" className="btn small" disabled={!state.selected} onClick={()=>act('insert',state.selected)}>{tr(L,'Insert')}</button></div></div>;
 }
 
 type FontState={font?:string;sz?:number;b?:boolean;i?:boolean;u?:string;uColor?:string;color?:string;strike?:boolean;dstrike?:boolean;vert?:string;shadow?:boolean;outline?:boolean;emboss?:boolean;imprint?:boolean;smallCaps?:boolean;caps?:boolean;hidden?:boolean;w?:number;spacing?:number;position?:number;kern?:number;effect?:string;tab:number;target:boolean;fonts:string[];sizes:string[];underlines:Array<[string,string]>;animations:Array<[string,string]>;effects:Array<[string,string]>;sample:string;caption:string;[key:string]:any};
@@ -1940,20 +2034,31 @@ function CustomizeDialogBody({ L }: { L: WordxRuntime }) {
 
 type DrawingGridState = { snap: boolean; horizontal: number; vertical: number };
 function DrawingGridDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactDrawingGridCatalog?(): DrawingGridState; reactDrawingGridAction?(value: DrawingGridState): DrawingGridState }) | undefined;
-  const state = adapter?.reactDrawingGridCatalog?.() || { snap: false, horizontal: 9, vertical: 9 };
-  return <div className="col" id="react-wordx-drawing-grid-body"><label><input name="react-wordx-grid-snap" type="checkbox" defaultChecked={state.snap}/>{tr(L,'Snap objects to grid')}</label><fieldset className="col"><legend>{tr(L,'Grid settings')}</legend><label htmlFor="react-wordx-grid-horizontal">{tr(L,'Horizontal spacing:')}<input id="react-wordx-grid-horizontal" type="number" min={1} step={0.1} defaultValue={state.horizontal}/></label><label htmlFor="react-wordx-grid-vertical">{tr(L,'Vertical spacing:')}<input id="react-wordx-grid-vertical" type="number" min={1} step={0.1} defaultValue={state.vertical}/></label></fieldset></div>;
+  const adapter = L.dlg as (typeof L.dlg & { reactDrawingGridCatalog?(): DrawingGridState; reactDrawingGridSet?(value: DrawingGridState): void }) | undefined;
+  const initial = adapter?.reactDrawingGridCatalog?.() || { snap: false, horizontal: 9, vertical: 9 };
+  const [state, setState] = useState({ snap: initial.snap, horizontal: String(initial.horizontal), vertical: String(initial.vertical) });
+  const update = (next: typeof state) => {
+    setState(next);
+    adapter?.reactDrawingGridSet?.({ snap: next.snap, horizontal: Number(next.horizontal) || 1, vertical: Number(next.vertical) || 1 });
+  };
+  return <div className="col" id="react-wordx-drawing-grid-body"><label><input name="react-wordx-grid-snap" type="checkbox" checked={state.snap} onChange={(event) => update({ ...state, snap: event.currentTarget.checked })}/>{tr(L,'Snap objects to grid')}</label><fieldset className="col"><legend>{tr(L,'Grid settings')}</legend><label htmlFor="react-wordx-grid-horizontal">{tr(L,'Horizontal spacing:')}<input id="react-wordx-grid-horizontal" type="number" min={1} step={0.1} value={state.horizontal} onChange={(event) => update({ ...state, horizontal: event.currentTarget.value })}/></label><label htmlFor="react-wordx-grid-vertical">{tr(L,'Vertical spacing:')}<input id="react-wordx-grid-vertical" type="number" min={1} step={0.1} value={state.vertical} onChange={(event) => update({ ...state, vertical: event.currentTarget.value })}/></label></fieldset></div>;
 }
 
 type AutoFormatState = { mode: string; kind: string; options: Record<string, boolean> };
 function AutoFormatDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactAutoFormatCatalog?(): AutoFormatState }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactAutoFormatCatalog?(): AutoFormatState; reactAutoFormatSet?(value: AutoFormatState): void }) | undefined;
   const state = adapter?.reactAutoFormatCatalog?.() || { mode: 'now', kind: 'general', options: {} };
   const [mode, setMode] = useState(state.mode);
   const [kind, setKind] = useState(state.kind);
   const [options, setOptions] = useState(state.options);
+  const update = (next: AutoFormatState) => {
+    setMode(next.mode);
+    setKind(next.kind);
+    setOptions(next.options);
+    adapter?.reactAutoFormatSet?.({ ...next, options: { ...next.options } });
+  };
   const labels: Record<string,string> = { headings:'Built-in Heading styles', lists:'List styles', quotes:'Straight quotes with smart quotes', dashes:'Hyphens (--) with dash (—)', ordinals:'Ordinals (1st) with superscript', fractions:'Fractions (1/2) with fraction character', urls:'Internet paths with hyperlinks', empty:'Remove extra empty paragraphs' };
-  return <div className="col" id="react-wordx-autoformat-body"><div className="tp-note">{tr(L,'Wordx will automatically format the document.')}</div><fieldset className="col"><legend>{tr(L,'Mode')}</legend><label><input type="radio" name="react-wordx-autoformat-mode" value="now" checked={mode==='now'} onChange={()=>setMode('now')}/>{tr(L,'AutoFormat now')}</label><label><input type="radio" name="react-wordx-autoformat-mode" value="review" checked={mode==='review'} onChange={()=>setMode('review')}/>{tr(L,'AutoFormat and review each change')}</label></fieldset><label htmlFor="react-wordx-autoformat-kind">{tr(L,'Document type')}<select id="react-wordx-autoformat-kind" value={kind} onChange={(event)=>setKind(event.currentTarget.value)}><option value="general">{tr(L,'General document')}</option><option value="letter">{tr(L,'Letter')}</option><option value="email">{tr(L,'E-mail')}</option></select></label><fieldset className="col"><legend>{tr(L,'Apply / replace')}</legend>{Object.entries(labels).map(([id,label])=><label key={id}><input type="checkbox" data-autoformat-option={id} checked={!!options[id]} onChange={(event)=>setOptions({...options,[id]:event.currentTarget.checked})}/>{tr(L,label)}</label>)}</fieldset></div>;
+  return <div className="col" id="react-wordx-autoformat-body"><div className="tp-note">{tr(L,'Wordx will automatically format the document.')}</div><fieldset className="col"><legend>{tr(L,'Mode')}</legend><label><input type="radio" name="react-wordx-autoformat-mode" value="now" checked={mode==='now'} onChange={()=>update({ mode:'now', kind, options })}/>{tr(L,'AutoFormat now')}</label><label><input type="radio" name="react-wordx-autoformat-mode" value="review" checked={mode==='review'} onChange={()=>update({ mode:'review', kind, options })}/>{tr(L,'AutoFormat and review each change')}</label></fieldset><label htmlFor="react-wordx-autoformat-kind">{tr(L,'Document type')}<select id="react-wordx-autoformat-kind" value={kind} onChange={(event)=>update({ mode, kind:event.currentTarget.value, options })}><option value="general">{tr(L,'General document')}</option><option value="letter">{tr(L,'Letter')}</option><option value="email">{tr(L,'E-mail')}</option></select></label><fieldset className="col"><legend>{tr(L,'Apply / replace')}</legend>{Object.entries(labels).map(([id,label])=><label key={id}><input type="checkbox" data-autoformat-option={id} checked={!!options[id]} onChange={(event)=>update({ mode, kind, options:{...options,[id]:event.currentTarget.checked} })}/>{tr(L,label)}</label>)}</fieldset></div>;
 }
 
 function AutoFormatReviewDialogBody({ L }: { L: WordxRuntime }) {
@@ -1965,7 +2070,7 @@ function AutoFormatReviewDialogBody({ L }: { L: WordxRuntime }) {
 
 type EnvelopeState = { tab: number; selectedText: string; address: string; returnAddress: string; omit: boolean; size: string; labelAddress: string; products: Array<{ id: string; name: string }>; product: string; printMode: string; row: number; column: number };
 function EnvelopesDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactEnvelopeCatalog?(): EnvelopeState; reactEnvelopeTab?(tab: string): void }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactEnvelopeCatalog?(): EnvelopeState; reactEnvelopeTab?(tab: string): void; reactEnvelopeSet?(value: Partial<EnvelopeState>): void }) | undefined;
   const state = adapter?.reactEnvelopeCatalog?.() || { tab: 0, selectedText: '', address: '', returnAddress: '', omit: false, size: '10', labelAddress: '', products: [], product: '5160', printMode: 'full', row: 1, column: 1 };
   const [tab, setTab] = useState(state.tab === 1 ? 'labels' : 'envelopes');
   const [address, setAddress] = useState(state.address || state.selectedText);
@@ -1977,6 +2082,7 @@ function EnvelopesDialogBody({ L }: { L: WordxRuntime }) {
   const [printMode, setPrintMode] = useState(state.printMode);
   const [row, setRow] = useState(state.row);
   const [column, setColumn] = useState(state.column);
+  const update = (value: Partial<EnvelopeState>) => adapter?.reactEnvelopeSet?.(value);
   const id = useId().replaceAll(':', '');
   const tabs = [['envelopes','Envelopes'],['labels','Labels']] as const;
   const panelId = `${id}-envelopes-panel`;
@@ -1992,66 +2098,119 @@ function EnvelopesDialogBody({ L }: { L: WordxRuntime }) {
     event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
   };
   const panelProps = { id: panelId, role: 'tabpanel' as const, 'aria-labelledby': tabId(tab) };
-  return <div className="col" id="react-wordx-envelopes-body"><div className="tabs-head" role="tablist" aria-label={tr(L,'Envelope options')}>{tabs.map(([name,label],index)=><button type="button" key={name} id={tabId(name)} role="tab" aria-controls={panelId} aria-selected={tab===name} tabIndex={tab===name?0:-1} className={`tab${tab===name?' on':''}`} onClick={()=>{setTab(name);adapter?.reactEnvelopeTab?.(name);}} onKeyDown={(event)=>tabKeyDown(event,index)}>{tr(L,label)}</button>)}</div>{tab==='envelopes'?<div className="col" {...panelProps}><label htmlFor="react-wordx-envelope-address">{tr(L,'Delivery address:')}</label><textarea id="react-wordx-envelope-address" rows={5} value={address} onChange={(event)=>setAddress(event.currentTarget.value)}/><label htmlFor="react-wordx-envelope-return">{tr(L,'Return address:')}<input id="react-wordx-envelope-omit" type="checkbox" checked={omit} onChange={(event)=>setOmit(event.currentTarget.checked)}/>{tr(L,'Omit')}</label><textarea id="react-wordx-envelope-return" rows={4} value={returnAddress} onChange={(event)=>setReturnAddress(event.currentTarget.value)}/><label htmlFor="react-wordx-envelope-size">{tr(L,'Envelope size:')}<select id="react-wordx-envelope-size" value={size} onChange={(event)=>setSize(event.currentTarget.value)}><option value="10">{tr(L,'Size 10 (4 1/8 x 9 1/2 in)')}</option><option value="DL">{tr(L,'DL (110 x 220 mm)')}</option><option value="C5">{tr(L,'C5 (162 x 229 mm)')}</option><option value="Monarch">{tr(L,'Monarch (3 7/8 x 7 1/2 in)')}</option></select></label></div>:<div className="col" {...panelProps}><label htmlFor="react-wordx-label-address">{tr(L,'Address:')}<textarea id="react-wordx-label-address" rows={5} value={labelAddress} onChange={(event)=>setLabelAddress(event.currentTarget.value)}/></label><label htmlFor="react-wordx-label-product">{tr(L,'Label product:')}<select id="react-wordx-label-product" value={product} onChange={(event)=>setProduct(event.currentTarget.value)}>{state.products.map((item)=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label><fieldset className="col"><legend>{tr(L,'Print')}</legend><label><input type="radio" name="react-wordx-label-mode" value="full" checked={printMode==='full'} onChange={()=>setPrintMode('full')}/>{tr(L,'Full page of the same label')}</label><label><input type="radio" name="react-wordx-label-mode" value="single" checked={printMode==='single'} onChange={()=>setPrintMode('single')}/>{tr(L,'Single label')}</label><label htmlFor="react-wordx-label-row">{tr(L,'Row:')}<input id="react-wordx-label-row" type="number" min={1} max={30} value={row} onChange={(event)=>setRow(Number(event.currentTarget.value))}/></label><label htmlFor="react-wordx-label-column">{tr(L,'Column:')}<input id="react-wordx-label-column" type="number" min={1} max={4} value={column} onChange={(event)=>setColumn(Number(event.currentTarget.value))}/></label></fieldset></div>}</div>;
+  return <div className="col" id="react-wordx-envelopes-body"><div className="tabs-head" role="tablist" aria-label={tr(L,'Envelope options')}>{tabs.map(([name,label],index)=><button type="button" key={name} id={tabId(name)} role="tab" aria-controls={panelId} aria-selected={tab===name} tabIndex={tab===name?0:-1} className={`tab${tab===name?' on':''}`} onClick={()=>{setTab(name);adapter?.reactEnvelopeTab?.(name);}} onKeyDown={(event)=>tabKeyDown(event,index)}>{tr(L,label)}</button>)}</div>{tab==='envelopes'?<div className="col" {...panelProps}><label htmlFor="react-wordx-envelope-address">{tr(L,'Delivery address:')}</label><textarea id="react-wordx-envelope-address" rows={5} value={address} onChange={(event)=>{const value=event.currentTarget.value;setAddress(value);update({address:value});}}/><label htmlFor="react-wordx-envelope-return">{tr(L,'Return address:')}<input id="react-wordx-envelope-omit" type="checkbox" checked={omit} onChange={(event)=>{const value=event.currentTarget.checked;setOmit(value);update({omit:value});}}/>{tr(L,'Omit')}</label><textarea id="react-wordx-envelope-return" rows={4} value={returnAddress} onChange={(event)=>{const value=event.currentTarget.value;setReturnAddress(value);update({returnAddress:value});}}/><label htmlFor="react-wordx-envelope-size">{tr(L,'Envelope size:')}<select id="react-wordx-envelope-size" value={size} onChange={(event)=>{const value=event.currentTarget.value;setSize(value);update({size:value});}}><option value="10">{tr(L,'Size 10 (4 1/8 x 9 1/2 in)')}</option><option value="DL">{tr(L,'DL (110 x 220 mm)')}</option><option value="C5">{tr(L,'C5 (162 x 229 mm)')}</option><option value="Monarch">{tr(L,'Monarch (3 7/8 x 7 1/2 in)')}</option></select></label></div>:<div className="col" {...panelProps}><label htmlFor="react-wordx-label-address">{tr(L,'Address:')}<textarea id="react-wordx-label-address" rows={5} value={labelAddress} onChange={(event)=>{const value=event.currentTarget.value;setLabelAddress(value);update({labelAddress:value});}}/></label><label htmlFor="react-wordx-label-product">{tr(L,'Label product:')}<select id="react-wordx-label-product" value={product} onChange={(event)=>{const value=event.currentTarget.value;setProduct(value);update({product:value});}}>{state.products.map((item)=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label><fieldset className="col"><legend>{tr(L,'Print')}</legend><label><input type="radio" name="react-wordx-label-mode" value="full" checked={printMode==='full'} onChange={()=>{setPrintMode('full');update({printMode:'full'});}}/>{tr(L,'Full page of the same label')}</label><label><input type="radio" name="react-wordx-label-mode" value="single" checked={printMode==='single'} onChange={()=>{setPrintMode('single');update({printMode:'single'});}}/>{tr(L,'Single label')}</label><label htmlFor="react-wordx-label-row">{tr(L,'Row:')}<input id="react-wordx-label-row" type="number" min={1} max={30} value={row} onChange={(event)=>{const value=Number(event.currentTarget.value);setRow(value);update({row:value});}}/></label><label htmlFor="react-wordx-label-column">{tr(L,'Column:')}<input id="react-wordx-label-column" type="number" min={1} max={4} value={column} onChange={(event)=>{const value=Number(event.currentTarget.value);setColumn(value);update({column:value});}}/></label></fieldset></div>}</div>;
 }
 
 type IndexTablesState = { initialTab: string; styles: Array<{ id: string; name: string; level?: number }>; labels: string[]; leaders: Array<[string,string]> };
+type IndexTablesDraft = {
+  tab: string;
+  toc: { show: boolean; right: boolean; links: boolean; leader: string; levels: number; format: string; styles: Record<string, number | boolean> | null };
+  figures: { label: string; include: boolean; show: boolean };
+  index: { type: string; columns: number; right: boolean; headings: boolean };
+};
+type IndexTablesDraftPatch = { tab?: string; toc?: Partial<IndexTablesDraft['toc']>; figures?: Partial<IndexTablesDraft['figures']>; index?: Partial<IndexTablesDraft['index']> };
 function IndexTablesDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactIndexTablesCatalog?(): IndexTablesState; reactIndexTablesAction?(action: string, value?: unknown): void }) | undefined;
-  const catalog = adapter?.reactIndexTablesCatalog?.() || { initialTab:'toc', styles:[], labels:['Figure','Table','Equation'], leaders:[] };
-  const [tab,setTab]=useState(catalog.initialTab),[options,setOptions]=useState(false);
-  const [tocShow,setTocShow]=useState(true),[tocRight,setTocRight]=useState(true),[tocLinks,setTocLinks]=useState(true),[tocLeader,setTocLeader]=useState('dot'),[tocLevels,setTocLevels]=useState(3),[tocFormat,setTocFormat]=useState('template');
-  const [tocStyles,setTocStyles]=useState<Record<string,number>>(()=>Object.fromEntries(catalog.styles.filter((item)=>/^Heading\d$/.test(item.id)&&item.level!=null&&item.level<3).map((item)=>[item.id,(item.level||0)+1])));
-  const [outline,setOutline]=useState(true),[fields,setFields]=useState(false);
-  const [figure,setFigure]=useState(catalog.labels[0]||'Figure'),[include,setInclude]=useState(true),[figureShow,setFigureShow]=useState(true);
-  const [indexType,setIndexType]=useState('indent'),[columns,setColumns]=useState(2),[indexRight,setIndexRight]=useState(false),[headings,setHeadings]=useState(false);
-  const tabs=[['index','Index'],['toc','Table of Contents'],['tof','Table of Figures'],['toa','Table of Authorities']] as const;
-  const tabKeyDown=(event:KeyboardEvent<HTMLButtonElement>,index:number)=>{
-    const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index-1+tabs.length)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:-1;
-    if(next<0)return;const destination=tabs[next];if(!destination)return;event.preventDefault();setTab(destination[0]);event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+  const adapter = L.dlg as (typeof L.dlg & { reactIndexTablesCatalog?(): IndexTablesState; reactIndexTablesAction?(action: string, value?: unknown): void; reactIndexTablesDraftSet?(patch: IndexTablesDraftPatch): void }) | undefined;
+  const catalog = adapter?.reactIndexTablesCatalog?.() || { initialTab: 'toc', styles: [], labels: ['Figure', 'Table', 'Equation'], leaders: [] };
+  const [tab, setTab] = useState(catalog.initialTab);
+  const [options, setOptions] = useState(false);
+  const [tocShow, setTocShow] = useState(true), [tocRight, setTocRight] = useState(true), [tocLinks, setTocLinks] = useState(true), [tocLeader, setTocLeader] = useState('dot'), [tocLevels, setTocLevels] = useState(3), [tocFormat, setTocFormat] = useState('template');
+  const [tocStyles, setTocStyles] = useState<Record<string, number>>(() => Object.fromEntries(catalog.styles.filter((item) => /^Heading\d$/.test(item.id) && item.level != null && item.level < 3).map((item) => [item.id, (item.level || 0) + 1])));
+  const [outline, setOutline] = useState(true), [fields, setFields] = useState(false);
+  const [figure, setFigure] = useState(catalog.labels[0] || 'Figure'), [include, setInclude] = useState(true), [figureShow, setFigureShow] = useState(true);
+  const [indexType, setIndexType] = useState('indent'), [columns, setColumns] = useState(2), [indexRight, setIndexRight] = useState(false), [headings, setHeadings] = useState(false);
+  const patchToc = (patch: Partial<IndexTablesDraft['toc']>) => adapter?.reactIndexTablesDraftSet?.({ toc: patch });
+  const patchFigures = (patch: Partial<IndexTablesDraft['figures']>) => adapter?.reactIndexTablesDraftSet?.({ figures: patch });
+  const patchIndex = (patch: Partial<IndexTablesDraft['index']>) => adapter?.reactIndexTablesDraftSet?.({ index: patch });
+  const chooseTab = (value: string) => { setTab(value); adapter?.reactIndexTablesDraftSet?.({ tab: value }); };
+  const tabs = [['index', 'Index'], ['toc', 'Table of Contents'], ['tof', 'Table of Figures'], ['toa', 'Table of Authorities']] as const;
+  const tabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+    if (next < 0) return;
+    const destination = tabs[next];
+    if (!destination) return;
+    event.preventDefault(); chooseTab(destination[0]);
+    event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
   };
-  return <div className="col" id="react-wordx-index-tables-body"><div className="tabs-head" role="tablist" aria-label={tr(L,'Index and table options')}>{tabs.map(([id,label],index)=><button key={id} type="button" role="tab" data-index-tab={id} aria-selected={tab===id} tabIndex={tab===id?0:-1} className={`tab${tab===id?' on':''}`} onClick={()=>setTab(id)} onKeyDown={(event)=>tabKeyDown(event,index)}>{tr(L,label)}</button>)}</div>
-    {tab==='toc'&&<div className="row" role="tabpanel"><div className="col" style={{flex:1}}><div className="cd-cap">{tr(L,'Print Preview')}</div><div className="preview-box" style={{height:150,flexDirection:'column',alignItems:'stretch',padding:6}}>{Array.from({length:Math.min(3,tocLevels)},(_,i)=><div key={i} style={{display:'flex',paddingLeft:i*12,fontWeight:i===0?'bold':undefined}}><span>{tr(L,'Heading {0}'.replace('{0}',String(i+1)))}</span><span style={{flex:1,borderBottom:tocRight&&tocLeader!=='none'?'1px dotted #000':undefined,margin:'0 2px 3px'}}/><span>{tocShow?String(i*2+1):''}</span></div>)}</div><label><input id="react-wordx-toc-show" type="checkbox" checked={tocShow} onChange={(e)=>setTocShow(e.currentTarget.checked)}/>{tr(L,'Show page numbers')}</label><label><input id="react-wordx-toc-right" type="checkbox" checked={tocRight} onChange={(e)=>setTocRight(e.currentTarget.checked)}/>{tr(L,'Right align page numbers')}</label><label>{tr(L,'Tab leader:')}<select id="react-wordx-toc-leader" value={tocLeader} onChange={(e)=>setTocLeader(e.currentTarget.value)}>{catalog.leaders.map(([v,l])=><option key={v} value={v}>{tr(L,l)}</option>)}</select></label></div><div className="col" style={{flex:1}}><div className="cd-cap">{tr(L,'Web Preview')}</div><div className="preview-box" style={{height:150,flexDirection:'column',alignItems:'flex-start',padding:6,gap:3}}>{[1,2,3].map((n)=><u key={n} style={{color:'#00f',marginLeft:(n-1)*10}}>{tr(L,'Heading {0}'.replace('{0}',String(n)))}</u>)}</div><label><input id="react-wordx-toc-links" type="checkbox" checked={tocLinks} onChange={(e)=>setTocLinks(e.currentTarget.checked)}/>{tr(L,'Use hyperlinks instead of page numbers (Web)')}</label></div><div className="col" style={{flexBasis:'100%'}}><label>{tr(L,'Formats:')}<select id="react-wordx-toc-format" value={tocFormat} onChange={(e)=>setTocFormat(e.currentTarget.value)}>{([['template','From template'],['classic','Classic'],['distinctive','Distinctive'],['formal','Formal'],['simple','Simple']] as const).map(([v,l])=><option key={v} value={v}>{tr(L,l)}</option>)}</select></label><label>{tr(L,'Show levels:')}<input id="react-wordx-toc-levels" type="number" min={1} max={9} value={tocLevels} onChange={(e)=>setTocLevels(Number(e.currentTarget.value))}/></label><button type="button" className="btn small" onClick={()=>setOptions(true)}>{tr(L,'Options...')}</button><button type="button" className="btn small" onClick={()=>adapter?.reactIndexTablesAction?.('modify')}>{tr(L,'Modify...')}</button>{options&&<fieldset className="col"><legend>{tr(L,'Table of Contents Options')}</legend><div style={{maxHeight:200,overflow:'auto'}}>{catalog.styles.map((style)=><label key={style.id}>{style.name}<input type="number" min={1} max={9} data-toc-style={style.id} value={tocStyles[style.id]??''} onChange={(e)=>{const next={...tocStyles};const value=Number(e.currentTarget.value);if(value)next[style.id]=value;else delete next[style.id];setTocStyles(next)}}/></label>)}</div><label><input id="react-wordx-toc-outline" type="checkbox" checked={outline} onChange={(e)=>setOutline(e.currentTarget.checked)}/>{tr(L,'Outline levels')}</label><label><input id="react-wordx-toc-fields" type="checkbox" checked={fields} onChange={(e)=>setFields(e.currentTarget.checked)}/>{tr(L,'Table entry fields')}</label></fieldset>}</div></div>}
-    {tab==='tof'&&<div className="col" role="tabpanel"><label>{tr(L,'Caption label:')}<select id="react-wordx-tof-label" value={figure} onChange={(e)=>setFigure(e.currentTarget.value)}>{catalog.labels.map((label)=><option key={label}>{label}</option>)}</select></label><label><input id="react-wordx-tof-include" type="checkbox" checked={include} onChange={(e)=>setInclude(e.currentTarget.checked)}/>{tr(L,'Include label and number')}</label><label><input id="react-wordx-tof-show" type="checkbox" checked={figureShow} onChange={(e)=>setFigureShow(e.currentTarget.checked)}/>{tr(L,'Show page numbers')}</label><div className="tp-note">{tr(L,'Captions inserted with Insert ▸ Reference ▸ Caption are collected here.')}</div></div>}
-    {tab==='index'&&<div className="col" role="tabpanel"><fieldset className="col"><legend>{tr(L,'Type')}</legend><label><input type="radio" name="react-wordx-index-type" value="indent" checked={indexType==='indent'} onChange={()=>setIndexType('indent')}/>{tr(L,'Indented')}</label><label><input type="radio" name="react-wordx-index-type" value="runin" checked={indexType==='runin'} onChange={()=>setIndexType('runin')}/>{tr(L,'Run-in')}</label></fieldset><label>{tr(L,'Columns:')}<input id="react-wordx-index-columns" type="number" min={1} max={4} value={columns} onChange={(e)=>setColumns(Number(e.currentTarget.value))}/></label><label><input id="react-wordx-index-right" type="checkbox" checked={indexRight} onChange={(e)=>setIndexRight(e.currentTarget.checked)}/>{tr(L,'Right align page numbers')}</label><label><select aria-label={tr(L,'Tab leader:')} value={tocLeader} onChange={(e)=>setTocLeader(e.currentTarget.value)}>{catalog.leaders.map(([v,l])=><option key={v} value={v}>{tr(L,l)}</option>)}</select></label><label><input id="react-wordx-index-headings" type="checkbox" checked={headings} onChange={(e)=>setHeadings(e.currentTarget.checked)}/>{tr(L,'Show letter headings')}</label><button type="button" className="btn small" onClick={()=>{setTab('index');adapter?.reactIndexTablesAction?.('mark')}}>{tr(L,'Mark Entry...')}</button><div className="tp-note">{tr(L,'Mark entries first (Alt+Shift+X), then insert the index where it should appear.')}</div></div>}
-    {tab==='toa'&&<div className="tp-note" role="tabpanel">{tr(L,'Tables of authorities need citations marked with TA fields. Use Insert ▸ Field ▸ TA to mark citations, then Field ▸ TOA to build the table.')}</div>}
+  const tocStyleDraft = (next: Record<string, number>) => ({ ...next, __outline: outline, __fields: fields });
+  return <div className="col" id="react-wordx-index-tables-body">
+    <div className="tabs-head" role="tablist" aria-label={tr(L, 'Index and table options')}>
+      {tabs.map(([id, label], index) => <button key={id} type="button" role="tab" data-index-tab={id} aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} className={`tab${tab === id ? ' on' : ''}`} onClick={() => chooseTab(id)} onKeyDown={(event) => tabKeyDown(event, index)}>{tr(L, label)}</button>)}
+    </div>
+    {tab === 'toc' && <div className="row" role="tabpanel">
+      <div className="col" style={{ flex: 1 }}><div className="cd-cap">{tr(L, 'Print Preview')}</div><div className="preview-box" style={{ height: 150, flexDirection: 'column', alignItems: 'stretch', padding: 6 }}>{Array.from({ length: Math.min(3, tocLevels) }, (_, i) => <div key={i} style={{ display: 'flex', paddingLeft: i * 12, fontWeight: i === 0 ? 'bold' : undefined }}><span>{tr(L, 'Heading {0}'.replace('{0}', String(i + 1)))}</span><span style={{ flex: 1, borderBottom: tocRight && tocLeader !== 'none' ? '1px dotted #000' : undefined, margin: '0 2px 3px' }} /><span>{tocShow ? String(i * 2 + 1) : ''}</span></div>)}</div>
+        <label><input id="react-wordx-toc-show" type="checkbox" checked={tocShow} onChange={(event) => { const value = event.currentTarget.checked; setTocShow(value); patchToc({ show: value }); }} />{tr(L, 'Show page numbers')}</label>
+        <label><input id="react-wordx-toc-right" type="checkbox" checked={tocRight} onChange={(event) => { const value = event.currentTarget.checked; setTocRight(value); patchToc({ right: value }); }} />{tr(L, 'Right align page numbers')}</label>
+        <label>{tr(L, 'Tab leader:')}<select id="react-wordx-toc-leader" value={tocLeader} onChange={(event) => { const value = event.currentTarget.value; setTocLeader(value); patchToc({ leader: value }); }}>{catalog.leaders.map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></label>
+      </div>
+      <div className="col" style={{ flex: 1 }}><div className="cd-cap">{tr(L, 'Web Preview')}</div><div className="preview-box" style={{ height: 150, flexDirection: 'column', alignItems: 'flex-start', padding: 6, gap: 3 }}>{[1, 2, 3].map((n) => <u key={n} style={{ color: '#00f', marginLeft: (n - 1) * 10 }}>{tr(L, 'Heading {0}'.replace('{0}', String(n)))}</u>)}</div>
+        <label><input id="react-wordx-toc-links" type="checkbox" checked={tocLinks} onChange={(event) => { const value = event.currentTarget.checked; setTocLinks(value); patchToc({ links: value }); }} />{tr(L, 'Use hyperlinks instead of page numbers (Web)')}</label>
+      </div>
+      <div className="col" style={{ flexBasis: '100%' }}>
+        <label>{tr(L, 'Formats:')}<select id="react-wordx-toc-format" value={tocFormat} onChange={(event) => { const value = event.currentTarget.value; setTocFormat(value); patchToc({ format: value }); }}>{([['template', 'From template'], ['classic', 'Classic'], ['distinctive', 'Distinctive'], ['formal', 'Formal'], ['simple', 'Simple']] as const).map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></label>
+        <label>{tr(L, 'Show levels:')}<input id="react-wordx-toc-levels" type="number" min={1} max={9} value={tocLevels} onChange={(event) => { const value = Number(event.currentTarget.value); setTocLevels(value); patchToc({ levels: value }); }} /></label>
+        <button type="button" className="btn small" onClick={() => { setOptions(true); patchToc({ styles: tocStyleDraft(tocStyles) }); }}>{tr(L, 'Options...')}</button>
+        <button type="button" className="btn small" onClick={() => adapter?.reactIndexTablesAction?.('modify')}>{tr(L, 'Modify...')}</button>
+        {options && <fieldset className="col"><legend>{tr(L, 'Table of Contents Options')}</legend><div style={{ maxHeight: 200, overflow: 'auto' }}>{catalog.styles.map((style) => <label key={style.id}>{style.name}<input type="number" min={1} max={9} data-toc-style={style.id} value={tocStyles[style.id] ?? ''} onChange={(event) => { const next = { ...tocStyles }; const value = Number(event.currentTarget.value); if (value) next[style.id] = value; else delete next[style.id]; setTocStyles(next); patchToc({ styles: tocStyleDraft(next) }); }} /></label>)}</div>
+          <label><input id="react-wordx-toc-outline" type="checkbox" checked={outline} onChange={(event) => { const value = event.currentTarget.checked; setOutline(value); patchToc({ styles: { ...tocStyleDraft(tocStyles), __outline: value } }); }} />{tr(L, 'Outline levels')}</label>
+          <label><input id="react-wordx-toc-fields" type="checkbox" checked={fields} onChange={(event) => { const value = event.currentTarget.checked; setFields(value); patchToc({ styles: { ...tocStyleDraft(tocStyles), __fields: value } }); }} />{tr(L, 'Table entry fields')}</label>
+        </fieldset>}
+      </div>
+    </div>}
+    {tab === 'tof' && <div className="col" role="tabpanel"><label>{tr(L, 'Caption label:')}<select id="react-wordx-tof-label" value={figure} onChange={(event) => { const value = event.currentTarget.value; setFigure(value); patchFigures({ label: value }); }}>{catalog.labels.map((label) => <option key={label}>{label}</option>)}</select></label><label><input id="react-wordx-tof-include" type="checkbox" checked={include} onChange={(event) => { const value = event.currentTarget.checked; setInclude(value); patchFigures({ include: value }); }} />{tr(L, 'Include label and number')}</label><label><input id="react-wordx-tof-show" type="checkbox" checked={figureShow} onChange={(event) => { const value = event.currentTarget.checked; setFigureShow(value); patchFigures({ show: value }); }} />{tr(L, 'Show page numbers')}</label><div className="tp-note">{tr(L, 'Captions inserted with Insert ▸ Reference ▸ Caption are collected here.')}</div></div>}
+    {tab === 'index' && <div className="col" role="tabpanel"><fieldset className="col"><legend>{tr(L, 'Type')}</legend><label><input type="radio" name="react-wordx-index-type" value="indent" checked={indexType === 'indent'} onChange={() => { setIndexType('indent'); patchIndex({ type: 'indent' }); }} />{tr(L, 'Indented')}</label><label><input type="radio" name="react-wordx-index-type" value="runin" checked={indexType === 'runin'} onChange={() => { setIndexType('runin'); patchIndex({ type: 'runin' }); }} />{tr(L, 'Run-in')}</label></fieldset>
+      <label>{tr(L, 'Columns:')}<input id="react-wordx-index-columns" type="number" min={1} max={4} value={columns} onChange={(event) => { const value = Number(event.currentTarget.value); setColumns(value); patchIndex({ columns: value }); }} /></label>
+      <label><input id="react-wordx-index-right" type="checkbox" checked={indexRight} onChange={(event) => { const value = event.currentTarget.checked; setIndexRight(value); patchIndex({ right: value }); }} />{tr(L, 'Right align page numbers')}</label>
+      <label><select aria-label={tr(L, 'Tab leader:')} value={tocLeader} onChange={(event) => { const value = event.currentTarget.value; setTocLeader(value); patchToc({ leader: value }); }}>{catalog.leaders.map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></label>
+      <label><input id="react-wordx-index-headings" type="checkbox" checked={headings} onChange={(event) => { const value = event.currentTarget.checked; setHeadings(value); patchIndex({ headings: value }); }} />{tr(L, 'Show letter headings')}</label>
+      <button type="button" className="btn small" onClick={() => { chooseTab('index'); adapter?.reactIndexTablesAction?.('mark'); }}>{tr(L, 'Mark Entry...')}</button><div className="tp-note">{tr(L, 'Mark entries first (Alt+Shift+X), then insert the index where it should appear.')}</div>
+    </div>}
+    {tab === 'toa' && <div className="tp-note" role="tabpanel">{tr(L, 'Tables of authorities need citations marked with TA fields. Use Insert ▸ Field ▸ TA to mark citations, then Field ▸ TOA to build the table.')}</div>}
   </div>;
 }
 
 type LetterWizardState = { dates: Array<{ value: string; label: string }>; styles: Array<[string,string]>; salutations: string[]; closings: string[]; name: string; address: string };
+type LetterWizardDraft = { date: boolean; datePic: string; style: string; recipient: string; delivery: string; salutation: string; reference: string; subject: string; cc: string; sender: string; returnAddress: string; closing: string; title: string; enclosures: number };
 function LetterWizardDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter=L.dlg as (typeof L.dlg & {reactLetterWizardCatalog?():LetterWizardState})|undefined;
+  const adapter=L.dlg as (typeof L.dlg & {reactLetterWizardCatalog?():LetterWizardState;reactLetterWizardSet?(value:Partial<LetterWizardDraft>):void})|undefined;
   const catalog=adapter?.reactLetterWizardCatalog?.()||{dates:[],styles:[],salutations:['Dear '],closings:['Sincerely,'],name:'',address:''};
   const [tab,setTab]=useState('format'),[date,setDate]=useState(true),[datePic,setDatePic]=useState(catalog.dates[0]?.value||'MMMM d, yyyy'),[style,setStyle]=useState('full');
   const [recipient,setRecipient]=useState(''),[delivery,setDelivery]=useState(''),[salutation,setSalutation]=useState('Dear '),[reference,setReference]=useState(''),[subject,setSubject]=useState(''),[cc,setCc]=useState('');
   const [sender,setSender]=useState(catalog.name),[returnAddress,setReturnAddress]=useState(catalog.address),[closing,setClosing]=useState('Sincerely,'),[title,setTitle]=useState(''),[enclosures,setEnclosures]=useState(0);
+  const update=(value:Partial<LetterWizardDraft>)=>adapter?.reactLetterWizardSet?.(value);
   const tabs=[['format','Letter Format'],['recipient','Recipient Info'],['other','Other Elements'],['sender','Sender Info']] as const;
   const tabKeyDown=(event:KeyboardEvent<HTMLButtonElement>,index:number)=>{
     const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index-1+tabs.length)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:-1;
     if(next<0)return;const destination=tabs[next];if(!destination)return;event.preventDefault();setTab(destination[0]);event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
   };
   return <div className="col" id="react-wordx-letter-wizard-body"><div className="tabs-head" role="tablist" aria-label={tr(L,'Letter wizard sections')}>{tabs.map(([name,label],index)=><button key={name} type="button" role="tab" aria-selected={tab===name} tabIndex={tab===name?0:-1} className={`tab${tab===name?' on':''}`} onClick={()=>setTab(name)} onKeyDown={(event)=>tabKeyDown(event,index)}>{tr(L,label)}</button>)}</div>
-    {tab==='format'&&<div className="col" role="tabpanel"><label><input id="react-wordx-letter-date" type="checkbox" checked={date} onChange={(event)=>setDate(event.currentTarget.checked)}/>{tr(L,'Date line:')}</label><label>{tr(L,'Date format:')}<select id="react-wordx-letter-date-format" value={datePic} onChange={(event)=>setDatePic(event.currentTarget.value)}>{catalog.dates.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label>{tr(L,'Page design / Letter style:')}<select id="react-wordx-letter-style" value={style} onChange={(event)=>setStyle(event.currentTarget.value)}>{catalog.styles.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label></div>}
-    {tab==='recipient'&&<div className="col" role="tabpanel"><label>{tr(L,"Recipient's name:")}<input id="react-wordx-letter-recipient" value={recipient} onChange={(event)=>setRecipient(event.currentTarget.value)}/></label><label>{tr(L,'Delivery address:')}<textarea id="react-wordx-letter-delivery" rows={4} value={delivery} onChange={(event)=>setDelivery(event.currentTarget.value)}/></label><label>{tr(L,'Salutation:')}<input id="react-wordx-letter-salutation" list="react-wordx-letter-salutations" value={salutation} onChange={(event)=>setSalutation(event.currentTarget.value)}/><datalist id="react-wordx-letter-salutations">{catalog.salutations.map((value)=><option key={value} value={value}/>)}</datalist></label></div>}
-    {tab==='other'&&<div className="col" role="tabpanel"><label>{tr(L,'Reference line:')}<input id="react-wordx-letter-reference" placeholder={tr(L,'In reply to:')} value={reference} onChange={(event)=>setReference(event.currentTarget.value)}/></label><label>{tr(L,'Subject:')}<input id="react-wordx-letter-subject" value={subject} onChange={(event)=>setSubject(event.currentTarget.value)}/></label><label>{tr(L,'Courtesy copies (cc):')}<input id="react-wordx-letter-cc" value={cc} onChange={(event)=>setCc(event.currentTarget.value)}/></label></div>}
-    {tab==='sender'&&<div className="col" role="tabpanel"><label>{tr(L,"Sender's name:")}<input id="react-wordx-letter-sender" value={sender} onChange={(event)=>setSender(event.currentTarget.value)}/></label><label>{tr(L,'Return address:')}<textarea id="react-wordx-letter-return" rows={3} value={returnAddress} onChange={(event)=>setReturnAddress(event.currentTarget.value)}/></label><label>{tr(L,'Complimentary closing:')}<input id="react-wordx-letter-closing" list="react-wordx-letter-closings" value={closing} onChange={(event)=>setClosing(event.currentTarget.value)}/><datalist id="react-wordx-letter-closings">{catalog.closings.map((value)=><option key={value} value={value}/>)}</datalist></label><label>{tr(L,'Job title:')}<input id="react-wordx-letter-title" value={title} onChange={(event)=>setTitle(event.currentTarget.value)}/></label><label>{tr(L,'Enclosures:')}<input id="react-wordx-letter-enclosures" type="number" min={0} value={enclosures} onChange={(event)=>setEnclosures(Number(event.currentTarget.value))}/></label></div>}
+    {tab==='format'&&<div className="col" role="tabpanel"><label><input id="react-wordx-letter-date" type="checkbox" checked={date} onChange={(event)=>{const value=event.currentTarget.checked;setDate(value);update({date:value});}}/>{tr(L,'Date line:')}</label><label>{tr(L,'Date format:')}<select id="react-wordx-letter-date-format" value={datePic} onChange={(event)=>{const value=event.currentTarget.value;setDatePic(value);update({datePic:value});}}>{catalog.dates.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label>{tr(L,'Page design / Letter style:')}<select id="react-wordx-letter-style" value={style} onChange={(event)=>{const value=event.currentTarget.value;setStyle(value);update({style:value});}}>{catalog.styles.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label></div>}
+    {tab==='recipient'&&<div className="col" role="tabpanel"><label>{tr(L,"Recipient's name:")}<input id="react-wordx-letter-recipient" value={recipient} onChange={(event)=>{const value=event.currentTarget.value;setRecipient(value);update({recipient:value});}}/></label><label>{tr(L,'Delivery address:')}<textarea id="react-wordx-letter-delivery" rows={4} value={delivery} onChange={(event)=>{const value=event.currentTarget.value;setDelivery(value);update({delivery:value});}}/></label><label>{tr(L,'Salutation:')}<input id="react-wordx-letter-salutation" list="react-wordx-letter-salutations" value={salutation} onChange={(event)=>{const value=event.currentTarget.value;setSalutation(value);update({salutation:value});}}/><datalist id="react-wordx-letter-salutations">{catalog.salutations.map((value)=><option key={value} value={value}/>)}</datalist></label></div>}
+    {tab==='other'&&<div className="col" role="tabpanel"><label>{tr(L,'Reference line:')}<input id="react-wordx-letter-reference" placeholder={tr(L,'In reply to:')} value={reference} onChange={(event)=>{const value=event.currentTarget.value;setReference(value);update({reference:value});}}/></label><label>{tr(L,'Subject:')}<input id="react-wordx-letter-subject" value={subject} onChange={(event)=>{const value=event.currentTarget.value;setSubject(value);update({subject:value});}}/></label><label>{tr(L,'Courtesy copies (cc):')}<input id="react-wordx-letter-cc" value={cc} onChange={(event)=>{const value=event.currentTarget.value;setCc(value);update({cc:value});}}/></label></div>}
+    {tab==='sender'&&<div className="col" role="tabpanel"><label>{tr(L,"Sender's name:")}<input id="react-wordx-letter-sender" value={sender} onChange={(event)=>{const value=event.currentTarget.value;setSender(value);update({sender:value});}}/></label><label>{tr(L,'Return address:')}<textarea id="react-wordx-letter-return" rows={3} value={returnAddress} onChange={(event)=>{const value=event.currentTarget.value;setReturnAddress(value);update({returnAddress:value});}}/></label><label>{tr(L,'Complimentary closing:')}<input id="react-wordx-letter-closing" list="react-wordx-letter-closings" value={closing} onChange={(event)=>{const value=event.currentTarget.value;setClosing(value);update({closing:value});}}/><datalist id="react-wordx-letter-closings">{catalog.closings.map((value)=><option key={value} value={value}/>)}</datalist></label><label>{tr(L,'Job title:')}<input id="react-wordx-letter-title" value={title} onChange={(event)=>{const value=event.currentTarget.value;setTitle(value);update({title:value});}}/></label><label>{tr(L,'Enclosures:')}<input id="react-wordx-letter-enclosures" type="number" min={0} value={enclosures} onChange={(event)=>{const value=Number(event.currentTarget.value);setEnclosures(value);update({enclosures:value});}}/></label></div>}
   </div>;
 }
 
 type SaveAsCatalog = { name: string; type: string; types: Array<{ id: string; label: string }>; note: string };
 function SaveAsDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactSaveAsCatalog?(): SaveAsCatalog }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactSaveAsCatalog?(): SaveAsCatalog; reactSaveAsSet?(value: Pick<SaveAsCatalog, 'name' | 'type'>): void }) | undefined;
   const catalog = adapter?.reactSaveAsCatalog?.() || { name: 'Document', type: 'docx', types: [], note: '' };
   const [name, setName] = useState(catalog.name);
   const [type, setType] = useState(catalog.type);
+  const update = (value: Pick<SaveAsCatalog, 'name' | 'type'>) => {
+    setName(value.name);
+    setType(value.type);
+    adapter?.reactSaveAsSet?.(value);
+  };
   return <div className="col" id="react-wordx-save-as-body">
-    <label htmlFor="react-wordx-save-as-name">{tr(L, 'File name:')}<input id="react-wordx-save-as-name" type="text" value={name} onChange={(event) => setName(event.currentTarget.value)} style={{ width: '100%' }} /></label>
-    <label htmlFor="react-wordx-save-as-type">{tr(L, 'Save as type:')}<select id="react-wordx-save-as-type" value={type} onChange={(event) => setType(event.currentTarget.value)}>{catalog.types.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+    <label htmlFor="react-wordx-save-as-name">{tr(L, 'File name:')}<input id="react-wordx-save-as-name" type="text" value={name} onChange={(event) => update({ name: event.currentTarget.value, type })} style={{ width: '100%' }} /></label>
+    <label htmlFor="react-wordx-save-as-type">{tr(L, 'Save as type:')}<select id="react-wordx-save-as-type" value={type} onChange={(event) => update({ name, type: event.currentTarget.value })}>{catalog.types.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
     <div className="tp-note">{tr(L, catalog.note)}</div>
   </div>;
 }
 
 function PrintDialogBody({ L }: { L: WordxRuntime }) {
+  const adapter = L.dlg as (typeof L.dlg & { reactPrintSet?(value: { range?: string; pages?: string; what?: string; which?: string; copies?: number; perSheet?: string }): void }) | undefined;
   const [range, setRange] = useState('all');
   const [pages, setPages] = useState('');
   const [what, setWhat] = useState('doc');
@@ -2060,22 +2219,23 @@ function PrintDialogBody({ L }: { L: WordxRuntime }) {
   const [perSheet, setPerSheet] = useState('1');
   const ranges: Array<[string,string]> = [['all','All'],['current','Current page'],['selection','Selection'],['pages','Pages:']];
   const kinds: Array<[string,string]> = [['doc','Document'],['markup','Document showing markup'],['props','Document properties'],['list','List of markup'],['styles','Styles'],['autotext','AutoText entries'],['keys','Key assignments']];
+  const update = (value: { range?: string; pages?: string; what?: string; which?: string; copies?: number; perSheet?: string }) => adapter?.reactPrintSet?.(value);
   return <div className="col" id="react-wordx-print-body">
     <fieldset className="col"><legend>{tr(L,'Printer')}</legend><label htmlFor="react-wordx-print-printer">{tr(L,'Name:')}<select id="react-wordx-print-printer" disabled><option>{tr(L,'Save as PDF (Wordx)')}</option></select></label><div className="tp-note">{tr(L,'Status: Ready — the pages are saved as a PDF that you can print from any viewer.')}</div></fieldset>
-    <div className="row"><fieldset className="col"><legend>{tr(L,'Page range')}</legend>{ranges.map(([value,label])=><label key={value}><input type="radio" name="react-wordx-print-range" value={value} checked={range===value} onChange={()=>setRange(value)} />{tr(L,label)}</label>)}<input id="react-wordx-print-pages" type="text" value={pages} onFocus={()=>setRange('pages')} onChange={(event)=>{setRange('pages');setPages(event.currentTarget.value);}} placeholder="1,3,5–12" /><div className="tp-note">{tr(L,'Enter page numbers and/or page ranges separated by commas. For example, 1,3,5–12')}</div></fieldset><fieldset className="col"><legend>{tr(L,'Copies')}</legend><label htmlFor="react-wordx-print-copies">{tr(L,'Number of copies:')}<input id="react-wordx-print-copies" type="number" min={1} max={99} value={copies} onChange={(event)=>setCopies(Number(event.currentTarget.value))} /></label></fieldset></div>
-    <div className="row"><label htmlFor="react-wordx-print-what">{tr(L,'Print what:')}<select id="react-wordx-print-what" value={what} onChange={(event)=>setWhat(event.currentTarget.value)}>{kinds.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label><label htmlFor="react-wordx-print-which">{tr(L,'Print:')}<select id="react-wordx-print-which" value={which} onChange={(event)=>setWhich(event.currentTarget.value)}><option value="all">{tr(L,'All pages in range')}</option><option value="odd">{tr(L,'Odd pages')}</option><option value="even">{tr(L,'Even pages')}</option></select></label></div>
-    <label htmlFor="react-wordx-print-persheet">{tr(L,'Pages per sheet:')}<select id="react-wordx-print-persheet" value={perSheet} onChange={(event)=>setPerSheet(event.currentTarget.value)}>{[[1,'1 page'],[2,'2 pages'],[4,'4 pages'],[6,'6 pages'],[8,'8 pages'],[16,'16 pages']].map(([count,label])=><option key={count} value={count}>{tr(L,String(label))}</option>)}</select></label>
+    <div className="row"><fieldset className="col"><legend>{tr(L,'Page range')}</legend>{ranges.map(([value,label])=><label key={value}><input type="radio" name="react-wordx-print-range" value={value} checked={range===value} onChange={()=>{setRange(value);update({range:value});}} />{tr(L,label)}</label>)}<input id="react-wordx-print-pages" type="text" value={pages} onFocus={()=>{setRange('pages');update({range:'pages'});}} onChange={(event)=>{const value=event.currentTarget.value;setRange('pages');setPages(value);update({range:'pages',pages:value});}} placeholder="1,3,5–12" /><div className="tp-note">{tr(L,'Enter page numbers and/or page ranges separated by commas. For example, 1,3,5–12')}</div></fieldset><fieldset className="col"><legend>{tr(L,'Copies')}</legend><label htmlFor="react-wordx-print-copies">{tr(L,'Number of copies:')}<input id="react-wordx-print-copies" type="number" min={1} max={99} value={copies} onChange={(event)=>{const value=Number(event.currentTarget.value);setCopies(value);update({copies:value});}} /></label></fieldset></div>
+    <div className="row"><label htmlFor="react-wordx-print-what">{tr(L,'Print what:')}<select id="react-wordx-print-what" value={what} onChange={(event)=>{const value=event.currentTarget.value;setWhat(value);update({what:value});}}>{kinds.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select></label><label htmlFor="react-wordx-print-which">{tr(L,'Print:')}<select id="react-wordx-print-which" value={which} onChange={(event)=>{const value=event.currentTarget.value;setWhich(value);update({which:value});}}><option value="all">{tr(L,'All pages in range')}</option><option value="odd">{tr(L,'Odd pages')}</option><option value="even">{tr(L,'Even pages')}</option></select></label></div>
+    <label htmlFor="react-wordx-print-persheet">{tr(L,'Pages per sheet:')}<select id="react-wordx-print-persheet" value={perSheet} onChange={(event)=>{const value=event.currentTarget.value;setPerSheet(value);update({perSheet:value});}}>{[[1,'1 page'],[2,'2 pages'],[4,'4 pages'],[6,'6 pages'],[8,'8 pages'],[16,'16 pages']].map(([count,label])=><option key={count} value={count}>{tr(L,String(label))}</option>)}</select></label>
   </div>;
 }
 
 type TemplatePickerItem = { id: string; name: string };
-type TemplatePickerState = { categories: Array<{ name: string; items: TemplatePickerItem[] }> };
+type TemplatePickerState = { categories: Array<{ name: string; items: TemplatePickerItem[] }>; selected?: string };
 function TemplatePickerDialogBody({ L }: { L: WordxRuntime }) {
   const adapter = L.dlg as (typeof L.dlg & { reactTemplatePickerCatalog?(): TemplatePickerState; reactTemplatePickerAction?(action: string, id?: string): void }) | undefined;
   const catalog = adapter?.reactTemplatePickerCatalog?.() || { categories: [] };
   const first = catalog.categories.find((category) => category.name === 'General') || catalog.categories[0];
   const [category, setCategory] = useState(first?.name || '');
-  const [selected, setSelected] = useState('blank');
+  const [selected, setSelected] = useState(catalog.selected || 'blank');
   const active = catalog.categories.find((item) => item.name === category) || first;
   const item = active?.items.find((entry) => entry.id === selected) || active?.items[0];
   const id=useId().replaceAll(':','');
@@ -2083,10 +2243,10 @@ function TemplatePickerDialogBody({ L }: { L: WordxRuntime }) {
   const tabId=(name:string)=>`${id}-template-category-${name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()}`;
   const tabKeyDown=(event:KeyboardEvent<HTMLButtonElement>,index:number)=>{
     const next=event.key==='ArrowRight'?(index+1)%catalog.categories.length:event.key==='ArrowLeft'?(index-1+catalog.categories.length)%catalog.categories.length:event.key==='Home'?0:event.key==='End'?catalog.categories.length-1:-1;
-    if(next<0)return;const destination=catalog.categories[next];if(!destination)return;event.preventDefault();setCategory(destination.name);if(destination.items[0])setSelected(destination.items[0].id);event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    if(next<0)return;const destination=catalog.categories[next];if(!destination)return;event.preventDefault();setCategory(destination.name);if(destination.items[0]){setSelected(destination.items[0].id);adapter?.reactTemplatePickerAction?.('select',destination.items[0].id);}event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
   };
   return <div className="row" id="react-wordx-template-picker-body">
-    <div className="col" style={{ flex: 1, minWidth: 240 }}><div className="tabs-head" role="tablist" aria-label={tr(L,'Template categories')}>{catalog.categories.map((item,index) => <button key={item.name} id={tabId(item.name)} type="button" role="tab" aria-controls={panelId} aria-selected={item.name === category} tabIndex={item.name===category?0:-1} className={`tab${item.name === category ? ' on' : ''}`} onClick={() => { setCategory(item.name); if (item.items[0]) setSelected(item.items[0].id); }} onKeyDown={(event)=>tabKeyDown(event,index)}>{tr(L,item.name)}</button>)}</div>
+    <div className="col" style={{ flex: 1, minWidth: 240 }}><div className="tabs-head" role="tablist" aria-label={tr(L,'Template categories')}>{catalog.categories.map((item,index) => <button key={item.name} id={tabId(item.name)} type="button" role="tab" aria-controls={panelId} aria-selected={item.name === category} tabIndex={item.name===category?0:-1} className={`tab${item.name === category ? ' on' : ''}`} onClick={() => { setCategory(item.name); if (item.items[0]) { setSelected(item.items[0].id); adapter?.reactTemplatePickerAction?.('select',item.items[0].id); } }} onKeyDown={(event)=>tabKeyDown(event,index)}>{tr(L,item.name)}</button>)}</div>
       <div className="preset-grid" id={panelId} role="tabpanel" aria-labelledby={tabId(category)}>{(active?.items || []).map((entry) => <button key={entry.id} type="button" className={entry.id === selected ? 'on' : ''} aria-pressed={entry.id === selected} data-template-id={entry.id} onClick={() => { setSelected(entry.id); adapter?.reactTemplatePickerAction?.('select', entry.id); }} onDoubleClick={() => adapter?.reactTemplatePickerAction?.('accept', entry.id)}><span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.get?.('new') || '' }} /><span>{tr(L,entry.name)}</span></button>)}</div>
     </div>
     <div className="col"><div className="cd-cap">{tr(L,'Preview')}</div><div className="preview-box" style={{ width: 150, height: 190 }}><div className="ps-page" style={{ width: 110, height: 140 }}>{Array.from({ length: item?.id === 'blank' ? 0 : 14 }, (_, index) => <i key={index} style={{ top: 14 + index * 8, ...(index % 5 === 4 ? { right: 40 } : {}) }} />)}</div></div></div>
@@ -2112,13 +2272,17 @@ function OrganizerDialogBody({ L }: { L: WordxRuntime }) {
 
 type TemplatesState = { name: string; update: boolean };
 function TemplatesDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactTemplatesCatalog?(): TemplatesState; reactTemplatesAction?(action: string, value?: boolean): Promise<TemplatesState> | TemplatesState }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactTemplatesCatalog?(): TemplatesState; reactTemplatesSet?(value: boolean): void; reactTemplatesAction?(action: string, value?: boolean): Promise<TemplatesState> | TemplatesState }) | undefined;
   const [state, setState] = useState<TemplatesState>(adapter?.reactTemplatesCatalog?.() || { name: 'Normal', update: false });
   const act = async (action: string, value?: boolean) => { const next = await adapter?.reactTemplatesAction?.(action, value); if (next) setState(next); };
+  const setUpdate = (update: boolean) => {
+    setState((current) => ({ ...current, update }));
+    adapter?.reactTemplatesSet?.(update);
+  };
   return <div className="col" id="react-wordx-templates-body">
     <fieldset className="col"><legend>{tr(L, 'Document template')}</legend>
       <label htmlFor="react-wordx-template-name">{tr(L, 'Template:')}<input id="react-wordx-template-name" type="text" value={state.name} readOnly style={{ width: '100%' }} /></label>
-      <label><input id="react-wordx-template-update" type="checkbox" checked={state.update} onChange={(event) => setState((current) => ({ ...current, update: event.currentTarget.checked }))} />{tr(L, 'Automatically update document styles')}</label>
+      <label><input id="react-wordx-template-update" type="checkbox" checked={state.update} onChange={(event) => setUpdate(event.currentTarget.checked)} />{tr(L, 'Automatically update document styles')}</label>
       <div className="tp-btns"><button type="button" className="btn small" onClick={() => { void act('attach', state.update); }}>{tr(L, 'Attach...')}</button><button type="button" className="btn small" onClick={() => { void act('organizer'); }}>{tr(L, 'Organizer...')}</button></div>
     </fieldset>
     <div className="tp-note">{tr(L, 'Attaching a template with "Automatically update document styles" copies its styles into this document.')}</div>
@@ -2127,8 +2291,9 @@ function TemplatesDialogBody({ L }: { L: WordxRuntime }) {
 
 type PropertiesState = { fileName: string; general: Array<[string, string]>; summary: Array<{ key: string; label: string; value: string }>; comments: string; hyperlinkBase: string; template: string; statistics: Array<[string, string | number]>; headings: Array<{ level: number; text: string }>; custom: Array<{ name: string; type: string; value: unknown }> };
 function PropertiesDialogBody({ L }: { L: WordxRuntime }) {
-  const adapter = L.dlg as (typeof L.dlg & { reactPropertiesCatalog?(): PropertiesState; reactPropertiesAction?(action: string, value?: unknown): PropertiesState }) | undefined;
+  const adapter = L.dlg as (typeof L.dlg & { reactPropertiesCatalog?(): PropertiesState; reactPropertiesAction?(action: string, value?: unknown): PropertiesState; reactPropertiesSet?(value: { fields: Array<{ key: string; value: string }>; comments: string; hyperlinkBase: string }): void }) | undefined;
   const [state, setState] = useState<PropertiesState>(adapter?.reactPropertiesCatalog?.() || { fileName: '', general: [], summary: [], comments: '', hyperlinkBase: '', template: 'Normal', statistics: [], headings: [], custom: [] });
+  const [draft, setDraft] = useState({ fields: state.summary.map(({ key, value }) => ({ key, value })), comments: state.comments, hyperlinkBase: state.hyperlinkBase });
   const [tab, setTab] = useState('Summary');
   const id = useId().replaceAll(':', '');
   const [customName, setCustomName] = useState('');
@@ -2139,6 +2304,7 @@ function PropertiesDialogBody({ L }: { L: WordxRuntime }) {
   const tabId = (index: number) => `${id}-properties-tab-${index}`;
   const panelId = `${id}-properties-panel`;
   const custom = (action: string, value?: unknown) => { const next = adapter?.reactPropertiesAction?.(action, value); if (next) setState(next); };
+  const updateDraft = (value: typeof draft) => { setDraft(value); adapter?.reactPropertiesSet?.(value); };
   return <div className="col" id="react-wordx-properties-body"><div role="tablist" aria-label={tr(L, 'Document Properties')} className="tabs-head">{tabs.map((name, index) => <button key={name} id={tabId(index)} type="button" role="tab" aria-controls={panelId} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => setTab(name)} onKeyDown={(event) => {
     const current = tabs.indexOf(name);
     const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
@@ -2152,7 +2318,7 @@ function PropertiesDialogBody({ L }: { L: WordxRuntime }) {
     event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
   }}>{tr(L, name)}</button>)}</div><div id={panelId} aria-labelledby={tabId(Math.max(0, tabs.indexOf(tab)))} role="tabpanel" className="col">
     {tab === 'General' && <><div className="row"><b translate="no">{state.fileName}.docx</b></div><table className="wc-table"><tbody>{state.general.map(([label, value]) => <tr key={label}><td>{tr(L, label)}</td><td translate="no">{value}</td></tr>)}</tbody></table></>}
-    {tab === 'Summary' && <>{state.summary.map((field) => <label key={field.key} htmlFor={`react-wordx-property-${field.key}`}>{tr(L, field.label)}<input id={`react-wordx-property-${field.key}`} type="text" defaultValue={field.value} /></label>)}<label htmlFor="react-wordx-properties-comments">{tr(L, 'Comments:')}<textarea id="react-wordx-properties-comments" rows={3} defaultValue={state.comments} /></label><label htmlFor="react-wordx-properties-hyperlink-base">{tr(L, 'Hyperlink base:')}<input id="react-wordx-properties-hyperlink-base" type="text" defaultValue={state.hyperlinkBase} /></label><div className="tp-note">{L.t?.('Template: {0}', state.template)}</div></>}
+    {tab === 'Summary' && <>{draft.fields.map((field) => <label key={field.key} htmlFor={`react-wordx-property-${field.key}`}>{tr(L, state.summary.find((entry) => entry.key === field.key)?.label || field.key)}<input id={`react-wordx-property-${field.key}`} type="text" value={field.value} onChange={(event) => updateDraft({ ...draft, fields: draft.fields.map((item) => item.key === field.key ? { ...item, value: event.currentTarget.value } : item) })} /></label>)}<label htmlFor="react-wordx-properties-comments">{tr(L, 'Comments:')}<textarea id="react-wordx-properties-comments" rows={3} value={draft.comments} onChange={(event) => updateDraft({ ...draft, comments: event.currentTarget.value })} /></label><label htmlFor="react-wordx-properties-hyperlink-base">{tr(L, 'Hyperlink base:')}<input id="react-wordx-properties-hyperlink-base" type="text" value={draft.hyperlinkBase} onChange={(event) => updateDraft({ ...draft, hyperlinkBase: event.currentTarget.value })} /></label><div className="tp-note">{L.t?.('Template: {0}', state.template)}</div></>}
     {tab === 'Statistics' && <table className="wc-table"><tbody>{state.statistics.map(([label, value], index) => <tr key={`${label}:${index}`}><td>{tr(L, label)}</td><td>{String(value)}</td></tr>)}</tbody></table>}
     {tab === 'Contents' && <><div>{tr(L, 'Document contents:')}</div><div className="tp-box" style={{ maxHeight: 200, overflow: 'auto' }}>{state.headings.length ? state.headings.map((heading, index) => <div key={`${index}:${heading.text}`} translate="no" style={{ paddingLeft: (heading.level - 1) * 12 }}>{heading.text}</div>) : <div>{tr(L, '(no headings)')}</div>}</div></>}
     {tab === 'Custom' && <><label htmlFor="react-wordx-property-custom-name">{tr(L, 'Name:')}<input id="react-wordx-property-custom-name" list="react-wordx-property-custom-names" value={customName} onChange={(event) => setCustomName(event.currentTarget.value)} /></label><datalist id="react-wordx-property-custom-names">{['Checked by','Client','Date completed','Department','Destination','Disposition','Division','Document number','Editor','Forward to','Group','Language','Mailstop','Matter','Office','Owner','Project','Publisher','Purpose','Received from','Recorded by','Recorded date','Reference','Source','Status','Telephone number','Typist'].map((name) => <option key={name} value={name} />)}</datalist><label htmlFor="react-wordx-property-custom-type">{tr(L, 'Type:')}<select id="react-wordx-property-custom-type" value={customType} onChange={(event) => setCustomType(event.currentTarget.value)}>{([['text','Text'],['date','Date'],['number','Number'],['bool','Yes or no']] as Array<[string,string]>).map(([value,label]) => <option key={value} value={value}>{tr(L,label)}</option>)}</select></label><label htmlFor="react-wordx-property-custom-value">{tr(L, 'Value:')}<input id="react-wordx-property-custom-value" type="text" value={customValue} onChange={(event) => setCustomValue(event.currentTarget.value)} /></label><div className="tp-btns"><button type="button" className="btn small" onClick={() => { const next=adapter?.reactPropertiesAction?.('addCustom',{name:customName,type:customType,value:customValue}); if(next) setState(next); setSelectedCustom(customName.trim()); }}>{tr(L, 'Add')}</button><button type="button" className="btn small" onClick={() => { const next=adapter?.reactPropertiesAction?.('deleteCustom',selectedCustom || customName.trim()); if(next) setState(next); setCustomName(''); setCustomValue(''); setSelectedCustom(''); }}>{tr(L, 'Delete')}</button></div><label htmlFor="react-wordx-properties-custom-list">{tr(L, 'Properties:')}</label><select id="react-wordx-properties-custom-list" size={6} value={selectedCustom} onChange={(event) => { const value=event.currentTarget.value, item=state.custom.find((entry) => entry.name===value); setSelectedCustom(value); setCustomName(value); if(item) { setCustomType(item.type); setCustomValue(String(item.value ?? '')); } }}>{state.custom.map((item) => <option key={item.name} value={item.name}>{item.name}: {String(item.value ?? '')}</option>)}</select></>}
@@ -2207,6 +2373,7 @@ function InsertObjectDialogBody({ L }: { L: WordxRuntime }) {
 
 function EquationDialogBody({ L }: { L: WordxRuntime }) {
   const [value, setValue] = useState('');
+  const updateValue = (next: string) => { setValue(next); L.dlg?.reactEquationDraftSet?.(next); };
   const symbols = '±×÷≠≈≤≥∞√∛∑∏∫∂∆∇πθαβγδλμσφωΩ→⇒∈∉⊂⊃∪∩∀∃¬∧∨²³⁴ⁿ₀₁₂ᵢ½';
   const input = useRef<HTMLTextAreaElement>(null);
   const focusFrame = useRef<number | null>(null);
@@ -2216,50 +2383,58 @@ function EquationDialogBody({ L }: { L: WordxRuntime }) {
     const start = node?.selectionStart ?? value.length;
     const end = node?.selectionEnd ?? start;
     const next = value.slice(0, start) + symbol + value.slice(end);
-    setValue(next);
+    updateValue(next);
     if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
     focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; if (!node?.isConnected) return; node.focus(); node.setSelectionRange(start + symbol.length, start + symbol.length); });
   };
   return <div className="col">
     <div className="sym-recent" style={{ gridTemplateColumns: 'repeat(16,26px)' }}>{[...symbols].map((symbol, index) => <button key={`${symbol}-${index}`} type="button" onClick={() => insertSymbol(symbol)}>{symbol}</button>)}</div>
-    <textarea ref={input} rows={3} aria-label={tr(L, 'Equation')} style={{ width: '100%', font: '16px "Cambria Math", Caladea, serif' }} value={value} onChange={(event) => setValue(event.currentTarget.value)} />
+    <textarea ref={input} rows={3} aria-label={tr(L, 'Equation')} style={{ width: '100%', font: '16px "Cambria Math", Caladea, serif' }} value={value} onChange={(event) => updateValue(event.currentTarget.value)} />
     <div className="tp-note">{tr(L, 'Type the equation; it is inserted in Cambria Math italics.')}</div>
   </div>;
 }
 
 function BreakDialogBody({ L }: { L: WordxRuntime }) {
+  const adapter = L.dlg as (typeof L.dlg & { reactBreakSelect?(value: string): void }) | undefined;
   const [selected, setSelected] = useState('page');
   const items = L.dlg?.reactBreakCatalog?.() || [];
-  const group = (title: string, options: typeof items) => <fieldset><legend>{tr(L, title)}</legend>{options.map((item) => <label key={item.value} className="row" style={{ gap: 6 }}><input type="radio" name="react-wordx-break-type" data-break-type={item.value} checked={selected === item.value} onChange={() => setSelected(item.value)} /><span>{item.label}</span></label>)}</fieldset>;
+  const choose = (value: string) => { setSelected(value); adapter?.reactBreakSelect?.(value); };
+  const group = (title: string, options: typeof items) => <fieldset><legend>{tr(L, title)}</legend>{options.map((item) => <label key={item.value} className="row" style={{ gap: 6 }}><input type="radio" name="react-wordx-break-type" data-break-type={item.value} checked={selected === item.value} onChange={() => choose(item.value)} /><span>{item.label}</span></label>)}</fieldset>;
   return <div className="col" role="radiogroup" aria-label={tr(L, 'Break types')}>{group('Break types', items.slice(0, 3))}{group('Section break types', items.slice(3))}</div>;
 }
 
 function DateTimeDialogBody({ L }: { L: WordxRuntime }) {
   const options = L.dlg?.reactDateTimeCatalog?.() || [];
-  const initial = L.dlg?.reactDateTimeState?.();
-  const [format, setFormat] = useState(options.some((option) => option.value === initial?.format) ? initial?.format || options[0]?.value || '' : options[0]?.value || '');
+  const initial = L.dlg?.reactDateTimeDraftState?.();
+  const saved = L.dlg?.reactDateTimeState?.();
+  const initialFormat = initial?.pic || saved?.format;
+  const [format, setFormat] = useState(options.some((option) => option.value === initialFormat) ? initialFormat || options[0]?.value || '' : options[0]?.value || '');
   const [language, setLanguage] = useState('en-US');
-  const [autoUpdate, setAutoUpdate] = useState(initial?.autoUpdate || false);
+  const [autoUpdate, setAutoUpdate] = useState(initial?.autoUpdate ?? saved?.autoUpdate ?? false);
+  const update = (key: string, value: string | boolean) => L.dlg?.reactDateTimeDraftSet?.(key, value);
   return <div className="col">
     <label htmlFor="react-wordx-date-format">{tr(L, 'Available formats:')}</label>
-    <select id="react-wordx-date-format" size={8} value={format} onChange={(event) => setFormat(event.currentTarget.value)}>{options.map((option) => <option key={option.value} value={option.value} translate="no">{option.label}</option>)}</select>
+    <select id="react-wordx-date-format" size={8} value={format} onChange={(event) => { const value=event.currentTarget.value; setFormat(value); update('pic', value); }}>{options.map((option) => <option key={option.value} value={option.value} translate="no">{option.label}</option>)}</select>
     <label htmlFor="react-wordx-date-language">{tr(L, 'Language:')}</label>
     <select id="react-wordx-date-language" value={language} onChange={(event) => setLanguage(event.currentTarget.value)}><option value="en-US">English (U.S.)</option><option value="en-GB">English (U.K.)</option></select>
-    <label><input type="checkbox" checked={autoUpdate} onChange={(event) => setAutoUpdate(event.currentTarget.checked)} />{tr(L, 'Update automatically')}</label>
+    <label><input type="checkbox" checked={autoUpdate} onChange={(event) => { const value=event.currentTarget.checked; setAutoUpdate(value); update('autoUpdate', value); }} />{tr(L, 'Update automatically')}</label>
   </div>;
 }
 
 function PageNumbersDialogBody({ L }: { L: WordxRuntime }) {
-  const [position, setPosition] = useState('bottom');
-  const [alignment, setAlignment] = useState('right');
-  const [showFirst, setShowFirst] = useState(true);
+  const adapter = L.dlg;
+  const initial = adapter?.reactPageNumbersDraftState?.() || { position: 'bottom', alignment: 'right', showFirst: true };
+  const [position, setPosition] = useState(initial.position);
+  const [alignment, setAlignment] = useState(initial.alignment);
+  const [showFirst, setShowFirst] = useState(initial.showFirst);
+  const update = (key: string, value: string | boolean) => adapter?.reactPageNumbersDraftSet?.(key, value);
   const x: Record<string, string> = { left: '8px', right: '8px', center: '36px', inside: '8px', outside: '8px' };
   const alignments: Array<[string, string]> = [['right','Right'],['left','Left'],['center','Center'],['inside','Inside'],['outside','Outside']];
   return <div className="row">
     <div className="col">
-      <label htmlFor="react-wordx-page-position">{tr(L, 'Position:')}</label><select id="react-wordx-page-position" value={position} onChange={(event) => setPosition(event.currentTarget.value)}><option value="bottom">{tr(L, 'Bottom of page (Footer)')}</option><option value="top">{tr(L, 'Top of page (Header)')}</option></select>
-      <label htmlFor="react-wordx-page-alignment">{tr(L, 'Alignment:')}</label><select id="react-wordx-page-alignment" value={alignment} onChange={(event) => setAlignment(event.currentTarget.value)}>{alignments.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select>
-      <label><input type="checkbox" checked={showFirst} onChange={(event) => setShowFirst(event.currentTarget.checked)} />{tr(L, 'Show number on first page')}</label>
+      <label htmlFor="react-wordx-page-position">{tr(L, 'Position:')}</label><select id="react-wordx-page-position" value={position} onChange={(event) => { const value=event.currentTarget.value; setPosition(value); update('position', value); }}><option value="bottom">{tr(L, 'Bottom of page (Footer)')}</option><option value="top">{tr(L, 'Top of page (Header)')}</option></select>
+      <label htmlFor="react-wordx-page-alignment">{tr(L, 'Alignment:')}</label><select id="react-wordx-page-alignment" value={alignment} onChange={(event) => { const value=event.currentTarget.value; setAlignment(value); update('alignment', value); }}>{alignments.map(([value,label])=><option key={value} value={value}>{tr(L,label)}</option>)}</select>
+      <label><input type="checkbox" checked={showFirst} onChange={(event) => { const value=event.currentTarget.checked; setShowFirst(value); update('showFirst', value); }} />{tr(L, 'Show number on first page')}</label>
     </div>
     <div className="col"><div className="cd-cap">{tr(L, 'Preview')}</div><div className="ps-page" style={{ width: 80, height: 104, margin: '4px auto' }}><span data-page-number-preview="" style={{ position: 'absolute', ...(position === 'top' ? { top: 6 } : { bottom: 6 }), ...(alignment === 'center' ? { left: 36 } : alignment === 'left' ? { left: 8 } : { right: x[alignment] }), width: 8, height: 8, border: '1px solid #000', background: '#fff' }} /></div></div>
   </div>;
@@ -2267,23 +2442,26 @@ function PageNumbersDialogBody({ L }: { L: WordxRuntime }) {
 
 function PageNumberFormatDialogBody({ L }: { L: WordxRuntime }) {
   const options = L.dlg?.reactPageNumberFormatCatalog?.() || [];
-  const initial = L.dlg?.reactPageNumberFormatState?.();
-  const [format, setFormat] = useState(initial?.fmt || 'decimal');
-  const [chapter, setChapter] = useState(initial?.chapter || false);
-  const [mode, setMode] = useState(initial?.mode || 'cont');
-  const [start, setStart] = useState(initial?.start || 1);
+  const initial = L.dlg?.reactPageNumberFormatDraftState?.() || { format: 'decimal', chapter: false, mode: 'cont', start: 1 };
+  const [format, setFormat] = useState(initial.format);
+  const [chapter, setChapter] = useState(initial.chapter);
+  const [mode, setMode] = useState(initial.mode);
+  const [start, setStart] = useState(initial.start);
+  const update = (key: string, value: string | number | boolean) => L.dlg?.reactPageNumberFormatDraftSet?.(key, value);
   return <div className="col">
-    <label htmlFor="react-wordx-page-number-format">{tr(L, 'Number format:')}</label><select id="react-wordx-page-number-format" value={format} onChange={(event) => setFormat(event.currentTarget.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
-    <label><input type="checkbox" checked={chapter} onChange={(event) => setChapter(event.currentTarget.checked)} />{tr(L, 'Include chapter number')}</label>
-    <fieldset><legend>{tr(L, 'Page numbering')}</legend><label><input type="radio" name="react-wordx-page-number-mode" data-page-number-mode="cont" checked={mode === 'cont'} onChange={() => setMode('cont')} />{tr(L, 'Continue from previous section')}</label><label><input type="radio" name="react-wordx-page-number-mode" data-page-number-mode="start" checked={mode === 'start'} onChange={() => setMode('start')} />{tr(L, 'Start at:')} <input id="react-wordx-page-number-start" type="number" min={0} value={start} onChange={(event) => setStart(Number(event.currentTarget.value))} /></label></fieldset>
+    <label htmlFor="react-wordx-page-number-format">{tr(L, 'Number format:')}</label><select id="react-wordx-page-number-format" value={format} onChange={(event) => { const value=event.currentTarget.value; setFormat(value); update('format', value); }}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+    <label><input type="checkbox" checked={chapter} onChange={(event) => { const value=event.currentTarget.checked; setChapter(value); update('chapter', value); }} />{tr(L, 'Include chapter number')}</label>
+    <fieldset><legend>{tr(L, 'Page numbering')}</legend><label><input type="radio" name="react-wordx-page-number-mode" data-page-number-mode="cont" checked={mode === 'cont'} onChange={() => { setMode('cont'); update('mode', 'cont'); }} />{tr(L, 'Continue from previous section')}</label><label><input type="radio" name="react-wordx-page-number-mode" data-page-number-mode="start" checked={mode === 'start'} onChange={() => { setMode('start'); update('mode', 'start'); }} />{tr(L, 'Start at:')} <input id="react-wordx-page-number-start" type="number" min={0} value={start} onChange={(event) => { const value=Number(event.currentTarget.value); setStart(value); update('start', value); }} /></label></fieldset>
   </div>;
 }
 
 function CellOperationDialogBody({ L }: { L: WordxRuntime }) {
   const kind = L.dlg?.reactCellDialogKind || 'insert';
   const options = L.dlg?.reactCellDialogCatalog?.(kind) || [];
-  const [selected, setSelected] = useState(kind === 'insert' ? 'down' : 'left');
-  return <fieldset><legend>{tr(L, kind === 'insert' ? 'Insert cells' : 'Delete cells')}</legend>{options.map(([value, label]) => <label key={value} className="row" style={{ gap: 6 }}><input type="radio" name="react-wordx-cell-operation" data-cell-operation={value} checked={selected === value} onChange={() => setSelected(value)} /><span>{tr(L, label)}</span></label>)}</fieldset>;
+  const initial = kind === 'insert' ? 'down' : 'left';
+  const [selected, setSelected] = useState(L.dlg?.reactCellDialogDraft || initial);
+  const choose = (value: string) => { setSelected(value); L.dlg?.reactCellDialogDraftSet?.(value); };
+  return <fieldset><legend>{tr(L, kind === 'insert' ? 'Insert cells' : 'Delete cells')}</legend>{options.map(([value, label]) => <label key={value} className="row" style={{ gap: 6 }}><input type="radio" name="react-wordx-cell-operation" data-cell-operation={value} checked={selected === value} onChange={() => choose(value)} onClick={() => choose(value)} /><span>{tr(L, label)}</span></label>)}</fieldset>;
 }
 
 function InsertTableDialogBody({ L }: { L: WordxRuntime }) {
@@ -2294,16 +2472,17 @@ function InsertTableDialogBody({ L }: { L: WordxRuntime }) {
   const [width, setWidth] = useState('');
   const [remember, setRemember] = useState(false);
   const [style, setStyle] = useState('Table Grid');
+  const updateDraft = (key: 'columns' | 'rows' | 'fit' | 'width' | 'remember', value: number | string | boolean) => L.dlg?.reactInsertTableDraftSet?.(key, value);
   useEffect(() => {
     const onStyle = (event: Event) => setStyle((event as CustomEvent<{ name: string }>).detail.name);
     window.addEventListener('wordx-insert-table-style', onStyle);
     return () => window.removeEventListener('wordx-insert-table-style', onStyle);
   }, []);
   return <div className="col">
-    <fieldset><legend>{tr(L, 'Table size')}</legend><label>{tr(L, 'Number of columns:')} <input id="react-wordx-table-columns" type="number" min={1} max={63} value={columns} onChange={(event) => setColumns(Number(event.currentTarget.value))} /></label><label>{tr(L, 'Number of rows:')} <input id="react-wordx-table-rows" type="number" min={1} max={32767} value={rows} onChange={(event) => setRows(Number(event.currentTarget.value))} /></label></fieldset>
-    <fieldset><legend>{tr(L, 'AutoFit behavior')}</legend><label><input type="radio" name="react-wordx-table-fit" data-table-fit="fixed" checked={fit === 'fixed'} onChange={() => setFit('fixed')} />{tr(L, 'Fixed column width:')} <input id="react-wordx-table-width" type="text" value={width} onChange={(event) => setWidth(event.currentTarget.value)} /></label><label><input type="radio" name="react-wordx-table-fit" data-table-fit="contents" checked={fit === 'contents'} onChange={() => setFit('contents')} />{tr(L, 'AutoFit to contents')}</label><label><input type="radio" name="react-wordx-table-fit" data-table-fit="window" checked={fit === 'window'} onChange={() => setFit('window')} />{tr(L, 'AutoFit to window')}</label></fieldset>
+    <fieldset><legend>{tr(L, 'Table size')}</legend><label>{tr(L, 'Number of columns:')} <input id="react-wordx-table-columns" type="number" min={1} max={63} value={columns} onChange={(event) => { const value=Number(event.currentTarget.value); setColumns(value); updateDraft('columns', value); }} /></label><label>{tr(L, 'Number of rows:')} <input id="react-wordx-table-rows" type="number" min={1} max={32767} value={rows} onChange={(event) => { const value=Number(event.currentTarget.value); setRows(value); updateDraft('rows', value); }} /></label></fieldset>
+    <fieldset><legend>{tr(L, 'AutoFit behavior')}</legend><label><input type="radio" name="react-wordx-table-fit" data-table-fit="fixed" checked={fit === 'fixed'} onChange={() => { setFit('fixed'); updateDraft('fit', 'fixed'); }} />{tr(L, 'Fixed column width:')} <input id="react-wordx-table-width" type="text" value={width} onChange={(event) => { const value=event.currentTarget.value; setWidth(value); updateDraft('width', value); }} /></label><label><input type="radio" name="react-wordx-table-fit" data-table-fit="contents" checked={fit === 'contents'} onChange={() => { setFit('contents'); updateDraft('fit', 'contents'); }} />{tr(L, 'AutoFit to contents')}</label><label><input type="radio" name="react-wordx-table-fit" data-table-fit="window" checked={fit === 'window'} onChange={() => { setFit('window'); updateDraft('fit', 'window'); }} />{tr(L, 'AutoFit to window')}</label></fieldset>
     <div className="row"><span className="tp-note">{L.t?.('Table style: {0}', style) || `Table style: ${style}`}</span><button className="btn small" type="button" onClick={() => L.dlg?.reactInsertTableAction?.('autoFormat')}>{tr(L, 'AutoFormat...')}</button></div>
-    <label><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.currentTarget.checked)} />{tr(L, 'Remember dimensions for new tables')}</label>
+    <label><input type="checkbox" checked={remember} onChange={(event) => { const value=event.currentTarget.checked; setRemember(value); updateDraft('remember', value); }} />{tr(L, 'Remember dimensions for new tables')}</label>
   </div>;
 }
 
@@ -2312,10 +2491,11 @@ function SplitCellsDialogBody({ L }: { L: WordxRuntime }) {
   const [columns, setColumns] = useState(initial.columns);
   const [rows, setRows] = useState(initial.rows);
   const [merge, setMerge] = useState(initial.merge);
+  const update = (key: 'columns' | 'rows' | 'merge', value: number | boolean) => L.dlg?.reactSplitCellsDraftSet?.(key, value);
   return <div className="col">
-    <label>{tr(L, 'Number of columns:')} <input id="react-wordx-split-columns" type="number" min={1} max={63} value={columns} onChange={(event) => setColumns(Number(event.currentTarget.value))} /></label>
-    <label>{tr(L, 'Number of rows:')} <input id="react-wordx-split-rows" type="number" min={1} max={100} value={rows} onChange={(event) => setRows(Number(event.currentTarget.value))} /></label>
-    <label><input type="checkbox" checked={merge} onChange={(event) => setMerge(event.currentTarget.checked)} />{tr(L, 'Merge cells before split')}</label>
+    <label>{tr(L, 'Number of columns:')} <input id="react-wordx-split-columns" type="number" min={1} max={63} value={columns} onChange={(event) => { const value=Number(event.currentTarget.value); setColumns(value); update('columns', value); }} /></label>
+    <label>{tr(L, 'Number of rows:')} <input id="react-wordx-split-rows" type="number" min={1} max={100} value={rows} onChange={(event) => { const value=Number(event.currentTarget.value); setRows(value); update('rows', value); }} /></label>
+    <label><input type="checkbox" checked={merge} onChange={(event) => { const value=event.currentTarget.checked; setMerge(value); update('merge', value); }} />{tr(L, 'Merge cells before split')}</label>
   </div>;
 }
 
@@ -2325,25 +2505,37 @@ function TextToTableDialogBody({ L }: { L: WordxRuntime }) {
   const [custom, setCustom] = useState('-');
   const [columns, setColumns] = useState(source.columns);
   const [fit, setFit] = useState('fixed');
+  const adapter = L.dlg as (typeof L.dlg & { reactTextToTableDraftSet?(options: { sep: string; cols: number; autofit: string }): void }) | undefined;
   const paragraphs = source.paragraphs;
-  const columnCount = (kind: string) => Math.max(1, ...paragraphs.map((paragraph) => kind === 'tabs' ? paragraph.tabs + 1 : (paragraph.text.split(kind === 'commas' ? ',' : custom || '-').length)));
-  useEffect(() => { setColumns(separator === 'paragraphs' ? 1 : columnCount(separator)); }, [separator, custom]);
+  const columnCount = (kind: string, separatorChar = custom) => Math.max(1, ...paragraphs.map((paragraph) => kind === 'tabs' ? paragraph.tabs + 1 : paragraph.text.split(kind === 'commas' ? ',' : separatorChar || '-').length));
+  const updateDraft = (kind: string, customValue: string, columnCountValue: number, fitValue: string) => {
+    const sep = kind === 'paragraphs' ? 'para' : kind === 'commas' ? ',' : kind === 'tabs' ? '\t' : customValue || '-';
+    adapter?.reactTextToTableDraftSet?.({ sep, cols: columnCountValue, autofit: fitValue });
+  };
+  const chooseSeparator = (kind: string) => { const count = kind === 'paragraphs' ? 1 : columnCount(kind); setSeparator(kind); setColumns(count); updateDraft(kind, custom, count, fit); };
+  const changeCustom = (value: string) => { const count = separator === 'other' ? columnCount(separator, value) : columns; setCustom(value); if (separator === 'other') setColumns(count); updateDraft(separator, value, count, fit); };
+  const changeColumns = (value: number) => { setColumns(value); updateDraft(separator, custom, value, fit); };
+  const changeFit = (value: string) => { setFit(value); updateDraft(separator, custom, columns, value); };
   const rows = separator === 'paragraphs' ? Math.ceil(paragraphs.length / Math.max(1, columns)) : paragraphs.length;
   return <div className="col">
-    <fieldset><legend>{tr(L, 'Table size')}</legend><label>{tr(L, 'Number of columns:')} <input id="react-wordx-text-table-columns" type="number" min={1} max={63} value={columns} onChange={(event) => setColumns(Number(event.currentTarget.value))} /></label><label>{tr(L, 'Number of rows:')} <output>{rows}</output></label></fieldset>
-    <fieldset><legend>{tr(L, 'AutoFit behavior')}</legend><label><input type="radio" name="react-wordx-text-table-fit" data-text-fit="fixed" checked={fit === 'fixed'} onChange={() => setFit('fixed')} />{tr(L, 'Fixed column width')}</label><label><input type="radio" name="react-wordx-text-table-fit" data-text-fit="contents" checked={fit === 'contents'} onChange={() => setFit('contents')} />{tr(L, 'AutoFit to contents')}</label><label><input type="radio" name="react-wordx-text-table-fit" data-text-fit="window" checked={fit === 'window'} onChange={() => setFit('window')} />{tr(L, 'AutoFit to window')}</label></fieldset>
-    <fieldset><legend>{tr(L, 'Separate text at')}</legend><label><input type="radio" name="react-wordx-text-separator" data-text-separator="paragraphs" checked={separator === 'paragraphs'} onChange={() => setSeparator('paragraphs')} />{tr(L, 'Paragraphs')}</label><label><input type="radio" name="react-wordx-text-separator" data-text-separator="commas" checked={separator === 'commas'} onChange={() => setSeparator('commas')} />{tr(L, 'Commas')}</label><label><input type="radio" name="react-wordx-text-separator" data-text-separator="tabs" checked={separator === 'tabs'} onChange={() => setSeparator('tabs')} />{tr(L, 'Tabs')}</label><label><input type="radio" name="react-wordx-text-separator" data-text-separator="other" checked={separator === 'other'} onChange={() => setSeparator('other')} />{tr(L, 'Other:')} <input id="react-wordx-text-separator" type="text" maxLength={1} value={custom} onChange={(event) => setCustom(event.currentTarget.value)} /></label></fieldset>
+    <fieldset><legend>{tr(L, 'Table size')}</legend><label>{tr(L, 'Number of columns:')} <input id="react-wordx-text-table-columns" type="number" min={1} max={63} value={columns} onChange={(event) => changeColumns(Number(event.currentTarget.value))} /></label><label>{tr(L, 'Number of rows:')} <output>{rows}</output></label></fieldset>
+    <fieldset><legend>{tr(L, 'AutoFit behavior')}</legend><label><input type="radio" name="react-wordx-text-table-fit" data-text-fit="fixed" checked={fit === 'fixed'} onChange={() => changeFit('fixed')} />{tr(L, 'Fixed column width')}</label><label><input type="radio" name="react-wordx-text-table-fit" data-text-fit="contents" checked={fit === 'contents'} onChange={() => changeFit('contents')} />{tr(L, 'AutoFit to contents')}</label><label><input type="radio" name="react-wordx-text-table-fit" data-text-fit="window" checked={fit === 'window'} onChange={() => changeFit('window')} />{tr(L, 'AutoFit to window')}</label></fieldset>
+    <fieldset><legend>{tr(L, 'Separate text at')}</legend><label><input type="radio" name="react-wordx-text-separator" data-text-separator="paragraphs" checked={separator === 'paragraphs'} onChange={() => chooseSeparator('paragraphs')} />{tr(L, 'Paragraphs')}</label><label><input type="radio" name="react-wordx-text-separator" data-text-separator="commas" checked={separator === 'commas'} onChange={() => chooseSeparator('commas')} />{tr(L, 'Commas')}</label><label><input type="radio" name="react-wordx-text-separator" data-text-separator="tabs" checked={separator === 'tabs'} onChange={() => chooseSeparator('tabs')} />{tr(L, 'Tabs')}</label><label><input type="radio" name="react-wordx-text-separator" data-text-separator="other" checked={separator === 'other'} onChange={() => chooseSeparator('other')} />{tr(L, 'Other:')} <input id="react-wordx-text-separator" type="text" maxLength={1} value={custom} onChange={(event) => changeCustom(event.currentTarget.value)} /></label></fieldset>
   </div>;
 }
 
 function TableToTextDialogBody({ L }: { L: WordxRuntime }) {
+  const adapter = L.dlg as (typeof L.dlg & { reactTableToTextDraftSet?(key: string, value: string): void }) | undefined;
   const [separator, setSeparator] = useState('\t');
   const [custom, setCustom] = useState('-');
-  return <fieldset><legend>{tr(L, 'Separate text with')}</legend><label><input type="radio" name="react-wordx-table-text-separator" data-table-text-separator="para" checked={separator === 'para'} onChange={() => setSeparator('para')} />{tr(L, 'Paragraph marks')}</label><label><input type="radio" name="react-wordx-table-text-separator" data-table-text-separator="tabs" checked={separator === '\t'} onChange={() => setSeparator('\t')} />{tr(L, 'Tabs')}</label><label><input type="radio" name="react-wordx-table-text-separator" data-table-text-separator="commas" checked={separator === ','} onChange={() => setSeparator(',')} />{tr(L, 'Commas')}</label><label><input type="radio" name="react-wordx-table-text-separator" data-table-text-separator="other" checked={separator === 'other'} onChange={() => setSeparator('other')} />{tr(L, 'Other:')} <input id="react-wordx-table-text-separator" type="text" maxLength={1} value={custom} onChange={(event) => setCustom(event.currentTarget.value)} /></label></fieldset>;
+  const choose = (value: string) => { setSeparator(value); adapter?.reactTableToTextDraftSet?.('separator', value); };
+  const changeCustom = (value: string) => { setCustom(value); adapter?.reactTableToTextDraftSet?.('custom', value); };
+  return <fieldset><legend>{tr(L, 'Separate text with')}</legend><label><input type="radio" name="react-wordx-table-text-separator" data-table-text-separator="para" checked={separator === 'para'} onChange={() => choose('para')} />{tr(L, 'Paragraph marks')}</label><label><input type="radio" name="react-wordx-table-text-separator" data-table-text-separator="tabs" checked={separator === '\t'} onChange={() => choose('\t')} />{tr(L, 'Tabs')}</label><label><input type="radio" name="react-wordx-table-text-separator" data-table-text-separator="commas" checked={separator === ','} onChange={() => choose(',')} />{tr(L, 'Commas')}</label><label><input type="radio" name="react-wordx-table-text-separator" data-table-text-separator="other" checked={separator === 'other'} onChange={() => choose('other')} />{tr(L, 'Other:')} <input id="react-wordx-table-text-separator" type="text" maxLength={1} value={custom} onChange={(event) => changeCustom(event.currentTarget.value)} /></label></fieldset>;
 }
 
 function FormulaDialogBody({ L }: { L: WordxRuntime }) {
   const catalog = L.dlg?.reactFormulaCatalog?.() || { guess: '=', functions: [], bookmarks: [], formats: [] };
+  const adapter = L.dlg as (typeof L.dlg & { reactFormulaDraftSet?(key: string, value: string): void }) | undefined;
   const [formula, setFormula] = useState(catalog.guess);
   const [format, setFormat] = useState('');
   const [selectedFunction, setSelectedFunction] = useState('');
@@ -2351,61 +2543,66 @@ function FormulaDialogBody({ L }: { L: WordxRuntime }) {
   const input = useRef<HTMLInputElement>(null);
   const focusFrame = useRef<number | null>(null);
   useEffect(() => () => { if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); }, []);
+  const updateFormula = (value: string) => { setFormula(value); adapter?.reactFormulaDraftSet?.('formula', value); };
+  const updateFormat = (value: string) => { setFormat(value); adapter?.reactFormulaDraftSet?.('format', value); };
   const addFunction = (name: string) => {
     if (!name) return;
     const node = input.current;
     const start = node?.selectionStart ?? formula.length;
     const end = node?.selectionEnd ?? start;
     const next = formula.slice(0, start) + `${name}()` + formula.slice(end);
-    setFormula(next);
+    updateFormula(next);
     setSelectedFunction('');
     if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
     focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; if (!node?.isConnected) return; node.focus(); node.setSelectionRange(start + name.length + 1, start + name.length + 1); });
   };
-  const addBookmark = (name: string) => { if (name) setFormula((current) => current + name); setBookmark(''); input.current?.focus(); };
+  const addBookmark = (name: string) => { if (name) updateFormula(formula + name); setBookmark(''); input.current?.focus(); };
   return <div className="col">
-    <label htmlFor="react-wordx-formula-input">{tr(L, 'Formula:')}</label><input ref={input} id="react-wordx-formula-input" type="text" value={formula} onChange={(event) => setFormula(event.currentTarget.value)} />
-    <label htmlFor="react-wordx-formula-format">{tr(L, 'Number format:')}</label><input id="react-wordx-formula-format" type="text" list="react-wordx-formula-formats" value={format} onChange={(event) => setFormat(event.currentTarget.value)} /><datalist id="react-wordx-formula-formats">{catalog.formats.map((item) => <option key={item} value={item} />)}</datalist>
+    <label htmlFor="react-wordx-formula-input">{tr(L, 'Formula:')}</label><input ref={input} id="react-wordx-formula-input" type="text" value={formula} onChange={(event) => updateFormula(event.currentTarget.value)} />
+    <label htmlFor="react-wordx-formula-format">{tr(L, 'Number format:')}</label><input id="react-wordx-formula-format" type="text" list="react-wordx-formula-formats" value={format} onChange={(event) => updateFormat(event.currentTarget.value)} /><datalist id="react-wordx-formula-formats">{catalog.formats.map((item) => <option key={item} value={item} />)}</datalist>
     <div className="row"><select aria-label={tr(L, 'Paste function')} value={selectedFunction} onChange={(event) => addFunction(event.currentTarget.value)}><option value="">{tr(L, 'Paste function')}</option>{catalog.functions.map((name) => <option key={name} value={name} translate="no">{name}</option>)}</select><select aria-label={tr(L, 'Paste bookmark')} value={bookmark} onChange={(event) => addBookmark(event.currentTarget.value)}><option value="">{tr(L, 'Paste bookmark')}</option>{catalog.bookmarks.map((name) => <option key={name} value={name} translate="no">{name}</option>)}</select></div>
   </div>;
 }
 
 function CrossReferenceDialogBody({ L }: { L: WordxRuntime }) {
+  const adapter = L.dlg as (typeof L.dlg & { reactCrossRefDraftSet?(draft: { type: string; index: number; reference: string; hyperlink: boolean; aboveBelow: boolean }): void }) | undefined;
+  const initialCatalog = adapter?.reactCrossRefCatalog?.('Heading') || { types: [], references: [], items: [] };
   const [type, setType] = useState('Heading');
-  const [reference, setReference] = useState('text');
-  const [item, setItem] = useState('0');
+  const [reference, setReference] = useState(initialCatalog.references[0]?.value || 'text');
+  const [item, setItem] = useState(initialCatalog.items[0]?.value || '0');
   const [hyperlink, setHyperlink] = useState(true);
   const [aboveBelow, setAboveBelow] = useState(false);
-  const catalog = L.dlg?.reactCrossRefCatalog?.(type) || { types: [], references: [], items: [] };
-  useEffect(() => {
-    setReference(catalog.references[0]?.value || '');
-    setItem(catalog.items[0]?.value || '');
-  }, [type]);
+  const catalog = adapter?.reactCrossRefCatalog?.(type) || { types: [], references: [], items: [] };
+  const update = (draft: { type: string; reference: string; item: string; hyperlink: boolean; aboveBelow: boolean }) => adapter?.reactCrossRefDraftSet?.({ ...draft, index: Number(draft.item) || 0 });
+  const chooseType = (value: string) => { const next=adapter?.reactCrossRefCatalog?.(value) || { references: [], items: [] }; const nextReference=next.references[0]?.value || ''; const nextItem=next.items[0]?.value || '0'; setType(value); setReference(nextReference); setItem(nextItem); update({ type: value, reference: nextReference, item: nextItem, hyperlink, aboveBelow }); };
   return <div className="col">
-    <div className="row"><label>{tr(L, 'Reference type:')} <select id="react-wordx-cross-reference-type" value={type} onChange={(event) => setType(event.currentTarget.value)}>{catalog.types.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}</select></label><label>{tr(L, 'Insert reference to:')} <select id="react-wordx-cross-reference-reference" value={reference} onChange={(event) => setReference(event.currentTarget.value)}>{catalog.references.map((entry) => <option key={entry.value} value={entry.value}>{tr(L, entry.label)}</option>)}</select></label></div>
-    <div className="row"><label><input id="react-wordx-cross-reference-link" type="checkbox" checked={hyperlink} onChange={(event) => setHyperlink(event.currentTarget.checked)} />{tr(L, 'Insert as hyperlink')}</label><label><input id="react-wordx-cross-reference-above-below" type="checkbox" checked={aboveBelow} onChange={(event) => setAboveBelow(event.currentTarget.checked)} />{tr(L, 'Include above/below')}</label></div>
-    <label htmlFor="react-wordx-cross-reference-items">{tr(L, 'For which item:')}</label><select id="react-wordx-cross-reference-items" size={8} value={item} onChange={(event) => setItem(event.currentTarget.value)}>{catalog.items.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}</select>
+    <div className="row"><label>{tr(L, 'Reference type:')} <select id="react-wordx-cross-reference-type" value={type} onChange={(event) => chooseType(event.currentTarget.value)}>{catalog.types.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}</select></label><label>{tr(L, 'Insert reference to:')} <select id="react-wordx-cross-reference-reference" value={reference} onChange={(event) => { const value=event.currentTarget.value; setReference(value); update({type,reference:value,item,hyperlink,aboveBelow}); }}>{catalog.references.map((entry) => <option key={entry.value} value={entry.value}>{tr(L, entry.label)}</option>)}</select></label></div>
+    <div className="row"><label><input id="react-wordx-cross-reference-link" type="checkbox" checked={hyperlink} onChange={(event) => { const value=event.currentTarget.checked; setHyperlink(value); update({type,reference,item,hyperlink:value,aboveBelow}); }} />{tr(L, 'Insert as hyperlink')}</label><label><input id="react-wordx-cross-reference-above-below" type="checkbox" checked={aboveBelow} onChange={(event) => { const value=event.currentTarget.checked; setAboveBelow(value); update({type,reference,item,hyperlink,aboveBelow:value}); }} />{tr(L, 'Include above/below')}</label></div>
+    <label htmlFor="react-wordx-cross-reference-items">{tr(L, 'For which item:')}</label><select id="react-wordx-cross-reference-items" size={8} value={item} onChange={(event) => { const value=event.currentTarget.value; setItem(value); update({type,reference,item:value,hyperlink,aboveBelow}); }}>{catalog.items.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}</select>
   </div>;
 }
 
 function MarkEntryDialogBody({ L }: { L: WordxRuntime }) {
   const initial = L.dlg?.reactMarkEntryState?.() || { main: '', sub: '', option: 'cur', xref: 'See ', bold: false, italic: false };
+  const adapter = L.dlg as (typeof L.dlg & { reactMarkEntryDraftSet?(draft: Partial<typeof initial>): void }) | undefined;
   const [main, setMain] = useState(initial.main);
   const [sub, setSub] = useState(initial.sub);
   const [option, setOption] = useState(initial.option);
   const [xref, setXref] = useState(initial.xref);
   const [bold, setBold] = useState(initial.bold);
   const [italic, setItalic] = useState(initial.italic);
+  const update = (draft: Partial<typeof initial>) => adapter?.reactMarkEntryDraftSet?.(draft);
   return <div className="col">
-    <label htmlFor="react-wordx-mark-main">{tr(L, 'Main entry:')}</label><input id="react-wordx-mark-main" type="text" value={main} onChange={(event) => setMain(event.currentTarget.value)} />
-    <label htmlFor="react-wordx-mark-sub">{tr(L, 'Subentry:')}</label><input id="react-wordx-mark-sub" type="text" value={sub} onChange={(event) => setSub(event.currentTarget.value)} />
-    <fieldset><legend>{tr(L, 'Options')}</legend><label><input type="radio" name="react-wordx-mark-option" value="cur" checked={option === 'cur'} onChange={() => setOption('cur')} />{tr(L, 'Current page')}</label><label><input type="radio" name="react-wordx-mark-option" value="xref" checked={option === 'xref'} onChange={() => setOption('xref')} />{tr(L, 'Cross-reference:')} <input id="react-wordx-mark-xref" type="text" value={xref} onChange={(event) => setXref(event.currentTarget.value)} /></label></fieldset>
-    <fieldset><legend>{tr(L, 'Page number format')}</legend><label><input id="react-wordx-mark-bold" type="checkbox" checked={bold} onChange={(event) => setBold(event.currentTarget.checked)} />{tr(L, 'Bold')}</label><label><input id="react-wordx-mark-italic" type="checkbox" checked={italic} onChange={(event) => setItalic(event.currentTarget.checked)} />{tr(L, 'Italic')}</label></fieldset>
+    <label htmlFor="react-wordx-mark-main">{tr(L, 'Main entry:')}</label><input id="react-wordx-mark-main" type="text" value={main} onChange={(event) => { const value=event.currentTarget.value; setMain(value); update({ main:value }); }} />
+    <label htmlFor="react-wordx-mark-sub">{tr(L, 'Subentry:')}</label><input id="react-wordx-mark-sub" type="text" value={sub} onChange={(event) => { const value=event.currentTarget.value; setSub(value); update({ sub:value }); }} />
+    <fieldset><legend>{tr(L, 'Options')}</legend><label><input type="radio" name="react-wordx-mark-option" value="cur" checked={option === 'cur'} onChange={() => { setOption('cur'); update({ option:'cur' }); }} />{tr(L, 'Current page')}</label><label><input type="radio" name="react-wordx-mark-option" value="xref" checked={option === 'xref'} onChange={() => { setOption('xref'); update({ option:'xref' }); }} />{tr(L, 'Cross-reference:')} <input id="react-wordx-mark-xref" type="text" value={xref} onChange={(event) => { const value=event.currentTarget.value; setXref(value); update({ xref:value }); }} /></label></fieldset>
+    <fieldset><legend>{tr(L, 'Page number format')}</legend><label><input id="react-wordx-mark-bold" type="checkbox" checked={bold} onChange={(event) => { const value=event.currentTarget.checked; setBold(value); update({ bold:value }); }} />{tr(L, 'Bold')}</label><label><input id="react-wordx-mark-italic" type="checkbox" checked={italic} onChange={(event) => { const value=event.currentTarget.checked; setItalic(value); update({ italic:value }); }} />{tr(L, 'Italic')}</label></fieldset>
   </div>;
 }
 
 type FieldDialogAdapter = {
   reactFieldState?(): { code: string; type: string; editing: boolean; format: string; datePicture: string; keep: boolean };
+  reactFieldDraftSet?(draft: Partial<{ code: string; format: string; datePicture: string; keep: boolean }>): void;
   reactFieldCatalog?(category?: string): { categories: Array<{ value: string; label: string }>; names: Array<{ value: string; label: string }>; formats: Array<{ value: string; label: string }>; datePictures: Array<{ value: string; label: string }> };
   reactFieldDescription?(name: string): string;
   reactFieldPreview?(code: string, format: string, datePicture: string, keep: boolean): string;
@@ -2422,31 +2619,37 @@ function FieldDialogBody({ L }: { L: WordxRuntime }) {
   const [datePicture, setDatePicture] = useState(initial.datePicture);
   const [keep, setKeep] = useState(initial.keep);
   const [description, setDescription] = useState(adapter?.reactFieldDescription?.(initial.type) || '');
+  const updateDraft = (draft: Partial<{ code: string; format: string; datePicture: string; keep: boolean }>) => adapter?.reactFieldDraftSet?.(draft);
   const catalog = adapter?.reactFieldCatalog?.(category) || { categories: [], names: [], formats: [], datePictures: [] };
   const preview = adapter?.reactFieldPreview?.(code, format, datePicture, keep) || '';
   return <div className="row">
     <div className="col" style={{ width: 190 }}>
       <label htmlFor="react-wordx-field-category">{tr(L, 'Categories:')}</label><select id="react-wordx-field-category" value={category} onChange={(event) => setCategory(event.currentTarget.value)}>{catalog.categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-      <label htmlFor="react-wordx-field-name">{tr(L, 'Field names:')}</label><select id="react-wordx-field-name" size={12} value={name} onChange={(event) => { const next = event.currentTarget.value; setName(next); setCode(next === '=' ? '= ' : next + ' '); setDescription(adapter?.reactFieldDescription?.(next) || ''); }}>{catalog.names.map((item) => <option key={item.value} value={item.value} translate="no">{item.label}</option>)}</select>
+      <label htmlFor="react-wordx-field-name">{tr(L, 'Field names:')}</label><select id="react-wordx-field-name" size={12} value={name} onChange={(event) => { const next = event.currentTarget.value; const value = next === '=' ? '= ' : next + ' '; setName(next); setCode(value); updateDraft({ code: value }); setDescription(adapter?.reactFieldDescription?.(next) || ''); }}>{catalog.names.map((item) => <option key={item.value} value={item.value} translate="no">{item.label}</option>)}</select>
     </div>
     <div className="col" style={{ flex: 1, minWidth: 220 }}>
-      <label htmlFor="react-wordx-field-code">{tr(L, 'Field codes:')}</label><input id="react-wordx-field-code" type="text" value={code} onChange={(event) => setCode(event.currentTarget.value)} />
+      <label htmlFor="react-wordx-field-code">{tr(L, 'Field codes:')}</label><input id="react-wordx-field-code" type="text" value={code} onChange={(event) => { const value=event.currentTarget.value; setCode(value); updateDraft({ code:value }); }} />
       <div className="tp-note" style={{ minHeight: 28 }}>{description}</div>
-      <fieldset><legend>{tr(L, 'Field options')}</legend><label>{tr(L, 'Format:')} <select id="react-wordx-field-format" value={format} onChange={(event) => setFormat(event.currentTarget.value)}>{catalog.formats.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label>{tr(L, 'Date picture:')} <select id="react-wordx-field-date-picture" value={datePicture} onChange={(event) => setDatePicture(event.currentTarget.value)}>{catalog.datePictures.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label></fieldset>
+      <fieldset><legend>{tr(L, 'Field options')}</legend><label>{tr(L, 'Format:')} <select id="react-wordx-field-format" value={format} onChange={(event) => { const value=event.currentTarget.value; setFormat(value); updateDraft({ format:value }); }}>{catalog.formats.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label>{tr(L, 'Date picture:')} <select id="react-wordx-field-date-picture" value={datePicture} onChange={(event) => { const value=event.currentTarget.value; setDatePicture(value); updateDraft({ datePicture:value }); }}>{catalog.datePictures.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label></fieldset>
       <label>{tr(L, 'Result preview')}</label><div className="tp-box" style={{ minHeight: 22 }} translate="no">{preview}</div>
-      <label><input id="react-wordx-field-keep" type="checkbox" checked={keep} onChange={(event) => setKeep(event.currentTarget.checked)} />{tr(L, 'Preserve formatting during updates')}</label>
+      <label><input id="react-wordx-field-keep" type="checkbox" checked={keep} onChange={(event) => { const value=event.currentTarget.checked; setKeep(value); updateDraft({ keep:value }); }} />{tr(L, 'Preserve formatting during updates')}</label>
     </div>
   </div>;
 }
 
+type FootnoteDialogValues = { kind: string; fnPos: string; enPos: string; fnFmt: string; enFmt: string; fnStart: number; enStart: number; fnRestart: string; enRestart: string; custom: string };
 type FootnoteDialogAdapter = {
-  reactFootnoteState?(): { kind: string; fnPos: string; enPos: string; fnFmt: string; enFmt: string; fnStart: number; enStart: number; fnRestart: string; enRestart: string; custom: string };
+  reactFootnoteState?(): FootnoteDialogValues;
+  reactFootnoteDraftState?(): FootnoteDialogValues;
+  reactFootnoteDraftSet?(draft: Partial<FootnoteDialogValues>): void;
+  reactFootnoteSymbolPick?(character: string): void;
   reactFootnoteCatalog?(): { locations: Record<string, Array<[string, string]>>; formats: Array<[string, string]>; restarts: Array<[string, string]> };
-  reactFootnoteAction?(action: string, values: { kind: string; fnPos: string; enPos: string; fnFmt: string; enFmt: string; fnStart: number; enStart: number; fnRestart: string; enRestart: string; custom: string }): void | boolean;
+  reactFootnoteAction?(action: string, values: FootnoteDialogValues): void | boolean;
 };
 
 type DiagramDialogAdapter = {
   reactDiagramCatalog?(): Array<{ value: string; label: string }>;
+  reactDiagramSelect?(kind: string): void;
   reactDiagramAction?(kind: string): void;
 };
 
@@ -2465,20 +2668,29 @@ function DiagramDialogBody({ L }: { L: WordxRuntime }) {
   const [selected, setSelected] = useState('org');
   return <div className="col">
     <div>{tr(L, 'Select a diagram type:')}</div>
-    <div className="preset-grid">{catalog.map((item) => <button type="button" key={item.value} data-wordx-diagram={item.value} aria-label={item.label} aria-pressed={selected === item.value} className={selected === item.value ? 'on' : ''} onClick={() => setSelected(item.value)} onDoubleClick={() => adapter?.reactDiagramAction?.(item.value)}><DiagramPreview kind={item.value} /><span>{item.label}</span></button>)}</div>
+    <div className="preset-grid">{catalog.map((item) => <button type="button" key={item.value} data-wordx-diagram={item.value} aria-label={item.label} aria-pressed={selected === item.value} className={selected === item.value ? 'on' : ''} onClick={() => { setSelected(item.value); adapter?.reactDiagramSelect?.(item.value); }} onDoubleClick={() => { adapter?.reactDiagramSelect?.(item.value); adapter?.reactDiagramAction?.(item.value); }}><DiagramPreview kind={item.value} /><span>{item.label}</span></button>)}</div>
   </div>;
 }
 
 function FootnoteDialogBody({ L }: { L: WordxRuntime }) {
   const adapter = L.dlg as FootnoteDialogAdapter | undefined;
   const [state, setState] = useState(adapter?.reactFootnoteState?.() || { kind: 'fn', fnPos: 'pageBottom', enPos: 'docEnd', fnFmt: 'decimal', enFmt: 'lowerRoman', fnStart: 1, enStart: 1, fnRestart: 'continuous', enRestart: 'continuous', custom: '' });
+  useEffect(() => {
+    if (!adapter) return;
+    const pick = (character: string) => {
+      setState((current) => ({ ...current, custom: character }));
+      adapter.reactFootnoteDraftSet?.({ custom: character });
+    };
+    adapter.reactFootnoteSymbolPick = pick;
+    return () => { if (adapter.reactFootnoteSymbolPick === pick) delete adapter.reactFootnoteSymbolPick; };
+  }, [adapter]);
   const catalog = adapter?.reactFootnoteCatalog?.() || { locations: {}, formats: [], restarts: [] };
-  const update = <K extends keyof typeof state>(key: K, value: (typeof state)[K]) => setState((current) => ({ ...current, [key]: value }));
+  const update = <K extends keyof FootnoteDialogValues>(key: K, value: FootnoteDialogValues[K]) => { setState((current) => ({ ...current, [key]: value })); adapter?.reactFootnoteDraftSet?.({ [key]: value }); };
   const kind = state.kind === 'fn' ? 'fn' : 'en';
   const formatId = kind === 'fn' ? 'react-wordx-footnote-fnFmt' : 'react-wordx-footnote-enFmt';
   const startId = kind === 'fn' ? 'react-wordx-footnote-fnStart' : 'react-wordx-footnote-enStart';
   const restartId = kind === 'fn' ? 'react-wordx-footnote-fnRestart' : 'react-wordx-footnote-enRestart';
-  const set = (action: string) => adapter?.reactFootnoteAction?.(action, state);
+  const set = (action: string) => adapter?.reactFootnoteAction?.(action, adapter.reactFootnoteDraftState?.() || state);
   return <div className="col">
     <fieldset><legend>{tr(L, 'Location')}</legend><label><input id="react-wordx-footnote-kind-fn" type="radio" name="react-wordx-footnote-kind" value="fn" checked={kind === 'fn'} onChange={() => update('kind', 'fn')} />{tr(L, 'Footnotes:')} <select id="react-wordx-footnote-fnPos" value={state.fnPos} onChange={(event) => update('fnPos', event.currentTarget.value)}>{(catalog.locations.fn || []).map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></label><label><input id="react-wordx-footnote-kind-en" type="radio" name="react-wordx-footnote-kind" value="en" checked={kind === 'en'} onChange={() => update('kind', 'en')} />{tr(L, 'Endnotes:')} <select id="react-wordx-footnote-enPos" value={state.enPos} onChange={(event) => update('enPos', event.currentTarget.value)}>{(catalog.locations.en || []).map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></label><button type="button" className="btn small" onClick={() => set('convert')}>{tr(L, 'Convert...')}</button></fieldset>
     <fieldset><legend>{tr(L, 'Format')}</legend><label>{tr(L, 'Number format:')} <select id={formatId} value={kind === 'fn' ? state.fnFmt : state.enFmt} onChange={(event) => update(kind === 'fn' ? 'fnFmt' : 'enFmt', event.currentTarget.value)}>{catalog.formats.map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></label><label>{tr(L, 'Custom mark:')} <input id="react-wordx-footnote-custom" type="text" value={state.custom} onChange={(event) => update('custom', event.currentTarget.value)} /></label><button type="button" className="btn small" onClick={() => set('symbol')}>{tr(L, 'Symbol...')}</button><label>{tr(L, 'Start at:')} <input id={startId} type="number" min={1} value={kind === 'fn' ? state.fnStart : state.enStart} onChange={(event) => update(kind === 'fn' ? 'fnStart' : 'enStart', Math.max(1, Number(event.currentTarget.value)))} /></label><label>{tr(L, 'Numbering:')} <select id={restartId} value={kind === 'fn' ? state.fnRestart : state.enRestart} onChange={(event) => update(kind === 'fn' ? 'fnRestart' : 'enRestart', event.currentTarget.value)}>{catalog.restarts.map(([value, label]) => <option key={value} value={value}>{tr(L, label)}</option>)}</select></label></fieldset>
@@ -2486,8 +2698,10 @@ function FootnoteDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 function ConvertNotesDialogBody({ L }: { L: WordxRuntime }) {
+  const adapter = L.dlg as (typeof L.dlg & { reactConvertNotesSelect?(kind: string): void }) | undefined;
   const [kind,setKind]=useState('fn');
-  return <fieldset className="col" id="react-wordx-convert-notes-body"><label><input type="radio" name="react-wordx-convert-notes" value="fn" checked={kind==='fn'} onChange={()=>setKind('fn')}/>{tr(L,'Convert all footnotes to endnotes')}</label><label><input type="radio" name="react-wordx-convert-notes" value="en" checked={kind==='en'} onChange={()=>setKind('en')}/>{tr(L,'Convert all endnotes to footnotes')}</label></fieldset>;
+  const choose = (value: string) => { setKind(value); adapter?.reactConvertNotesSelect?.(value); };
+  return <fieldset className="col" id="react-wordx-convert-notes-body"><label><input type="radio" name="react-wordx-convert-notes" value="fn" checked={kind==='fn'} onChange={()=>choose('fn')}/>{tr(L,'Convert all footnotes to endnotes')}</label><label><input type="radio" name="react-wordx-convert-notes" value="en" checked={kind==='en'} onChange={()=>choose('en')}/>{tr(L,'Convert all endnotes to footnotes')}</label></fieldset>;
 }
 
 type WordxStyleState={name:string;builtIn:boolean;isNew:boolean;type:string;basedOn:string;next:string;styles:Array<{id:string;name:string}>;fonts:string[];sizes:string[];font:string;size:number;bold:boolean;italic:boolean;underline:string;color:string;automaticColor:boolean;align:string;autoRedefine:boolean;preview:{font:string;size:number;bold:boolean;italic:boolean;underline:boolean;color:string;align:CSSProperties['textAlign']}};
@@ -2517,6 +2731,8 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   const [findFormatSummaryMount, setFindFormatSummaryMount] = useState<HTMLElement | null>(null);
   const [replaceFormatSummaryMount, setReplaceFormatSummaryMount] = useState<HTMLElement | null>(null);
   const [findMoreMount, setFindMoreMount] = useState<HTMLElement | null>(null);
+  const [findTabsMount, setFindTabsMount] = useState<HTMLElement | null>(null);
+  const [findStyleMount, setFindStyleMount] = useState<HTMLElement | null>(null);
   const [findActionsMount, setFindActionsMount] = useState<HTMLElement | null>(null);
   const [sortMount, setSortMount] = useState<HTMLElement | null>(null);
   const [mailMergeRecipientsMount, setMailMergeRecipientsMount] = useState<HTMLElement | null>(null);
@@ -2658,6 +2874,8 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
     let findFormatSummaryTarget: HTMLElement | null = null;
     let replaceFormatSummaryTarget: HTMLElement | null = null;
     let findMoreTarget: HTMLElement | null = null;
+    let findTabsTarget: HTMLElement | null = null;
+    let findStyleTarget: HTMLElement | null = null;
     let findActionsTarget: HTMLElement | null = null;
     let sortTarget: HTMLElement | null = null;
     let mailMergeRecipientsTarget: HTMLElement | null = null;
@@ -2851,6 +3069,10 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
       if (nextReplaceFormatSummary !== replaceFormatSummaryTarget) { replaceFormatSummaryTarget = nextReplaceFormatSummary; setReplaceFormatSummaryMount(replaceFormatSummaryTarget); }
       const nextFindMore = host.querySelector<HTMLElement>('#react-wordx-find-more-root');
       if (nextFindMore !== findMoreTarget) { findMoreTarget = nextFindMore; setFindMoreMount(findMoreTarget); }
+      const nextFindTabs = host.querySelector<HTMLElement>('#react-wordx-find-tabs-root');
+      if (nextFindTabs !== findTabsTarget) { findTabsTarget = nextFindTabs; setFindTabsMount(findTabsTarget); }
+      const nextFindStyle = host.querySelector<HTMLElement>('#react-wordx-find-style-root');
+      if (nextFindStyle !== findStyleTarget) { findStyleTarget = nextFindStyle; setFindStyleMount(findStyleTarget); }
       const nextFindActions = host.querySelector<HTMLElement>('#react-wordx-find-actions-root');
       if (nextFindActions !== findActionsTarget) { findActionsTarget = nextFindActions; setFindActionsMount(findActionsTarget); }
       const nextSort = host.querySelector<HTMLElement>('#react-wordx-sort-root');
@@ -3070,7 +3292,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
     const body = host.querySelector<HTMLElement>('#taskpane > .tp-body');
     body?.classList.toggle('react-pane-adapter', current === 'getting-started' || current === 'help' || current === 'search' || current === 'clipart' || current === 'new' || current === 'clipboard' || current === 'styles' || current === 'reveal' || current === 'protect' || current === 'research' || current === 'mailmerge' || current === 'recovery');
     return () => body?.classList.remove('react-pane-adapter');
-  }, [host, current]);
+  }, [host, current, mount]);
   if (!L) return null;
   const dropHint = dropHintActive ? createPortal(<div className="drop-hint" data-react-owned="wordx-drop-hint">{tr(L, 'Drop a document to open it, or pictures to insert them')}</div>, host) : null;
   const docMap = <>{mapMount ? createPortal(<DocumentMap key="wordx-document-map" L={L} host={host} />, mapMount) : null}{mailMergeRecipientsMount ? createPortal(<MailMergeRecipientsDialogBody key="wordx-mail-merge-recipients-dialog" L={L} />, mailMergeRecipientsMount) : null}{newAddressListMount ? createPortal(<NewAddressListDialogBody key="wordx-new-address-list-dialog" L={L} />, newAddressListMount) : null}{mergeFieldMount ? createPortal(<InsertMergeFieldDialogBody key="wordx-mail-merge-field-dialog" L={L} />, mergeFieldMount) : null}{reviewersMount ? createPortal(<ReviewersDialogBody key="wordx-reviewers-dialog" L={L} />, reviewersMount) : null}{commentEditMount ? createPortal(<CommentEditDialogBody key="wordx-comment-edit-dialog" L={L} />, commentEditMount) : null}{contentControlMount ? createPortal(<ContentControlDialogBody key="wordx-content-control-dialog" L={L} />, contentControlMount) : null}{spellCheckMount ? createPortal(<SpellCheckDialogBody key="wordx-spell-check-dialog" L={L} />, spellCheckMount) : null}</>;
@@ -3087,7 +3309,8 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   const findFormat = findFormatMount ? createPortal(<FindFormatControls key="wordx-find-format" L={L} />, findFormatMount) : null;
   const findFormatSummary = findFormatSummaryMount ? createPortal(<FindFormatSummary key="wordx-find-format-summary" L={L} replace={false} />, findFormatSummaryMount) : null;
   const replaceFormatSummary = replaceFormatSummaryMount ? createPortal(<FindFormatSummary key="wordx-replace-format-summary" L={L} replace />, replaceFormatSummaryMount) : null;
-  const findMore = findMoreMount ? createPortal(<FindMoreToggle key="wordx-find-more" L={L} />, findMoreMount) : null;
+  const findStyleDialog = findStyleMount ? createPortal(<FindStyleDialogBody key="wordx-find-style-dialog" L={L} />, findStyleMount) : null;
+  const findMore = <>{findMoreMount ? createPortal(<FindMoreToggle key="wordx-find-more" L={L} />, findMoreMount) : null}{findTabsMount ? createPortal(<FindTabs key="wordx-find-tabs" L={L} />, findTabsMount) : null}{findStyleDialog}</>;
   const findActions = findActionsMount ? createPortal(<FindFooterActions key="wordx-find-actions" L={L} />, findActionsMount) : null;
   const sortDialog = sortMount ? createPortal(<SortDialogBody key="wordx-sort-dialog" L={L} />, sortMount) : null;
   const tableAutoFormatDialog = tableAutoFormatMount ? createPortal(<TableAutoFormatDialogBody key="wordx-table-autoformat-dialog" L={L} />, tableAutoFormatMount) : null;

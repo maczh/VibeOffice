@@ -85,7 +85,7 @@ export function ExcelxFormatCellsDialog() {
     runtime()?.dlg?.reactFormatCellsSetAlignment?.(patch);
   };
   const rotation = alignment.rot === 255 ? 0 : typeof alignment.rot === 'number' && alignment.rot > 90 ? 90 - alignment.rot : Number(alignment.rot || 0);
-  const setNumberCategoryValue = (value: string) => { setNumberCategory(value); const next = runtime()?.dlg?.reactFormatCellsSetNumberCategory?.(value); setNumberOptions(next === false ? null : next || null); };
+  const setNumberCategoryValue = (value: string) => { const next = runtime()?.dlg?.reactFormatCellsSetNumberCategory?.(value); setNumberCategory(value); setNumberOptions(next === false ? null : next || null); };
   const updateNumberOptions = (patch: Record<string, unknown>) => { const next = runtime()?.dlg?.reactFormatCellsSetNumberOptions?.(patch); if (next !== false && next) { setNumberOptions(next); if (next.kind === 'custom') setCustomFormatInput(String(next.code || '')); } };
   const updateFont = (patch: Record<string, unknown>) => {
     const updated = runtime()?.dlg?.reactFormatCellsSetFont?.(patch);

@@ -18,6 +18,7 @@ interface EditorRuntimeManifest {
 const loadedScripts = new WeakMap<Window, Map<string, Promise<void>>>();
 const mountingWindows = new WeakSet<Window>();
 const engineNamespaces = new WeakSet<object>();
+const engineNamespacesByHost = new WeakMap<Window, object>();
 
 function abortError(): DOMException {
   return new DOMException('The editor mount was cancelled', 'AbortError');
@@ -190,14 +191,15 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   if (directRuntime.root?.isConnected) throw new Error('Only one VibeOffice editor can be mounted in a host document at a time');
   const hostEngineDescriptor = Object.getOwnPropertyDescriptor(runtimeWindow, 'L');
   const hostEngineNamespace = runtimeWindow.L;
+  const cachedEngineNamespace = engineNamespacesByHost.get(view);
   const preserveHostEngineNamespace = !!hostEngineDescriptor && !engineNamespaces.has(hostEngineNamespace as object);
   if (preserveHostEngineNamespace) {
     if (!hostEngineDescriptor.configurable && !('value' in hostEngineDescriptor && hostEngineDescriptor.writable)) {
       throw new Error('The embedding window.L namespace cannot be isolated for the VibeOffice editor');
     }
     const isolatedDescriptor = 'value' in hostEngineDescriptor
-      ? { ...hostEngineDescriptor, value: undefined }
-      : { configurable: hostEngineDescriptor.configurable ?? false, enumerable: hostEngineDescriptor.enumerable ?? false, writable: true, value: undefined };
+      ? { ...hostEngineDescriptor, value: cachedEngineNamespace }
+      : { configurable: hostEngineDescriptor.configurable ?? false, enumerable: hostEngineDescriptor.enumerable ?? false, writable: true, value: cachedEngineNamespace };
     Object.defineProperty(runtimeWindow, 'L', isolatedDescriptor);
   }
   let restoreDomRoot: (() => void) | undefined;
@@ -262,14 +264,21 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
       const scriptUrl = new URL(script, source);
       assertSameOrigin(scriptUrl, base);
       beforeLegacyScript?.(runtimeWindow, scriptUrl);
+      if (preserveHostEngineNamespace && runtimeWindow.L && runtimeWindow.L !== hostEngineNamespace) {
+        engineNamespaces.add(runtimeWindow.L);
+        engineNamespacesByHost.set(view, runtimeWindow.L);
+      }
       if (signal.aborted) throw abortError();
-      if (skipLegacyScripts.some((path) => scriptUrl.pathname.endsWith(path))) continue;
+      if (skipLegacyScripts.some((path) => scriptUrl.pathname.endsWith(path)) || (shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ribbon.js'))) continue;
       loadedScripts.push(scriptUrl.pathname);
       await loadScript(document, scriptUrl, signal);
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L && runtimeWindow.VO?.t) {
         Object.assign(runtimeWindow.L, { t: runtimeWindow.VO.t, N: runtimeWindow.VO.N });
       }
-      if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L) engineNamespaces.add(runtimeWindow.L);
+      if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L) {
+        engineNamespaces.add(runtimeWindow.L);
+        engineNamespacesByHost.set(view, runtimeWindow.L);
+      }
       if (shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ui.js')) restoreBrushService = installReactBrushService(runtimeWindow);
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L?.mountDomRoot) {
         restoreDomRoot = runtimeWindow.L.mountDomRoot(root);

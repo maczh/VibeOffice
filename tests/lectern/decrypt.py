@@ -1,4 +1,4 @@
-"""Independent check of Lectern's encrypted saves: decrypt an ECMA-376 Agile-encrypted package (the format
+"""Independent check of PPTX's encrypted saves: decrypt an ECMA-376 Agile-encrypted package (the format
 PowerPoint 2010+ writes) with Python's `cryptography`, verifying the password verifier and the HMAC.
 Usage: python3 -I decrypt.py in.pptx password out.pptx"""
 import base64, hashlib, hmac, struct, sys

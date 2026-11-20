@@ -1,5 +1,7 @@
-/* Shared Vite-host settings and language services extracted from public/common; classic/Tauri pages keep their originals. */
 // @ts-nocheck -- exact compatibility service bodies retain the established VO runtime contract.
+import { installReactRibbonService } from './ribbon-service.js';
+
+/* Shared Vite-host settings and language services extracted from public/common; classic/Tauri pages keep their originals. */
 
 const installSharedLookInstalled = new WeakSet<Window>();
 export function installSharedLook(runtime: Window): void {
@@ -207,6 +209,7 @@ export function installSharedRuntimeService(runtime: Window, scriptUrl: URL): vo
   if (scriptUrl.pathname.endsWith('/common/look.js')) installSharedLook(runtime);
   else if (scriptUrl.pathname.endsWith('/common/lang.js')) installSharedLanguage(runtime);
   else if (scriptUrl.pathname.endsWith('/common/i18n.js')) installSharedI18n(runtime, scriptUrl);
+  else if (scriptUrl.pathname.endsWith('/common/ribbon.js')) installReactRibbonService(runtime);
 }
 
 export function initializeSharedRuntime(runtime: Window = window): void {

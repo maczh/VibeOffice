@@ -6,6 +6,11 @@ export function installPptxDialogs(runtime: Window): void {
   const ui = L.ui;
   const D = (L.dlg = {});
   const E = () => L.ed;
+  function onMountTimeout(callback, delay = 0) {
+    let removeCleanup = () => {};
+    const timer = setTimeout(() => { removeCleanup(); callback(); }, delay);
+    removeCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(() => clearTimeout(timer)) : () => {};
+  }
   let reactSaveAs = null;
   let reactSaveAsCallback = null;
   let reactSaveAsResolve = null;
@@ -1375,7 +1380,7 @@ export function installPptxDialogs(runtime: Window): void {
     if (replace) {
       btns.push({ label: '&Replace', onClick: () => { read(); replaceOne(); return false; } });
       btns.push({ label: 'Replace &All', onClick: () => { read(); const n = replaceAll(); ui.msg(n > 1 ? L.t('{0} has finished searching the presentation and made {1} replacements.', L.APP, n) : n ? L.t('{0} has finished searching the presentation and made 1 replacement.', L.APP) : 'The search item wasn\'t found.', { icon: 'info' }); return false; } });
-    } else btns.push({ label: 'Re&place...', onClick: (close) => { read(); close(null); setTimeout(() => D.find(true), 0); return false; } });
+    } else btns.push({ label: 'Re&place...', onClick: (close) => { read(); close(null); onMountTimeout(() => D.find(true)); return false; } });
     btns.push({ label: 'Close' });
     ui.dialog({ title: replace ? 'Replace' : 'Find', body, width: 440, buttons: btns });
   };
@@ -1623,7 +1628,7 @@ export function installPptxDialogs(runtime: Window): void {
       /* confirm a new password, as PowerPoint does */
       const p2 = h('input', { type: 'password', id: 'pw-confirm', autocomplete: 'new-password', style: 'width:100%' });
       ui.dialog({ title: 'Confirm Password', width: 320, body: h('div', { class: 'col' }, h('label', { for: 'pw-confirm', text: 'Reenter password to open:' }), p2, h('div', { class: 'tp-note', text: 'Caution: If you lose or forget the password, it cannot be recovered.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { if (p2.value !== pw) { ui.msg('Confirmation password is not identical.', { icon: 'warn' }); return false; } L.pres.password = pw; L.hist.dirty = true; } }, { label: 'Cancel' }] });
-      setTimeout(() => p2.focus(), 0);
+      onMountTimeout(() => p2.focus());
       return true;
     };
     ui.dialog({ title: 'Options', body: tabs, width: 460, buttons: [{ label: 'OK', primary: true, onClick: () => { L.hist.limit = undo.get(); L.pres.props.author = user.value; L.app.saveOpts(); L.app.applyOpts(); if (look) look.apply(); applyPw(); } }, { label: 'Cancel', onClick: () => { L.app.loadOpts(); } }] });

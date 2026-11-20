@@ -1,5 +1,5 @@
 import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { RibbonComboControl, type ComboOptions } from './combo.js';
 
 interface LegacyCommand {
@@ -52,6 +52,7 @@ interface LegacyRibbonUi {
   openMenu(items: unknown[], rect: DOMRect | { left: number; bottom: number }): unknown;
   stripAmp(text: string): string;
   ampHTML(text: string): string;
+  barKeys?: { active(): boolean; byKey(key: string): boolean; index(index: number): void } | null;
 }
 
 interface LegacyRibbonRuntime {
@@ -180,7 +181,7 @@ function RibbonGroup({ group, spec, refresh, folded, open, onOpen }: { group: Le
 function RibbonTab({ tab, selected, select, spec, refresh }: { tab: LegacyRibbonTab; selected: boolean; select: () => void; spec: LegacyRibbonSpec; refresh: number }) {
   const office = runtime();
   if (!office) return null;
-  return <button type="button" role="tab" aria-selected={selected} className={`rb-tab${selected ? ' on' : ''}`} dangerouslySetInnerHTML={{ __html: office.ui.ampHTML(tab.label) }} onPointerDown={(event) => event.preventDefault()} onDoubleClick={() => runtime()?.ribbonUI.collapse()} onClick={select} />;
+  return <button type="button" role="tab" data-tab={tab.id} aria-selected={selected} className={`rb-tab${selected ? ' on' : ''}`} dangerouslySetInnerHTML={{ __html: office.ui.ampHTML(tab.label) }} onPointerDown={(event) => event.preventDefault()} onDoubleClick={() => runtime()?.ribbonUI.collapse()} onClick={select} />;
 }
 
 /** React-owned Ribbon structure, tabs, command buttons and live enabled/checked state. */
@@ -192,6 +193,7 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
   const [peek, setPeek] = useState(false);
   const [foldedGroups, setFoldedGroups] = useState<string[]>([]);
   const [foldedOpen, setFoldedOpen] = useState<{ key: string; left: number; top: number; anchor: HTMLButtonElement } | null>(null);
+  const [keyTips, setKeyTips] = useState<{ level: 'tabs' | 'commands'; entries: Array<{ key: string; x: number; y: number; tab?: string; target: HTMLElement }>; buffer: string } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const groupsRef = useRef<HTMLDivElement>(null);
   const focusFrame = useRef<number | null>(null);
@@ -227,22 +229,90 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
       if (id) select(id);
     };
     const onCollapse = (event: Event) => toggleCollapse((event as CustomEvent<{ collapsed?: boolean }>).detail?.collapsed);
+    const hasVisibleRibbon = () => !!target?.querySelector<HTMLElement>('.vibeoffice-react-ribbon') && (target.closest<HTMLElement>('[data-layout]')?.dataset.layout === 'ribbon' || document.documentElement.dataset.layout === 'ribbon');
+    const hasKeyTipOverlay = () => !!engineRoot?.querySelector('.rb-keytip');
+    const showKeyTips = (level: 'tabs' | 'commands') => {
+      const ribbon = target?.querySelector<HTMLElement>('.vibeoffice-react-ribbon');
+      if (!ribbon || !spec || !hasVisibleRibbon()) return;
+      const candidates: Array<{ target: HTMLElement; label: string; key?: string; tab?: string }> = [];
+      if (level === 'tabs') {
+        ribbon.querySelectorAll<HTMLElement>('.rb-qat > *, .rb-tabs .rb-tab').forEach((element, index) => {
+          const tab = element.dataset.tab;
+          const label = tab === 'file' ? 'File' : tab ? [...spec.tabs, ...(spec.contextual || []).flatMap((context) => context.tabs)].find((item) => item.id === tab)?.label || element.textContent || '' : element.getAttribute('aria-label') || element.textContent || '';
+          const access = /&([A-Za-z0-9])/.exec(label)?.[1];
+          candidates.push({ target: element, label, ...(tab ? { tab } : {}), ...(!tab && element.closest('.rb-qat') ? { key: String(index + 1) } : access ? { key: access.toUpperCase() } : {}) });
+        });
+      } else {
+        ribbon.querySelectorAll<HTMLElement>('.rb-panel .tb-btn:not(.tb-dd), .rb-panel .combo, .rb-panel .rb-launch').forEach((element) => {
+          if (!element.getClientRects().length) return;
+          const commandId = element.dataset.cmd;
+          const commandKey = commandId ? runtime()?.ui.cmds[commandId]?.key : undefined;
+          candidates.push({ target: element, label: element.getAttribute('aria-label') || element.textContent || '', ...(commandKey ? { key: commandKey.toUpperCase() } : {}) });
+        });
+      }
+      const used = new Set<string>();
+      const entries: Array<{ key: string; x: number; y: number; tab?: string; target: HTMLElement }> = [];
+      for (const candidate of candidates) {
+        const letters = [...candidate.label.toUpperCase()].filter((character) => /[A-Z]/.test(character));
+        let key = candidate.key && !used.has(candidate.key) ? candidate.key : letters.find((character) => !used.has(character));
+        if (!key) {
+          const first = letters[0] || 'A';
+          key = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((character) => first + character).find((candidateKey) => !used.has(candidateKey)) || `${first}A`;
+        }
+        used.add(key);
+        const rect = candidate.target.getBoundingClientRect();
+        entries.push({ key, x: rect.left + rect.width / 2, y: rect.bottom - 7, target: candidate.target, ...(candidate.tab ? { tab: candidate.tab } : {}) });
+      }
+      setKeyTips({ level, entries, buffer: '' });
+    };
+    const onKeyTipRequest = (event: Event) => showKeyTips((event as CustomEvent<{ level?: 'tabs' | 'commands' }>).detail?.level || 'tabs');
     const onLook = () => { const next = runtime()?.ribbonSpec?.(); if (next) setSpec(next); };
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], dialog, [role="dialog"], [data-menu-keyboard-owner="react"]')) return;
       if (event.key === 'F1' && event.ctrlKey && !event.altKey && !event.shiftKey) { event.preventDefault(); event.stopPropagation(); toggleCollapse(); }
-      else if (event.key === 'Escape' && peek) setPeek(false);
+      else if (keyTips && hasKeyTipOverlay() && hasVisibleRibbon() && event.key === 'Escape') {
+        event.preventDefault(); event.stopPropagation();
+        if (keyTips.level === 'commands') showKeyTips('tabs'); else { setKeyTips(null); if (peek) setPeek(false); }
+      } else if (keyTips && hasKeyTipOverlay() && hasVisibleRibbon() && !['Alt', 'Shift', 'Control', 'Meta'].includes(event.key)) {
+        event.preventDefault(); event.stopPropagation();
+        if (event.key.length !== 1) { setKeyTips(null); return; }
+        const buffer = keyTips.buffer + event.key.toUpperCase();
+        const hit = keyTips.entries.find((entry) => entry.key === buffer);
+        if (hit) {
+          setKeyTips(null);
+          if (keyTips.level === 'tabs' && hit.tab) {
+            if (hit.tab === 'file') hit.target.click();
+            else {
+              flushSync(() => select(hit.tab!));
+              showKeyTips('commands');
+            }
+          } else if (hit.target.matches('.combo')) hit.target.querySelector('input')?.focus();
+          else hit.target.click();
+        } else if (keyTips.entries.some((entry) => entry.key.startsWith(buffer))) setKeyTips({ ...keyTips, buffer });
+        else setKeyTips({ ...keyTips, buffer: '' });
+      } else if ((event.key === 'Alt' || event.key === 'F10') && !event.ctrlKey && !event.metaKey && hasVisibleRibbon()) {
+        event.preventDefault(); showKeyTips('tabs');
+      } else if (event.key === 'Escape' && peek) setPeek(false);
     };
     const onPointerDown = (event: PointerEvent) => { if (peek && target && !target.contains(event.target as Node)) setPeek(false); };
     host.addEventListener('vibeoffice-react-ribbon', onSpec);
     host.addEventListener('vibeoffice-react-ribbon-select', onSelect);
     host.addEventListener('vibeoffice-react-ribbon-collapse', onCollapse);
+    host.addEventListener('vibeoffice-react-ribbon-keytips', onKeyTipRequest);
     window.addEventListener('vo-look', onLook);
     document.addEventListener('keydown', onKeyDown, true);
     document.addEventListener('pointerdown', onPointerDown, true);
     const offRefresh = runtime()?.bus.on('ui-refresh', () => setRefresh((current) => current + 1));
+    const office = runtime();
+    const priorBarKeys = office?.ui.barKeys;
+    if (office?.ui) office.ui.barKeys = {
+      active: () => !!keyTips && hasVisibleRibbon(),
+      byKey: () => { host.dispatchEvent(new CustomEvent('vibeoffice-react-ribbon-keytips', { detail: { level: 'tabs' }, bubbles: true })); return true; },
+      index: () => { host.dispatchEvent(new CustomEvent('vibeoffice-react-ribbon-keytips', { detail: { level: 'tabs' }, bubbles: true })); },
+    };
     setCollapsed(!!runtime()?.store.get('ribbonCollapsed', false));
-    return () => { host.removeEventListener('vibeoffice-react-ribbon', onSpec); host.removeEventListener('vibeoffice-react-ribbon-select', onSelect); host.removeEventListener('vibeoffice-react-ribbon-collapse', onCollapse); window.removeEventListener('vo-look', onLook); document.removeEventListener('keydown', onKeyDown, true); document.removeEventListener('pointerdown', onPointerDown, true); offRefresh?.(); };
-  }, [host, peek, select, target, toggleCollapse]);
+    return () => { host.removeEventListener('vibeoffice-react-ribbon', onSpec); host.removeEventListener('vibeoffice-react-ribbon-select', onSelect); host.removeEventListener('vibeoffice-react-ribbon-collapse', onCollapse); host.removeEventListener('vibeoffice-react-ribbon-keytips', onKeyTipRequest); window.removeEventListener('vo-look', onLook); document.removeEventListener('keydown', onKeyDown, true); document.removeEventListener('pointerdown', onPointerDown, true); offRefresh?.(); if (office?.ui.barKeys !== priorBarKeys) office!.ui.barKeys = priorBarKeys || null; };
+  }, [host, keyTips, peek, select, spec, target, toggleCollapse]);
 
   const activeContexts = useMemo(() => (spec?.contextual || []).filter((context) => { try { return context.when(); } catch { return false; } }), [refresh, spec]);
   const office = runtime();
@@ -279,7 +349,8 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
     fit();
     const observer = new ResizeObserver(fit);
     observer.observe(panel);
-    return () => observer.disconnect();
+    window.addEventListener('resize', fit);
+    return () => { observer.disconnect(); window.removeEventListener('resize', fit); };
   }, [activeTab, collapsed, peek]);
 
   useEffect(() => {
@@ -316,7 +387,7 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
     <div className="rb-bar">
       <div className="rb-qat" role="toolbar" aria-label="Quick Access Toolbar">{(spec.qat || []).map((item, index) => <RibbonItem key={`qat:${index}`} value={item} size="small" spec={spec} refresh={refresh} />)}</div>
       <div className="rb-tabs" role="tablist">
-        <button type="button" role="tab" className="rb-tab file" onPointerDown={(event) => event.preventDefault()} onClick={openFile}>{office.t('File')}</button>
+        <button type="button" role="tab" data-tab="file" className="rb-tab file" onPointerDown={(event) => event.preventDefault()} onClick={openFile}>{office.t('File')}</button>
         {spec.tabs.map((tab) => <RibbonTab key={tab.id} tab={tab} selected={activeTab.id === tab.id} select={() => { select(tab.id); if (collapsed) setPeek(true); }} spec={spec} refresh={refresh} />)}
         {activeContexts.map((context) => <div key={context.id} className="rb-ctx"><span className="rb-ctx-name">{office.t(context.set)}</span><div className="rb-ctx-tabs">{context.tabs.map((tab) => <RibbonTab key={tab.id} tab={tab} selected={activeTab.id === tab.id} select={() => select(tab.id)} spec={spec} refresh={refresh} />)}</div></div>)}
       </div>
@@ -324,5 +395,6 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
     </div>
     <div className="rb-panelwrap">{collapsed && !peek ? null : <div className="rb-panel" ref={panelRef} onClick={(event) => { if (peek && (event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) deferPeekClose(); }}><div className="rb-groups" ref={groupsRef} role="tabpanel">{groups.map((group) => <RibbonGroup key={group.id} group={group} spec={spec} refresh={refresh} folded={foldedGroups.includes(group.id)} open={foldedOpen?.key === group.id} onOpen={(key, anchor) => { const rect = anchor.getBoundingClientRect(); setFoldedOpen({ key, left: Math.max(2, Math.min(rect.left, window.innerWidth - 320)), top: rect.bottom, anchor }); }} />)}</div></div>}</div>
     {foldedOpen && groupsRef.current && groups.find((group) => group.id === foldedOpen.key) && createPortal(<div className="rb-pop rb-group" data-react-ribbon-pop="true" style={{ left: foldedOpen.left, top: foldedOpen.top }} onClick={(event) => { if ((event.target as HTMLElement).closest('.tb-btn:not(.tb-drop)')) deferPeekClose(); }}><RibbonGroupContents group={groups.find((group) => group.id === foldedOpen.key)!} spec={spec} refresh={refresh} /></div>, engineRoot || target)}
+    {keyTips && createPortal(<>{keyTips.entries.map((entry) => <span key={`${entry.key}:${entry.x}:${entry.y}`} className="rb-keytip" style={{ left: entry.x, top: entry.y }}>{entry.key}</span>)}</>, engineRoot || target)}
   </div>, target);
 }

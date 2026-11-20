@@ -166,8 +166,7 @@ export function installWordxDialogs(runtime: Window): void {
       const exact = list.find((x) => shown(x).toLowerCase() === lc);
       cur = exact && shown(exact) !== String(val(exact)) ? val(exact) : v;
       mark(hit ? val(hit) : undefined);
-      if (directRoot && directRoot.isConnected) box.querySelector('.li.on')?.scrollIntoView({ block: 'nearest' });
-      else { const on = box.querySelector('.li.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
+      if (!(directRoot && directRoot.isConnected)) { const on = box.querySelector('.li.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
       if (o.onChange) o.onChange(cur);
     };
     if (inp) inp.addEventListener('input', () => input(inp.value));
@@ -217,6 +216,12 @@ export function installWordxDialogs(runtime: Window): void {
     const st = { font: val('font'), sz: val('sz'), b: val('b'), i: val('i'), u: val('u'), uColor: val('uColor'), color: val('color'), strike: val('strike'), dstrike: val('dstrike'), vert: val('vert'), shadow: val('shadow'), outline: val('outline'), emboss: val('emboss'), imprint: val('imprint'), smallCaps: val('smallCaps'), caps: val('caps'), hidden: val('hidden'), w: val('w'), spacing: val('spacing'), position: val('position'), kern: val('kern'), effect: val('effect') };
     const changed = new Set();
     const set = (k, v) => { st[k] = v; changed.add(k); upd(); };
+    const caption = () => {
+      const used = st.font ? L.fontStandIn(st.font) : '';
+      return !used ? L.t('This is a TrueType font. This font will be used on both printer and screen.')
+        : /^(serif|sans-serif|monospace|cursive|fantasy)$/.test(used) ? L.t('{0} is not installed on this computer; a default font is used on screen and in print.', st.font)
+          : L.t('{0} is not installed on this computer; {1} is used on screen and in print.', st.font, used);
+    };
     const fontLB = G.listBox(FONTS(), st.font || '', { input: true, height: 110, id: 'fd-font', translate: 'no', onChange: (v) => set('font', v) });
     const styleName = () => (st.b && st.i ? 'Bold Italic' : st.b ? 'Bold' : st.i ? 'Italic' : st.b === undefined || st.i === undefined ? '' : 'Regular');
     const styleLB = G.listBox([L.N('Regular'), L.N('Italic'), L.N('Bold'), L.N('Bold Italic')], styleName(), { input: true, height: 110, id: 'fd-style', onChange: (v) => { const s = String(v).toLowerCase(); st.b = /bold/.test(s); st.i = /italic/.test(s); changed.add('b'); changed.add('i'); upd(); } });
@@ -248,10 +253,7 @@ export function installWordxDialogs(runtime: Window): void {
       if (r.u === 'none') delete r.u;
       preview(pv.firstChild, r);
       pv.firstChild.textContent = sample();
-      const used = st.font ? L.fontStandIn(st.font) : '';
-      pvCap.textContent = !used ? L.t('This is a TrueType font. This font will be used on both printer and screen.')
-        : /^(serif|sans-serif|monospace|cursive|fantasy)$/.test(used) ? L.t('{0} is not installed on this computer; a default font is used on screen and in print.', st.font)
-          : L.t('{0} is not installed on this computer; {1} is used on screen and in print.', st.font, used);
+      pvCap.textContent = caption();
     }
     upd();
     /* character spacing */
@@ -266,7 +268,7 @@ export function installWordxDialogs(runtime: Window): void {
     const root = h('div', { id: 'react-wordx-font-root' });
     const animations = [['','(none)'],['blinkBackground','Blinking Background'],['lights','Las Vegas Lights'],['antsBlack','Marching Black Ants'],['antsRed','Marching Red Ants'],['shimmer','Shimmer'],['sparkle','Sparkle Text']];
     const effects = fx.map(([key,label]) => [key, ui.stripAmp(label)]);
-    G.reactFontCatalog = () => ({ ...st, tab: opts.tab || 0, target: !!opts.target, fonts: FONTS(), sizes: L.SIZE_LIST.map(String), underlines: UNDERLINES.map(([value,label]) => [value,label]), animations: animations.map((item) => item.slice()), effects: effects.map((item) => item.slice()), sample: sample(), caption: pvCap.textContent });
+    G.reactFontCatalog = () => ({ ...st, tab: opts.tab || 0, target: !!opts.target, fonts: FONTS(), sizes: L.SIZE_LIST.map(String), underlines: UNDERLINES.map(([value,label]) => [value,label]), animations: animations.map((item) => item.slice()), effects: effects.map((item) => item.slice()), sample: sample(), caption: caption() });
     G.reactFontAction = (action, value) => {
       if (action === 'set' && value?.key) {
         const { key, value: next } = value;
@@ -965,8 +967,8 @@ export function installWordxDialogs(runtime: Window): void {
       const reactRoot = h('div', { id: 'react-wordx-line-numbers-root' });
       ui.dialog({ title: 'Line Numbers', width: 300, body: direct ? reactRoot : h('div', { class: 'col' }, on, G.f('Start &at:', startAt), G.f('From &text:', from), G.f('Count &by:', countBy), ui.group('Numbering:', restart)), buttons: [{ label: 'OK', primary: true, onClick: () => { if (direct) G.reactLineNumbersAction('apply'); else lnNum = on.input.checked ? { start: startAt.get(), distance: from.get(), countBy: countBy.get(), restart: restart.get() } : null; } }, { label: 'Cancel' }] });
     }
-    reactPageValues = { mt: sect.mt, mb: sect.mb, ml: sect.ml, mr: sect.mr, gutter: sect.gutter || 0, pgW: sect.pgW, pgH: sect.pgH, orient, type: start.value, titlePg: !!sect.titlePg, hdr: sect.hdr, ftr: sect.ftr, vAlign: sect.vAlign || 'top', lnNum, evenOdd: !!d.settings.evenOdd, multi: d.settings.bookFold ? 'bookFold' : d.settings.mirror ? 'mirror' : 'normal', gutterAtTop: !!d.settings.gutterAtTop, applyTo: applyTo.value, tab: tab === 'paper' ? 1 : tab === 'layout' ? 2 : 0 };
-    G.reactPageSetupCatalog = () => ({ ...reactPageValues, papers: D.PAPER.map((p) => ({ value: p[0], label: PAPER_NAMES[p[0]] || p[0], width: p[1], height: p[2] })), paper: paper.value, starts: [['continuous', 'Continuous'], ['nextColumn', 'New column'], ['nextPage', 'New page'], ['evenPage', 'Even page'], ['oddPage', 'Odd page']], applyOptions: multiSect ? [['section', 'This section'], ['forward', 'This point forward'], ['all', 'Whole document']] : [['all', 'Whole document'], ['forward', 'This point forward']] });
+    reactPageValues = { mt: sect.mt, mb: sect.mb, ml: sect.ml, mr: sect.mr, gutter: sect.gutter || 0, pgW: sect.pgW, pgH: sect.pgH, orient, type: start.value, titlePg: !!sect.titlePg, hdr: sect.hdr, ftr: sect.ftr, vAlign: sect.vAlign || 'top', lnNum, evenOdd: !!d.settings.evenOdd, multi: d.settings.bookFold ? 'bookFold' : d.settings.mirror ? 'mirror' : 'normal', gutterAtTop: !!d.settings.gutterAtTop, applyTo: applyTo.value, paper: paper.value, tab: tab === 'paper' ? 1 : tab === 'layout' ? 2 : 0 };
+    G.reactPageSetupCatalog = () => ({ ...reactPageValues, papers: D.PAPER.map((p) => ({ value: p[0], label: PAPER_NAMES[p[0]] || p[0], width: p[1], height: p[2] })), starts: [['continuous', 'Continuous'], ['nextColumn', 'New column'], ['nextPage', 'New page'], ['evenPage', 'Even page'], ['oddPage', 'Odd page']], applyOptions: multiSect ? [['section', 'This section'], ['forward', 'This point forward'], ['all', 'Whole document']] : [['all', 'Whole document'], ['forward', 'This point forward']] });
     G.reactPageSetupAction = (action, value) => {
       if (action === 'change') reactPageValues = { ...reactPageValues, ...(value || {}) };
       else if (action === 'lineNumbers') lineNumbers();
@@ -980,7 +982,7 @@ export function installWordxDialogs(runtime: Window): void {
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
     });
     function values() {
-      return direct ? { ...reactPageValues } : { mt: mt.get(), mb: mb.get(), ml: ml.get(), mr: mr.get(), gutter: gutter.get() || 0, pgW: pw.get(), pgH: ph.get(), orient, type: start.value, titlePg: firstPg.input.checked, hdr: hdr.get(), ftr: ftr.get(), vAlign: vAlign.value, lnNum };
+      return direct ? { mt: reactPageValues.mt, mb: reactPageValues.mb, ml: reactPageValues.ml, mr: reactPageValues.mr, gutter: reactPageValues.gutter, pgW: reactPageValues.pgW, pgH: reactPageValues.pgH, orient: reactPageValues.orient, type: reactPageValues.type, titlePg: reactPageValues.titlePg, hdr: reactPageValues.hdr, ftr: reactPageValues.ftr, vAlign: reactPageValues.vAlign, lnNum: reactPageValues.lnNum } : { mt: mt.get(), mb: mb.get(), ml: ml.get(), mr: mr.get(), gutter: gutter.get() || 0, pgW: pw.get(), pgH: ph.get(), orient, type: start.value, titlePg: firstPg.input.checked, hdr: hdr.get(), ftr: ftr.get(), vAlign: vAlign.value, lnNum };
     }
     async function setDefault() {
       const r = await ui.msg('Do you want to change the default settings for page setup?\nThis change will affect all new documents.', { icon: 'question', buttons: ['&Yes', '&No'] });
@@ -990,6 +992,7 @@ export function installWordxDialogs(runtime: Window): void {
     }
     function apply() {
       const v = values();
+      const applyTarget = direct ? reactPageValues.applyTo : applyTo.value;
       E.edit('Page Setup', () => {
         D.touchKey(d, 'settings');
         d.settings.evenOdd = direct ? reactPageValues.evenOdd : evenOdd.input.checked;
@@ -998,8 +1001,8 @@ export function installWordxDialogs(runtime: Window): void {
         d.settings.bookFold = multiMode === 'bookFold' || undefined;
         d.settings.gutterAtTop = (direct ? reactPageValues.gutterAtTop : gutPos.value === 'top') || undefined;
         const assign = (hd) => { D.touchKey(hd, 'sect'); const sc = hd === d ? d.sect : hd.sect; Object.assign(sc, v); };
-        if (applyTo.value === 'all') for (const sc of D.sections(d)) assign(sc.endPara || d);
-        else if (applyTo.value === 'forward') {
+        if (applyTarget === 'all') for (const sc of D.sections(d)) assign(sc.endPara || d);
+        else if (applyTarget === 'forward') {
           const tb = D.topBlock(d, E.sel.f.p);
           const cont = D.touchList(d.main);
           let endP = cont.blocks[tb.i - 1];
@@ -1079,12 +1082,15 @@ export function installWordxDialogs(runtime: Window): void {
     const options = [['sentence', 'Sentence case.'], ['lower', 'lowercase'], ['upper', 'UPPERCASE'], ['title', 'Title Case'], ['toggle', 'tOGGLE cASE']];
     const r = G.radios('cc', options, 'sentence');
     const reactRoot = h('div', { id: 'react-wordx-change-case-root' });
+    let reactSelection = 'sentence';
     G.reactChangeCaseCatalog = () => options;
+    G.reactChangeCaseState = () => reactSelection;
+    G.reactChangeCaseSelect = (value) => { reactSelection = value; };
     ui.dialog({ title: 'Change Case', width: 230, body: direct ? reactRoot : r, buttons: [{ label: 'OK', primary: true, onClick: () => {
       if (!E.sel) return;
       let [a, b] = E.range();
       if (D.eqPos(a, b)) { const w = O.wordAt(a); if (!w) return; [a, b] = w; }
-      const selectedCase = direct ? reactRoot.querySelector('input:checked')?.value || 'sentence' : r.get();
+      const selectedCase = direct ? reactSelection : r.get();
       E.edit('Change Case', () => { O.changeCase(a, b, selectedCase); return { a, f: b }; });
     } }, { label: 'Cancel' }] });
   };
@@ -1176,8 +1182,10 @@ export function installWordxDialogs(runtime: Window): void {
     const current = (it && it.vert) || 'horz';
     const r = G.radios('tdir', options, current);
     const reactRoot = h('div', { id: 'react-wordx-text-direction-root' });
+    let reactDirection = current;
     G.reactTextDirectionState = () => current;
-    ui.dialog({ title: 'Text Direction - Text Box', width: 280, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Text direction applies to text boxes and table cells.' }), r), buttons: [{ label: 'OK', primary: true, onClick: () => { const direction = direct ? reactRoot.querySelector('input:checked')?.value || current : r.get(); if (it && it.tb) L.drawing.modifySelected('Text Direction', (x) => { x.vert = direction === 'horz' ? undefined : direction; }); else if (L.tables && L.tables.inTable()) L.tables.forCells('Text Direction', (c) => { if (direction === 'horz') delete c.tcPr.textDir; else c.tcPr.textDir = direction === 'vert' ? 'tbRl' : 'btLr'; }); else A().status('Select a text box or table cell first.'); } }, { label: 'Cancel' }] });
+    G.reactTextDirectionSelect = (value) => { reactDirection = value; };
+    ui.dialog({ title: 'Text Direction - Text Box', width: 280, body: direct ? reactRoot : h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Text direction applies to text boxes and table cells.' }), r), buttons: [{ label: 'OK', primary: true, onClick: () => { const direction = direct ? reactDirection : r.get(); if (it && it.tb) L.drawing.modifySelected('Text Direction', (x) => { x.vert = direction === 'horz' ? undefined : direction; }); else if (L.tables && L.tables.inTable()) L.tables.forCells('Text Direction', (c) => { if (direction === 'horz') delete c.tcPr.textDir; else c.tcPr.textDir = direction === 'vert' ? 'tbRl' : 'btLr'; }); else A().status('Select a text box or table cell first.'); } }, { label: 'Cancel' }] });
   };
 
   /* ================= Style (New / Modify) ================= */
@@ -1219,14 +1227,14 @@ export function installWordxDialogs(runtime: Window): void {
           {label:'&Numbering...',enabled:()=>st.type==='paragraph',run:()=>A().status('Apply numbering to text, then use Update to Match Selection to add it to the style.')},
         ],anchor.getBoundingClientRect());return; }
         if (action==='save') {
-          const nm=String(value.name||'').trim();if(!nm){ui.msg('Please enter a name for the style.',{icon:'warn'});return false;}
+          const nm=String((value||st).name||'').trim();if(!nm){ui.msg('Please enter a name for the style.',{icon:'warn'});return false;}
           const exists=D.findStyleByName(d,nm);if(isNew&&exists){ui.msg(L.t('A style named {0} already exists.',nm),{icon:'warn'});return false;}
           const sid=isNew?D.uniqueStyleId(d,nm):id;
           E.edit(isNew?'New Style':'Modify Style',()=>{D.touchKey(d,'styles');const out=Object.assign({},st,{id:sid,name:isNew||!st.builtin?nm:st.name});if(out.next==='__self')out.next=sid;if(isNew){out.custom=true;out.q=true;delete out.builtin;}d.styles[sid]=out;D.stylesChanged();return E.sel;});
           if(isNew&&st.type==='paragraph'&&E.sel&&curP)A().applyStyle(sid);return sid;
         }
       };
-      ui.dialog({title:isNew?'New Style':'Modify Style',width:520,body:root,buttons:[{label:'Format ▾',onClick:(close,button)=>{G.reactStyleAction('format',button);return false;}},{label:'OK',primary:true,onClick:()=>G.reactStyleAction('save',Object.fromEntries(['name','type','basedOn','next','font','size','bold','italic','underline','color','align','autoRedefine'].map((key)=>{const el=root.querySelector('[data-style-field="'+key+'"]');return [key,key==='bold'||key==='italic'||key==='autoRedefine'?!!el?.checked:el?.value??''];})))},{label:'Cancel'}],onOpen:(el)=>el.querySelector('.dlg-foot .btn').classList.add('left')});
+      ui.dialog({title:isNew?'New Style':'Modify Style',width:520,body:root,buttons:[{label:'Format ▾',onClick:(close,button)=>{G.reactStyleAction('format',button);return false;}},{label:'OK',primary:true,onClick:()=>G.reactStyleAction('save')},{label:'Cancel'}],onOpen:(el)=>el.querySelector('.dlg-foot .btn').classList.add('left')});
       return;
     }
     const d = doc();

@@ -1,5 +1,5 @@
-// A document's hyperlink is never opened by the suite: Ctrl+click and Open Hyperlink (Quire, Ledger) and a click in
-// the slide show (Lectern) show its address with a warning and Copy (L.ui.linkDialog), whatever the address, a
+// A document's hyperlink is never opened by the suite: Ctrl+click and Open Hyperlink (Wordx, Excelx) and a click in
+// the slide show (PPTX) show its address with a warning and Copy (L.ui.linkDialog), whatever the address, a
 // javascript: one too; nothing runs and no window opens. Links within the document still go where they point.
 //
 //   node --test --test-concurrency=1 tests/ui/hyperlinks.test.mjs

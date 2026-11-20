@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { PptxPreviewArtwork } from './slides-pane.js';
 
 interface FinderSlide { index: number; title: string; thumb: string }
 interface SlideFinderCatalog { name: string; keep: boolean; slides: FinderSlide[]; selected: number[] }
@@ -38,7 +39,7 @@ export function PptxSlideFinderDialog() {
       <div>{t('Presentation: {0}', catalog.name)}</div>
       <div className="slide-finder-grid" role="group" aria-label={t('Slides in presentation')} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10, maxHeight: 320, overflow: 'auto', padding: 4, background: '#fff', border: '1px solid var(--field-border)' }}>
         {catalog.slides.map((slide) => <label key={slide.index} className="slide-finder-item" style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start', cursor: 'default' }}>
-          <span className="slide-finder-thumb" style={{ border: '1px solid var(--field-border)' }} dangerouslySetInnerHTML={{ __html: slide.thumb }} />
+          <span className="slide-finder-thumb" style={{ border: '1px solid var(--field-border)' }}><PptxPreviewArtwork markup={slide.thumb} /></span>
           <span className="row" style={{ gap: 4, alignItems: 'center' }}><input type="checkbox" aria-label={t('Slide {0}: {1}', slide.index + 1, slide.title)} checked={selected.includes(slide.index)} onChange={(event) => toggle(slide.index, event.currentTarget.checked)} /><span>{slide.index + 1}. {slide.title.slice(0, 24)}</span></span>
         </label>)}
       </div>

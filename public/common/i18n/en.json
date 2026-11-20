@@ -3018,7 +3018,7 @@
  "&Replace It": {
   "where": [
    "common/core.js:406",
-   "suite/src/main.tsx:29"
+   "suite/src/main.tsx:30"
   ]
  },
  "&Replace:": {
@@ -4665,6 +4665,11 @@
  "A UI mount element is required": {
   "where": [
    "common/ui.js:23"
+  ]
+ },
+ "A browser office suite with Wordx, Excelx, and PPTX. Your documents stay on this computer.": {
+  "where": [
+   "suite/src/main.tsx:313"
   ]
  },
  "A cell reference is not valid.": {
@@ -9318,7 +9323,7 @@
  },
  "Continue": {
   "where": [
-   "suite/src/main.tsx:31"
+   "suite/src/main.tsx:32"
   ]
  },
  "Continue Numbering": {
@@ -9782,9 +9787,9 @@
  "Create File": {
   "where": [
    "start.js:141",
-   "suite/src/main.tsx:264",
-   "suite/src/main.tsx:273",
-   "index.html:222"
+   "suite/src/main.tsx:287",
+   "suite/src/main.tsx:297",
+   "suite/src/main.tsx:308"
   ]
  },
  "Create Graphic": {
@@ -9804,6 +9809,12 @@
    "ledger/js/dialogs3.js:359",
    "ledger/js/dialogs3.js:366",
    "ledger/js/dialogs3.js:375"
+  ]
+ },
+ "Create a blank file": {
+  "where": [
+   "suite/src/main.tsx:297",
+   "suite/src/main.tsx:298"
   ]
  },
  "Create a new document...": {
@@ -11385,7 +11396,7 @@
  },
  "Dismiss": {
   "where": [
-   "suite/src/main.tsx:32"
+   "suite/src/main.tsx:33"
   ]
  },
  "Display drawing &guides on screen": {
@@ -12513,7 +12524,7 @@
  },
  "Enter a number, or Cancel to stop.": {
   "where": [
-   "suite/src/main.tsx:30"
+   "suite/src/main.tsx:31"
   ]
  },
  "Enter adds an item, Tab and Shift+Tab move it in and out a level, Alt+Shift+↑/↓ move it.": {
@@ -12924,7 +12935,7 @@
  "Excelx": {
   "where": [
    "ledger/js/panes.js:82",
-   "suite/src/main.tsx:23",
+   "suite/src/main.tsx:24",
    "index.html:227",
    "ledger/index.html:2"
   ]
@@ -13314,6 +13325,7 @@
  },
  "Feedback on our GitHub": {
   "where": [
+   "suite/src/main.tsx:305",
    "index.html:237"
   ]
  },
@@ -13448,7 +13460,7 @@
  },
  "File name": {
   "where": [
-   "suite/src/main.tsx:29"
+   "suite/src/main.tsx:30"
   ]
  },
  "File sharing": {
@@ -16648,6 +16660,7 @@
  },
  "Install VibeOffice.work": {
   "where": [
+   "suite/src/main.tsx:305",
    "index.html:234"
   ]
  },
@@ -18500,7 +18513,7 @@
  },
  "Missing #root mount element": {
   "where": [
-   "suite/src/main.tsx:282"
+   "suite/src/main.tsx:318"
   ]
  },
  "Mo&vies and Sounds": {
@@ -19993,13 +20006,13 @@
  },
  "Open File…": {
   "where": [
-   "suite/src/main.tsx:273",
+   "suite/src/main.tsx:297",
    "index.html:221"
   ]
  },
  "Open URL…": {
   "where": [
-   "suite/src/main.tsx:27"
+   "suite/src/main.tsx:28"
   ]
  },
  "Open a presentation (.pptx)...": {
@@ -20454,7 +20467,7 @@
  "PPTX": {
   "where": [
    "lectern/js/panes.js:734",
-   "suite/src/main.tsx:24"
+   "suite/src/main.tsx:25"
   ]
  },
  "PPTX &Help": {
@@ -20866,7 +20879,7 @@
   "where": [
    "common/ui.js:863",
    "ledger/js/app.js:182",
-   "suite/src/main.tsx:31"
+   "suite/src/main.tsx:32"
   ]
  },
  "Password to &open:": {
@@ -22243,12 +22256,12 @@
  },
  "Recover": {
   "where": [
-   "suite/src/main.tsx:32"
+   "suite/src/main.tsx:33"
   ]
  },
  "Recover unsaved work": {
   "where": [
-   "suite/src/main.tsx:32"
+   "suite/src/main.tsx:33"
   ]
  },
  "Recovered the unsaved changes. Save the document to keep them.": {
@@ -24993,7 +25006,7 @@
   "where": [
    "lectern/js/commands.js:26",
    "quire/js/dialogs3.js:945",
-   "suite/src/main.tsx:29"
+   "suite/src/main.tsx:30"
   ]
  },
  "Save &As...": {
@@ -25084,7 +25097,7 @@
   "where": [
    "lectern/js/app.js:629",
    "quire/js/app.js:1088",
-   "suite/src/main.tsx:32"
+   "suite/src/main.tsx:33"
   ]
  },
  "Saving {0}...": {
@@ -25773,7 +25786,7 @@
  },
  "Service worker:": {
   "where": [
-   "suite/src/main.tsx:95"
+   "suite/src/main.tsx:99"
   ]
  },
  "Set AutoShape &Defaults": {
@@ -28880,7 +28893,7 @@
  },
  "The file could not be opened: {0}": {
   "where": [
-   "suite/src/main.tsx:28"
+   "suite/src/main.tsx:29"
   ]
  },
  "The file could not be saved: {0}": {
@@ -29090,7 +29103,7 @@
  },
  "The remote file changed since it was opened. Replace it anyway?": {
   "where": [
-   "suite/src/main.tsx:27"
+   "suite/src/main.tsx:28"
   ]
  },
  "The search item wasn't found.": {
@@ -29513,7 +29526,7 @@
  },
  "This WebDAV folder is empty.": {
   "where": [
-   "suite/src/main.tsx:30"
+   "suite/src/main.tsx:31"
   ]
  },
  "This browser blocked the image export.": {
@@ -29638,7 +29651,7 @@
  },
  "This file type is not supported.": {
   "where": [
-   "suite/src/main.tsx:28"
+   "suite/src/main.tsx:29"
   ]
  },
  "This file was damaged; Excelx repaired what it could.": {
@@ -30980,7 +30993,7 @@
  },
  "Username": {
   "where": [
-   "suite/src/main.tsx:31"
+   "suite/src/main.tsx:32"
   ]
  },
  "V&ery Loose": {
@@ -31331,6 +31344,11 @@
    "quire/js/dialogs3.js:163"
   ]
  },
+ "Web edition": {
+  "where": [
+   "suite/src/main.tsx:313"
+  ]
+ },
  "Web page": {
   "where": [
    "quire/js/panes.js:242"
@@ -31338,17 +31356,17 @@
  },
  "WebDAV collection URL": {
   "where": [
-   "suite/src/main.tsx:28"
+   "suite/src/main.tsx:29"
   ]
  },
  "WebDAV files": {
   "where": [
-   "suite/src/main.tsx:30"
+   "suite/src/main.tsx:31"
   ]
  },
  "WebDAV…": {
   "where": [
-   "suite/src/main.tsx:27"
+   "suite/src/main.tsx:28"
   ]
  },
  "Webdings": {
@@ -31674,6 +31692,7 @@
  },
  "Word processor": {
   "where": [
+   "suite/src/main.tsx:23",
    "index.html:226"
   ]
  },
@@ -31703,7 +31722,7 @@
  "Wordx": {
   "where": [
    "quire/js/panes.js:98",
-   "suite/src/main.tsx:22",
+   "suite/src/main.tsx:23",
    "index.html:226",
    "quire/index.html:13"
   ]
@@ -31984,6 +32003,7 @@
  },
  "Your files stay on this computer.": {
   "where": [
+   "suite/src/main.tsx:305",
    "index.html:239"
   ]
  },

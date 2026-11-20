@@ -146,6 +146,7 @@ export function installPptxEditor(runtime: Window): void {
   function drawGrid() {
     const g = E.gridEl;
     g.hidden = !E.grid.show && !E.grid.guides;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__) { L.bus.emit('pptx-grid'); return; }
     if (g.hidden) return;
     L.clear(g);
     if (E.grid.show) {
@@ -168,6 +169,22 @@ export function installPptxEditor(runtime: Window): void {
       g.append(gv, gh);
     }
   }
+  E.reactGridCatalog = function () {
+    if (!E.gridEl) return null;
+    if (E.grid.guides) {
+      if (E.grid.gx == null) E.grid.gx = L.pres.W / 2;
+      if (E.grid.gy == null) E.grid.gy = L.pres.H / 2;
+    }
+    const step = E.grid.size * E.scale;
+    const big = step * Math.max(1, Math.round(72 / E.grid.size / 2));
+    return {
+      visible: E.grid.show || E.grid.guides,
+      backgroundImage: E.grid.show ? 'radial-gradient(circle, rgba(0,0,0,.45) 0.7px, transparent 0.9px)' : 'none',
+      backgroundSize: `${big}px ${big}px`,
+      backgroundPosition: `${-big / 2}px ${-big / 2}px`,
+      guides: E.grid.guides ? [{ axis: 'x', position: E.grid.gx * E.scale }, { axis: 'y', position: E.grid.gy * E.scale }] : [],
+    };
+  };
   function dragGuide(e, axis) {
     if (e.button !== 0) return;
     e.stopPropagation(); e.preventDefault();
@@ -191,10 +208,29 @@ export function installPptxEditor(runtime: Window): void {
   }
 
   L.onLook(() => { if (E.rulerH) E.drawRulers(); });   /* the canvas follows the look */
+  E.reactRulerCatalog = function () {
+    if (!E.scroller) return null;
+    const show = !!(L.app && L.app.opts.ruler) && E.view !== 'sorter';
+    return {
+      show,
+      width: E.scroller.clientWidth,
+      height: E.scroller.clientHeight,
+      slideWidth: L.pres.W,
+      slideHeight: L.pres.H,
+      scale: E.scale,
+      offsetX: E.ox - E.scroller.scrollLeft,
+      offsetY: E.oy - E.scroller.scrollTop,
+      background: L.lookColor('ruler', '#fff'),
+      outside: L.lookColor('ruler-off-2', '#c5d6f3'),
+      tick: L.lookColor('ruler-tick-2', '#4b5d7e'),
+      ink: L.lookColor('ruler-ink-2', '#334'),
+    };
+  };
   E.drawRulers = function () {
     const show = !!(L.app && L.app.opts.ruler) && E.view !== 'sorter';
     E.rulerH.hidden = E.rulerV.hidden = !show;
     E.wrap.classList.toggle('with-rulers', show);
+    if (window.__VIBE_OFFICE_DIRECT_HOST__) { L.bus.emit('pptx-rulers'); return; }
     if (!show) return;
     const W = L.pres.W, H = L.pres.H, s = E.scale;
     const mk = (len, horiz) => {
@@ -318,72 +354,106 @@ export function installPptxEditor(runtime: Window): void {
   /* ---------- overlay (selection handles) ---------- */
   const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
   const HPOS = { nw: [0, 0], n: [0.5, 0], ne: [1, 0], e: [1, 0.5], se: [1, 1], s: [0.5, 1], sw: [0, 1], w: [0, 0.5] };
-  E.drawOverlay = function () {
-    if (!E.overlay) return;
-    L.clear(E.overlay);
-    const s = E.scale;
+  E.reactSelectionOverlayCatalog = function () {
+    const nodes = [];
+    const scale = E.scale;
     const editId = E.editing() ? L.te.target().sh.id : null;
+    const node = (key, className, style, props = {}) => ({ key, className, style, owned: true, ...props });
     for (const id of E.sel) {
-      const f = E.find(id);
-      if (!f) continue;
-      const sh = f.shape;
-      const vis = E.visualBox(sh, f.parent);
-      if (f.parent) {
-        const gb = f.parent;
-        const gfr = h('div', { class: 'sel-frame grp-frame', style: `left:${gb.x * s}px;top:${gb.y * s}px;width:${gb.w * s}px;height:${gb.h * s}px;${gb.rot ? `transform:rotate(${gb.rot}deg)` : ''}` });
-        E.overlay.appendChild(gfr);
+      const found = E.find(id);
+      if (!found) continue;
+      const shape = found.shape;
+      const visual = E.visualBox(shape, found.parent);
+      if (found.parent) {
+        const group = found.parent;
+        nodes.push(node(`group:${id}`, 'sel-frame grp-frame', {
+          left: group.x * scale,
+          top: group.y * scale,
+          width: group.w * scale,
+          height: group.h * scale,
+          ...(group.rot ? { transform: `rotate(${group.rot}deg)` } : {}),
+        }));
       }
-      if (sh.type === 'line' || (sh.type === 'shape' && L.geom.isLine(sh.geom))) {
-        const [p1, p2] = L.geom.lineEnds(sh);
-        for (const [k, p] of [['p1', p1], ['p2', p2]]) {
-          E.overlay.appendChild(h('div', { class: 'hd hd-end', 'data-h': k, 'data-sid': id, style: `left:${p[0] * s}px;top:${p[1] * s}px` }));
-        }
+      if (shape.type === 'line' || (shape.type === 'shape' && L.geom.isLine(shape.geom))) {
+        const [start, end] = L.geom.lineEnds(shape);
+        for (const [handle, point] of [['p1', start], ['p2', end]]) nodes.push(node(`line:${id}:${handle}`, 'hd hd-end', {
+          left: point[0] * scale,
+          top: point[1] * scale,
+        }, { handle, shapeId: id }));
         continue;
       }
-      const fr = h('div', { class: 'sel-frame' + (editId === id ? ' editing' : '') + (sh.type === 'group' ? ' is-group' : ''), 'data-sid': id });
-      fr.style.cssText = `left:${vis.x * s}px;top:${vis.y * s}px;width:${Math.max(vis.w * s, 1)}px;height:${Math.max(vis.h * s, 1)}px;${vis.rot ? `transform:rotate(${vis.rot}deg)` : ''}`;
-      if (editId === id) {
-        fr.appendChild(h('div', { class: 'edit-ring', 'data-h': 'move', 'data-sid': id }));
-      } else if (sh.type === 'group') fr.appendChild(h('div', { class: 'grp-ring', 'data-h': 'move', 'data-sid': id }));
-      const locked = !!f.parent && !!f.parent.rot;
-      if (!locked) {
-        if (E.cropMode && sh.type === 'image' && E.sel.length === 1) {
-          for (const k of HANDLES) fr.appendChild(h('div', { class: 'hd crop-' + k, 'data-h': 'crop-' + k, 'data-sid': id, style: `left:${HPOS[k][0] * 100}%;top:${HPOS[k][1] * 100}%` }));
+      const children = [];
+      if (editId === id) children.push(node(`edit:${id}`, 'edit-ring', {}, { handle: 'move', shapeId: id }));
+      else if (shape.type === 'group') children.push(node(`group-ring:${id}`, 'grp-ring', {}, { handle: 'move', shapeId: id }));
+      const parentRotated = !!found.parent && !!found.parent.rot;
+      if (!parentRotated) {
+        if (E.cropMode && shape.type === 'image' && E.sel.length === 1) {
+          for (const handle of HANDLES) {
+            const [x, y] = HPOS[handle];
+            children.push(node(`crop:${id}:${handle}`, `hd crop-${handle}`, { left: `${x * 100}%`, top: `${y * 100}%` }, { handle: `crop-${handle}`, shapeId: id }));
+          }
         } else {
-          for (const k of HANDLES) {
-            if (sh.type === 'table' && (k === 'n' || k === 's')) continue;
-            fr.appendChild(h('div', { class: 'hd', 'data-h': k, 'data-sid': id, style: `left:${HPOS[k][0] * 100}%;top:${HPOS[k][1] * 100}%` }));
+          for (const handle of HANDLES) {
+            if (shape.type === 'table' && (handle === 'n' || handle === 's')) continue;
+            children.push(node(`resize:${id}:${handle}`, 'hd', { left: `${HPOS[handle][0] * 100}%`, top: `${HPOS[handle][1] * 100}%` }, { handle, shapeId: id }));
           }
           if (E.selected().every(M.canRotate)) {
-            fr.appendChild(h('div', { class: 'hd-rotline' }));
-            fr.appendChild(h('div', { class: 'hd hd-rot', 'data-h': 'rot', 'data-sid': id }));
+            children.push(node(`rotate-line:${id}`, 'hd-rotline', {}));
+            children.push(node(`rotate:${id}`, 'hd hd-rot', {}, { handle: 'rot', shapeId: id }));
           }
-          if (E.sel.length === 1 && (sh.type === 'shape' || sh.type === 'text') && !f.parent) {
-            L.geom.handles(sh).forEach((hd, i) => {
-              let [x, y] = hd.pos(sh.w, sh.h, L.geom.adj(sh));
-              if (sh.flipH) x = sh.w - x;
-              if (sh.flipV) y = sh.h - y;
-              fr.appendChild(h('div', { class: 'hd hd-adj', 'data-h': 'adj' + i, 'data-sid': id, style: `left:${x * s}px;top:${y * s}px` }));
+          if (E.sel.length === 1 && (shape.type === 'shape' || shape.type === 'text') && !found.parent) {
+            L.geom.handles(shape).forEach((control, index) => {
+              let [x, y] = control.pos(shape.w, shape.h, L.geom.adj(shape));
+              if (shape.flipH) x = shape.w - x;
+              if (shape.flipV) y = shape.h - y;
+              children.push(node(`adjust:${id}:${index}`, 'hd hd-adj', { left: x * scale, top: y * scale }, { handle: `adj${index}`, shapeId: id }));
             });
           }
         }
       }
-      E.overlay.appendChild(fr);
+      nodes.push(node(`selection:${id}`, `sel-frame${editId === id ? ' editing' : ''}${shape.type === 'group' ? ' is-group' : ''}`, {
+        left: visual.x * scale,
+        top: visual.y * scale,
+        width: Math.max(visual.w * scale, 1),
+        height: Math.max(visual.h * scale, 1),
+        ...(visual.rot ? { transform: `rotate(${visual.rot}deg)` } : {}),
+      }, { shapeId: id, children }));
     }
     if (E.cellSel && E.editing()) {
-      const t = L.te.target();
-      if (t && t.sh.type === 'table') {
+      const target = L.te.target();
+      if (target && target.sh.type === 'table') {
         const { r0, c0, r1, c1 } = E.cellSel;
-        const tbl = t.sh.tbl;
-        let x = t.sh.x, y = t.sh.y;
-        for (let c = 0; c < Math.min(c0, c1); c++) x += tbl.cols[c];
-        for (let r = 0; r < Math.min(r0, r1); r++) y += tbl.rows[r].h;
-        let w = 0, hh = 0;
-        for (let c = Math.min(c0, c1); c <= Math.max(c0, c1); c++) w += tbl.cols[c];
-        for (let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++) hh += tbl.rows[r].h;
-        if (r0 !== r1 || c0 !== c1) E.overlay.appendChild(h('div', { class: 'cell-sel', style: `left:${x * s}px;top:${y * s}px;width:${w * s}px;height:${hh * s}px` }));
+        const table = target.sh.tbl;
+        let x = target.sh.x, y = target.sh.y;
+        for (let col = 0; col < Math.min(c0, c1); col++) x += table.cols[col];
+        for (let row = 0; row < Math.min(r0, r1); row++) y += table.rows[row].h;
+        let width = 0, height = 0;
+        for (let col = Math.min(c0, c1); col <= Math.max(c0, c1); col++) width += table.cols[col];
+        for (let row = Math.min(r0, r1); row <= Math.max(r0, r1); row++) height += table.rows[row].h;
+        if (r0 !== r1 || c0 !== c1) nodes.push(node('cell-selection', 'cell-sel', {
+          left: x * scale, top: y * scale, width: width * scale, height: height * scale,
+        }));
       }
     }
+    return nodes;
+  };
+  E.drawOverlay = function () {
+    if (!E.overlay) return;
+    if (window.__VIBE_OFFICE_DIRECT_HOST__) {
+      L.bus.emit('pptx-selection-overlay');
+      E.drawRulers();
+      return;
+    }
+    L.clear(E.overlay);
+    const append = (node) => {
+      const el = h('div', { class: node.className });
+      for (const [key, value] of Object.entries(node.style || {})) el.style[key] = typeof value === 'number' ? `${value}px` : value;
+      if (node.handle) el.dataset.h = node.handle;
+      if (node.shapeId) el.dataset.sid = node.shapeId;
+      for (const child of node.children || []) el.appendChild(append(child));
+      return el;
+    };
+    for (const node of E.reactSelectionOverlayCatalog()) E.overlay.appendChild(append(node));
     E.drawRulers();
   };
   /** Visual box of a shape (accounts for parent group rotation) */

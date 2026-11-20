@@ -17,6 +17,15 @@ export function installWordxReview(runtime: Window): void {
   const app = () => L.app;
   const { h } = L;
 
+  function afterCurrentMount(callback) {
+    let removeCleanup = () => {};
+    const timer = setTimeout(() => {
+      removeCleanup();
+      callback();
+    }, 0);
+    removeCleanup = typeof L.addMountCleanup === 'function' ? L.addMountCleanup(() => clearTimeout(timer)) : () => {};
+  }
+
   /* ================= tracking ================= */
   RV.toggleTracking = function () {
     const d = doc();
@@ -196,7 +205,7 @@ export function installWordxReview(runtime: Window): void {
     });
     LY.opts.showComments = true;
     if (LY.view !== 'print' || LY.opts.balloons === false) { RV.togglePane(true); }
-    setTimeout(() => { D.reindex(d); if (target) { E.setSel(D.pos(target, 0)); E.focus(); highlightBalloon(id); } if (LY.view !== 'print' || LY.opts.balloons === false) RV.editComment(id); }, 0);
+    afterCurrentMount(() => { D.reindex(d); if (target) { E.setSel(D.pos(target, 0)); E.focus(); highlightBalloon(id); } if (LY.view !== 'print' || LY.opts.balloons === false) RV.editComment(id); });
   };
   RV.commentAt = function (pos) {
     pos = pos || (E.sel && E.sel.f);
@@ -309,7 +318,7 @@ export function installWordxReview(runtime: Window): void {
       d._idxDirty = true;
       return E.sel;
     });
-    setTimeout(() => RV.editComment(nid), 0);
+    afterCurrentMount(() => RV.editComment(nid));
   };
 
   /* ================= balloons ================= */

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { PptxPreviewArtwork } from './slides-pane.js';
 
 interface ShowStartOptions { from?: number; rehearse?: boolean; preview?: number }
 interface ShowElements { root: HTMLElement; stage: HTMLElement; inkCanvas: HTMLCanvasElement; popbar: HTMLElement }
@@ -154,7 +155,7 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
   const overlay = show?.overlayCatalog?.();
   void revision;
   if (!show) return null;
-  const control = (name: string, icon: string, action: (button: HTMLButtonElement) => void) => <button type="button" aria-label={name} dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} onClick={(event) => { event.stopPropagation(); action(event.currentTarget); }} />;
+  const control = (name: string, icon: string, action: (button: HTMLButtonElement) => void) => <button type="button" aria-label={name} onClick={(event) => { event.stopPropagation(); action(event.currentTarget); }}><PptxPreviewArtwork markup={L.icons?.get(icon) || ''} /></button>;
   return <>
     {showRequest && <div className="show" data-react-show-shell="true" tabIndex={0} role="application" aria-label={L.t?.('Slide Show') || 'Slide Show'} ref={bindShowRoot}>
       <div className="stage" />
@@ -171,10 +172,10 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
       {control('Next', 'showNext', () => show.next())}
     </>, mount)}
     {rehearseMount && rehearsal && createPortal(<>
-      <button className="tb-btn" type="button" aria-label="Next" dangerouslySetInnerHTML={{ __html: L.icons?.get('forward') || '' }} onClick={(event) => { event.stopPropagation(); show.next(); }} />
+      <button className="tb-btn" type="button" aria-label="Next" onClick={(event) => { event.stopPropagation(); show.next(); }}><PptxPreviewArtwork markup={L.icons?.get('forward') || ''} /></button>
       <button className="tb-btn" type="button" aria-label={rehearsal.paused ? 'Resume' : 'Pause'} onClick={(event) => { event.stopPropagation(); show.toggleRehearsePause?.(); }}>{rehearsal.paused ? '▶' : '❚❚'}</button>
       <span className="rt">{rehearsal.current}</span>
-      <button className="tb-btn" type="button" aria-label="Repeat" dangerouslySetInnerHTML={{ __html: L.icons?.get('undo') || '' }} onClick={(event) => { event.stopPropagation(); show.repeatRehearse?.(); }} />
+      <button className="tb-btn" type="button" aria-label="Repeat" onClick={(event) => { event.stopPropagation(); show.repeatRehearse?.(); }}><PptxPreviewArtwork markup={L.icons?.get('undo') || ''} /></button>
       <span className="tot">{rehearsal.total}</span>
     </>, rehearseMount)}
     {gotoMount && gotoBuffer != null && createPortal(L.t?.('Go to slide {0}', gotoBuffer) || `Go to slide ${gotoBuffer}`, gotoMount)}

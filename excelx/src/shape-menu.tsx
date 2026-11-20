@@ -29,18 +29,22 @@ export function ExcelxShapeMenu({ host }: { host: HTMLElement }) {
     return () => observer.disconnect();
   }, [host]);
 
-  useEffect(() => { setActiveIndex(0); buttonRefs.current = []; }, [slot]);
+  useEffect(() => { setActiveIndex(0); }, [slot]);
   const L = runtime();
   if (!slot) return null;
   const choices = L?.drawing?.reactShapeMenuCatalog?.() || [];
   const t = (message: string) => L?.t?.(message) || message;
   const active = Math.min(activeIndex, Math.max(0, choices.length - 1));
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const currentIndex = Math.max(0, buttonRefs.current.indexOf(document.activeElement as HTMLButtonElement));
-    const next = event.key === 'ArrowLeft' ? Math.max(0, currentIndex - 1)
-      : event.key === 'ArrowRight' ? Math.min(choices.length - 1, currentIndex + 1)
+    const currentIndex = buttonRefs.current.indexOf(event.currentTarget);
+    if (currentIndex < 0) return;
+    const lastIndex = choices.length - 1;
+    const next = event.key === 'ArrowLeft' ? currentIndex % 8 === 0 ? currentIndex : currentIndex - 1
+      : event.key === 'ArrowRight' ? currentIndex === lastIndex || currentIndex % 8 === 7 ? currentIndex : currentIndex + 1
+        : event.key === 'ArrowUp' ? Math.max(0, currentIndex - 8)
+          : event.key === 'ArrowDown' ? Math.min(lastIndex, currentIndex + 8)
         : event.key === 'Home' ? 0
-          : event.key === 'End' ? choices.length - 1 : -1;
+          : event.key === 'End' ? lastIndex : -1;
     if (next < 0) return;
     event.preventDefault();
     event.stopPropagation();

@@ -115,7 +115,8 @@ export function EditorToolbarLayer({ host }: { host: HTMLElement }) {
     };
     host.addEventListener('vibeoffice-react-toolbar', onToolbar);
     const offRefresh = runtime()?.bus.on('ui-refresh', () => setRefresh((current) => current + 1));
-    return () => { host.removeEventListener('vibeoffice-react-toolbar', onToolbar); offRefresh?.(); setRequests([]); };
+    const offVisibility = runtime()?.bus.on('toolbar-visibility', () => setRefresh((current) => current + 1));
+    return () => { host.removeEventListener('vibeoffice-react-toolbar', onToolbar); offRefresh?.(); offVisibility?.(); setRequests([]); };
   }, [host]);
 
   useLayoutEffect(() => {

@@ -1,4 +1,4 @@
-// The Format Painter in Quire, Ledger and Lectern with real mouse input (tests/lib/input.mjs): it paints what the
+// The Format Painter in Wordx, Excelx and PPTX with real mouse input (tests/lib/input.mjs): it paints what the
 // user marks, once, when the mouse is let go (never while a selection is still being dragged out); a click on its
 // button arms it for one use, a double-click keeps it on until Esc; starting it keeps the selection or the text being
 // edited (common/ui.js, ui.brush; docs/suite.md, Brushes).
@@ -161,9 +161,9 @@ test('Esc in the middle of a painting drag cancels it and puts the painter down 
     await g.click(await g.button('formatPainter'));
     const a = await cell(3, 3), b = await cell(6, 5);
     await g.press(a); await g.glide(a, b, 5); await g.esc(); await g.release(b);
-    assert.equal(await g.painting(), false, 'Ledger: the painter is down');
+    assert.equal(await g.painting(), false, 'Excelx: the painter is down');
     await g.click(await cell(9, 1));
-    assert.equal(await painted(), 0, 'Ledger: nothing painted, not even by the next click');
+    assert.equal(await painted(), 0, 'Excelx: nothing painted, not even by the next click');
     g.clean();
   } finally { await g.close(); }
   const s = await open('lectern');
@@ -179,8 +179,8 @@ test('Esc in the middle of a painting drag cancels it and puts the painter down 
     await s.click(await s.button('painter'));
     const c = await centre('blue'), to = { x: c.x + 30, y: c.y + 20 };
     await s.press(c); await s.glide(c, to, 5); await s.esc(); await s.release(to);
-    assert.equal(await s.painting(), false, 'Lectern: the painter is down');
-    assert.equal(await s.evaluate(`L.ed.shape('blue').fill.c`), '#0000FF', 'Lectern: the shape is not painted');
+    assert.equal(await s.painting(), false, 'PPTX: the painter is down');
+    assert.equal(await s.evaluate(`L.ed.shape('blue').fill.c`), '#0000FF', 'PPTX: the shape is not painted');
     s.clean();
   } finally { await s.close(); }
 });

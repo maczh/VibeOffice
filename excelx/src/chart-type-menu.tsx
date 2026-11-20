@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { SvgArtwork } from '@vibeoffice/core';
 import './chart-type-menu.css';
 
 type Catalog = { left: number; top: number; anchor?: HTMLElement | null; items: { kind: string; label: string; icon: string }[] };
@@ -39,6 +40,6 @@ export function ExcelxChartTypeMenu() {
     event.stopPropagation();
   };
   return <div ref={rootRef} className="excelx-chart-type-menu" role="listbox" aria-label={runtime()?.t?.('Chart type') || 'Chart type'} aria-activedescendant={catalog.items[active] ? `excelx-chart-type-option-${active}` : undefined} tabIndex={0} onKeyDown={onKeyDown} style={{ left: catalog.left, top: catalog.top }}>
-    {catalog.items.map((item, index) => <button type="button" id={`excelx-chart-type-option-${index}`} role="option" aria-label={runtime()?.t?.(item.label) || item.label} aria-selected={active === index} tabIndex={-1} key={item.kind} onPointerEnter={() => setActive(index)} onClick={() => dismiss(item.kind)}><span dangerouslySetInnerHTML={{ __html: item.icon }} />{runtime()?.t?.(item.label) || item.label}</button>)}
+    {catalog.items.map((item, index) => <button type="button" id={`excelx-chart-type-option-${index}`} role="option" aria-label={runtime()?.t?.(item.label) || item.label} aria-selected={active === index} tabIndex={-1} key={item.kind} onPointerEnter={() => setActive(index)} onClick={() => dismiss(item.kind)}><SvgArtwork markup={item.icon} owner="chart-type-option" />{runtime()?.t?.(item.label) || item.label}</button>)}
   </div>;
 }
