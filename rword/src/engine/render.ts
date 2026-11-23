@@ -63,11 +63,17 @@ function rPrStyle(r: RPr | undefined, doc: Doc): string {
   // Some Word files mark CJK runs as vanished while still expecting them to
   // be visible in the normal document view. Rendering them transparent makes
   // the text appear only when selected, so keep the run readable here.
-  if (r?.color && !/^#(?:fff|ffffff)$/i.test(r.color.trim())) s.push('color:' + r.color)
+  if (r?.color && !isInvisibleLightColor(r.color)) s.push('color:' + r.color)
   if (r?.highlight) s.push('background:' + r.highlight)
   if (r?.vertAlign === 'superscript') s.push('vertical-align:super;font-size:smaller')
   if (r?.vertAlign === 'subscript') s.push('vertical-align:sub;font-size:smaller')
   return s.join(';')
+}
+
+function isInvisibleLightColor(value: string): boolean {
+  const color = value.trim().toLowerCase().replace(/\s+/g, '')
+  return color === 'transparent' || color === '#fff' || color === '#ffffff' ||
+    color === 'rgb(255,255,255)' || color === 'rgba(255,255,255,1)' || color === 'rgba(255,255,255,0)'
 }
 
 function pPrStyle(p: Para, doc: Doc): string {
@@ -221,7 +227,7 @@ function mergeStyle(r: RPr, el: HTMLElement): RPr {
     else if (!isNaN(px)) out.size = Math.round(px * 0.75 * 2) / 2
   }
   const col = rgbToHex(st.color)
-  if (col) out.color = col
+  if (col && !isInvisibleLightColor(col)) out.color = col
   const bg = rgbToHex(st.backgroundColor)
   if (bg && bg !== '#ffffff') out.highlight = HL_NAMES[bg.toLowerCase()] || bg
   if (st.verticalAlign === 'super') out.vertAlign = 'superscript'

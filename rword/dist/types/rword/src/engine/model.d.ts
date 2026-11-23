@@ -1,0 +1,207 @@
+export interface RPr {
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    underlineStyle?: 'double' | 'words';
+    strike?: boolean;
+    font?: string;
+    /** point size */
+    size?: number;
+    color?: string;
+    /** highlight colour name (yellow, green, …) or hex */
+    highlight?: string;
+    vertAlign?: 'superscript' | 'subscript';
+    caps?: 'all' | 'small';
+    hidden?: boolean;
+    /** the LettersArt warp applied to the run */
+    warp?: string;
+}
+/** One border edge: a style name, a width in points and a colour. */
+export interface Border {
+    val?: string;
+    sz?: number;
+    color?: string;
+    space?: number;
+}
+/** The edges a paragraph or a cell can draw a border on. */
+export type BorderSet = Partial<Record<'top' | 'bottom' | 'left' | 'right' | 'between' | 'insideH' | 'insideV' | 'diagDown' | 'diagUp', Border>>;
+export interface ImageRef {
+    rId: string;
+    part: string;
+    url: string;
+    /** display size in px */
+    w: number;
+    h: number;
+    /** picture-tool state, kept on the run so it survives DOCX write-back */
+    contrast?: number;
+    brightness?: number;
+    crop?: {
+        l: number;
+        r: number;
+        t: number;
+        b: number;
+    };
+    rotation?: number;
+    /** offset from the text flow, in px */
+    offset?: {
+        x: number;
+        y: number;
+    };
+    wrap?: 'inline' | 'square' | 'tight' | 'behind' | 'none' | 'topBottom' | 'through';
+    /** the picture colour mode */
+    gray?: boolean;
+    bw?: boolean;
+    washout?: boolean;
+}
+/** A tracked change. `before`/`after` hold text so accept/reject can be applied. */
+export interface Revision {
+    id: string;
+    kind: 'insert' | 'delete' | 'format';
+    author: string;
+    date: string;
+    text: string;
+    before?: string;
+    after?: string;
+    accepted?: boolean;
+    rejected?: boolean;
+    blockId?: string;
+}
+export interface Comment {
+    id: string;
+    author: string;
+    date: string;
+    text: string;
+    blockId?: string;
+    resolved?: boolean;
+}
+export interface Run {
+    text?: string;
+    br?: boolean;
+    tab?: boolean;
+    image?: ImageRef;
+    hyperlink?: {
+        rId: string;
+        url: string;
+    };
+    rPr?: RPr;
+    /** verbatim XML for content we do not model (fields, drawings, …) */
+    raw?: string;
+}
+export interface PPr {
+    align?: 'left' | 'center' | 'right' | 'justify';
+    style?: string;
+    numId?: number;
+    ilvl?: number;
+    /** left indent in px */
+    indent?: number;
+    hanging?: number;
+    pageBreakBefore?: boolean;
+    spaceBefore?: number;
+    spaceAfter?: number;
+    line?: number;
+    outlineLvl?: number;
+    keepNext?: boolean;
+    keepLines?: boolean;
+    /** paragraph borders, per edge */
+    borders?: BorderSet;
+    /** shading colour */
+    shading?: string;
+    /** expanded/collapsed outline state */
+    collapsed?: boolean;
+}
+export interface Para {
+    kind: 'p';
+    id: string;
+    runs: Run[];
+    pPr?: PPr;
+    raw?: string;
+}
+export interface Cell {
+    paras: Para[];
+    gridSpan?: number;
+    vMerge?: 'restart' | 'continue';
+    fill?: string;
+    width?: number;
+    vAlign?: 'top' | 'center' | 'bottom';
+    textDirection?: 'horizontal' | 'vertical';
+    /** cell borders, per edge */
+    borders?: BorderSet;
+    raw?: string;
+}
+export interface Table {
+    kind: 'tbl';
+    id: string;
+    rows: Cell[][];
+    /** column widths in px */
+    widths: number[];
+    align?: 'left' | 'center' | 'right';
+    autoFit?: 'content' | 'window' | 'fixed';
+    headerRows?: number;
+    raw?: string;
+}
+export type Block = Para | Table;
+export interface Section {
+    /** twips (1/1440 inch) */
+    pageW: number;
+    pageH: number;
+    margins: {
+        top: number;
+        right: number;
+        bottom: number;
+        left: number;
+    };
+    /** Number of newspaper-style text columns in this section. */
+    columns?: number;
+}
+export interface StyleDef {
+    id: string;
+    name: string;
+    basedOn?: string;
+    rPr?: RPr;
+    pPr?: PPr;
+}
+export interface Doc {
+    blocks: Block[];
+    section: Section;
+    styles: StyleDef[];
+    defaultFont: string;
+    defaultSize: number;
+    /** numId → level-0 number format (bullet/decimal/…), from numbering.xml */
+    numbering?: Record<number, string>;
+    format: string;
+    comments?: Comment[];
+    revisions?: Revision[];
+    bookmarks?: Record<string, string>;
+    /** mail-merge state: CSV source rows and current record */
+    merge?: {
+        source?: string;
+        rows?: Record<string, string>[];
+        index?: number;
+    };
+    /** last Go Back position, block id */
+    lastPosition?: string;
+    /** table/paragraph borders enabled by the current view toggle */
+    gridlines?: boolean;
+    /** the review display mode: final, original or markup */
+    markupMode?: 'final' | 'original' | 'markup' | 'originalMarkup';
+    headerFooter?: {
+        header?: string;
+        footer?: string;
+        linkPrev?: boolean;
+        showText?: boolean;
+        kind?: 'odd' | 'even';
+    };
+}
+export declare const uid: (p?: string) => string;
+export declare const emptyPara: (pPr?: PPr) => Para;
+export declare const defaultSection: () => Section;
+export declare const newDoc: () => Doc;
+export declare const isPara: (b: Block) => b is Para;
+export declare const isTable: (b: Block) => b is Table;
+/** plain text of a block (for word count / find) */
+export declare function blockText(b: Block): string;
+export declare function paraText(p: Para): string;
+export declare function docText(d: Doc): string;
+export declare function wordCount(d: Doc): number;
+/** deep clone via JSON (model is plain data; image blob URLs survive as strings) */
+export declare const cloneDoc: (d: Doc) => Doc;

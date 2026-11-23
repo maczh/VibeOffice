@@ -335,7 +335,18 @@ export const RWord = forwardRef<OfficeApi, RWordProps>(function RWord(
       const id = html.dataset.id
       if (!id) return
       const old = byId.get(id)
-      if (old) changed.set(id, syncBlock(html, docRef.current, old))
+      if (old) {
+        const next = syncBlock(html, docRef.current, old)
+        // A browser formatting command must never turn a populated table into
+        // an empty table. This can happen when a selection is inside a cell
+        // and the browser temporarily restructures the table DOM.
+        if (old.kind === 'tbl' && next.kind === 'tbl') {
+          const oldText = old.rows.flat().flatMap((cell) => cell.paras).flatMap((para) => para.runs).map((run) => run.text || '').join('')
+          const nextText = next.rows.flat().flatMap((cell) => cell.paras).flatMap((para) => para.runs).map((run) => run.text || '').join('')
+          if (oldText.trim() && nextText.length < oldText.length) return
+        }
+        changed.set(id, next)
+      }
     })
     const blocks = previous.map((block) => changed.get(block.id) || block)
     docRef.current = { ...docRef.current, blocks }
