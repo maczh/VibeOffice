@@ -11,6 +11,10 @@
  * `commandEnabled` / `commandChecked`. */
 
 export interface CommandState {
+  /** the document is read-only */
+  readOnly: boolean
+  /** current document view */
+  view: 'normal' | 'reading' | 'preview' | 'web' | 'print' | 'outline'
   /** the document can be edited: a document is open, it is not read-only and the
    *  view is not a reading-only one (the original's `canEdit`) */
   canEdit: boolean
@@ -28,6 +32,8 @@ export interface CommandState {
   hfOnly: boolean
   /** the header and footer are linked to the previous section (the original's `A.hfLinked`) */
   hfLinked: boolean
+  /** header and footer text is shown */
+  hfShowText: boolean
   /** a mail-merge data source is loaded (the original's `hasData`) */
   hasData: boolean
   /** the merged data is being previewed (the original's `L.mailmerge.preview`) */
