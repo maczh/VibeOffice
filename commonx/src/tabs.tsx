@@ -54,7 +54,7 @@ function TabsControl({ request }: { request: TabsRequest }) {
 /** React-owned tab headers preserve the legacy DOM panel and select/onShow contract. */
 export function EditorTabsLayer({ host }: { host: HTMLElement }) {
   const [requests, setRequests] = useState<TabsRequest[]>([]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onTabs = (event: Event) => {
       const request = (event as CustomEvent<TabsRequest>).detail;
       if (!request || !(request.target instanceof HTMLDivElement) || !(request.bodyHost instanceof HTMLElement) || !Array.isArray(request.tabs) || typeof request.select !== 'function') return;

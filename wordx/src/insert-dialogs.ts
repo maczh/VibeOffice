@@ -22,7 +22,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
 
   /* ================= Break ================= */
   G.breakDlg = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const items = [['page', '&Page break'], ['column', '&Column break'], ['wrap', 'Text &wrapping break'], ['nextPage', '&Next page'], ['continuous', 'Con&tinuous'], ['evenPage', '&Even page'], ['oddPage', '&Odd page']];
     const r = direct ? null : G.radios('br', items, 'page');
     const els = r?.querySelectorAll('.ck');
@@ -74,7 +74,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const d = doc();
     const s = A().curSect();
     if (mode === 'format') { formatPageNumbers(s); return; }
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const pos = direct ? null : ui.select([['bottom', 'Bottom of page (Footer)'], ['top', 'Top of page (Header)']], 'bottom', () => draw(), { id: 'pn-pos' });
     const al = direct ? null : ui.select([['right', 'Right'], ['left', 'Left'], ['center', 'Center'], ['inside', 'Inside'], ['outside', 'Outside']], 'right', () => draw(), { id: 'pn-al' });
     const first = direct ? null : ui.check('&Show number on first page', true, null);
@@ -130,7 +130,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const d = doc();
     const sect = s.sect;
     const pn = Object.assign({ fmt: 'decimal', start: null }, sect.pgNum || {});
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const formats = [['decimal', '1, 2, 3, ...'], ['numberInDash', '- 1 -, - 2 -, - 3 -, ...'], ['lowerLetter', 'a, b, c, ...'], ['upperLetter', 'A, B, C, ...'], ['lowerRoman', 'i, ii, iii, ...'], ['upperRoman', 'I, II, III, ...']];
     const fmt = direct ? null : ui.select(formats, pn.fmt, null, { id: 'pf-fmt' });
     const chap = direct ? null : ui.check('Include chapter &number', !!pn.chapStyle, null);
@@ -173,7 +173,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const now = new Date();
     const pics = F().DATE_PICTURES;
     const def = L.store.get('defDatePic', pics[0]);
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const lb = direct ? null : G.listBox(pics.map((p) => ({ value: p, label: F().formatDate(now, p) })), def, { height: 220, translate: 'no', onDbl: () => ok.click() });
     const lang = ui.select([['en-US', 'English (U.S.)'], ['en-GB', 'English (U.K.)']], 'en-US', null, { id: 'dt-lang' });
     const auto = ui.check('&Update automatically', !!L.store.get('defDateAuto', false), null);
@@ -224,7 +224,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   G.field = function (fieldRef, opts) {
     opts = opts || {};
     const editing = !!fieldRef;
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     if (direct) {
       const root = h('div', { id: 'react-wordx-field-root' });
       const initialCode = editing ? fieldRef.it.instr.trim().replace(/\s*\\\*\s*MERGEFORMAT/i, '') : '';
@@ -311,7 +311,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   const SUBSETS = [[L.N('Basic Latin'), 0x20, 0x7e], [L.N('Latin-1 Supplement'), 0xa0, 0xff], [L.N('Latin Extended-A'), 0x100, 0x17f], [L.N('Greek and Coptic'), 0x370, 0x3ff], [L.N('Cyrillic'), 0x400, 0x4ff], [L.N('General Punctuation'), 0x2010, 0x205e], [L.N('Currency Symbols'), 0x20a0, 0x20bf], [L.N('Letterlike Symbols'), 0x2100, 0x214f], [L.N('Number Forms'), 0x2150, 0x218b], [L.N('Arrows'), 0x2190, 0x21ff], [L.N('Mathematical Operators'), 0x2200, 0x22ff], [L.N('Miscellaneous Technical'), 0x2300, 0x23ff], [L.N('Box Drawing'), 0x2500, 0x257f], [L.N('Block Elements'), 0x2580, 0x259f], [L.N('Geometric Shapes'), 0x25a0, 0x25ff], [L.N('Miscellaneous Symbols'), 0x2600, 0x26ff], [L.N('Dingbats'), 0x2700, 0x27bf]];
   G.symbol = function (opts) {
     opts = opts || {};
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     let cur = null;
     const recent = L.store.get('recentSymbols', ['€', '£', '¥', '©', '®', '™', '±', '≠', '≤', '≥', '÷', '×', '∞', 'µ', 'α', 'β']);
     const font = ui.select([['', L.t('(normal text)')], ['Symbol', 'Symbol'], ['Wingdings', 'Wingdings'], ['Webdings', 'Webdings']].concat(G.FONTS().map((f) => [f, f])), '', () => fill(), { id: 'sy-font', translate: 'no' });
@@ -380,7 +380,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   /* ================= Footnote and Endnote ================= */
   G.footnote = function () {
     const d = doc();
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     if (direct) {
       const root = h('div', { id: 'react-wordx-footnote-root' });
       const state = () => ({
@@ -465,7 +465,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
 
   /* ================= Caption ================= */
   G.caption = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const labels = Array.from(new Set(F().CAPTION_LABELS.concat(L.store.get('captionLabels', []))));
     const ci = L.tables && L.tables.inTable();
     const lab = ui.select(labels.map((x) => [x, x]), ci ? 'Table' : 'Figure', () => upd(), { id: 'cp-lab', translate: 'no' });   // labels go into the document as they are
@@ -526,7 +526,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
 
   /* ================= Cross-reference ================= */
   G.crossRef = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const kinds = [L.N('Numbered item'), L.N('Heading'), L.N('Bookmark'), L.N('Footnote'), L.N('Endnote')];
     const types = kinds.concat(['Equation', 'Figure', 'Table'], L.store.get('captionLabels', []));   // then the caption labels, as the document has them
     const what = { 'Numbered item': [['number', 'Paragraph number'], ['numberFull', 'Paragraph number (full context)'], ['text', 'Paragraph text'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]], Heading: [['text', 'Heading text'], ['page', 'Page number'], ['number', 'Heading number'], ['abovebelow', L.N('Above/below')]], Bookmark: [['text', 'Bookmark text'], ['page', 'Page number'], ['number', 'Paragraph number'], ['abovebelow', L.N('Above/below')]], Footnote: [['notenum', 'Footnote number'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]], Endnote: [['notenum', 'Endnote number'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]] };
@@ -583,7 +583,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
 
   /* ================= Index and Tables ================= */
   G.indexTables = function (tab) {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     if (direct) {
       const initialTab = tab === 'tof' ? 'tof' : tab === 'index' ? 'index' : 'toc';
       const root = h('div', { id: 'react-wordx-index-tables-root' });
@@ -695,7 +695,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     E.edit('TOC Format', () => { D.touchKey(d, 'styles'); for (let i = 1; i <= levels; i++) { const id = D.useStyle(d, 'TOC' + i); d.styles[id].rPr = Object.assign({}, look[Math.min(i - 1, 2)]); } D.stylesChanged(); return E.sel; });
   }
   G.markEntry = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const sel = E.sel && !E.collapsed() ? O.textRange(...E.range(), ' ').trim() : '';
     const main = direct ? null : h('input', { type: 'text', id: 'me-main', value: sel, style: 'width:100%' });
     const sub = direct ? null : h('input', { type: 'text', id: 'me-sub', style: 'width:100%' });
@@ -746,7 +746,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
 
   /* ================= Bookmark ================= */
   G.bookmark = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     let reactName = '', reactSort = 'name', reactHidden = false, reactNames = [];
     const sortBy = direct ? { get: () => reactSort } : G.radios('bm-s', [['name', '&Name'], ['loc', '&Location']], 'name', () => fill());
     const hidden = direct ? null : ui.check('&Hidden bookmarks', false, () => fill());
@@ -789,7 +789,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
 
   /* ================= Hyperlink ================= */
   G.hyperlink = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const d = doc();
     let cur = null;
     if (E.sel) {
@@ -871,7 +871,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   /* ================= Insert Object ================= */
   G.insertObject = function () {
     const types = [['chart', L.N('Chart')], ['equation', L.N('Equation')], ['wordart', L.N('LettersArt')], ['excel', L.N('Spreadsheet (table)')], ['document', L.N('Document (inserted as text)')], ['picture', L.N('Bitmap Image')]];
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     let selected = 'chart', tab = 0, dlg = null;
     const lb = direct ? { get: () => selected } : G.listBox(types.map(([v, l]) => ({ value: v, label: l })), 'chart', { height: 160, onDbl: () => ok.click() });
     const root = h('div', { id: 'react-wordx-object-root' });
@@ -903,7 +903,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   };
   /** a simple equation editor: linear format with Unicode math symbols */
   G.equation = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const inp = direct ? null : h('textarea', { rows: 3, id: 'eq-in', style: 'width:100%;font:16px "Cambria Math",Caladea,serif' });
     const pal = h('div', { class: 'sym-recent', style: 'grid-template-columns:repeat(16,26px)' });
     if (!direct) for (const c of '±×÷≠≈≤≥∞√∛∑∏∫∂∆∇πθαβγδλμσφωΩ→⇒∈∉⊂⊃∪∩∀∃¬∧∨²³⁴ⁿ₀₁₂ᵢ½'.split('')) { const b = h('button', { type: 'button', text: c }); b.addEventListener('click', () => { const s = inp.selectionStart; inp.value = inp.value.slice(0, s) + c + inp.value.slice(inp.selectionEnd); inp.focus(); inp.setSelectionRange(s + 1, s + 1); }); pal.appendChild(b); }
@@ -928,7 +928,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   /* ================= Diagram Gallery ================= */
   G.diagram = function () {
     const kinds = [['org', 'Organization Chart'], ['cycle', 'Cycle Diagram'], ['radial', 'Radial Diagram'], ['pyramid', 'Pyramid Diagram'], ['venn', 'Venn Diagram'], ['target', 'Target Diagram']];
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     if (direct) {
       const root = h('div', { id: 'react-wordx-diagram-root' });
       let selected = 'org';
@@ -992,7 +992,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     { fill: { t: 'solid', c: '#CC0000' }, line: { c: '#660000', w: 0.75 }, warp: 'textArchDown' }, { fill: { t: 'solid', c: '#336633' }, warp: 'textTriangle' }, { fill: { t: 'grad', ang: 45, stops: [{ p: 0, c: '#0000FF' }, { p: 1, c: '#00FFFF' }] }, warp: 'textPlain', b: true }, { fill: { t: 'solid', c: '#FFCC00' }, line: { c: '#996600', w: 0.75 }, warp: 'textSlantDown', shadow: { dx: 2, dy: 2 } }, { fill: { t: 'solid', c: '#660099' }, warp: 'textCircle' },
   ];
   G.wordart = function (mode) {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const it = mode && L.drawing.selectedItem();
     if (mode === true && it && it.wordart) { editText(it, (wa) => L.drawing.modifySelected('Edit LettersArt', (x) => { x.wordart = Object.assign({}, x.wordart, wa); }), direct); return; }
     let pick = 0;
@@ -1045,7 +1045,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     } });
     const ok = dlg.buttons[0];
   };
-  function editText(it, done, reactHost = !!(window.VO && VO.reactDirectHost)) {
+  function editText(it, done, reactHost = !!(window.VO?.reactDirectHost)) {
     const direct = !!reactHost;
     const wa = Object.assign({ text: 'Your Text Here', font: 'Arial Black', sz: 36 }, it.wordart || {});
     const font = direct ? null : ui.select(G.FONTS().map((f) => [f, f]), wa.font, () => upd(), { id: 'wa-font', translate: 'no' });
@@ -1075,7 +1075,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   /* ================= Table dialogs ================= */
   G.insertTable = function () {
     const last = L.store.get('tableDims', { c: 5, r: 2 });
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const cols = G.num(last.c, { min: 1, max: 63, id: 'it-c' }), rows = G.num(last.r, { min: 1, max: 32767, id: 'it-r' });
     const fit = G.radios('it-fit', [['fixed', 'Fi&xed column width:'], ['contents', 'Auto&Fit to contents'], ['window', 'AutoFit to win&dow']], 'fixed');
     const cw = G.len(null, { id: 'it-cw', autoLabel: L.N('Auto'), min: 9 });
@@ -1091,7 +1091,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
       if (action === 'autoFormat') {
         G.tableAutoFormat({ pick: (name, selectedLook) => {
           style = name; look = selectedLook;
-          window.dispatchEvent(new CustomEvent('wordx-insert-table-style', { detail: { name } }));
+          window.dispatchEvent(new window.CustomEvent('wordx-insert-table-style', { detail: { name } }));
         } });
         return;
       }
@@ -1133,7 +1133,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     });
   };
   G.insertCells = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const items = [['right', 'Shift cells right'], ['down', 'Shift cells down'], ['row', 'Insert entire row'], ['col', 'Insert entire column']];
     const deleteItems = [['left', 'Shift cells left'], ['up', 'Shift cells up'], ['row', 'Delete entire row'], ['col', 'Delete entire column']];
     const r = direct ? null : G.radios('ic', [['right', 'Shift cells r&ight'], ['down', 'Shift cells &down'], ['row', 'Insert entire &row'], ['col', 'Insert entire &column']], 'down');
@@ -1151,7 +1151,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     } });
   };
   G.deleteCells = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const catalog = () => [['left', 'Shift cells left'], ['up', 'Shift cells up'], ['row', 'Delete entire row'], ['col', 'Delete entire column']];
     G.reactCellDialogKind = 'delete';
     const r = direct ? null : G.radios('dc', [['left', 'Shift cells &left'], ['up', 'Shift cells &up'], ['row', 'Delete entire &row'], ['col', 'Delete entire &column']], 'left');
@@ -1168,7 +1168,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     } });
   };
   G.splitCells = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const c = G.num(2, { min: 1, max: 63, id: 'sc-c' }), r = G.num(1, { min: 1, max: 100, id: 'sc-r' });
     const merge = ui.check('&Merge cells before split', !!E.cellSel, null);
     const root = h('div', { id: 'react-wordx-split-cells-root' });
@@ -1192,7 +1192,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const look = Object.assign({ firstRow: true, firstCol: true, lastRow: false, lastCol: false }, ci ? ci.tbl.tblPr.look || {} : {});
     let reactName = names.includes(curStyle) ? curStyle : 'Table Grid';
     let reactLook = { ...look };
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const lb = G.listBox(names, reactName, { height: 200, translate: 'no', onChange: () => draw() });
     const pv = h('div', { class: 'preview-box', style: 'width:220px;height:170px' });
     const chk = (k, l) => ui.check(l, !!look[k], (v) => { look[k] = v; draw(); });
@@ -1254,7 +1254,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const { tp } = R.tblProps(d, t);
     const rg = L.tables.range();
     const total = t.grid.reduce((a, b) => a + b, 0);
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     if (direct) {
       const row = t.rows[rg.r0], cell = ci.cell, cellMap = rg.map[ci.ri].find((m) => m.cell === cell);
       const cellWidth = t.grid.slice(cellMap.c0, cellMap.c0 + cellMap.span).reduce((a, b) => a + b, 0);
@@ -1427,9 +1427,9 @@ export function installWordxInsertDialogs(runtime: Window): void {
     const reactRoot = h('div', { id: 'react-wordx-sort-root' });
     ui.dialog({
       title: inTbl ? 'Sort' : 'Sort Text', width: 470,
-      body: window.VO && VO.reactDirectHost ? reactRoot : h('div', { class: 'col' }, row('&Sort by', k1), row('&Then by', k2), row('Then &by', k3), ui.group('My list has', hdr), G.row(G.f('Separate fields at:', sepSel), caseS)),
+      body: window.VO?.reactDirectHost ? reactRoot : h('div', { class: 'col' }, row('&Sort by', k1), row('&Then by', k2), row('Then &by', k3), ui.group('My list has', hdr), G.row(G.f('Separate fields at:', sepSel), caseS)),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
-        if (window.VO && VO.reactDirectHost) { G.reactSortAction('apply'); return; }
+        if (window.VO?.reactDirectHost) { G.reactSortAction('apply'); return; }
         const keys = [k1, k2, k3].filter((k) => k.by.value !== '').map((k) => ({ col: +k.by.value, field: +k.by.value, type: k.type.value, desc: k.dir.get() === 'desc' }));
         if (inTbl) L.tables.sortTable(keys, { header: hdr.get() === 'yes', caseSensitive: caseS.input.checked });
         else L.tables.sortParagraphs(keys, { header: hdr.get() === 'yes', sep: sepSel.value === 'other' ? ';' : sepSel.value, caseSensitive: caseS.input.checked });
@@ -1442,7 +1442,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   G.formula = function () {
     let guess = '=SUM(ABOVE)';
     try { if (L.tables.inTable()) { const v = L.tables.evalFormula('SUM(ABOVE)', E.sel.f.p); const l = L.tables.evalFormula('SUM(LEFT)', E.sel.f.p); if (!v && l) guess = '=SUM(LEFT)'; } else guess = '='; } catch (e) { /* default */ }
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const inp = direct ? null : h('input', { type: 'text', id: 'fo-f', value: guess, style: 'width:100%' });
     const fmt = h('input', { type: 'text', id: 'fo-fmt', list: 'fo-fmts', style: 'width:100%' });
     const dl = h('datalist', { id: 'fo-fmts' }, ...['#,##0', '#,##0.00', '$#,##0.00;($#,##0.00)', '0', '0%', '0.00', '0.00%'].map((x) => h('option', { value: x })));
@@ -1473,7 +1473,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
   };
   G.textToTable = function () {
     const paras = E.selectedParas();
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const initialSeparator = paras.some((p) => p.runs.some((it) => it.t === 'tab')) ? '\t' : paras.some((p) => D.plainText(p).includes(',')) ? ',' : 'para';
     const initialColumns = initialSeparator === 'para' ? 1 : Math.max(1, ...paras.map((p) => initialSeparator === '\t' ? p.runs.filter((it) => it.t === 'tab').length + 1 : D.plainText(p).split(initialSeparator).length));
     const sepR = direct ? null : G.radios('tt-s', [['para', '&Paragraphs'], [',', '&Commas'], ['\t', '&Tabs'], ['other', 'O&ther:']], initialSeparator, () => upd());
@@ -1507,7 +1507,7 @@ export function installWordxInsertDialogs(runtime: Window): void {
     } });
   };
   G.tableToText = function () {
-    const direct = !!(window.VO && VO.reactDirectHost);
+    const direct = !!(window.VO?.reactDirectHost);
     const r = G.radios('tx-s', [['para', '&Paragraph marks'], ['\t', '&Tabs'], [',', '&Commas'], ['other', '&Other:']], '\t');
     const other = h('input', { type: 'text', maxlength: 1, value: '-', style: 'width:30px' });
     const root = h('div', { id: 'react-wordx-table-to-text-root' });

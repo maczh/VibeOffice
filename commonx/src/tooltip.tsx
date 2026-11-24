@@ -16,14 +16,16 @@ interface EditorTooltipProps {
 /** React-owned, editor-scoped tooltip for legacy engine elements carrying data-tip. */
 export function EditorTooltip({ host }: EditorTooltipProps) {
   const { translate } = useVibeOffice();
+  const view = host.ownerDocument.defaultView;
   const [tip, setTip] = useState<TooltipState | null>(null);
   const timer = useRef<number | null>(null);
   const target = useRef<Element | null>(null);
   const tipElement = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!view) return;
     const clearTimer = () => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
+      if (timer.current !== null) view.clearTimeout(timer.current);
       timer.current = null;
     };
     const hide = () => {
@@ -40,7 +42,7 @@ export function EditorTooltip({ host }: EditorTooltipProps) {
       if (!text) return;
       target.current = element;
       const { clientX: x, clientY: y } = event;
-      timer.current = window.setTimeout(() => {
+      timer.current = view.setTimeout(() => {
         timer.current = null;
         if (target.current === element) setTip({ text, x, y, untranslated: !!element.closest('[translate="no"]') });
       }, 650);
@@ -56,18 +58,20 @@ export function EditorTooltip({ host }: EditorTooltipProps) {
       host.removeEventListener('keydown', hide, true);
       host.removeEventListener('vibeoffice-react-hide-tooltip', hide);
     };
-  }, [host]);
+  }, [host, view]);
 
   useLayoutEffect(() => {
     if (!tip || !tipElement.current) return;
     const bounds = tipElement.current.getBoundingClientRect();
     let left = tip.x + 2;
     let top = tip.y + 20;
-    if (left + bounds.width > window.innerWidth - 4) left = window.innerWidth - bounds.width - 4;
-    if (top + bounds.height > window.innerHeight - 4) top = tip.y - bounds.height - 6;
+    const view = host.ownerDocument.defaultView;
+    if (!view) return;
+    if (left + bounds.width > view.innerWidth - 4) left = view.innerWidth - bounds.width - 4;
+    if (top + bounds.height > view.innerHeight - 4) top = tip.y - bounds.height - 6;
     tipElement.current.style.left = `${Math.max(2, left)}px`;
     tipElement.current.style.top = `${Math.max(2, top)}px`;
-  }, [tip]);
+  }, [host, tip]);
 
   if (!tip) return null;
   const text = tip.untranslated ? tip.text : translate(tip.text);

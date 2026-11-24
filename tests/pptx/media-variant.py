@@ -1,6 +1,6 @@
 """Add an AlternateContent/effects regression to an authored media picture.
 
-python3 tests/lectern/media-variant.py EmbeddedVideo.pptx OUT.pptx [--strict]
+python3 tests/pptx/media-variant.py EmbeddedVideo.pptx OUT.pptx [--strict]
 The input/output fixtures remain outside the repository. Validate both before use.
 """
 from pathlib import Path

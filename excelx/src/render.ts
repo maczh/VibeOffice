@@ -3,6 +3,7 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxRender(runtime: Window): void {
   const root = runtime;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.layout || !L?.numfmt || !L?.formula) throw new Error("Excelx renderer requires workbook geometry and formatting services");
   if (installedRuntimes.has(L)) return;

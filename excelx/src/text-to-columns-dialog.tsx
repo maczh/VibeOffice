@@ -1,25 +1,25 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 type State = { fixed: boolean; delims: Record<string, boolean | string>; merge: boolean; quote: string; breaks: number[]; formats: string[]; dest: string };
 type Catalog = { state: State; delimiterLabels: [string, string][]; formatChoices: [string, string][] };
 type Runtime = { dlg?: { reactTextColumnsCatalog?(): Catalog | null; reactTextColumnsPreview?(state: State): string[][]; reactTextColumnsApply?(state: State): boolean; reactTextColumnsClose?(): void }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 export function ExcelxTextToColumnsDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [state, setState] = useState<State>({ fixed: false, delims: {}, merge: false, quote: '"', breaks: [], formats: [], dest: '' });
   const [preview, setPreview] = useState<string[][]>([]);
   const [selected, setSelected] = useState(0);
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactTextColumnsCatalog?.() || null; setCatalog(next); if (next) { setState(next.state); setSelected(0); setPreview(runtime()?.dlg?.reactTextColumnsPreview?.(next.state) || []); } };
-    const off = runtime()?.bus?.on('excelx-text-columns-dialog', refresh);
-    return () => { off?.(); runtime()?.dlg?.reactTextColumnsClose?.(); };
+    const refresh = () => { const next = runtime?.dlg?.reactTextColumnsCatalog?.() || null; setCatalog(next); if (next) { setState(next.state); setSelected(0); setPreview(runtime?.dlg?.reactTextColumnsPreview?.(next.state) || []); } };
+    const off = runtime?.bus?.on('excelx-text-columns-dialog', refresh);
+    return () => { off?.(); runtime?.dlg?.reactTextColumnsClose?.(); };
   }, []);
   if (!catalog) return null;
-  const t = (s: string) => runtime()?.t?.(s) || s;
-  const update = (patch: Partial<State>) => setState((old) => { const next = { ...old, ...patch }; setPreview(runtime()?.dlg?.reactTextColumnsPreview?.(next) || []); return next; });
-  const close = () => runtime()?.dlg?.reactTextColumnsClose?.();
+  const t = (s: string) => runtime?.t?.(s) || s;
+  const update = (patch: Partial<State>) => setState((old) => { const next = { ...old, ...patch }; setPreview(runtime?.dlg?.reactTextColumnsPreview?.(next) || []); return next; });
+  const close = () => runtime?.dlg?.reactTextColumnsClose?.();
   const columns = Math.max(1, ...preview.map((row) => row.length));
   return <OfficeDialog title={t('Convert Text to Columns Wizard')} className="excelx-text-columns-dialog" style={{ width: 'min(94vw, 680px)' }} onRequestClose={close}>
     <div className="excelx-text-columns-dialog__body">
@@ -29,6 +29,6 @@ export function ExcelxTextToColumnsDialog() {
       <fieldset><legend>{t('Column data format')}</legend><div className="ttc-fmts excelx-text-columns-dialog__formats">{catalog.formatChoices.map(([key, label]) => <label key={key}><input type="radio" name="excelx-text-column-format" checked={(state.formats[selected] || 'general') === key} onChange={() => update({ formats: Object.assign([...state.formats], { [selected]: key }) })} />{t(label)}</label>)}</div></fieldset>
       <label>{t('D&estination:')}<input value={state.dest} onChange={(e) => update({ dest: e.currentTarget.value })} /></label>
       <div className="tiw-cap excelx-text-columns-dialog__caption">{t('Data preview:')}</div><div className="tiw-preview excelx-text-columns-dialog__preview"><table className="tiw-table"><thead><tr>{Array.from({ length: columns }, (_, col) => <th key={col} className={selected === col ? 'on' : ''} onClick={() => setSelected(col)}>{t(catalog.formatChoices.find(([key]) => key === (state.formats[col] || 'general'))?.[1] || 'General')}</th>)}</tr></thead><tbody>{preview.map((row, i) => <tr key={i}>{Array.from({ length: columns }, (_, col) => <td key={col} className={selected === col ? 'on' : ''}>{row[col] || ''}</td>)}</tr>)}</tbody></table></div>
-    </div><div className="excelx-text-columns-dialog__actions"><span /><button type="button" className="primary" onClick={() => runtime()?.dlg?.reactTextColumnsApply?.(state)}>{t('&Finish').replace('&', '')}</button><button type="button" onClick={close}>{t('Cancel')}</button></div>
+    </div><div className="excelx-text-columns-dialog__actions"><span /><button type="button" className="primary" onClick={() => runtime?.dlg?.reactTextColumnsApply?.(state)}>{t('&Finish').replace('&', '')}</button><button type="button" onClick={close}>{t('Cancel')}</button></div>
   </OfficeDialog>;
 }

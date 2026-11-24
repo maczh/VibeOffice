@@ -31,7 +31,7 @@ def main():
         ('powerpoint-repair.pptx', args.repair_cases / '03-powerpoint-fixture-original.pptx', 'rejected', 60),
         ('powerpoint-control.pptx', args.repair_cases / '04-powerpoint-without-test-object.pptx', 'ok', 60),
         ('password.docx', args.corpus / 'document/bug53475-password-is-pass.docx', 'blocked', 30),
-        ('deadline.docx', Path('tests/quire/lines/linecases.docx'), 'timeout', 5),
+        ('deadline.docx', Path('tests/wordx/lines/linecases.docx'), 'timeout', 5),
         ('after-failure.docx', args.corpus / 'document/sample.docx', 'ok', 60),
     ]
     for _, source, _, _ in cases:

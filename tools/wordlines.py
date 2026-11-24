@@ -1,4 +1,4 @@
-"""Body lines of a PDF, page by page, to compare with the lines Wordx draws (tests/quire/lines.test.mjs).
+"""Body lines of a PDF, page by page, to compare with the lines Wordx draws (tests/wordx/lines.test.mjs).
 
   python3 tools/wordlines.py PDF DOCX OUT.json [--text]
 
@@ -7,7 +7,7 @@ tops within 1pt), left to right, so a table's cells on one line make one row, as
 [hash, chars, top, bottom] in points from the top of the page: hash is FNV-1a (32 bit) of the row's last 16 non-blank
 characters after NFKC normalisation, chars how many non-blank characters it has. The reference for a document whose text
 can't be published (Word's PDF of the walkthrough in ~/corpora/word-ref) is compared without storing its text; --text
-also keeps each row's text, for documents of our own (tests/quire/lines/linecases.docx, made by tools/linecases.py).
+also keeps each row's text, for documents of our own (tests/wordx/lines/linecases.docx, made by tools/linecases.py).
 """
 import html, json, re, subprocess, sys, unicodedata, zipfile
 

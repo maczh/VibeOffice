@@ -3,6 +3,7 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxCharts(runtime: Window): void {
   const root = runtime;
+  const window = root;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.formula || !L?.calc || !L?.chart || !L?.dml) throw new Error("Excelx charts require model, formula, calculation, DrawingML, and chart primitives");
   if (installedRuntimes.has(L)) return;

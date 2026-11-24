@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host.js';
 
 interface AdvancedFilterState { list: string; criteria: string; destination: string; copy: boolean; unique: boolean }
 interface AdvancedFilterRuntime {
@@ -8,26 +9,25 @@ interface AdvancedFilterRuntime {
   t?(message: string): string;
 }
 
-function runtime(): AdvancedFilterRuntime | undefined { return (window as Window & { L?: AdvancedFilterRuntime }).L; }
-
 export function ExcelxAdvancedFilterDialog() {
+  const runtime = useExcelxRuntime<AdvancedFilterRuntime>();
   const [catalog, setCatalog] = useState<AdvancedFilterState | null>(null);
   const [state, setState] = useState<AdvancedFilterState>({ list: '', criteria: '', destination: '', copy: false, unique: false });
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactAdvancedFilterCatalog?.() || null;
+      const next = runtime?.dlg?.reactAdvancedFilterCatalog?.() || null;
       setCatalog(next);
       if (next) setState(next);
     };
-    const off = runtime()?.bus?.on('excelx-advanced-filter-dialog', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactAdvancedFilterCatalog?.()) runtime()?.dlg?.reactAdvancedFilterClose?.(); };
+    const off = runtime?.bus?.on('excelx-advanced-filter-dialog', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactAdvancedFilterCatalog?.()) runtime?.dlg?.reactAdvancedFilterClose?.(); };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactAdvancedFilterClose?.();
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactAdvancedFilterClose?.();
   const update = (patch: Partial<AdvancedFilterState>) => setState((current) => ({ ...current, ...patch }));
   const textField = (key: 'list' | 'criteria' | 'destination', label: string) => <label>{translate(label)}<input type="text" aria-label={translate(label).replace('&', '')} value={state[key]} disabled={key === 'destination' && !state.copy} onChange={(event) => update({ [key]: event.currentTarget.value })} /></label>;
-  const apply = () => runtime()?.dlg?.reactAdvancedFilterApply?.(state);
+  const apply = () => runtime?.dlg?.reactAdvancedFilterApply?.(state);
   return <OfficeDialog title={translate('Advanced Filter')} className="excelx-advanced-filter-dialog" style={{ width: 'min(92vw, 440px)' }} onRequestClose={close}>
     <div className="excelx-advanced-filter-dialog__body">
       <fieldset><legend>{translate('Action|filter')}</legend>

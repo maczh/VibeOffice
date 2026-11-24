@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface InsertSheetOption { value: string; label: string }
 interface InsertSheetCatalog { options: InsertSheetOption[] }
@@ -9,12 +10,9 @@ interface InsertSheetRuntime {
   t?(message: string): string;
 }
 
-function runtime(): InsertSheetRuntime | undefined {
-  return (window as Window & { L?: InsertSheetRuntime }).L;
-}
-
 /** React UI for Worksheet, Chart, and built-in template sheet insertion. */
 export function ExcelxInsertSheetDialog() {
+  const runtime = useExcelxRuntime<InsertSheetRuntime>();
   const [catalog, setCatalog] = useState<InsertSheetCatalog | null>(null);
   const [selected, setSelected] = useState('ws');
   const [tab, setTab] = useState('General');
@@ -23,23 +21,23 @@ export function ExcelxInsertSheetDialog() {
   const panelId = (key: 'general' | 'solutions') => `${id}-insert-panel-${key}`;
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactInsertSheetCatalog?.() || null;
+      const next = runtime?.dlg?.reactInsertSheetCatalog?.() || null;
       setCatalog(next);
       if (next) {
         setSelected('ws');
         setTab('General');
       }
     };
-    const off = runtime()?.bus?.on('excelx-insert-sheet-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-insert-sheet-dialog', refresh);
     return () => {
       off?.();
-      if (runtime()?.dlg?.reactInsertSheetCatalog?.()) runtime()?.dlg?.reactInsertSheetClose?.();
+      if (runtime?.dlg?.reactInsertSheetCatalog?.()) runtime?.dlg?.reactInsertSheetClose?.();
     };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactInsertSheetClose?.();
-  const apply = () => runtime()?.dlg?.reactInsertSheetApply?.(selected);
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactInsertSheetClose?.();
+  const apply = () => runtime?.dlg?.reactInsertSheetApply?.(selected);
   return <OfficeDialog title={translate('Insert')} className="excelx-insert-sheet-dialog" style={{ width: 'min(92vw, 440px)' }} onRequestClose={close}>
     <div className="excelx-insert-sheet-dialog__tabs" role="tablist" aria-label={translate('Insert')}>
       {(['General', 'Spreadsheet Solutions'] as const).map((name, index) => {

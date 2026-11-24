@@ -31,14 +31,16 @@ interface CustomAnimationCatalog { available: boolean; animations: AnimationEntr
 interface DiagramTextChoice { id: string; name: string; preview: string; selected: boolean }
 interface DiagramTextCatalog { available: boolean; focusId?: string | null; rows: Array<{ id: string; text: string; level: number }>; layouts: DiagramTextChoice[]; colors: DiagramTextChoice[]; styles: Array<{ language: string; title: string; choices: DiagramTextChoice[] }> }
 
-function runtime(): TaskContentRuntime | undefined { return (window as Window & { L?: TaskContentRuntime }).L; }
+function runtime(host: HTMLElement): TaskContentRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: TaskContentRuntime }) | null)?.L;
+}
 function translate(L: TaskContentRuntime, text: string, ...args: unknown[]): string { return L.t?.(text, ...args) || text; }
 
 /** React-owned PPTX task-pane bodies backed by the existing document and command engines. */
 export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [revision, refresh] = useState(0);
-  const L = runtime();
+  const L = runtime(host);
   const task = L?.panes?.task;
   const current = task?.current;
   const taskTitle = current ? task?.registry?.[current]?.title : undefined;
@@ -47,7 +49,7 @@ export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
     let slot: HTMLElement | null = null;
     let off: (() => void) | undefined;
     const attach = () => {
-      const engine = runtime();
+      const engine = runtime(host);
       const target = host.querySelector<HTMLElement>('#react-task-body-root');
       if (!engine || !target) return;
       if (!off && engine.bus) off = engine.bus.on('pptx-task-render', () => refresh((value) => value + 1));
@@ -56,7 +58,8 @@ export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
       target.classList.add('vibeoffice-react-owned');
       setMount(target);
     };
-    const observer = new MutationObserver(attach);
+    const Observer = host.ownerDocument.defaultView?.MutationObserver || MutationObserver;
+    const observer = new Observer(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); off?.(); slot?.classList.remove('vibeoffice-react-owned'); };
@@ -73,10 +76,11 @@ export function PptxTaskContentLayer({ host }: { host: HTMLElement }) {
   </button>;
   const section = (title: string, ...children: ReactNode[]) => createElement('section', { className: 'tp-sec' }, createElement('div', { className: 'tp-h' }, translate(L, title)), ...Children.toArray(children));
   const appIcon = L.icons?.app?.(32) || '';
-  const editionName = (window as Window & { VO?: { editionName?(app: string): string } }).VO?.editionName?.('PPTX') || 'PPTX';
+  const ownerWindow = host.ownerDocument.defaultView as (Window & { VO?: { editionName?(app: string): string } }) | null;
+  const editionName = ownerWindow?.VO?.editionName?.('PPTX') || 'PPTX';
   if (toolContext) return <ContextualToolsPane L={L} mount={mount} context={toolContext} />;
   if (current === 'diagramText') return <IntelliArtTextPane L={L} mount={mount} revision={revision} />;
-  if (current === 'recovery') return <DraftRecoveryPane host={host} editor="pptx" />;
+  if (current === 'recovery') return createPortal(<DraftRecoveryPane host={host} editor="pptx" />, mount);
   if (current === 'help') return <HelpPane L={L} task={task} mount={mount} />;
   if (current === 'clipart') return <ClipArtPane L={L} mount={mount} />;
   if (current === 'design') return <DesignPane L={L} mount={mount} />;
@@ -344,17 +348,17 @@ function ContextualToolsPane({ L, mount, context }: { L: TaskContentRuntime; mou
     {context.tabs.flatMap((tab) => tab.groups).map((group, groupIndex) => <section className="tp-sec" key={`${context.id}-${groupIndex}`}>
       <div className="tp-h">{translate(L, group.label)}</div>
       <div className="tp-tools">
-        {group.items.filter((item) => item !== '|').map((item, index) => <ContextualRibbonItem key={`${groupIndex}-${index}`} L={L} item={item as RibbonItem} size="medium" />)}
-        {group.launcher && <ContextualRibbonItem L={L} item={{ cmd: group.launcher }} size="medium" />}
+        {group.items.filter((item) => item !== '|').map((item, index) => <ContextualRibbonItem key={`${groupIndex}-${index}`} L={L} ownerDocument={mount.ownerDocument} item={item as RibbonItem} size="medium" />)}
+        {group.launcher && <ContextualRibbonItem L={L} ownerDocument={mount.ownerDocument} item={{ cmd: group.launcher }} size="medium" />}
       </div>
     </section>)}
   </div>, mount);
 }
 
-function ContextualRibbonItem({ L, item: value, size }: { L: TaskContentRuntime; item: RibbonItem; size: 'large' | 'medium' | 'small' }) {
+function ContextualRibbonItem({ L, ownerDocument, item: value, size }: { L: TaskContentRuntime; ownerDocument: Document; item: RibbonItem; size: 'large' | 'medium' | 'small' }) {
   const item = typeof value === 'string' ? { cmd: value } : value;
-  if (item.row) return <div className="rb-row">{item.row.map((child, index) => child === '|' ? <span className="rb-gap" key={`gap-${index}`} /> : <ContextualRibbonItem L={L} item={child} size="small" key={`item-${index}`} />)}</div>;
-  if (item.make) return <ContextualControlSlot make={item.make} size={item.size || size} />;
+  if (item.row) return <div className="rb-row">{item.row.map((child, index) => child === '|' ? <span className="rb-gap" key={`gap-${index}`} /> : <ContextualRibbonItem L={L} ownerDocument={ownerDocument} item={child} size="small" key={`item-${index}`} />)}</div>;
+  if (item.make) return <ContextualControlSlot make={item.make} ownerDocument={ownerDocument} size={item.size || size} />;
 
   const commandId = item.cmd || item.split;
   const command = commandId ? L.ui?.cmds?.[commandId] : undefined;
@@ -382,8 +386,8 @@ function ContextualRibbonItem({ L, item: value, size }: { L: TaskContentRuntime;
   return <button type="button" className={`tb-btn rb-${actualSize}${label ? ' with-label' : ''}${checked ? ' on' : ''}${enabled ? '' : ' dis'}`} data-cmd={commandId} data-tip={tip} aria-label={L.ui?.stripAmp?.(command?.label || label || commandId) || label || commandId} aria-pressed={command?.checked ? checked : undefined} disabled={!enabled} onPointerDown={(event) => event.preventDefault()} onClick={(event) => L.ui?.exec(commandId, item.arg, event.nativeEvent)}>{iconLabel}</button>;
 }
 
-function ContextualControlSlot({ make, size }: { make: () => HTMLElement; size: 'large' | 'medium' | 'small' }) {
-  const [host] = useState(() => document.createElement('span'));
+function ContextualControlSlot({ make, ownerDocument, size }: { make: () => HTMLElement; ownerDocument: Document; size: 'large' | 'medium' | 'small' }) {
+  const [host] = useState(() => ownerDocument.createElement('span'));
   useEffect(() => {
     const control = make();
     control.classList.add(`rb-${size}`);

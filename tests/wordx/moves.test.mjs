@@ -1,5 +1,5 @@
 // A tracked move (moveFrom, moveTo and their named ranges) is saved as a move, not as a deletion and an insertion.
-// node --test tests/quire/moves.test.mjs
+// node --test tests/wordx/moves.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

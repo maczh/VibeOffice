@@ -8,7 +8,9 @@ interface PrintRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): PrintRuntime | undefined { return (window as Window & { L?: PrintRuntime }).L; }
+function runtime(host: HTMLElement): PrintRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: PrintRuntime }) | null)?.L;
+}
 function label(L: PrintRuntime, text: string): string { return L.t?.(text) || text; }
 
 /** React-owned Print Preview controls; page composition remains supplied by the presentation engine. */
@@ -23,30 +25,32 @@ export function PptxPrintPreviewLayer({ host }: { host: HTMLElement }) {
       slot?.classList.remove('vibeoffice-react-owned');
       slot = target;
       slot.classList.add('vibeoffice-react-owned');
-      const pane = runtime()?.panes?.preview;
+      const pane = runtime(host)?.panes?.preview;
       if (pane) pane.reactMounted = true;
       setMount(slot);
     };
-    const off = runtime()?.bus?.on('pptx-preview-render', () => refresh((value) => value + 1));
-    const observer = new MutationObserver(attach);
+    const off = runtime(host)?.bus?.on('pptx-preview-render', () => refresh((value) => value + 1));
+    const Observer = host.ownerDocument.defaultView?.MutationObserver || MutationObserver;
+    const observer = new Observer(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
       observer.disconnect(); off?.();
       slot?.classList.remove('vibeoffice-react-owned');
-      const pane = runtime()?.panes?.preview;
+      const pane = runtime(host)?.panes?.preview;
       if (pane) pane.reactMounted = false;
     };
   }, [host]);
-  const L = runtime();
+  const L = runtime(host);
   const app = L?.app;
   const options = app?.printOpts;
   void refresh;
   if (!mount || !L || !app || !options) return null;
-  const canPrint = window.self === window.top || !!(window as Window & { VO?: { reactDirectHost?: unknown } }).VO?.reactDirectHost;
+  const ownerWindow = host.ownerDocument.defaultView as (Window & { VO?: { reactDirectHost?: unknown } }) | null;
+  const canPrint = !!ownerWindow && (ownerWindow.self === ownerWindow.top || !!ownerWindow.VO?.reactDirectHost);
   const update = (change: Partial<PrintOptions>) => { Object.assign(options, change); L.panes?.preview?.render(); };
   return createPortal(<>
-    {canPrint && <button className="btn small" type="button" onClick={() => window.print()}>{label(L, 'Print...')}</button>}
+    {canPrint && <button className="btn small" type="button" onClick={() => ownerWindow?.print()}>{label(L, 'Print...')}</button>}
     <label htmlFor="react-print-what">{label(L, 'Print What:')}</label>
     <select id="react-print-what" value={options.what} onChange={(event) => update({ what: event.currentTarget.value as PrintOptions['what'] })}>
       <option value="slides">{label(L, 'Slides')}</option><option value="handouts">{label(L, 'Handouts')}</option><option value="notes">{label(L, 'Notes Pages')}</option><option value="outline">{label(L, 'Outline View')}</option>

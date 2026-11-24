@@ -2,6 +2,7 @@ import { OfficeDialog } from '@vibeoffice/core';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent } from 'react';
 import './format-cells-dialog.css';
+import { useExcelxRuntime } from './editor-host';
 
 interface FontColor { hex: string; automatic: boolean }
 interface NumberOptions { kind: 'number' | 'currency' | 'accounting' | 'percentage' | 'scientific' | 'catalog' | 'description' | 'custom'; dec?: number; sep?: boolean; neg?: number; sym?: string; formats?: { value: string; label: string }[]; selected?: string; description?: string; locale?: boolean; code?: string; canDelete?: boolean }
@@ -15,10 +16,9 @@ interface Runtime {
   t?(message: string): string;
 }
 
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** React-owned lifecycle and dialog shell for Excelx's full six-tab cell formatter. */
 export function ExcelxFormatCellsDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [protectionHost, setProtectionHost] = useState<HTMLElement | null>(null);
   const [alignmentHost, setAlignmentHost] = useState<HTMLElement | null>(null);
@@ -46,21 +46,21 @@ export function ExcelxFormatCellsDialog() {
   const contentHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactFormatCellsCatalog?.() || null;
+      const next = runtime?.dlg?.reactFormatCellsCatalog?.() || null;
       setCatalog(next);
       if (next) { setProtection(next.protection); setAlignment(next.alignment); setMerged(next.merged); setNumberCategory(next.numberCategory); setNumberOptions(next.numberOptions); setCustomFormatInput(next.numberOptions?.kind === 'custom' ? String(next.numberOptions.code || '') : ''); setFont(next.font); setFontName(next.fontName); setFontNameInput(next.fontName); setFontSizeInput(String(next.font.sz || 10)); setFontColors(next.fontColors); setFill(next.fill); setPatternMenuOpen(false); setBorder(next.border); }
     };
-    const off = runtime()?.bus?.on('excelx-format-cells-dialog', refresh);
-    const offColor = runtime()?.bus?.on('excelx-format-cells-font-color', () => {
-      const current = runtime()?.dlg?.reactFormatCellsCatalog?.();
+    const off = runtime?.bus?.on('excelx-format-cells-dialog', refresh);
+    const offColor = runtime?.bus?.on('excelx-format-cells-font-color', () => {
+      const current = runtime?.dlg?.reactFormatCellsCatalog?.();
       if (current) { setFont(current.font); setFontColors(current.fontColors); }
     });
-    const offNumber = runtime()?.bus?.on('excelx-format-cells-number-options', () => {
-      const current = runtime()?.dlg?.reactFormatCellsCatalog?.();
+    const offNumber = runtime?.bus?.on('excelx-format-cells-number-options', () => {
+      const current = runtime?.dlg?.reactFormatCellsCatalog?.();
       if (current) { setNumberOptions(current.numberOptions); setCustomFormatInput(current.numberOptions?.kind === 'custom' ? String(current.numberOptions.code || '') : ''); }
     });
-    const offBorder = runtime()?.bus?.on('excelx-format-cells-border-color', () => { const current = runtime()?.dlg?.reactFormatCellsCatalog?.(); if (current) setBorder(current.border); });
-    return () => { off?.(); offColor?.(); offNumber?.(); offBorder?.(); runtime()?.dlg?.reactFormatCellsClose?.(); };
+    const offBorder = runtime?.bus?.on('excelx-format-cells-border-color', () => { const current = runtime?.dlg?.reactFormatCellsCatalog?.(); if (current) setBorder(current.border); });
+    return () => { off?.(); offColor?.(); offNumber?.(); offBorder?.(); runtime?.dlg?.reactFormatCellsClose?.(); };
   }, []);
   useEffect(() => {
     if (!catalog || !contentHost.current) return;
@@ -78,26 +78,26 @@ export function ExcelxFormatCellsDialog() {
     setBorderHost(catalog.content.querySelector<HTMLElement>('.fc-border'));
   }, [catalog]);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
+  const translate = (message: string) => runtime?.t?.(message) || message;
   const setAlignmentValue = (key: string, value: unknown) => {
     const patch = { [key]: value };
     setAlignment((current) => ({ ...current, ...patch }));
-    runtime()?.dlg?.reactFormatCellsSetAlignment?.(patch);
+    runtime?.dlg?.reactFormatCellsSetAlignment?.(patch);
   };
   const rotation = alignment.rot === 255 ? 0 : typeof alignment.rot === 'number' && alignment.rot > 90 ? 90 - alignment.rot : Number(alignment.rot || 0);
-  const setNumberCategoryValue = (value: string) => { const next = runtime()?.dlg?.reactFormatCellsSetNumberCategory?.(value); setNumberCategory(value); setNumberOptions(next === false ? null : next || null); };
-  const updateNumberOptions = (patch: Record<string, unknown>) => { const next = runtime()?.dlg?.reactFormatCellsSetNumberOptions?.(patch); if (next !== false && next) { setNumberOptions(next); if (next.kind === 'custom') setCustomFormatInput(String(next.code || '')); } };
+  const setNumberCategoryValue = (value: string) => { const next = runtime?.dlg?.reactFormatCellsSetNumberCategory?.(value); setNumberCategory(value); setNumberOptions(next === false ? null : next || null); };
+  const updateNumberOptions = (patch: Record<string, unknown>) => { const next = runtime?.dlg?.reactFormatCellsSetNumberOptions?.(patch); if (next !== false && next) { setNumberOptions(next); if (next.kind === 'custom') setCustomFormatInput(String(next.code || '')); } };
   const updateFont = (patch: Record<string, unknown>) => {
-    const updated = runtime()?.dlg?.reactFormatCellsSetFont?.(patch);
+    const updated = runtime?.dlg?.reactFormatCellsSetFont?.(patch);
     if (!updated) return;
     setFont(updated.font); setFontName(updated.fontName); setFontNameInput(updated.fontName); setFontSizeInput(String(updated.font.sz || 10)); setFontColors(updated.fontColors);
   };
   const updateFill = (patch: Partial<Fill>) => {
-    const next = runtime()?.dlg?.reactFormatCellsSetFill?.(patch);
+    const next = runtime?.dlg?.reactFormatCellsSetFill?.(patch);
     if (next && typeof next === 'object') setFill(next);
   };
-  const patternPreview = runtime()?.dlg?.reactFormatCellsPatternURL;
-  const updateBorder = (patch: Record<string, unknown>) => { const next = runtime()?.dlg?.reactFormatCellsSetBorder?.(patch); if (next && typeof next === 'object') setBorder(next); };
+  const patternPreview = runtime?.dlg?.reactFormatCellsPatternURL;
+  const updateBorder = (patch: Record<string, unknown>) => { const next = runtime?.dlg?.reactFormatCellsSetBorder?.(patch); if (next && typeof next === 'object') setBorder(next); };
   const borderStroke = (edge: BorderEdge | null | undefined, x1: number, y1: number, x2: number, y2: number) => {
     if (!edge) return null;
     const width = /medium|slant/i.test(edge.style) ? 2 : edge.style === 'thick' ? 3 : edge.style === 'hair' ? 0.5 : 1;
@@ -138,7 +138,7 @@ export function ExcelxFormatCellsDialog() {
     const format = formats[next];
     if (format) updateNumberOptions({ code: format.value });
   };
-  const close = () => runtime()?.dlg?.reactFormatCellsClose?.();
+  const close = () => runtime?.dlg?.reactFormatCellsClose?.();
   return <OfficeDialog title={translate(catalog.title)} className="excelx-format-cells-dialog" style={{ width: 'min(96vw, 520px)' }} onRequestClose={close}>
     <div ref={contentHost} className="excelx-format-cells-dialog__content" />
     {numberHost && createPortal(<div className="excelx-format-cells-dialog__number-category">
@@ -160,7 +160,7 @@ export function ExcelxFormatCellsDialog() {
       {numberOptions.kind === 'custom' && <>
         <label>{translate('&Type:').replace('&', '')}<input aria-label={translate('&Type:').replace('&', '')} type="text" value={customFormatInput} onChange={(event) => { setCustomFormatInput(event.currentTarget.value); updateNumberOptions({ code: event.currentTarget.value }); }} /></label>
         <div className="lbox short excelx-format-cells-dialog__custom-format-list" role="listbox" aria-label={translate('Existing format codes')}>{(numberOptions.formats || []).map((format) => <div key={format.value} data-format={format.value} translate="no" className={`lbox-i${numberOptions.selected === format.value ? ' on' : ''}`} role="option" aria-selected={numberOptions.selected === format.value} onClick={() => updateNumberOptions({ code: format.value })}>{format.label}</div>)}</div>
-        <div className="row"><button type="button" disabled={!numberOptions.canDelete} onClick={() => { if (numberOptions.selected) runtime()?.dlg?.reactFormatCellsDeleteNumberFormat?.(numberOptions.selected); }}>{translate('&Delete').replace('&', '')}</button></div>
+        <div className="row"><button type="button" disabled={!numberOptions.canDelete} onClick={() => { if (numberOptions.selected) runtime?.dlg?.reactFormatCellsDeleteNumberFormat?.(numberOptions.selected); }}>{translate('&Delete').replace('&', '')}</button></div>
         {numberOptions.description && <p className="hint">{translate(numberOptions.description)}</p>}
       </>}
       {(numberOptions.kind === 'number' || numberOptions.kind === 'currency') && <>
@@ -181,7 +181,7 @@ export function ExcelxFormatCellsDialog() {
         <div className="col"><label>{translate('Size:')}</label><input aria-label={translate('Size:')} type="text" value={fontSizeInput} onChange={(event) => setFontSizeInput(event.currentTarget.value)} onBlur={() => updateFont({ sz: fontSizeInput })} onKeyDown={(event) => { if (event.key === 'Enter') updateFont({ sz: fontSizeInput }); }} /><div className="lbox short" role="listbox" aria-label={translate('Size:')}>{catalog.fontSizes.map((size) => <div className={`lbox-i${Number(font.sz || 10) === size ? ' on' : ''}`} role="option" aria-selected={Number(font.sz || 10) === size} key={size} onClick={() => updateFont({ sz: size })}>{size}</div>)}</div></div>
       </div>
       <div className="excelx-format-cells-dialog__font-row"><label>{translate('&Underline:').replace('&', '')}<select aria-label={translate('&Underline:').replace('&', '')} value={String(font.u || 'none')} onChange={(event) => updateFont({ u: event.currentTarget.value })}>{([['none','None'],['single','Single'],['double','Double'],['singleAccounting','Single Accounting'],['doubleAccounting','Double Accounting']] as const).map(([value,label]) => <option value={value} key={value}>{translate(label)}</option>)}</select></label>
-        <label>{translate('&Color:').replace('&', '')}<button ref={colorButton} type="button" className="swatch-btn wide" style={{ background: fontColors.hex }} onClick={() => { if (colorButton.current) runtime()?.dlg?.reactFormatCellsChooseFontColor?.(colorButton.current); }}><span>{fontColors.automatic ? translate('Automatic') : ''}</span><span className="dd-arrow" /></button></label>
+        <label>{translate('&Color:').replace('&', '')}<button ref={colorButton} type="button" className="swatch-btn wide" style={{ background: fontColors.hex }} onClick={() => { if (colorButton.current) runtime?.dlg?.reactFormatCellsChooseFontColor?.(colorButton.current); }}><span>{fontColors.automatic ? translate('Automatic') : ''}</span><span className="dd-arrow" /></button></label>
         <label><input type="checkbox" aria-label={translate('&Normal font').replace('&', '')} onChange={(event) => { if (event.currentTarget.checked) updateFont({ normal: true }); }} />{translate('&Normal font').replace('&', '')}</label></div>
       <div className="excelx-format-cells-dialog__font-row"><fieldset><legend>{translate('Effects')}</legend>
         <label><input type="checkbox" aria-label={translate('Stri&kethrough').replace('&', '')} checked={!!font.strike} onChange={(event) => updateFont({ strike: event.currentTarget.checked })} />{translate('Stri&kethrough').replace('&', '')}</label>
@@ -223,7 +223,7 @@ export function ExcelxFormatCellsDialog() {
         </div></fieldset>
       </div>
       <fieldset><legend>{translate('Line')}</legend><div className="excelx-format-cells-dialog__border-line"><label>{translate('Style:')}</label><div className="fc-lines" role="listbox" aria-label={translate('Style:')}>{catalog.borderLines.map((item) => <button key={item.style} type="button" className={`fc-line${border.style===item.style?' on':''}`} role="option" aria-selected={border.style===item.style} aria-label={translate(item.label)} onClick={() => updateBorder({ type: 'style', style: item.style })}>{item.style==='none'?<span>{translate('None')}</span>:<svg width="52" height="14" viewBox="0 0 52 14">{borderStroke({style:item.style,color:'#000'},2,7,50,7)}</svg>}</button>)}</div>
-        <label>{translate('&Color:').replace('&','')}<button ref={borderColorButton} type="button" className="swatch-btn wide" style={{background:border.color||'#000'}} onClick={() => { if(borderColorButton.current) runtime()?.dlg?.reactFormatCellsChooseBorderColor?.(borderColorButton.current); }}><span>{border.color?translate(''):translate('Automatic')}</span><span className="dd-arrow" /></button></label>
+        <label>{translate('&Color:').replace('&','')}<button ref={borderColorButton} type="button" className="swatch-btn wide" style={{background:border.color||'#000'}} onClick={() => { if(borderColorButton.current) runtime?.dlg?.reactFormatCellsChooseBorderColor?.(borderColorButton.current); }}><span>{border.color?translate(''):translate('Automatic')}</span><span className="dd-arrow" /></button></label>
       </div></fieldset>
     </div>, borderHost)}
     {alignmentHost && createPortal(<div className="excelx-format-cells-dialog__alignment">
@@ -237,17 +237,17 @@ export function ExcelxFormatCellsDialog() {
         {([['wrap','&Wrap text'],['shrink','Shrin&k to fit']] as const).map(([key,label]) => <label key={key}><input type="checkbox" aria-label={translate(label).replace('&', '')} checked={!!alignment[key]} onChange={(event) => setAlignmentValue(key, event.currentTarget.checked)} />{translate(label).replace('&', '')}</label>)}
         <label><input type="checkbox" aria-label={translate('&Merge cells').replace('&', '')} checked={merged} onChange={(event) => { setMerged(event.currentTarget.checked); setAlignmentValue('merge', event.currentTarget.checked); }} />{translate('&Merge cells').replace('&', '')}</label>
       </fieldset>
-      <fieldset><legend>{translate('Right-to-left')}</legend><label>{translate('&Text direction:').replace('&', '')}<select aria-label="Text direction" value={alignment.rtl ? 'rtl' : alignment.ltr ? 'ltr' : 'ctx'} onChange={(event) => { const value = event.currentTarget.value; setAlignment((current) => ({ ...current, rtl: value === 'rtl', ltr: value === 'ltr' })); runtime()?.dlg?.reactFormatCellsSetAlignment?.({ rtl: value === 'rtl', ltr: value === 'ltr' }); }}><option value="ctx">{translate('Context')}</option><option value="ltr">{translate('Left-to-Right')}</option><option value="rtl">{translate('Right-to-Left')}</option></select></label></fieldset>
+      <fieldset><legend>{translate('Right-to-left')}</legend><label>{translate('&Text direction:').replace('&', '')}<select aria-label="Text direction" value={alignment.rtl ? 'rtl' : alignment.ltr ? 'ltr' : 'ctx'} onChange={(event) => { const value = event.currentTarget.value; setAlignment((current) => ({ ...current, rtl: value === 'rtl', ltr: value === 'ltr' })); runtime?.dlg?.reactFormatCellsSetAlignment?.({ rtl: value === 'rtl', ltr: value === 'ltr' }); }}><option value="ctx">{translate('Context')}</option><option value="ltr">{translate('Left-to-Right')}</option><option value="rtl">{translate('Right-to-Left')}</option></select></label></fieldset>
       <fieldset><legend>{translate('Orientation')}</legend><label>{translate('Rotation')} <input aria-label="Text rotation" type="range" min="-90" max="90" step="1" value={rotation} onChange={(event) => setAlignmentValue('rot', Number(event.currentTarget.value))} /></label><output>{rotation}°</output><label><input type="checkbox" aria-label={translate('Vertical text')} checked={alignment.rot === 255} onChange={(event) => setAlignmentValue('rot', event.currentTarget.checked ? 255 : 0)} />{translate('Vertical text')}</label></fieldset>
     </div>, alignmentHost)}
     {protectionHost && createPortal(<div className="excelx-format-cells-dialog__protection">
-      <label><input type="checkbox" aria-label={translate('&Locked').replace('&', '')} checked={protection.locked} onChange={(event) => { const next = { ...protection, locked: event.currentTarget.checked }; setProtection(next); runtime()?.dlg?.reactFormatCellsSetProtection?.(next.locked, next.hidden); }} />{translate('&Locked').replace('&', '')}</label>
-      <label><input type="checkbox" aria-label={translate('H&idden').replace('&', '')} checked={protection.hidden} onChange={(event) => { const next = { ...protection, hidden: event.currentTarget.checked }; setProtection(next); runtime()?.dlg?.reactFormatCellsSetProtection?.(next.locked, next.hidden); }} />{translate('H&idden').replace('&', '')}</label>
+      <label><input type="checkbox" aria-label={translate('&Locked').replace('&', '')} checked={protection.locked} onChange={(event) => { const next = { ...protection, locked: event.currentTarget.checked }; setProtection(next); runtime?.dlg?.reactFormatCellsSetProtection?.(next.locked, next.hidden); }} />{translate('&Locked').replace('&', '')}</label>
+      <label><input type="checkbox" aria-label={translate('H&idden').replace('&', '')} checked={protection.hidden} onChange={(event) => { const next = { ...protection, hidden: event.currentTarget.checked }; setProtection(next); runtime?.dlg?.reactFormatCellsSetProtection?.(next.locked, next.hidden); }} />{translate('H&idden').replace('&', '')}</label>
       <p className="hint">{translate('Locking cells or hiding formulas has no effect unless the worksheet is protected. To protect the worksheet, choose Protection from the Tools menu, and then choose Protect Sheet. A password is optional.')}</p>
     </div>, protectionHost)}
     <div className="excelx-format-cells-dialog__actions">
       <span />
-      <button type="button" className="primary" onClick={() => runtime()?.dlg?.reactFormatCellsApply?.()}>{translate('OK')}</button>
+      <button type="button" className="primary" onClick={() => runtime?.dlg?.reactFormatCellsApply?.()}>{translate('OK')}</button>
       <button type="button" onClick={close}>{translate('Cancel')}</button>
     </div>
   </OfficeDialog>;

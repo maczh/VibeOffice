@@ -2,7 +2,7 @@
 // every reference right after its range's end as a plain CommentReference run, so Word 2016 placed the text after it
 // a fraction of a point differently (Comment035, Comment050; 505 of the corpus's 1,364 reference runs have ids, 325 more
 // properties, 232 come after other comments' marks, some right before their range's end).
-// node --test tests/quire/comment-references.test.mjs
+// node --test tests/wordx/comment-references.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

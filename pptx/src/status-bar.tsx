@@ -9,7 +9,9 @@ interface PptxStatusRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(text: string, ...args: unknown[]): string;
 }
-function runtime(): PptxStatusRuntime | undefined { return (window as Window & { L?: PptxStatusRuntime }).L; }
+function runtime(host: HTMLElement): PptxStatusRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: PptxStatusRuntime }) | null)?.L;
+}
 
 /** React-owned PPTX status values and zoom control; slide/layout calculations stay in the engine. */
 export function PptxStatusBar({ host }: { host: HTMLElement }) {
@@ -18,13 +20,14 @@ export function PptxStatusBar({ host }: { host: HTMLElement }) {
   useEffect(() => {
     const attach = () => setMount(host.querySelector<HTMLElement>('#statusbar'));
     attach();
-    const observer = new MutationObserver(attach);
+    const Observer = host.ownerDocument.defaultView?.MutationObserver || MutationObserver;
+    const observer = new Observer(attach);
     observer.observe(host, { childList: true, subtree: true });
-    const off = runtime()?.bus?.on('pptx-status-refresh', () => refresh((value) => value + 1));
-    const offZoom = runtime()?.bus?.on('zoom', () => refresh((value) => value + 1));
+    const off = runtime(host)?.bus?.on('pptx-status-refresh', () => refresh((value) => value + 1));
+    const offZoom = runtime(host)?.bus?.on('zoom', () => refresh((value) => value + 1));
     return () => { observer.disconnect(); off?.(); offZoom?.(); };
   }, [host]);
-  const L = runtime();
+  const L = runtime(host);
   const app = L?.app;
   const ed = L?.ed;
   const pres = L?.pres;

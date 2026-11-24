@@ -263,6 +263,20 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
         const rect = candidate.target.getBoundingClientRect();
         entries.push({ key, x: rect.left + rect.width / 2, y: rect.bottom - 7, target: candidate.target, ...(candidate.tab ? { tab: candidate.tab } : {}) });
       }
+      // A one-character tip is an immediate match, so it must not be a
+      // prefix of another tip. Otherwise typing the longer tip can never
+      // reach the later command. Expand the earlier tip where necessary.
+      for (const entry of entries) {
+        if (entry.key.length !== 1 || !entries.some((other) => other !== entry && other.key.startsWith(entry.key))) continue;
+        const prefix = entry.key;
+        const replacement = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
+          .map((character) => prefix + character)
+          .find((candidateKey) => !used.has(candidateKey) && !entries.some((other) => other !== entry && other.key.startsWith(candidateKey)));
+        if (!replacement) continue;
+        used.delete(entry.key);
+        used.add(replacement);
+        entry.key = replacement;
+      }
       setKeyTips({ level, entries, buffer: '' });
     };
     const onKeyTipRequest = (event: Event) => showKeyTips((event as CustomEvent<{ level?: 'tabs' | 'commands' }>).detail?.level || 'tabs');
@@ -334,6 +348,9 @@ export function EditorRibbon({ host }: { host: HTMLElement }) {
         element.classList.add('folded');
         const compact = element.getBoundingClientRect().width;
         if (!wasFolded) element.classList.remove('folded');
+        // The live React tree may still be in its previous folded state; don't measure
+        // that stale DOM when React has already committed the requested wider layout.
+        if (wasFolded && panel.clientWidth >= window.innerWidth - 24) element.classList.remove('folded');
         return { key: element.dataset.ribbonGroup || '', full, compact };
       });
       const next: string[] = [];

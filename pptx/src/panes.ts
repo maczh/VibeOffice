@@ -1,6 +1,9 @@
 // @ts-nocheck -- Pane controllers use existing dynamic presentation, editor and DOM contracts.
 /* PPTX — panes and alternate views. */
 export function installPptxPanes(runtime: Window): void {
+  const window = runtime;
+  const VO = (window as Window & { VO?: any }).VO;
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L;
   const { h } = L;
   const ui = L.ui;

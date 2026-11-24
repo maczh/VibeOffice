@@ -6,6 +6,7 @@
 const installedTableServices = new WeakSet<object>();
 export function installWordxTables(runtime: Window): void {
   const window = runtime as Window & { L?: any; VO?: any };
+  const document = runtime.document;
   const namespace = window.L;
   if (!namespace?.D || !namespace?.O || !namespace?.ed || !namespace?.layout || !namespace?.R) throw new Error('Wordx table dependencies are not ready');
   if (installedTableServices.has(namespace)) return;

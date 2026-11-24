@@ -19,21 +19,28 @@ interface PptxTextEditEvents { beforeinput(event: InputEvent): void; input(event
 interface PptxTextEditor { reactEvents?: PptxTextEditEvents; reactSelectionChange?(): void; setReactEventOwnership?(owned: boolean): void }
 interface InteractionRuntime { ed?: PptxCanvas; te?: PptxTextEditor; app?: { reactAppEvents?: PptxAppEvents; reactSplitterEvents?: PptxSplitterEvents; reactTransparentPointerDown?(event: PointerEvent): boolean; reactTransparentCancel?(): void; reactBeforeUnload?(event: BeforeUnloadEvent): void; reactResize?(): void; reactDropFiles?(files: File[]): void }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string }
 
+function interactionRuntime(host: HTMLElement): InteractionRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: InteractionRuntime }) | null)?.L;
+}
+
 /** Owns registration and cleanup of the PPTX slide-canvas interaction adapter. */
 export function PptxEditorInteractions({ host }: { host: HTMLElement }) {
   const [dropDepth, setDropDepth] = useState(0);
   useEffect(() => {
-    const runtime = (window as Window & { L?: InteractionRuntime }).L;
-    const textSelectionChange = () => runtime?.te?.reactSelectionChange?.();
-    const beforeUnload = (event: BeforeUnloadEvent) => runtime?.app?.reactBeforeUnload?.(event);
-    const resize = () => runtime?.app?.reactResize?.();
-    const layoutResize = () => runtime?.ed?.reactLayout?.();
-    const transparentPointerDown = (event: PointerEvent) => { runtime?.app?.reactTransparentPointerDown?.(event); };
-    document.addEventListener('selectionchange', textSelectionChange);
-    window.addEventListener('beforeunload', beforeUnload);
-    window.addEventListener('resize', resize);
-    const canvasResizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(layoutResize);
-    if (!canvasResizeObserver) window.addEventListener('resize', layoutResize);
+    const ownerDocument = host.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const textSelectionChange = () => interactionRuntime(host)?.te?.reactSelectionChange?.();
+    const beforeUnload = (event: BeforeUnloadEvent) => interactionRuntime(host)?.app?.reactBeforeUnload?.(event);
+    const resize = () => interactionRuntime(host)?.app?.reactResize?.();
+    const layoutResize = () => interactionRuntime(host)?.ed?.reactLayout?.();
+    const transparentPointerDown = (event: PointerEvent) => { interactionRuntime(host)?.app?.reactTransparentPointerDown?.(event); };
+    ownerDocument.addEventListener('selectionchange', textSelectionChange);
+    ownerWindow.addEventListener('beforeunload', beforeUnload);
+    ownerWindow.addEventListener('resize', resize);
+    const ResizeObserverConstructor = ownerWindow.ResizeObserver;
+    const canvasResizeObserver = ResizeObserverConstructor ? new ResizeObserverConstructor(layoutResize) : null;
+    if (!canvasResizeObserver) ownerWindow.addEventListener('resize', layoutResize);
     const bound = new Map<HTMLElement, PptxEditorEvents>();
     const splitterBindings = new Map<HTMLElement, (event: PointerEvent) => void>();
     let appEvents: PptxAppEvents | undefined;
@@ -80,9 +87,10 @@ export function PptxEditorInteractions({ host }: { host: HTMLElement }) {
       const files = Array.from(event.dataTransfer?.files || []);
       if (!files.length) return;
       event.preventDefault();
-      runtime?.app?.reactDropFiles?.(files);
+      interactionRuntime(host)?.app?.reactDropFiles?.(files);
     };
     const attach = () => {
+      const runtime = interactionRuntime(host);
       const events = runtime?.ed?.reactEvents;
       if (!events) return;
       const scroller = host.querySelector<HTMLElement>('.ed-scroll');
@@ -179,19 +187,22 @@ export function PptxEditorInteractions({ host }: { host: HTMLElement }) {
         dropTarget.addEventListener('drop', drop);
       }
     };
-    const observer = new MutationObserver(attach);
+    const observer = new ownerWindow.MutationObserver(attach);
     observer.observe(host, { childList: true, subtree: true });
     const splittersReady = () => attach();
+    const runtimeReady = () => attach();
     host.addEventListener('vibeoffice-pptx-splitters-ready', splittersReady);
+    host.addEventListener('vibeoffice-engine-runtime-ready', runtimeReady);
     attach();
     return () => {
       observer.disconnect();
       host.removeEventListener('vibeoffice-pptx-splitters-ready', splittersReady);
-      document.removeEventListener('selectionchange', textSelectionChange);
-      window.removeEventListener('beforeunload', beforeUnload);
-      window.removeEventListener('resize', resize);
+      host.removeEventListener('vibeoffice-engine-runtime-ready', runtimeReady);
+      ownerDocument.removeEventListener('selectionchange', textSelectionChange);
+      ownerWindow.removeEventListener('beforeunload', beforeUnload);
+      ownerWindow.removeEventListener('resize', resize);
       canvasResizeObserver?.disconnect();
-      if (!canvasResizeObserver) window.removeEventListener('resize', layoutResize);
+      if (!canvasResizeObserver) ownerWindow.removeEventListener('resize', layoutResize);
       for (const [element, events] of bound) {
         if (element.classList.contains('ed-scroll')) {
           element.removeEventListener('pointerdown', events.pointerdown);
@@ -236,11 +247,11 @@ export function PptxEditorInteractions({ host }: { host: HTMLElement }) {
         dropTarget.removeEventListener('dragover', dragOver);
         dropTarget.removeEventListener('drop', drop);
       }
-      runtime?.app?.reactTransparentCancel?.();
+      interactionRuntime(host)?.app?.reactTransparentCancel?.();
       dropTarget = null;
       depth = 0;
     };
   }, [host]);
-  const runtime = (window as Window & { L?: InteractionRuntime }).L;
+  const runtime = interactionRuntime(host);
   return <>{dropDepth ? createPortal(<div className="drop-hint" data-react-owned="pptx-drop-hint">{runtime?.t?.('Drop a .pptx to open it, or pictures to insert them') || 'Drop a .pptx to open it, or pictures to insert them'}</div>, host) : null}<PptxStatusBar host={host} /></>;
 }

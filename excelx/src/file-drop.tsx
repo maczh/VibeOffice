@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useExcelxRuntime } from './editor-host';
 
 interface ExcelxDropApi {
   openFiles?(files: File[]): void;
@@ -7,12 +8,9 @@ interface ExcelxDropApi {
   reactDropMounted?: boolean;
 }
 
-function runtime(): { app?: ExcelxDropApi; t?(message: string): string } | undefined {
-  return (window as Window & { L?: { app?: ExcelxDropApi; t?(message: string): string } }).L;
-}
-
 /** React owns the file-drop hint and event lifetime; the engine retains file handling. */
 export function ExcelxFileDropLayer({ host }: { host: HTMLElement }) {
+  const runtime = useExcelxRuntime<{ app?: ExcelxDropApi; t?(message: string): string }>();
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [active, setActive] = useState(false);
   useEffect(() => {
@@ -38,8 +36,8 @@ export function ExcelxFileDropLayer({ host }: { host: HTMLElement }) {
       if (!files.length) return;
       event.preventDefault();
       const books = files.filter((file) => /\.(xlsx|xlsm|xltx|xltm|csv|txt|tsv|prn|xml|xls)$/i.test(file.name));
-      if (books.length) runtime()?.app?.openFiles?.(books);
-      for (const file of files.filter((item) => /^image\//.test(item.type))) runtime()?.app?.insertPictureFile?.(file);
+      if (books.length) runtime?.app?.openFiles?.(books);
+      for (const file of files.filter((item) => /^image\//.test(item.type))) runtime?.app?.insertPictureFile?.(file);
     };
     const detach = () => {
       if (!app) return;
@@ -47,7 +45,7 @@ export function ExcelxFileDropLayer({ host }: { host: HTMLElement }) {
       app.removeEventListener('dragleave', leave);
       app.removeEventListener('dragover', over);
       app.removeEventListener('drop', drop);
-      if (runtime()?.app) runtime()!.app!.reactDropMounted = false;
+      if (runtime?.app) runtime.app.reactDropMounted = false;
       setMount((current) => current === app ? null : current);
       app = null;
       depth = 0;
@@ -60,19 +58,20 @@ export function ExcelxFileDropLayer({ host }: { host: HTMLElement }) {
       if (!next) return;
       app = next;
       setMount(next);
-      if (runtime()?.app) runtime()!.app!.reactDropMounted = true;
+      if (runtime?.app) runtime.app.reactDropMounted = true;
       app.addEventListener('dragenter', enter);
       app.addEventListener('dragleave', leave);
       app.addEventListener('dragover', over);
       app.addEventListener('drop', drop);
     };
-    const observer = new MutationObserver(attach);
-    observer.observe(host, { childList: true, subtree: true });
+    const Observer = host.ownerDocument.defaultView?.MutationObserver;
+    const observer = Observer ? new Observer(attach) : null;
+    observer?.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       detach();
     };
-  }, [host]);
-  return mount && active ? createPortal(<div className="drop-hint" data-react-owned="excelx-drop-hint">{runtime()?.t?.('Drop a workbook to open it, or pictures to insert them') || 'Drop a workbook to open it, or pictures to insert them'}</div>, mount) : null;
+  }, [host, runtime]);
+  return mount && active ? createPortal(<div className="drop-hint" data-react-owned="excelx-drop-hint">{runtime?.t?.('Drop a workbook to open it, or pictures to insert them') || 'Drop a workbook to open it, or pictures to insert them'}</div>, mount) : null;
 }

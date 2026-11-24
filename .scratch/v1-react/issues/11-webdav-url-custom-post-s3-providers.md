@@ -6,6 +6,8 @@
 
 **Status:** complete
 
+- 2026-11-24 follow-up: WebDAV multistatus `href` values are now resolved against the requested collection URL (including relative references) and the collection's own response is removed after path normalization. A production-browser fixture covers absolute self links, relative child paths, encoded names, and root-relative child links. The focused browser test (1/1), workspace provider suite (32/32), core build, typecheck, and `git diff --check` pass.
+
 - [x] A user can open a document from an allowed URL; URL loading is read-only unless a writable provider is supplied.
 - [x] A user can browse a WebDAV location, open a document, create a document, and save it through the provider.
 - [x] A host can implement its own service listing, authentication, and POST contract through the provider interface.

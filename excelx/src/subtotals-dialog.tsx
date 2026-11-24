@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface Choice { value: number; label: string }
 interface SubtotalState { at: number; fn: number; add: number[]; replace: boolean; pageBreak: boolean; below: boolean }
@@ -9,21 +10,20 @@ interface SubtotalsRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): SubtotalsRuntime | undefined { return (window as Window & { L?: SubtotalsRuntime }).L; }
-
 export function ExcelxSubtotalsDialog() {
+  const runtime = useExcelxRuntime<SubtotalsRuntime>();
   const [catalog, setCatalog] = useState<SubtotalsCatalog | null>(null);
   const [state, setState] = useState<SubtotalState>({ at: 0, fn: 9, add: [], replace: true, pageBreak: false, below: true });
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactSubtotalsCatalog?.() || null; setCatalog(next); if (next) setState(next.initial); };
-    const off = runtime()?.bus?.on('excelx-subtotals-dialog', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactSubtotalsCatalog?.()) runtime()?.dlg?.reactSubtotalsClose?.(); };
+    const refresh = () => { const next = runtime?.dlg?.reactSubtotalsCatalog?.() || null; setCatalog(next); if (next) setState(next.initial); };
+    const off = runtime?.bus?.on('excelx-subtotals-dialog', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactSubtotalsCatalog?.()) runtime?.dlg?.reactSubtotalsClose?.(); };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactSubtotalsClose?.();
-  const apply = () => runtime()?.dlg?.reactSubtotalsApply?.(state);
-  const remove = () => runtime()?.dlg?.reactSubtotalsRemove?.();
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactSubtotalsClose?.();
+  const apply = () => runtime?.dlg?.reactSubtotalsApply?.(state);
+  const remove = () => runtime?.dlg?.reactSubtotalsRemove?.();
   const update = (patch: Partial<SubtotalState>) => setState((current) => ({ ...current, ...patch }));
   const toggleColumn = (column: number, checked: boolean) => setState((current) => ({ ...current, add: checked ? [...new Set([...current.add, column])] : current.add.filter((value) => value !== column) }));
   return <OfficeDialog title={translate('Subtotal')} className="excelx-subtotals-dialog" style={{ width: 'min(92vw, 420px)' }} onRequestClose={close}>

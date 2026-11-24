@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { DraftRecoveryPane, SvgArtwork } from '@vibeoffice/core';
 import { EXCELX_HELP } from './help-content.js';
 import { EXCELX_WORKBOOK_TEMPLATES } from './template-catalog.js';
+import { useExcelxRuntime } from './editor-host';
 
 interface ClipboardEntry { clip: unknown; text: string; time: number }
 interface TaskPaneApi {
@@ -28,10 +29,6 @@ interface ExcelxTaskRuntime {
   app?: { newWorkbook(): void; openDialog?(accept?: string): void; toggleTask?(visible: boolean): void };
 }
 
-function runtime(): ExcelxTaskRuntime | undefined {
-  return (window as Window & { L?: ExcelxTaskRuntime }).L;
-}
-
 function translate(L: ExcelxTaskRuntime, text: string, ...args: unknown[]): string {
   return L.t?.(text, ...args) || text;
 }
@@ -44,12 +41,13 @@ function TaskIcon({ markup, owner, fallback = '' }: { markup: string; owner: str
 
 /** React-owned Excelx task-pane bodies; workbook creation and clipboard operations stay in the engine. */
 export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
+  const runtime = useExcelxRuntime<ExcelxTaskRuntime>();
   const [headMount, setHeadMount] = useState<HTMLElement | null>(null);
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [, refresh] = useState(0);
   const [helpQuery, setHelpQuery] = useState('');
   const [gettingStartedQuery, setGettingStartedQuery] = useState('');
-  const L = runtime();
+  const L = runtime;
   const panes = L?.panes;
   const task = panes?.task;
   const current = task?.current;
@@ -64,7 +62,7 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
     let off: (() => void) | undefined;
     const hideLegacyContent = () => {
       if (!target || !slot) return;
-      const active = ['getting-started', 'new', 'help', 'keys', 'clipboard', 'recovery'].includes(runtime()?.panes?.task?.current || '');
+      const active = ['getting-started', 'new', 'help', 'keys', 'clipboard', 'recovery'].includes(runtime?.panes?.task?.current || '');
       if (!active) {
         hiddenChildren.forEach((display, child) => { child.style.display = display; });
         hiddenChildren.clear();
@@ -116,13 +114,14 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
       hiddenChildren = new Map();
       hideLegacyContent();
       setMount(slot);
-      if (!off) off = runtime()?.bus?.on('excelx-task-render', onTaskRender);
+      if (!off) off = runtime?.bus?.on('excelx-task-render', onTaskRender);
     };
-    const observer = new MutationObserver(attach);
-    observer.observe(host, { childList: true, subtree: true });
+    const Observer = host.ownerDocument.defaultView?.MutationObserver;
+    const observer = Observer ? new Observer(attach) : null;
+    observer?.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       off?.();
       hiddenChildren.forEach((display, child) => { child.style.display = display; });
       if (headTarget) headTarget.style.display = headDisplay;
@@ -131,7 +130,7 @@ export function ExcelxTaskContentLayer({ host }: { host: HTMLElement }) {
       setHeadMount(null);
       setMount(null);
     };
-  }, [host]);
+  }, [host, runtime]);
 
   useEffect(() => {
     if (current === 'getting-started') setGettingStartedQuery('');

@@ -1,6 +1,6 @@
 // Far tails of the t, F and chi-square distributions and GAUSS near 0 keep their digits: right tails are computed
 // directly, not as 1 − cdf, and inverses stop on a relative tolerance. References from mpmath at 40 digits:
-//   node --test tests/ledger/stat-tails.test.js
+//   node --test tests/excelx/stat-tails.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
 require('../../public/common/core.js');

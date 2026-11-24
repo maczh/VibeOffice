@@ -1,18 +1,18 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
 import './text-import-dialog.css';
+import { useExcelxRuntime } from './editor-host';
 
 type Catalog = { step: number; title: string; fileName: string; fixed: boolean; start: number; encoding: string; encodings: { value: string; label: string }[]; detected: string; lineCount: number; lines: string[]; delimiters: { tab: boolean; semi: boolean; comma: boolean; space: boolean; other: boolean; otherCh: string }; merge: boolean; quote: string; quotes: { value: string; label: string }[]; rows: string[][]; breaks: number[]; width: number; formats: string[]; selectedColumn: number };
 type Runtime = { csv?: { reactImportCatalog?(): Catalog | null; reactImportAction?(action: string, patch?: Record<string, unknown>): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** React-owned three-step import wizard; the CSV service owns decoding, parsing, and workbook construction. */
 export function ExcelxTextImportDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  useEffect(() => { const refresh = () => setCatalog(runtime()?.csv?.reactImportCatalog?.() || null); const off = runtime()?.bus?.on('excelx-text-import', refresh); return () => { off?.(); runtime()?.csv?.reactImportAction?.('unmount'); }; }, []);
+  useEffect(() => { const refresh = () => setCatalog(runtime?.csv?.reactImportCatalog?.() || null); const off = runtime?.bus?.on('excelx-text-import', refresh); return () => { off?.(); runtime?.csv?.reactImportAction?.('unmount'); }; }, []);
   if (!catalog) return null;
-  const t = (value: string) => runtime()?.t?.(value) || value;
-  const action = (name: string, patch?: Record<string, unknown>) => runtime()?.csv?.reactImportAction?.(name, patch);
+  const t = (value: string) => runtime?.t?.(value) || value;
+  const action = (name: string, patch?: Record<string, unknown>) => runtime?.csv?.reactImportAction?.(name, patch);
   const cancel = () => { action('cancel'); setCatalog(null); };
   const finish = () => { action('finish'); setCatalog(null); };
   const update = (patch: Record<string, unknown>) => action('update', patch);

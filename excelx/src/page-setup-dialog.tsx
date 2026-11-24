@@ -1,24 +1,25 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { cloneElement, useEffect, useId, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 type PrintSettings = { orientation?: string; fit?: boolean; scale?: number; fitW?: number | null; fitH?: number | null; paper?: number; firstPage?: number | null; margins: Record<string, number>; hCenter?: boolean; vCenter?: boolean; header?: string; footer?: string; diffOddEven?: boolean; diffFirst?: boolean; hfScale?: boolean; hfAlign?: boolean; gridLines?: boolean; bw?: boolean; draft?: boolean; headings?: boolean; comments?: string; errors?: string; pageOrder?: string };
 type Catalog = { p: PrintSettings; area: string; rows: string; cols: string; first: string; tab: number; error: string; headers: { header: string; footer: string }; headerOptions: Array<{ code: string; label: string }>; papers: Array<{ key: number; label: string }> };
 type Runtime = { dlg?: { reactPageSetupCatalog?(): Catalog | null; reactPageSetupAction?(action: string, key?: string, value?: unknown): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string, ...args: unknown[]): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 const tabs = ['Page', 'Margins', 'Header/Footer', 'Sheet'];
 
 /** React-owned print configuration form backed by Excelx print/workbook services. */
 export function ExcelxPageSetupDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const id = useId().replaceAll(':', '');
   useEffect(() => {
-    const refresh = () => setCatalog(runtime()?.dlg?.reactPageSetupCatalog?.() || null);
-    const off = runtime()?.bus?.on('excelx-page-setup', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactPageSetupCatalog?.()) runtime()?.dlg?.reactPageSetupAction?.('close'); };
+    const refresh = () => setCatalog(runtime?.dlg?.reactPageSetupCatalog?.() || null);
+    const off = runtime?.bus?.on('excelx-page-setup', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactPageSetupCatalog?.()) runtime?.dlg?.reactPageSetupAction?.('close'); };
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const action = runtime()?.dlg?.reactPageSetupAction;
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const action = runtime?.dlg?.reactPageSetupAction;
   const change = (key: string, value: unknown) => action?.('change', key, value);
   const check = (key: keyof PrintSettings, label: string, checked: boolean) => <label key={key}><input type="checkbox" checked={checked} onChange={(event) => change(`print.${key}`, event.currentTarget.checked)} />{t(label).replace('&', '')}</label>;
   const field = (label: string, key: string, value: string | number, type: 'text' | 'number' = 'text', extra?: { min?: number; max?: number; step?: number }) => <label className="excelx-page-setup-dialog__field" key={key}>{t(label).replace('&', '')}<input type={type} value={value} min={extra?.min} max={extra?.max} step={extra?.step} onChange={(event) => change(key, type === 'number' ? Number(event.currentTarget.value) : event.currentTarget.value)} /></label>;

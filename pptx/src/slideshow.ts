@@ -1,6 +1,8 @@
 // @ts-nocheck -- Slide-show playback, transitions and animation use existing editor services.
 /* PPTX — slide show: transitions, custom animation, pen, rehearsal. */
 export function installPptxSlideshow(runtime: Window): void {
+  const window = runtime;
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L;
   const { h } = L;
 

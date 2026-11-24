@@ -1,7 +1,7 @@
 // Markdown round trips in Wordx, in the Chromium that tools/shot.mjs drives (CDP 127.0.0.1:9222).
 //
-//   node tests/quire/mdroundtrip.mjs DIR          every .md file in DIR (not checked in: download READMEs)
-//   node tests/quire/mdroundtrip.mjs --spec FILE  the examples of the CommonMark spec.json
+//   node tests/wordx/mdroundtrip.mjs DIR          every .md file in DIR (not checked in: download READMEs)
+//   node tests/wordx/mdroundtrip.mjs --spec FILE  the examples of the CommonMark spec.json
 //
 // Per file: open → save unchanged (must be byte for byte the same), edit one paragraph → save (how many
 // lines changed, against the edited block's own lines), and every block rewritten → save, compared with

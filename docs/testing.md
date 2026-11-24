@@ -144,32 +144,32 @@ and open http://127.0.0.1:8770/. For an update, stop the server, stage again wit
 
 `node --test tests/smartart.test.mjs` runs the layout engine (`public/common/smartart.js`) in Node: every layout, for 1 to 7 items, gives finite shapes inside the box, one shape per item it shows, and one text size within the limits. A change to the SmartArt writer (`public/lectern/js/smartart-io.js`, `diagramFrameXML` in `pptx-write.js`) is checked on a deck with one diagram per layout: save it from PPTX, run the Open XML SDK validator and `tools/ooxml/package.py check` on it, convert it with LibreOffice to PDF (does every diagram draw, with no word broken) and to PPTX, and reopen both copies in PPTX (every diagram editable again). Keep the decks and renders in `./tmp`.
 
-`python3 tests/lectern/smartart-office.py OUT [name]` checks SmartArt that PowerPoint made, in the corpus decks whose layouts PPTX has: unedited saves keep every diagram part byte-identical, an edit through the items gives a save with no new `package.py` findings, and that save reopens with the diagram editable (`OUT/results.json`). It removes the Recent Files entries it makes; run the SDK validator on `OUT/*-edited.pptx` too.
+`python3 tests/pptx/smartart-office.py OUT [name]` checks SmartArt that PowerPoint made, in the corpus decks whose layouts PPTX has: unedited saves keep every diagram part byte-identical, an edit through the items gives a save with no new `package.py` findings, and that save reopens with the diagram editable (`OUT/results.json`). It removes the Recent Files entries it makes; run the SDK validator on `OUT/*-edited.pptx` too.
 
-## Wordx: tests/quire/
+## Wordx: tests/wordx/
 
 | | |
 |---|---|
-| `node tests/quire/mdspec.js DIR` | The Markdown reader against the CommonMark spec examples and the GFM extension examples (in Node). DIR holds `spec.json` (https://spec.commonmark.org/0.31.2/spec.json), cmark-gfm's `test/spec.txt` saved as `gfm-spec.txt`, and the WHATWG `entities.json` |
-| `node tests/quire/mdroundtrip.mjs DIR` | Markdown round trips in Wordx (through `shot.mjs`): every `.md` in DIR saved unchanged (must be byte for byte the same), with one paragraph edited (only that block may change), and fully rewritten (same HTML). `--spec spec.json` runs the rewrite check on the spec examples |
-| `python3 tests/quire/loss-audit.py originals/ saved/ out.json` | What a save loses: each original `.docx` against Wordx's saved copy, feature by feature and word by word (standard library only); results in docs/wordx.md |
+| `node tests/wordx/mdspec.js DIR` | The Markdown reader against the CommonMark spec examples and the GFM extension examples (in Node). DIR holds `spec.json` (https://spec.commonmark.org/0.31.2/spec.json), cmark-gfm's `test/spec.txt` saved as `gfm-spec.txt`, and the WHATWG `entities.json` |
+| `node tests/wordx/mdroundtrip.mjs DIR` | Markdown round trips in Wordx (through `shot.mjs`): every `.md` in DIR saved unchanged (must be byte for byte the same), with one paragraph edited (only that block may change), and fully rewritten (same HTML). `--spec spec.json` runs the rewrite check on the spec examples |
+| `python3 tests/wordx/loss-audit.py originals/ saved/ out.json` | What a save loses: each original `.docx` against Wordx's saved copy, feature by feature and word by word (standard library only); results in docs/wordx.md |
 
 Run both after a change to `markdown.js` or `mdio.js`; the numbers are in docs/wordx.md.
 
-Line heights (`quire/js/portions.js`): `node --test tests/quire/lines.test.mjs` (a few seconds; `REPORT=1` prints what it
+Line heights (`wordx` layout engine): `node --test tests/wordx/lines.test.mjs` (a few seconds; `REPORT=1` prints what it
 measured) checks two documents in Wordx against another application's PDF, read by `python3 tools/wordlines.py PDF DOCX
 OUT.json` into rows (the text at one height on a page, matched by a hash of its last characters, so a document whose
 text isn't ours is compared without storing it):
 
-- a Word-saved 19-page walkthrough against Word's PDF of it (`tests/quire/lines/walkthrough-word.json`): pages start
+- a Word-saved 19-page walkthrough against Word's PDF of it (`tests/wordx/lines/walkthrough-word.json`): pages start
   where Word's do, and two lines that follow each other in both are as far apart as in Word, within 0.75pt. The
   document and the PDF stay out of git, in `~/corpora/word-ref/` (`fluent-walkthrough.docx`, `fluent-walkthrough.word.pdf`;
-  or the folder named in `QUIRE_WORD_REF`); without them that part is skipped;
-- `tests/quire/lines/linecases.docx` (`python3 tools/linecases.py make`), one case per paragraph between marker lines,
+  or the folder named in `WORDX_WORD_REF`); without them that part is skipped;
+- `tests/wordx/lines/linecases.docx` (`python3 tools/linecases.py make`), one case per paragraph between marker lines,
   against LibreOffice's PDF of it (`soffice --headless --convert-to pdf`, then `python3 tools/linecases.py read PDF
-  tests/quire/lines/linecases-lo.json`): the cases LibreOffice draws as Word does are asserted, the others recorded.
+  tests/wordx/lines/linecases-lo.json`): the cases LibreOffice draws as Word does are asserted, the others recorded.
 
-Page counts across the corpus: `node tools/quire-pages.mjs OUT.jsonl [--jobs 4]` opens every Word-saved `.docx` in
+Page counts across the corpus: `node tools/wordx-pages.mjs OUT.jsonl [--jobs 4]` opens every Word-saved `.docx` in
 `~/corpora/word` (Microsoft Office Word with `<Pages>` in docProps/app.xml) and records Wordx's page count beside
 Word's; `--compare BEFORE.jsonl AFTER.jsonl` lists what a change moved, and every file it moved away from Word's count.
 For the "before", serve the last commit's site on a port of its own (`git archive HEAD public | tar -x -C
@@ -206,13 +206,13 @@ of its own: no element, attribute or script the writer didn't make, the names st
 policy (`L.exportCSP`) in place; then it opens each page from a local server, where nothing of the document runs
 and PPTX's own script still does.
 
-## Excelx: tests/ledger/
+## Excelx: tests/excelx/
 
 The engine and the file readers and writers load in Node through `load.js` (the shared ones from `public/common/`; a missing file is an error), so most checks run without a browser.
 
 | | |
 |---|---|
-| `node --test tests/ledger/*.test.js` | Unit tests: calculation, formula parser, number formats, SHA |
+| `node --test tests/excelx/*.test.js` | Unit tests: calculation, formula parser, number formats, SHA |
 | `roundtrip.js file.xlsx [outdir]` | read → write → read, compare every cell's value, formula and style and the sheet settings |
 | `xmlss-rt.js file.xlsx [outdir]` | the same through XML Spreadsheet 2003 |
 | `recalc1.js file.xlsx` | recalculate every formula and compare with the value stored in the file |
@@ -222,7 +222,7 @@ The engine and the file readers and writers load in Node through `load.js` (the 
 | `pool.js script.js dir out.jsonl`, `recalc-all.js`, `summ.js` | run a per-file script over a corpus with a process pool, summarise the results |
 | `ui/*.js` | Playwright checks in Chromium against http://127.0.0.1:8760/ledger/: `smoke`, `flows` (44 end-to-end flows), `allcmds` (every menu and toolbar command), `password`, `perf`, `shots`. Need Playwright (`npm install --no-save playwright`) |
 
-## PPTX: tests/lectern/
+## PPTX: tests/pptx/
 
 `corpus.js` opens real decks in Chromium (open, render every slide, save, reopen, compare), `summarize.js` sums up its results, `ui-features.js` drives the password dialog, Tools ▸ Options ▸ Security and the chart dialog, `chartedit.js` writes every chart for validation, `decrypt.py` checks encrypted saves independently, `loss-audit.py` counts what a save loses (features and words, original against saved copy; standard-library Python), `viscompare.py` / `triptych.py` / `stack.py` compare renderings. They need Playwright; how to run them is in docs/pptx.md.
 
@@ -281,16 +281,16 @@ and an error/reason. Here, `ok` means the requested operation and reread complet
 the file was lossless. Independent comparisons and Office acceptance are separate checks.
 
 ```sh
-node tests/quire/corpus.mjs ~/corpora/word /tmp/quire.jsonl --save /tmp/lossless/quire
-node tests/ledger/corpus.js ~/corpora/excel /tmp/ledger.jsonl --save /tmp/lossless/ledger
-node tests/lectern/corpus.js ~/corpora/powerpoint /tmp/lectern.jsonl --lossless --save /tmp/lossless/lectern
+node tests/wordx/corpus.mjs ~/corpora/word /tmp/wordx.jsonl --save /tmp/lossless/wordx
+node tests/excelx/corpus.js ~/corpora/excel /tmp/excelx.jsonl --save /tmp/lossless/excelx
+node tests/pptx/corpus.js ~/corpora/powerpoint /tmp/pptx.jsonl --lossless --save /tmp/lossless/pptx
 ```
 
 Default scenarios are `save` and `repeat` (save, reopen, save again). `--edit` selects separate text,
 formatting, geometry, duplicate and delete-object scenarios, plus row/column/sheet operations in Excelx
 or slide insertion/deletion in PPTX. Each successful mutation also saves its undo and redo states.
 `--scenarios text` runs just text editing; `--scenarios draft` in the browser drivers exercises the app's
-actual snapshot and recovery hooks. For Excelx drafts, use `node tests/ledger/browser-corpus.mjs`
+actual snapshot and recovery hooks. For Excelx drafts, use `node tests/excelx/browser-corpus.mjs`
 with the same arguments; the Node engine driver rejects that scenario. `--limit N` limits files; `--resume` skips recorded input hashes and
 scenarios. A single Office file or a file list can replace the directory. Saved artifacts go into
 `save/`, `repeat/`, `repeat-second/`, `text/`, `text-undo/`, etc. Files retain their source extensions so
@@ -298,8 +298,8 @@ variant errors remain observable. The browser drivers use the existing CDP brows
 own tabs. Excelx uses isolated Node workers with a per-file timeout. The older PPTX rendering driver
 without these switches remains available and still requires Playwright.
 
-Wordx history regressions run with `node --test tests/quire/history.test.js`. The real-file check
-`node tests/quire/history.mjs ~/corpora/word/libreoffice__9b899b6707be__chart-size.docx`
+Wordx history regressions run with `node --test tests/wordx/history.test.js`. The real-file check
+`node tests/wordx/history.mjs ~/corpora/word/libreoffice__9b899b6707be__chart-size.docx`
 checks original chart bytes after editing, undo, redo, copying and whole-document snapshot restore.
 
 `tools/ooxml/check.mjs FILE...` uses an independent strict Python XML/ZIP reader to check content types,
@@ -386,7 +386,7 @@ parts while keeping opaque dependency bytes. Descendant `Ignorable` declarations
 only `unexpectedIgnorable` declarations fail the measurement. It is a serialization benchmark, not an app round trip;
 use fresh browser saves, package/SDK comparisons and Office samples for integration checks. Run
 `conventions.py` on its output and every full corpus run, recording newly introduced signatures.
-`tests/quire/comment-office-copies.py BATCH PREVIOUS_BATCH OUTPUT` recreates the bounded first
+`tests/wordx/comment-office-copies.py BATCH PREVIOUS_BATCH OUTPUT` recreates the bounded first
 Word comment-repair isolation round. Package checks now reject excess comment references beyond
 their matching definitions; comparison also rejects automatic pre-release thread-namespace promotion.
 They also reject a shape ID repeated within a PowerPoint VML part or across spreadsheet VML parts (`duplicate-vml-id`), two
@@ -399,25 +399,25 @@ Excelx's `pivots.test.js` and `threads.test.js` use the pinned public inputs (`V
 their source paths for package/SDK comparisons. Pivot source fixtures are generated automatically from
 the pinned input into `PIVOT_RESULTS/fixtures` (or a temporary directory); `PIVOT_FIXTURES` overrides
 that destination. They do not depend on an earlier results directory. The thread test also authors a mention/no-legacy-note
-fixture missing from the public corpus. `node tests/ledger/threads-ui.mjs INPUT.xlsx OUTPUT`
+fixture missing from the public corpus. `node tests/excelx/threads-ui.mjs INPUT.xlsx OUTPUT`
 checks the real Paste Special, undo/redo and suite draft/recovery hooks on a thread in the first sheet.
 Add `--edit` to first edit its root through the actual comment editor; replies and untouched mentions
 must survive, including edits around both ends of a mentioned name and later clipboard/draft recovery.
 `objects.test.js` uses `OBJECT_RESULTS=DIR` to retain controls/OLE/VML edit states from the same corpus.
-`node tests/ledger/objects-ui.mjs INPUT.xlsx OUTPUT` checks object paste into another workbook,
+`node tests/excelx/objects-ui.mjs INPUT.xlsx OUTPUT` checks object paste into another workbook,
 undo/redo and actual draft recovery, including the dependent payload bytes.
 `sh tools/corpora.sh ~/corpora ledger-features` fetches three supplemental slicer/timeline workbooks
 at fixed commits and SHA-256 hashes without changing the main corpus manifest. `slicers.test.js`
 uses them (`LEDGER_FEATURES` overrides their directory); `SLICER_RESULTS=DIR` retains edit states.
-`node tests/ledger/slicers-ui.mjs INPUT.xlsx OUTPUT` exercises real drawing copy/paste, undo/redo
+`node tests/excelx/slicers-ui.mjs INPUT.xlsx OUTPUT` exercises real drawing copy/paste, undo/redo
 and draft recovery. The supplemental sources and hashes are recorded in `ledger-features/manifest.json`.
 `extensions.test.js` uses `EXTENSION_RESULTS=DIR` for extended bars, validation, sparklines and unknown
 worksheet extension edit/history saves (`EXCEL_CORPUS` overrides `~/corpora/excel`).
-`node tests/ledger/extensions-ui.mjs INPUT.xlsx OUTPUT` checks an extended bar through edits,
+`node tests/excelx/extensions-ui.mjs INPUT.xlsx OUTPUT` checks an extended bar through edits,
 sheet copy, undo/redo and actual draft recovery.
 `tables.test.js` uses `QUERY_RESULTS=DIR` for query-table edits, column identities, copies and
 history saves (`EXCEL_CORPUS` overrides `~/corpora/excel`).
-`node tests/ledger/tables-ui.mjs INPUT.xlsx OUTPUT` checks inserted query columns, sheet
+`node tests/excelx/tables-ui.mjs INPUT.xlsx OUTPUT` checks inserted query columns, sheet
 copy, scoped names, undo/redo and actual draft recovery.
 `recovery.test.js` covers readable cells in damaged packages and unchanged mixed date/text filters.
 `sheet-properties.test.js` uses `SHEET_PROPERTY_RESULTS=DIR` to retain automatic row-height,
@@ -426,11 +426,11 @@ view flags and compatibility alternatives around worksheet-format properties.
 `page-setup.test.js` uses `PAGE_SETUP_RESULTS=DIR` to retain absent-default, paper/quality-edit,
 printer-dependency, chart-sheet, copy and history checks from public workbooks.
 For the independent cell audit after `corpus.js --scenarios text`, set `SCENARIO=text` when running
-`tests/ledger/loss-audit.py`: only A1 on the first ordinary worksheet is excluded as the intended
+`tests/excelx/loss-audit.py`: only A1 on the first ordinary worksheet is excluded as the intended
 edit. Dependent array-result recalculation still appears in the report. ZIP directory markers are
 excluded from feature-part counts.
 
-`node tests/ledger/scroll-ui.mjs` scrolls a sheet with the mouse wheel in all four directions
+`node tests/excelx/scroll-ui.mjs` scrolls a sheet with the mouse wheel in all four directions
 and with the arrow keys, with and without frozen panes, letting the page repaint between steps.
 
 Build the SDK validator and install the independent workbook reader in a test environment:
@@ -500,46 +500,46 @@ cancellation, download failure, successful acknowledgement, newly introduced not
 entries that must save without the dialog, in all apps.
 Feature inventories decode UTF-16 parts and count retained SmartArt text on both sides.
 
-`node tests/lectern/properties.mjs OUTPUT_DIR [SCENARIO_REGEX]` checks per-property edits,
+`node tests/pptx/properties.mjs OUTPUT_DIR [SCENARIO_REGEX]` checks per-property edits,
 tags, actions, transitions, animation changes, clipboard dependencies, undo/redo and actual drafts.
 The corpus driver also records original/opened/saved slide counts so a skipped source slide cannot
 pass merely because the remaining package is valid.
 
-`tests/lectern/designs.mjs OUTPUT [SCENARIO_REGEX]` checks imported design edits, independent
+`tests/pptx/designs.mjs OUTPUT [SCENARIO_REGEX]` checks imported design edits, independent
 copies, unused-master retention, history and draft recovery. It checks that unrelated layouts
 retain their exact bytes, theme effects retain their expanded XML, and new layouts allocate unique
 shape IDs including the structural group. It also covers interleaved unread master/layout shapes,
 stacking order, deletion, addition and edited default run properties. Reports follow the same
 package/SDK and LibreOffice comparison workflow.
 
-`node tests/lectern/frames.mjs OUTPUT_DIR [SCENARIO_REGEX]` exercises opaque SmartArt, OLE,
+`node tests/pptx/frames.mjs OUTPUT_DIR [SCENARIO_REGEX]` exercises opaque SmartArt, OLE,
 ink, 3-D and chartEx previews with geometry/content edits, copies, deletion, ungrouping, clipboard
 renditions and drafts. Every saved state must have unique VML preview IDs and part animations aimed
 at graphic frames (an embedded object copied twice; edited SmartArt animated by parts). Run
-`python3 tests/lectern/frame-fixtures.py FIXTURE_DIR` first for its
+`python3 tests/pptx/frame-fixtures.py FIXTURE_DIR` first for its
 multiple-member fallback case; `FRAME_FIXTURES` overrides the default sibling `frames-fixtures/`
 directory. The fixture is derived from a public SDK chartEx input, with explicit provenance.
 
-`python3 tests/lectern/comment-fixtures.py FIXTURE_DIR` creates a documented schema-authored
+`python3 tests/pptx/comment-fixtures.py FIXTURE_DIR` creates a documented schema-authored
 modern thread/task/anchor sample on a pinned public deck; it is not an Office-authored input.
-`node tests/lectern/comments.mjs OUTPUT_DIR FIXTURE_DIR [SCENARIO_REGEX]` checks original
+`node tests/pptx/comments.mjs OUTPUT_DIR FIXTURE_DIR [SCENARIO_REGEX]` checks original
 comment bytes, slide/shape ownership, author/index and GUID references, detached clipboard packages,
 Strict copies, undo/redo and suite drafts. Validate its `results.jsonl` using the Microsoft365 target.
 The scenario filter retains other recorded cases so corrections need not repeat unaffected work.
 
-`node tests/lectern/membership.mjs OUTPUT_DIR` uses pinned presentation inputs for section and
+`node tests/pptx/membership.mjs OUTPUT_DIR` uses pinned presentation inputs for section and
 custom-show insertion, copy, move, deletion, large IDs, empty sections, undo/redo and actual suite
 draft recovery (`VO_CORPORA` overrides `~/corpora`). It retains every saved state and a draft screenshot.
 Use its `results.jsonl` with `tools/ooxml/validate.py` for package/SDK and LibreOffice comparison.
 
-`node tests/lectern/media.mjs FILE_OR_LIST OUTDIR` opens authored video/audio decks in Chromium.
+`node tests/pptx/media.mjs FILE_OR_LIST OUTDIR` opens authored video/audio decks in Chromium.
 It saves unedited, moves/resizes, changes shadow and crop, duplicates, deletes, replaces, duplicates
 the slide, recovers an actual suite draft and copies through keyboard/native clipboard events into
 another tab. Every mutation that uses history emits its pre-edit, undo and redo state.
 
-`python3 tests/lectern/media-check.py ORIGINALS OUTDIR` independently compares media frames,
+`python3 tests/pptx/media-check.py ORIGINALS OUTDIR` independently compares media frames,
 bytes, reference targets, playback and exact history restoration (core timestamps excepted).
-`python3 tests/lectern/media-check.py --sounds ORIGINALS RESULTS.jsonl SAVED_ROOT` compares
+`python3 tests/pptx/media-check.py --sounds ORIGINALS RESULTS.jsonl SAVED_ROOT` compares
 transition/click sounds and playback through ordinary save/repeat/text/draft corpus scenarios,
 including decks without a media picture. `media-variant.py SOURCE.pptx OUT.pptx` derives an
 AlternateContent/effects fixture from an authored media deck (`--strict` adds a Strict case with an
@@ -566,7 +566,7 @@ inventory parses transition/run-effect elements and text as XML: namespace hoist
 properties and escaped apostrophes must not appear as feature or word loss. Edited SmartArt previews
 are intentional conversions and must be matched with their recorded loss entries.
 
-`python3 tests/ledger/pivot-fixtures.py ~/corpora/excel OUTDIR` authors the two pivot source kinds
+`python3 tests/excelx/pivot-fixtures.py ~/corpora/excel OUTDIR` authors the two pivot source kinds
 absent from the pinned inventory: a defined-name source and a two-area consolidation source. It keeps
 all unchanged package parts byte-identical, records source/output hashes and changed parts, and
 requires an empty destination. Consolidation input cells, cached records and displayed output agree.
@@ -575,24 +575,24 @@ edit behavior. Use them alongside the public range, table, external-source and s
 
 ### Wordx controls, properties and objects
 
-`node --test tests/quire/*.test.js` covers control boundaries and locks, independent property
-replacement, alternatives, range/object identity and history. `node tests/quire/controls.mjs
+`node --test tests/wordx/*.test.js` covers control boundaries and locks, independent property
+replacement, alternatives, range/object identity and history. `node tests/wordx/controls.mjs
 ~/corpora/word OUTDIR` edits authored bound-text, date and checkbox controls, emitting before/edit/undo/
-copy/draft/recovered files. `node tests/quire/objects.mjs ~/corpora/word OUTDIR` transfers authored
+copy/draft/recovered files. `node tests/wordx/objects.mjs ~/corpora/word OUTDIR` transfers authored
 OLE/SmartArt objects between browser tabs, edits converted content, undoes it and recovers a draft.
-`node tests/quire/sections.mjs ~/corpora/word OUTDIR` checks section XML, absent defaults,
+`node tests/wordx/sections.mjs ~/corpora/word OUTDIR` checks section XML, absent defaults,
 header relationships and alternatives through actual saves, margin edits, undo/redo and draft recovery.
 Its generated fixture also exercises the page-number dialog, section insertion, page setup/columns
 forward at new and existing boundaries, multi-column index insertion and merged letters. Add
 `--fixture` to run only these focused cases, including copied revision IDs through history and drafts.
 It writes the original and each saved state for package/SDK and external rendering comparisons.
 
-`node tests/quire/picture-bullets.mjs ~/corpora/word OUTDIR` exercises the public SDK picture-bullet
+`node tests/wordx/picture-bullets.mjs ~/corpora/word OUTDIR` exercises the public SDK picture-bullet
 fixture through the list dialog, symbol conversion, undo/redo, actual draft recovery and an import
 with colliding source IDs. It compares retained definition XML and image bytes and checks unused
 definitions after all list references have been removed.
 
-`node tests/quire/numbering.mjs ~/corpora/word OUTDIR` exercises the public custom-format and
+`node tests/wordx/numbering.mjs ~/corpora/word OUTDIR` exercises the public custom-format and
 style-linked numbering fixtures through list commands, independent copies, repeated imports,
 undo/redo and actual draft recovery. An optional final `custom` or `style` selects one fixture.
 The loss audit also inventories picture bullets, list identities/templates, legacy settings and
@@ -603,18 +603,18 @@ actual draft recovery.
 
 `tools/ooxml/prescan-bench.mjs` measures the shared writer's identity scan on a generated large sheet
 containing ordinary words such as “del”; it reports elapsed time and heap growth separately from
-whole-file save time. `tests/ooxml/lectern-review.test.mjs` checks chart rotation policy, placeholder
+whole-file save time. `tests/ooxml/pptx-review.test.mjs` checks chart rotation policy, placeholder
 flips, single-member alternative orientation and comment-extension order. The browser harness
-`tests/lectern/graphic-rotation.mjs OUTDIR` exercises actual chart/OLE commands and ungrouping.
-`tests/ledger/pictures.test.js` checks retained picture properties through geometry/crop edits,
+`tests/pptx/graphic-rotation.mjs OUTDIR` exercises actual chart/OLE commands and ungrouping.
+`tests/excelx/pictures.test.js` checks retained picture properties through geometry/crop edits,
 copying, deletion, history and recovery. The package checker additionally rejects orientation on
 PowerPoint graphic-frame transforms and inconsistent ActiveX worksheet/VML names.
 
-`node tests/quire/recovered-breaks.mjs ~/corpora/word OUTDIR` checks the public malformed-break
+`node tests/wordx/recovered-breaks.mjs ~/corpora/word OUTDIR` checks the public malformed-break
 fixture through text edits, deletion, undo/redo and actual draft recovery. It verifies valid saved
 break placement and that the Compatibility Checker follows surviving recovered content.
 
-`node tests/quire/drawing-properties.mjs ~/corpora/word OUTDIR` checks authored picture/shape
+`node tests/wordx/drawing-properties.mjs ~/corpora/word OUTDIR` checks authored picture/shape
 properties and watermarks, plus generated row/cell alternatives with populated and empty choices.
 It writes originals and every edit/history/draft state, checking that deletion cannot restore hidden
 table content and that original watermark elements remain byte-identical before editing.
@@ -634,7 +634,7 @@ variants where available, and writes a manifest. It refuses to replace differing
 Use a new destination for each implementation stage. Record actual Word/Excel/PowerPoint repair
 results; an unperformed Office check remains pending.
 
-`node tests/lectern/timing-repair.mjs OUTDIR --sdk PATH_TO_DLL` reproduces the slide-6
+`node tests/pptx/timing-repair.mjs OUTDIR --sdk PATH_TO_DLL` reproduces the slide-6
 diagnostic copies from the current sample. `--source SAVED_SAMPLE.pptx` instead uses the exact bytes
 of a reported failure; `--dotnet PATH` selects the runtime. The output directory must be empty.
 The variants isolate removal of slide-6 timing, its build list, its teeter effect, and ordering of

@@ -1,19 +1,19 @@
 import { OfficeDialog, SvgArtwork } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 import './chart-wizard-dialog.css';
 
 type TypeItem = { kind: string; label: string; icon: string; subtypes?: string[] };
 type Catalog = { step: number; steps: number; title: string; types: TypeItem[]; subtypes: TypeItem[]; kind: string; range: string; byRows: boolean | null; titleText: string; axX: string; axY: string; gridY: boolean; legend: string; labels: boolean; where: string; sheetName: string; preview: string; editing: boolean };
 type Runtime = { chartWizard?: { reactCatalog?(): Catalog | null; reactAction?(action: string, value?: unknown): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** React owns the multi-step chart wizard; chart parsing, preview generation, and workbook writes stay in xchart.js. */
 export function ExcelxChartWizardDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  useEffect(() => { const refresh = () => setCatalog(runtime()?.chartWizard?.reactCatalog?.() || null); const off = runtime()?.bus?.on('excelx-chart-wizard', refresh); return () => { off?.(); runtime()?.chartWizard?.reactAction?.('unmount'); }; }, []);
+  useEffect(() => { const refresh = () => setCatalog(runtime?.chartWizard?.reactCatalog?.() || null); const off = runtime?.bus?.on('excelx-chart-wizard', refresh); return () => { off?.(); runtime?.chartWizard?.reactAction?.('unmount'); }; }, []);
   if (!catalog) return null;
-  const t = (value: string) => runtime()?.t?.(value) || value;
-  const act = (action: string, value?: unknown) => runtime()?.chartWizard?.reactAction?.(action, value);
+  const t = (value: string) => runtime?.t?.(value) || value;
+  const act = (action: string, value?: unknown) => runtime?.chartWizard?.reactAction?.(action, value);
   const cancel = () => { act('cancel'); setCatalog(null); };
   const finish = () => { act('finish'); setCatalog(null); };
   const update = (patch: Record<string, unknown>) => act('update', patch);

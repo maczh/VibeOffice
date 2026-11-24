@@ -1,5 +1,6 @@
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { useExcelxRuntime } from './editor-host';
 
 interface StatusSnapshot { mode: string; text: string; calculation: string; end: boolean }
 interface ExcelxRuntime {
@@ -11,23 +12,21 @@ interface ExcelxRuntime {
   N?(value: string): string;
 }
 
-function runtime(): ExcelxRuntime | undefined {
-  return (window as Window & { L?: ExcelxRuntime }).L;
-}
-
 /** Attach the status-bar calculation menu through React's editor-mount lifetime. */
 export function ExcelxStatusBarInteractions({ host }: { host: HTMLElement }) {
+  const runtime = useExcelxRuntime<ExcelxRuntime>();
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [snapshot, setSnapshot] = useState<StatusSnapshot>({ mode: 'Ready', text: '', calculation: '', end: false });
   const [locks, setLocks] = useState({ caps: false, num: false, scroll: false });
   useEffect(() => {
     const attach = () => setMount(host.querySelector<HTMLElement>('#statusbar'));
-    const refresh = (next?: StatusSnapshot) => setSnapshot(next || runtime()?.statusSnapshot?.() || { mode: 'Ready', text: '', calculation: '', end: false });
-    const observer = new MutationObserver(attach);
-    observer.observe(host, { childList: true, subtree: true });
+    const refresh = (next?: StatusSnapshot) => setSnapshot(next || runtime?.statusSnapshot?.() || { mode: 'Ready', text: '', calculation: '', end: false });
+    const Observer = host.ownerDocument.defaultView?.MutationObserver;
+    const observer = Observer ? new Observer(attach) : null;
+    observer?.observe(host, { childList: true, subtree: true });
     attach();
     refresh();
-    const bus = runtime()?.bus;
+    const bus = runtime?.bus;
     const offStatus = bus?.on('excelx-statusbar', refresh);
     const offReady = bus?.on('app-ready', refresh);
     const keydown = (event: KeyboardEvent) => {
@@ -35,21 +34,21 @@ export function ExcelxStatusBarInteractions({ host }: { host: HTMLElement }) {
       const caps = event.getModifierState('CapsLock');
       const num = event.getModifierState('NumLock');
       const scroll = event.getModifierState('ScrollLock');
-      runtime()?.grid && (runtime()!.grid!.scrollLock = scroll);
+      if (runtime?.grid) runtime.grid.scrollLock = scroll;
       setLocks({ caps, num, scroll });
     };
     host.addEventListener('keydown', keydown, true);
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       offStatus?.();
       offReady?.();
       host.removeEventListener('keydown', keydown, true);
     };
-  }, [host]);
+  }, [host, runtime]);
   if (!mount) return null;
-  const label = (value: string) => runtime()?.N?.(value) || value;
+  const label = (value: string) => runtime?.N?.(value) || value;
   const openMenuAt = (x: number, y: number) => {
-    const L = runtime();
+    const L = runtime;
     const app = L?.app;
     if (!L?.ui || !app) return;
     const functions = [['NONE', '&None'], ['AVERAGE', '&Average'], ['COUNTA', '&Count'], ['COUNT', 'C&ount Nums'], ['MAX', '&Max'], ['MIN', 'M&in'], ['SUM', '&Sum']] as const;

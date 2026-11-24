@@ -1,6 +1,7 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import type { KeyboardEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 import { PptxPreviewArtwork } from './slides-pane.js';
 
 interface DiagramLayout { id: string; category: string; name: string; description: string; preview: string }
@@ -11,12 +12,12 @@ interface DiagramGalleryRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): DiagramGalleryRuntime | undefined { return (window as Window & { L?: DiagramGalleryRuntime }).L; }
 
 function handleOptionKeys(event: KeyboardEvent<HTMLDivElement>) {
   const options = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="option"]')];
   if (!options.length) return;
-  const current = options.indexOf(document.activeElement as HTMLElement);
+  const activeElement = event.currentTarget.ownerDocument.activeElement as HTMLElement;
+  const current = options.indexOf(activeElement);
   let next = current;
   if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (current + 1 + options.length) % options.length;
   else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = (current - 1 + options.length) % options.length;
@@ -25,7 +26,7 @@ function handleOptionKeys(event: KeyboardEvent<HTMLDivElement>) {
   else if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
     event.stopPropagation();
-    (document.activeElement as HTMLElement | null)?.click();
+    activeElement?.click();
     return;
   } else return;
   const target = options[next];
@@ -38,16 +39,17 @@ function handleOptionKeys(event: KeyboardEvent<HTMLDivElement>) {
 
 /** Full IntelliArt layout chooser; catalog, preview rendering, and commit are supplied by the presentation engine. */
 export function PptxDiagramGalleryDialog() {
+  const runtime = usePptxRuntime<DiagramGalleryRuntime>();
   const [catalog, setCatalog] = useState<DiagramGalleryCatalog | null>(null);
   const [category, setCategory] = useState('all');
   const [selected, setSelected] = useState('');
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.diagram?.reactGalleryCatalog?.() || null;
+      const next = runtime?.diagram?.reactGalleryCatalog?.() || null;
       setCatalog(next);
       if (next) { setCategory('all'); setSelected(next.current); }
     };
-    const off = runtime()?.bus?.on('pptx-diagram-gallery', refresh);
+    const off = runtime?.bus?.on('pptx-diagram-gallery', refresh);
     return () => off?.();
   }, []);
   const visible = useMemo(() => catalog?.layouts.filter((layout) => category === 'all' || layout.category === category) || [], [catalog, category]);
@@ -56,10 +58,10 @@ export function PptxDiagramGalleryDialog() {
     if (first && !visible.some((layout) => layout.id === selected)) setSelected(first.id);
   }, [visible, selected]);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const detail = runtime()?.diagram?.reactGalleryPreview?.(selected);
-  const close = () => runtime()?.diagram?.reactGalleryAction?.('close');
-  const apply = () => runtime()?.diagram?.reactGalleryAction?.('apply', selected);
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const detail = runtime?.diagram?.reactGalleryPreview?.(selected);
+  const close = () => runtime?.diagram?.reactGalleryAction?.('close');
+  const apply = () => runtime?.diagram?.reactGalleryAction?.('apply', selected);
   return <OfficeDialog title={t('Change IntelliArt Layout')} className="pptx-diagram-gallery-dialog" style={{ width: 'min(96vw, 720px)' }} onRequestClose={close}>
     <div className="sa-gallery">
       <div className="sa-cats list-box" role="listbox" aria-label={t('Categories')} aria-orientation="vertical" onKeyDownCapture={handleOptionKeys}>

@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { usePptxHost, usePptxRuntime } from './editor-host.js';
 
 interface SpeakerNotesCatalog { slide: number; notes: string }
 interface SpeakerNotesRuntime {
@@ -7,19 +8,20 @@ interface SpeakerNotesRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string, ...args: unknown[]): string;
 }
-function runtime(): SpeakerNotesRuntime | undefined { return (window as Window & { L?: SpeakerNotesRuntime }).L; }
 
 /** React-owned Speaker Notes dialog; the presentation engine retains the undoable notes transaction. */
 export function PptxSpeakerNotesDialog() {
+  const host = usePptxHost();
+  const runtime = usePptxRuntime<SpeakerNotesRuntime>();
   const [catalog, setCatalog] = useState<SpeakerNotesCatalog | null>(null);
   const [notes, setNotes] = useState('');
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.app?.reactSpeakerNotesCatalog?.() || null;
+      const next = runtime?.app?.reactSpeakerNotesCatalog?.() || null;
       setCatalog(next);
       setNotes(next?.notes || '');
     };
-    const off = runtime()?.bus?.on('pptx-speaker-notes-dialog', refresh);
+    const off = runtime?.bus?.on('pptx-speaker-notes-dialog', refresh);
     return () => off?.();
   }, []);
   useEffect(() => {
@@ -28,16 +30,16 @@ export function PptxSpeakerNotesDialog() {
       if (event.key !== 'Escape') return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      runtime()?.app?.reactSpeakerNotesAction?.('close');
+      runtime?.app?.reactSpeakerNotesAction?.('close');
       setCatalog(null);
     };
-    window.addEventListener('keydown', cancelDraft, true);
-    return () => window.removeEventListener('keydown', cancelDraft, true);
+    host.ownerDocument.addEventListener('keydown', cancelDraft, true);
+    return () => host.ownerDocument.removeEventListener('keydown', cancelDraft, true);
   }, [catalog]);
-  const close = () => { runtime()?.app?.reactSpeakerNotesAction?.('close'); setCatalog(null); };
+  const close = () => { runtime?.app?.reactSpeakerNotesAction?.('close'); setCatalog(null); };
   if (!catalog) return null;
-  const t = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
-  const save = () => { runtime()?.app?.reactSpeakerNotesAction?.('save', notes); setCatalog(null); };
+  const t = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
+  const save = () => { runtime?.app?.reactSpeakerNotesAction?.('save', notes); setCatalog(null); };
   return <OfficeDialog title={t('Speaker Notes')} className="pptx-speaker-notes-dialog" style={{ width: 'min(92vw, 420px)' }} onRequestClose={close}>
     <div className="vibeoffice-dialog__body">
       <label htmlFor="pptx-speaker-notes-text">{t('Slide {0}:', catalog.slide)}</label>

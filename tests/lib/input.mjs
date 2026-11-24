@@ -69,9 +69,11 @@ export async function open(app, opts = {}) {
   await send('Emulation.setDeviceMetricsOverride', { width: opts.width || 1280, height: opts.height || 800, deviceScaleFactor: 1, mobile: false });
   // the tab behaves as focused while other windows or tabs are in front (blurWindow turns this off for a while)
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
-  // a look for this test (it is saved for the profile, so close() puts the one before back)
-  const lookBefore = opts.look && await evaluate('VO.look.get()');
-  if (opts.look) await evaluate(`VO.look.set(${JSON.stringify(opts.look)})`);
+  // Keep classic app tests independent of the last look saved in this shared Chromium profile.
+  // Tests which cover another look opt into it explicitly; close() restores the profile setting.
+  const lookBefore = await evaluate('VO.look.get()');
+  const look = opts.look || 'classic';
+  if (lookBefore !== look) await evaluate(`VO.look.set(${JSON.stringify(look)})`);
   await pause(400);
 
   let buttons = 0;

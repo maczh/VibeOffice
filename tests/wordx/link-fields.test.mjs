@@ -1,5 +1,5 @@
 // What an unedited save used to drop without a word: a simple field's lock, a link field's ScreenTip with quotes, a link's target frame.
-// node --test tests/quire/link-fields.test.mjs
+// node --test tests/wordx/link-fields.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

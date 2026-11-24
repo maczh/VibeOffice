@@ -7,6 +7,8 @@
 const installedWordxAppDialogs = new WeakSet<object>();
 export function installWordxAppDialogs(runtime: Window): void {
   const window = runtime as Window & { L?: any; VO?: any };
+  const VO = window.VO;
+  const document = runtime.document;
   const namespace = window.L;
   if (!namespace?.D || !namespace?.O || !namespace?.ed || !namespace?.layout || !namespace?.R || !namespace?.dlg || !namespace?.ui) throw new Error('Wordx application-dialog dependencies are not ready');
   if (installedWordxAppDialogs.has(namespace)) return;
@@ -942,8 +944,8 @@ export function installWordxAppDialogs(runtime: Window): void {
     const balloons = ui.select([['always', 'Always'], ['never', 'Never'], ['comments', 'Only for comments/formatting']], LY.opts.balloons === false ? 'never' : 'comments', (v) => { LY.opts.balloons = v !== 'never'; rerender = true; }, { id: 'op-bal' });
     const compat = ui.select([['11', 'Microsoft Word 2003'], ['12', 'Microsoft Word 2007'], ['14', 'Microsoft Word 2010'], ['15', 'Microsoft Word 2013 and later']], String(d.settings.compat || 11), (v) => { d.settings.compat = +v; d.dirty = true; rerender = true; }, { id: 'op-compat' });
     const autoRec = G.num(o.autoSaveMin || 10, { min: 1, max: 120, id: 'op-asr' });
-    const look = ui.lookField();
     const direct = !!(window.VO && VO.reactDirectHost);
+    const look = direct ? null : ui.lookField();
     const viewRoot = direct ? h('div', { id: 'react-wordx-options-view-root' }) : null;
     const viewBody = direct ? h('div', { class: 'col' }, viewRoot) : null;
     const generalRoot = direct ? h('div', { id: 'react-wordx-options-general-root' }) : null;

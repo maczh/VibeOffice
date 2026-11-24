@@ -1,5 +1,5 @@
 // Design edits, detached clipboard transfer and suite draft recovery.
-// node tests/lectern/designs.mjs OUTPUT_DIR [SCENARIO_REGEX]
+// node tests/pptx/designs.mjs OUTPUT_DIR [SCENARIO_REGEX]
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

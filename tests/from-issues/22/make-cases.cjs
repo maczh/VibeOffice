@@ -1,7 +1,7 @@
 // Regenerate the four small merge controls used with the win10 Excel PDF API.
 // node tests/from-issues/22/make-cases.cjs [OUTPUT.xlsx]
 const fs = require('node:fs'), path = require('node:path');
-const L = require('../../ledger/load.js');
+const L = require('../../excelx/load.js');
 
 async function main() {
   const wb = new L.model.Workbook(), sh = wb.addSheet('Merged borders');

@@ -36,6 +36,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 export function installWordxMarkdown(runtime: Window): void {
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L || ((runtime as Window & { L?: any }).L = {});
   const M = (L.md = {});
 
@@ -93,7 +94,7 @@ export function installWordxMarkdown(runtime: Window): void {
     }
     if (M.entities) return M.entities[body] == null ? null : M.entities[body];
     if (NAMED[body]) return NAMED[body];
-    if (typeof document === 'undefined') return null;
+    if (!document) return null;
     decoder = decoder || document.createElement('textarea');
     decoder.innerHTML = s;
     const v = decoder.value;

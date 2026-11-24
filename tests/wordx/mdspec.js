@@ -1,6 +1,6 @@
 /* Checks Wordx's Markdown parser (public/quire/js/markdown.js) against the spec examples.
  *
- *   node tests/quire/mdspec.js DIR [--verbose] [--section NAME]
+ *   node tests/wordx/mdspec.js DIR [--verbose] [--section NAME]
  *
  * DIR holds the downloaded references (not checked in):
  *   spec.json      https://spec.commonmark.org/0.31.2/spec.json        CommonMark, 652 examples

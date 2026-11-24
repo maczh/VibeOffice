@@ -31,7 +31,7 @@ export function installExcelxCommands(runtime: Window): void {
 
   /* ------------------------------------------------------------ File */
   /* the toolbar button makes a blank workbook; the menu and Ctrl+N show Blank and the templates */
-  cmd('newBook', { label: '&New...', menuLabel: '&New...', tip: 'New', icon: 'new', key: 'Ctrl+N', run: (arg, ev) => { if ((ev && ev.currentTarget && ev.currentTarget.closest && ev.currentTarget.closest('.toolbar')) || !window.VO) A().newWorkbook(); else VO.newDialog('excelx', (id) => (id ? L.panes.newFromTemplate(id) : A().newWorkbook())); } });
+  cmd('newBook', { label: '&New...', menuLabel: '&New...', tip: 'New', icon: 'new', key: 'Ctrl+N', run: (arg, ev) => { if ((ev && ev.currentTarget && ev.currentTarget.closest && ev.currentTarget.closest('.toolbar')) || !window.VO) A().newWorkbook(); else window.VO.newDialog('excelx', (id) => (id ? L.panes.newFromTemplate(id) : A().newWorkbook())); } });
   cmd('newBlank', { label: 'New Blank Workbook', icon: 'new', run: () => A().newWorkbook() });
   cmd('open', { label: '&Open...', icon: 'open', key: 'Ctrl+O', run: () => A().openDialog() });
   cmd('close', { label: '&Close', run: () => A().closeWorkbook() });
@@ -49,7 +49,7 @@ export function installExcelxCommands(runtime: Window): void {
   cmd('properties', { label: 'Propert&ies', icon: 'properties', run: run(() => D().properties()) });
   cmd('versions', { label: 'Versio&ns...', icon: 'open', enabled: () => L.file.bound(), run: run(() => L.file.showVersions(A().books[A().cur].name)) });   // the desktop app
   /* close every workbook (asking to save each), then return to the Start Center */
-  cmd('exitApp', { label: 'E&xit', run: async () => { for (;;) { const last = A().books.length <= 1; if (!(await A().closeWorkbook())) return; if (last) break; } if (window.VO) VO.exit(); } });
+  cmd('exitApp', { label: 'E&xit', run: async () => { for (;;) { const last = A().books.length <= 1; if (!(await A().closeWorkbook())) return; if (last) break; } if (window.VO) window.VO.exit(); } });
 
   /* ------------------------------------------------------------ Edit */
   /* the step's name (an English label, L.N at its O.tx) shown translated */

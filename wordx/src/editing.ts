@@ -6,6 +6,7 @@
 const installedWordxEditing = new WeakSet<object>();
 export function installWordxEditing(runtime: Window): void {
   const window = runtime as Window & { L?: any; VO?: any };
+  const document = runtime.document;
   const namespace = window.L;
   if (!namespace?.D || !namespace?.O || !namespace?.layout || !namespace?.ui) throw new Error('Wordx editing dependencies are not ready');
   if (installedWordxEditing.has(namespace)) return;

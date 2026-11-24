@@ -6,6 +6,9 @@
  */
 const installedRuntimes = new WeakSet<object>();
 export function installWordxProofing(runtime: Window): void {
+  const window = runtime;
+  const VO = (window as Window & { VO?: any }).VO;
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L, D = L.D, O = L.O, E = L.ed, LY = L.layout;
   if (installedRuntimes.has(L)) return;
   const { h } = L;

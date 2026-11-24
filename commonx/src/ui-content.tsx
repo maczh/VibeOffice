@@ -31,7 +31,7 @@ function GroupControl({ request }: { request: GroupRequest }) {
 /** React-owned shared field/group structure and translated content around compatible engine DOM controls. */
 export function EditorUiContentLayer({ host }: { host: HTMLElement }) {
   const [structuredRequests, setStructuredRequests] = useState<StructuredRequest[]>([]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onStructured = (event: Event) => {
       const request = (event as CustomEvent<StructuredRequest>).detail;
       if (!request || !(request.target instanceof HTMLElement) || (request.kind !== 'field' && request.kind !== 'group')) return;

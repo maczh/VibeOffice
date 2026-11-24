@@ -11,7 +11,7 @@ interface PptxPaneRuntime {
   panes?: {
     left?: { tab: string; body?: HTMLElement; tabs?: HTMLElement; list?: HTMLElement | null; outline?: HTMLElement | null; setTab(tab: string): void; render?(): void; reactOutlineRows?(): Array<{ kind: string; slideId?: string; level: number; text: string }>; reactMasterCatalog?(): Array<{ kind: string; label: string; preview: HTMLElement; selected: boolean }> | null; reactSelectMaster?(kind: string): void; reactSelectThumb?(event: PointerEvent, index: number): boolean | undefined; onOutlineInput?(): void; onOutlinePaste?(event: ClipboardEvent): void; onOutlineKey?(event: KeyboardEvent): void; syncOutlineSlide?(): void; styleOutline?(): void; commitOutline?(keepFocus?: boolean): void; onThumbDown?(event: PointerEvent, index: number): void; onThumbContext?(event: MouseEvent, index: number): void; onThumbDoubleClick?(): void };
     sorter?: { el?: HTMLElement; reactMounted?: boolean; attachReactSurface?(root: HTMLElement): () => void; reactSelectThumb?(event: PointerEvent, index: number): boolean | undefined; onDown?(event: PointerEvent, index: number, item: HTMLElement): void; mark(): void };
-    task?: { stack: string[]; pos: number; current?: string; registry: Record<string, { id: string; title: string; hidden?: boolean }>; show(id: string): void; go(position: number): void };
+    task?: { stack: string[]; pos: number; current?: string; reactMounted?: boolean; registry: Record<string, { id: string; title: string; hidden?: boolean }>; show(id: string): void; go(position: number): void };
   };
   ui?: { openMenu(items: Array<{ label: string; run(): void; checked(): boolean }>, position: { left: number; bottom: number }): void };
   media?: { get(id: string): { type?: string } | null };
@@ -23,7 +23,9 @@ interface PptxPaneRuntime {
   t?(message: string, ...args: unknown[]): string;
 }
 
-function runtime(): PptxPaneRuntime | undefined { return (window as Window & { L?: PptxPaneRuntime }).L; }
+function runtime(host: HTMLElement): PptxPaneRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: PptxPaneRuntime }) | null)?.L;
+}
 
 type FailedThumbnailImages = Map<HTMLImageElement, string>;
 
@@ -88,9 +90,9 @@ export function PptxThumbnailArtwork({ element }: { element: HTMLElement }) {
   const failures = state.element === element ? state.failures : new Map<HTMLImageElement, string>();
   const onImageError = (image: HTMLImageElement) => {
     const mediaId = image.dataset.mediaId || '';
-    const media = runtime()?.media?.get(mediaId);
-    const ext = media?.type ? runtime()?.mimeToExt?.(media.type) || '' : '';
-    const L = runtime();
+    const L = runtime(element);
+    const media = L?.media?.get(mediaId);
+    const ext = media?.type ? L?.mimeToExt?.(media.type) || '' : '';
     const label = ext && ext !== 'png' ? L?.t?.('Picture (.{0})', ext) || `Picture (.${ext})` : L?.t?.('Picture') || 'Picture';
     setState((current) => {
       const next = current.element === element ? new Map(current.failures) : new Map<HTMLImageElement, string>();
@@ -128,6 +130,8 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
   const slideDrag = useRef<{ pointerId: number; startX: number; startY: number; dragging: boolean; target: number | null; line: HTMLElement | null; body: HTMLElement; list: HTMLElement; indices: number[] } | null>(null);
   const sorterDrag = useRef<{ pointerId: number; startX: number; startY: number; dragging: boolean; target: number | null; marker: HTMLElement | null; root: HTMLElement; indices: number[] } | null>(null);
   useEffect(() => {
+    const ownerWindow = host.ownerDocument.defaultView;
+    if (!ownerWindow) return;
     let slot: HTMLElement | null = null;
     let tabsSlot: HTMLElement | null = null;
     let taskSlot: HTMLElement | null = null;
@@ -140,21 +144,21 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
     let offSorterRender: (() => void) | undefined;
     let offSorterMark: (() => void) | undefined;
     let subscribed = false;
-    const onLeftFocus = () => { const app = runtime()?.app; if (app) app.focusArea = 'slides'; };
-    const onLeftBlur = () => { const app = runtime()?.app; if (app) app.focusArea = null; };
+    const onLeftFocus = () => { const app = runtime(host)?.app; if (app) app.focusArea = 'slides'; };
+    const onLeftBlur = () => { const app = runtime(host)?.app; if (app) app.focusArea = null; };
     const clearSlideDrag = (commit: boolean) => {
       const drag = slideDrag.current;
       if (!drag) return;
       slideDrag.current = null;
       drag.line?.remove();
-      if (commit && drag.dragging && drag.target != null) runtime()?.app?.moveSlides?.(drag.indices, drag.target);
+      if (commit && drag.dragging && drag.target != null) runtime(host)?.app?.moveSlides?.(drag.indices, drag.target);
     };
     const clearSorterDrag = (commit: boolean) => {
       const drag = sorterDrag.current;
       if (!drag) return;
       sorterDrag.current = null;
       drag.marker?.remove();
-      if (commit && drag.dragging && drag.target != null) runtime()?.app?.moveSlides?.(drag.indices, drag.target);
+      if (commit && drag.dragging && drag.target != null) runtime(host)?.app?.moveSlides?.(drag.indices, drag.target);
     };
     const updateSlideDrag = (event: PointerEvent) => {
       const drag = slideDrag.current;
@@ -162,7 +166,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
       drag.dragging = true;
       if (!drag.line) {
-        drag.line = document.createElement('div');
+        drag.line = host.ownerDocument.createElement('div');
         drag.line.className = 'drop-line';
         drag.body.appendChild(drag.line);
       }
@@ -195,7 +199,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
       drag.dragging = true;
       if (!drag.marker) {
-        drag.marker = document.createElement('div');
+        drag.marker = host.ownerDocument.createElement('div');
         Object.assign(drag.marker.style, { position: 'absolute', width: '3px', background: '#000', pointerEvents: 'none', zIndex: '5' });
         drag.root.appendChild(drag.marker);
       }
@@ -244,11 +248,11 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       if (slideDrag.current && event.pointerId !== slideDrag.current.pointerId) clearSlideDrag(false);
       if (sorterDrag.current && event.pointerId !== sorterDrag.current.pointerId) clearSorterDrag(false);
     };
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerCancel);
-    window.addEventListener('keydown', onKeyDown, true);
-    window.addEventListener('pointerdown', onOtherPointerDown);
+    ownerWindow.addEventListener('pointermove', onPointerMove);
+    ownerWindow.addEventListener('pointerup', onPointerUp);
+    ownerWindow.addEventListener('pointercancel', onPointerCancel);
+    ownerWindow.addEventListener('keydown', onKeyDown, true);
+    ownerWindow.addEventListener('pointerdown', onOtherPointerDown);
     host.addEventListener('keydown', onThumbnailKeyDownCapture, true);
     const attach = () => {
       const target = host.querySelector<HTMLElement>('#react-slides-root');
@@ -256,7 +260,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       const taskTarget = host.querySelector<HTMLElement>('#react-task-head-root');
       const sorterTarget = host.querySelector<HTMLElement>('.sorter');
       const leftBodyTarget = host.querySelector<HTMLElement>('#leftpane > .lp-body');
-      const engine = runtime();
+      const engine = runtime(host);
       if (!engine) return;
       if (leftBodyTarget && leftBodyTarget !== leftBody) {
         leftBody?.removeEventListener('focus', onLeftFocus, true);
@@ -291,6 +295,7 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       if (taskTarget && taskTarget !== taskSlot) {
         taskSlot = taskTarget;
         taskTarget.classList.add('vibeoffice-react-owned');
+        if (engine.panes?.task) engine.panes.task.reactMounted = true;
         host.querySelector<HTMLElement>('#taskpane > .tp-head')?.classList.add('react-pane-adapter');
         setTaskMount(taskTarget);
       }
@@ -306,18 +311,19 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
         engine.bus?.emit('pptx-sorter-render');
       }
     };
-    const observer = new MutationObserver(attach);
+    const Observer = host.ownerDocument.defaultView?.MutationObserver || MutationObserver;
+    const observer = new Observer(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
       observer.disconnect(); offRender?.(); offMark?.(); offTask?.(); offSorterRender?.(); offSorterMark?.();
       clearSlideDrag(false);
       clearSorterDrag(false);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerCancel);
-      window.removeEventListener('keydown', onKeyDown, true);
-      window.removeEventListener('pointerdown', onOtherPointerDown);
+      ownerWindow.removeEventListener('pointermove', onPointerMove);
+      ownerWindow.removeEventListener('pointerup', onPointerUp);
+      ownerWindow.removeEventListener('pointercancel', onPointerCancel);
+      ownerWindow.removeEventListener('keydown', onKeyDown, true);
+      ownerWindow.removeEventListener('pointerdown', onOtherPointerDown);
       host.removeEventListener('keydown', onThumbnailKeyDownCapture, true);
       sorterSurfaceCleanup?.();
       sorterSurfaceCleanup = undefined;
@@ -328,15 +334,17 @@ export function PptxSlidesLayer({ host }: { host: HTMLElement }) {
       tabsSlot?.classList.remove('vibeoffice-react-owned');
       host.querySelector<HTMLElement>('#leftpane > .lp-tabs')?.classList.remove('react-pane-adapter');
       taskSlot?.classList.remove('vibeoffice-react-owned');
+      const taskPane = runtime(host)?.panes?.task;
+      if (taskPane) taskPane.reactMounted = false;
       sorterSlot?.classList.remove('vibeoffice-react-owned');
       host.querySelector<HTMLElement>('#taskpane > .tp-head')?.classList.remove('react-pane-adapter');
-      const app = runtime()?.app;
+      const app = runtime(host)?.app;
       if (app) app.reactMounted = false;
-      const sorter = runtime()?.panes?.sorter;
+      const sorter = runtime(host)?.panes?.sorter;
       if (sorter) sorter.reactMounted = false;
     };
   }, [host]);
-  const L = runtime();
+  const L = runtime(host);
   const pane = L?.panes?.left;
   const task = L?.panes?.task;
   const sorter = L?.panes?.sorter;

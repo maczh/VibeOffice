@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface MoveCopyBook { index: number; name: string; sheets: string[] }
 interface MoveCopyCatalog { books: MoveCopyBook[]; book: number; before: number }
@@ -9,19 +10,16 @@ interface MoveCopyRuntime {
   t?(message: string): string;
 }
 
-function runtime(): MoveCopyRuntime | undefined {
-  return (window as Window & { L?: MoveCopyRuntime }).L;
-}
-
 /** React UI for moving or copying selected worksheet(s) to an open workbook. */
 export function ExcelxMoveCopySheetDialog() {
+  const runtime = useExcelxRuntime<MoveCopyRuntime>();
   const [catalog, setCatalog] = useState<MoveCopyCatalog | null>(null);
   const [book, setBook] = useState(0);
   const [before, setBefore] = useState(0);
   const [copy, setCopy] = useState(false);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactMoveCopyCatalog?.() || null;
+      const next = runtime?.dlg?.reactMoveCopyCatalog?.() || null;
       setCatalog(next);
       if (next) {
         setBook(next.book);
@@ -29,17 +27,17 @@ export function ExcelxMoveCopySheetDialog() {
         setCopy(false);
       }
     };
-    const off = runtime()?.bus?.on('excelx-move-copy-sheet-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-move-copy-sheet-dialog', refresh);
     return () => {
       off?.();
-      if (runtime()?.dlg?.reactMoveCopyCatalog?.()) runtime()?.dlg?.reactMoveCopyClose?.();
+      if (runtime?.dlg?.reactMoveCopyCatalog?.()) runtime?.dlg?.reactMoveCopyClose?.();
     };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
+  const translate = (message: string) => runtime?.t?.(message) || message;
   const target = catalog.books.find((item) => item.index === book);
-  const close = () => runtime()?.dlg?.reactMoveCopyClose?.();
-  const apply = () => { if (target) runtime()?.dlg?.reactMoveCopyApply?.(book, before, copy); };
+  const close = () => runtime?.dlg?.reactMoveCopyClose?.();
+  const apply = () => { if (target) runtime?.dlg?.reactMoveCopyApply?.(book, before, copy); };
   return <OfficeDialog title={translate('Move or Copy')} className="excelx-move-copy-sheet-dialog" style={{ width: 'min(92vw, 380px)' }} onRequestClose={close}>
     <div className="excelx-move-copy-sheet-dialog__form">
       <div>{translate('Move selected sheets')}</div>

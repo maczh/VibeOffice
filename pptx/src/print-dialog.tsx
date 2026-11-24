@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 type PrintRangeMode = 'all' | 'current' | 'range';
 type PrintWhat = 'slides' | 'handouts' | 'notes' | 'outline';
@@ -10,21 +11,21 @@ interface PrintRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): PrintRuntime | undefined { return (window as Window & { L?: PrintRuntime }).L; }
 
 /** React-owned Print options; pagination and the actual print preview remain in the existing print service. */
 export function PptxPrintDialog() {
+  const runtime = usePptxRuntime<PrintRuntime>();
   const [catalog, setCatalog] = useState<PrintCatalog | null>(null);
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactPrintCatalog?.() || null; setCatalog(next ? { ...next, rangeMode: next.rangeMode || 'all' } : null); };
-    const off = runtime()?.bus?.on('pptx-print-dialog', refresh);
+    const refresh = () => { const next = runtime?.dlg?.reactPrintCatalog?.() || null; setCatalog(next ? { ...next, rangeMode: next.rangeMode || 'all' } : null); };
+    const off = runtime?.bus?.on('pptx-print-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
+  const t = (message: string) => runtime?.t?.(message) || message;
   const update = (changes: Partial<PrintCatalog>) => setCatalog({ ...catalog, ...changes });
-  const close = () => runtime()?.dlg?.reactPrintAction?.('close');
-  const preview = () => runtime()?.dlg?.reactPrintAction?.('preview', { what: catalog.what, per: catalog.per, color: catalog.color, frame: catalog.frame, hidden: catalog.hidden, range: catalog.range, rangeMode: catalog.rangeMode });
+  const close = () => runtime?.dlg?.reactPrintAction?.('close');
+  const preview = () => runtime?.dlg?.reactPrintAction?.('preview', { what: catalog.what, per: catalog.per, color: catalog.color, frame: catalog.frame, hidden: catalog.hidden, range: catalog.range, rangeMode: catalog.rangeMode });
   return <OfficeDialog title={t('Print')} className="pptx-print-dialog" style={{ width: 'min(94vw, 520px)' }} onRequestClose={close}>
     <fieldset><legend>{t('Print range')}</legend>
       <label><input type="radio" name="pptx-print-range" checked={catalog.rangeMode === 'all'} onChange={() => update({ rangeMode: 'all' })} />{t('&All').replace('&', '')}</label>

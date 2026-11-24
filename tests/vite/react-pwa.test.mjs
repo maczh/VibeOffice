@@ -23,17 +23,22 @@ test('the production React suite can edit and save Office files entirely offline
       if (await fetch(origin).then((response) => response.ok).catch(() => false)) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    page = await openPage(undefined, { url: origin + '/', timeout: 60000 });
+    page = await openPage(undefined, { url: origin + '/?lang=en', timeout: 60000 });
     await page.send('Storage.clearDataForOrigin', { origin, storageTypes: 'all' });
+    await page.evaluate("caches.open('legacy-vibeoffice-cache').then((cache)=>cache.put('/index.html',new Response('<!doctype html><title>stale legacy shell</title>',{headers:{'Content-Type':'text/html'}})))");
     await page.evaluate("navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })");
     await page.evaluate("new Promise((resolve,reject)=>{const end=Date.now()+30000;const poll=()=>navigator.serviceWorker.ready.then(()=>navigator.serviceWorker.controller?resolve(true):Date.now()>end?reject(new Error('Vite worker did not control the page')):setTimeout(poll,50));poll()})");
     const cached = await page.evaluate("caches.keys().then(async(keys)=>({keys,entries:await Promise.all(['/index.html','/wordx/index.html','/excelx/index.html','/pptx/index.html'].map(async(url)=>({url,hit:!!await caches.match(url)})))}))");
     assert.ok(cached.keys.some((key) => key.startsWith('vibeoffice-react-')), `the production Vite worker creates its own cache: ${JSON.stringify(cached.keys)}`);
     assert.deepEqual(cached.entries, ['/index.html', '/wordx/index.html', '/excelx/index.html', '/pptx/index.html'].map((url) => ({ url, hit: true })), 'Start Center and all independent React editor entries are precached');
+    assert.equal(await page.evaluate("caches.open('legacy-vibeoffice-cache').then((cache)=>cache.match('/index.html').then((response)=>response.text()))"), '<!doctype html><title>stale legacy shell</title>', 'the independent legacy cache remains untouched during React worker activation');
     const shortcutTargets = await page.evaluate("fetch('/manifest.webmanifest').then((response)=>response.json()).then((manifest)=>manifest.shortcuts.map((shortcut)=>{const target=new URL(shortcut.url,location.origin+'/manifest.webmanifest');return target.pathname+target.search}))");
     assert.deepEqual(shortcutTargets, ['/?new=wordx', '/?new=excelx', '/?new=pptx'], 'installed app shortcuts resolve to the React Start Center deep links rather than legacy editor pages');
 
     await page.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0, connectionType: 'none' });
+    await page.send('Page.navigate', { url: origin + '/?lang=en' });
+    const offlineStart = await page.evaluate("new Promise((resolve)=>{const end=Date.now()+10000;const poll=()=>document.querySelector('.suite-start')?resolve({title:document.title,text:document.body.innerText}):Date.now()>end?resolve(false):setTimeout(poll,30);poll()})");
+    assert.ok(offlineStart && !offlineStart.title.includes('stale legacy shell') && offlineStart.text.includes('Create File'), JSON.stringify(offlineStart));
     for (const [index, app] of ['wordx', 'excelx', 'pptx'].entries()) {
       if (!index) {
         await page.send('Page.navigate', { url: new URL(`./?new=${app}`, `${origin}/manifest.webmanifest`).href });

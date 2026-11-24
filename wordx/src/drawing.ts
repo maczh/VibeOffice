@@ -4,6 +4,9 @@
 // @ts-nocheck -- Drawing operations retain the existing document, layout, and UI adapter contracts.
 const installedRuntimes = new WeakSet<object>();
 export function installWordxDrawing(runtime: Window): void {
+  const window = runtime;
+  const VO = (window as Window & { VO?: any }).VO;
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L, D = L.D, R = L.R;
   if (installedRuntimes.has(L)) return;
   installedRuntimes.add(L);

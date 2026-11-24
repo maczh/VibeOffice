@@ -1,5 +1,5 @@
 // Actual list commands and imported picture-bullet identities.
-// node tests/quire/picture-bullets.mjs CORPUS OUTPUT
+// node tests/wordx/picture-bullets.mjs CORPUS OUTPUT
 import fs from 'node:fs';
 import path from 'node:path';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

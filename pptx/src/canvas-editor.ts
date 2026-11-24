@@ -145,8 +145,8 @@ export function installPptxEditor(runtime: Window): void {
 
   function drawGrid() {
     const g = E.gridEl;
-    g.hidden = !E.grid.show && !E.grid.guides;
     if (window.__VIBE_OFFICE_DIRECT_HOST__) { L.bus.emit('pptx-grid'); return; }
+    g.hidden = !E.grid.show && !E.grid.guides;
     if (g.hidden) return;
     L.clear(g);
     if (E.grid.show) {
@@ -270,9 +270,8 @@ export function installPptxEditor(runtime: Window): void {
     const wasEditing = E.editing() ? L.te.snapshot() : null;
     if (wasEditing && !opts.keepEdit) L.te.detach();
     L.clear(E.host);
-    E.empty.hidden = !!sl;
-    E.canvas.hidden = !sl;
-    if (!sl) { E.sel = []; E.drawOverlay(); return; }
+    if (!E.surfaceOwnedByReact) { E.empty.hidden = !!sl; E.canvas.hidden = !sl; }
+    if (!sl) { E.sel = []; E.drawOverlay(); L.bus.emit('slide-rendered'); return; }
     const el = L.render.slide(L.pres, sl, { mode: 'edit', index: E.view === 'master' ? 0 : E.idx });
     el.style.transform = `scale(${E.scale})`;
     el.style.transformOrigin = '0 0';

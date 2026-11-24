@@ -3,7 +3,7 @@ deck that has one, open it in PPTX, save it unedited (every diagram part must st
 such diagram through its items (rename the first, add one) and save (tools/ooxml/package.py must pass), and
 reopen that save (the diagram must be editable). Needs Chromium with CDP, as tools/shot.mjs.
 
-    python3 tests/lectern/smartart-office.py OUT [name filter]
+    python3 tests/pptx/smartart-office.py OUT [name filter]
 
 Writes OUT/<deck>-edited.pptx and OUT/results.json; removes the Recent Files entries it made."""
 import base64, collections, glob, hashlib, json, os, re, subprocess, sys, zipfile

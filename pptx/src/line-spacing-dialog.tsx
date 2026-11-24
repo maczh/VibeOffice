@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 type SpacingUnit = 'l' | 'p';
 type SpacingKey = 'line' | 'before' | 'after';
@@ -10,21 +11,21 @@ interface LineSpacingRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): LineSpacingRuntime | undefined { return (window as Window & { L?: LineSpacingRuntime }).L; }
 const keys: SpacingKey[] = ['line', 'before', 'after'];
 const labels: Record<SpacingKey, string> = { line: 'Line spacing', before: 'Before paragraph', after: 'After paragraph' };
 
 /** React-owned line-spacing controls; paragraph-format mutation remains in the presentation formatter. */
 export function PptxLineSpacingDialog() {
+  const runtime = usePptxRuntime<LineSpacingRuntime>();
   const [catalog, setCatalog] = useState<LineSpacingCatalog | null>(null);
   useEffect(() => {
-    const refresh = () => setCatalog(runtime()?.dlg?.reactLineSpacingCatalog?.() || null);
-    const off = runtime()?.bus?.on('pptx-line-spacing-dialog', refresh);
+    const refresh = () => setCatalog(runtime?.dlg?.reactLineSpacingCatalog?.() || null);
+    const off = runtime?.bus?.on('pptx-line-spacing-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactLineSpacingAction?.('close');
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactLineSpacingAction?.('close');
   const update = (key: SpacingKey, next: SpacingValue) => setCatalog({ ...catalog, [key]: next });
   const setUnit = (key: SpacingKey, unit: SpacingUnit) => {
     const current = catalog[key];
@@ -37,6 +38,6 @@ export function PptxLineSpacingDialog() {
       <input aria-label={`${t(labels[key])} value`} type="number" min="0" max="1584" step={catalog[key].unit === 'p' ? '1' : '0.1'} value={catalog[key].value} onChange={(event) => update(key, { ...catalog[key], value: Number(event.currentTarget.value) })} />
       <select aria-label={`${t(labels[key])} unit`} value={catalog[key].unit} onChange={(event) => setUnit(key, event.currentTarget.value as SpacingUnit)}><option value="l">{t('Lines')}</option><option value="p">{t('Points')}</option></select>
     </fieldset>)}
-    <div className="vibeoffice-dialog__actions"><button className="primary" type="button" onClick={() => runtime()?.dlg?.reactLineSpacingAction?.('apply', catalog)}>{t('OK')}</button><button type="button" onClick={close}>{t('Cancel')}</button></div>
+    <div className="vibeoffice-dialog__actions"><button className="primary" type="button" onClick={() => runtime?.dlg?.reactLineSpacingAction?.('apply', catalog)}>{t('OK')}</button><button type="button" onClick={close}>{t('Cancel')}</button></div>
   </OfficeDialog>;
 }

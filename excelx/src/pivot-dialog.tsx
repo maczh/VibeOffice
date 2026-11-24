@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface PivotChoice { value: number; label: string }
 interface PivotState { row: number; col: number | ''; data: number; fn: string; page: number | ''; pageVal: string; where: 'new' | 'here' }
@@ -9,21 +10,20 @@ interface PivotRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): PivotRuntime | undefined { return (window as Window & { L?: PivotRuntime }).L; }
-
 export function ExcelxPivotDialog() {
+  const runtime = useExcelxRuntime<PivotRuntime>();
   const [catalog, setCatalog] = useState<PivotCatalog | null>(null);
   const [reference, setReference] = useState('');
   const [state, setState] = useState<PivotState>({ row: 0, col: '', data: 0, fn: 'sum', page: '', pageVal: '', where: 'new' });
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactPivotCatalog?.() || null; setCatalog(next); if (next) { setReference(next.reference); setState(next.initial); } };
-    const off = runtime()?.bus?.on('excelx-pivot-dialog', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactPivotCatalog?.()) runtime()?.dlg?.reactPivotClose?.(); };
+    const refresh = () => { const next = runtime?.dlg?.reactPivotCatalog?.() || null; setCatalog(next); if (next) { setReference(next.reference); setState(next.initial); } };
+    const off = runtime?.bus?.on('excelx-pivot-dialog', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactPivotCatalog?.()) runtime?.dlg?.reactPivotClose?.(); };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactPivotClose?.();
-  const apply = () => runtime()?.dlg?.reactPivotApply?.(reference, state);
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactPivotClose?.();
+  const apply = () => runtime?.dlg?.reactPivotApply?.(reference, state);
   const update = (patch: Partial<PivotState>) => setState((current) => ({ ...current, ...patch }));
   const columnSelect = (key: 'row' | 'col' | 'data' | 'page', optional = false) => <label>{translate(key === 'row' ? '&Row field:' : key === 'col' ? '&Column field:' : key === 'data' ? '&Data field:' : '&Page field:')}<select value={state[key]} onChange={(event) => update({ [key]: event.currentTarget.value === '' ? '' : Number(event.currentTarget.value) })}>{optional && <option value="">{translate('(none)')}</option>}{catalog.columns.map((column) => <option key={column.value} value={column.value}>{translate(column.label)}</option>)}</select></label>;
   return <OfficeDialog title={translate('PivotTable and PivotChart Wizard')} className="excelx-pivot-dialog" style={{ width: 'min(94vw, 520px)' }} onRequestClose={close}>

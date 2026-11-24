@@ -1,5 +1,6 @@
 import { AppearanceFields, OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useState, type ChangeEvent } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 interface OptionsCatalog { options: Record<string, boolean>; optionKeys: string[]; undo: number; user: string; password: string; looks: Array<[string, string]>; languages: Array<[string, string]>; look: string; lang: string }
 interface OptionsRuntime {
@@ -12,7 +13,6 @@ interface OptionsRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): OptionsRuntime | undefined { return (window as Window & { L?: OptionsRuntime }).L; }
 const viewOptions: Array<[string, string]> = [
   ['startupPane', 'Startup &Task Pane'], ['layoutPaneOnNew', '&Slide Layout task pane when inserting new slides'], ['paneFollows', 'Task pane f&ollows the selected object'], ['statusBar', 'Stat&us bar'], ['ruler', '&Vertical ruler'],
   ['showPopup', '&Popup menu on right mouse click'], ['showPopbar', 'Show popup menu &button'], ['endBlack', '&End with black slide'],
@@ -21,6 +21,7 @@ const editOptions: Array<[string, string]> = [['smartQuotes', 'Replace straight 
 
 /** React owns PPTX application preferences and password confirmation; settings and persistence stay in the host engine. */
 export function PptxOptionsDialog() {
+  const runtime = usePptxRuntime<OptionsRuntime>();
   const [catalog, setCatalog] = useState<OptionsCatalog | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
@@ -36,24 +37,24 @@ export function PptxOptionsDialog() {
   const tabId = (index: number) => `${id}-options-tab-${index}`;
   useEffect(() => {
     const openOptions = () => {
-      const next = runtime()?.dlg?.reactOptionsCatalog?.() || null;
+      const next = runtime?.dlg?.reactOptionsCatalog?.() || null;
       setCatalog(next ? { ...next, options: { ...next.options }, looks: [...next.looks], languages: [...next.languages] } : null);
       if (next) { setTab(0); setOptions({ ...next.options }); setUndo(next.undo); setUser(next.user); setPassword(next.password); setLook(next.look); setLang(next.lang); }
     };
     const openConfirm = () => {
-      const next = runtime()?.dlg?.reactOptionsConfirmCatalog?.() || null;
+      const next = runtime?.dlg?.reactOptionsConfirmCatalog?.() || null;
       setConfirmTarget(next?.target ?? null);
       if (next) setConfirmation('');
     };
-    const offOptions = runtime()?.bus?.on('pptx-options-dialog', openOptions);
-    const offConfirm = runtime()?.bus?.on('pptx-options-confirm-dialog', openConfirm);
+    const offOptions = runtime?.bus?.on('pptx-options-dialog', openOptions);
+    const offConfirm = runtime?.bus?.on('pptx-options-confirm-dialog', openConfirm);
     return () => { offOptions?.(); offConfirm?.(); };
   }, []);
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const closeOptions = () => runtime()?.dlg?.reactOptionsAction?.('close');
-  const apply = () => catalog && runtime()?.dlg?.reactOptionsAction?.('apply', { options, undo, user, password, look, lang });
-  const closeConfirm = () => runtime()?.dlg?.reactOptionsConfirmAction?.('close');
-  const confirmPassword = () => runtime()?.dlg?.reactOptionsConfirmAction?.('confirm', confirmation);
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const closeOptions = () => runtime?.dlg?.reactOptionsAction?.('close');
+  const apply = () => catalog && runtime?.dlg?.reactOptionsAction?.('apply', { options, undo, user, password, look, lang });
+  const closeConfirm = () => runtime?.dlg?.reactOptionsConfirmAction?.('close');
+  const confirmPassword = () => runtime?.dlg?.reactOptionsConfirmAction?.('confirm', confirmation);
   const toggle = (key: string) => (event: ChangeEvent<HTMLInputElement>) => {
     const checked = event.currentTarget.checked;
     setOptions((current) => ({ ...current, [key]: checked }));

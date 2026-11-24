@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface TabColorOption { color: string; label: string }
 interface TabColorCatalog { options: TabColorOption[]; selected: string | null }
@@ -9,30 +10,27 @@ interface TabColorRuntime {
   t?(message: string): string;
 }
 
-function runtime(): TabColorRuntime | undefined {
-  return (window as Window & { L?: TabColorRuntime }).L;
-}
-
 /** React UI for setting the selected worksheet tabs' standard colors. */
 export function ExcelxTabColorDialog() {
+  const runtime = useExcelxRuntime<TabColorRuntime>();
   const [catalog, setCatalog] = useState<TabColorCatalog | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactTabColorCatalog?.() || null;
+      const next = runtime?.dlg?.reactTabColorCatalog?.() || null;
       setCatalog(next);
       setSelected(next?.selected ?? null);
     };
-    const off = runtime()?.bus?.on('excelx-tab-color-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-tab-color-dialog', refresh);
     return () => {
       off?.();
-      if (runtime()?.dlg?.reactTabColorCatalog?.()) runtime()?.dlg?.reactTabColorClose?.();
+      if (runtime?.dlg?.reactTabColorCatalog?.()) runtime?.dlg?.reactTabColorClose?.();
     };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactTabColorClose?.();
-  const apply = () => runtime()?.dlg?.reactTabColorApply?.(selected);
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactTabColorClose?.();
+  const apply = () => runtime?.dlg?.reactTabColorApply?.(selected);
   return <OfficeDialog title={translate('Format Tab Color')} className="excelx-tab-color-dialog" style={{ width: 'min(92vw, 300px)' }} onRequestClose={close}>
     <fieldset className="excelx-tab-color-dialog__palette">
       <legend>{translate('Tab Color')}</legend>

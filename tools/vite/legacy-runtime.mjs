@@ -1,4 +1,4 @@
-import { cp, readFile, stat, writeFile } from 'node:fs/promises';
+import { cp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -48,7 +48,11 @@ export function editorRuntime(source) {
       styles.push({ css: match[2] || '', media: match[1]?.match(/\bmedia\s*=\s*(["'])(.*?)\1/i)?.[2] || '' });
     }
   }
-  const scripts = [...source.matchAll(/<script\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1[^>]*>/gi)].map((match) => match[2]);
+  // React command search owns this matcher in commonx; the classic source is only
+  // needed by the non-React pages and must not run in the generated React runtime.
+  const scripts = [...source.matchAll(/<script\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1[^>]*>/gi)]
+    .map((match) => match[2])
+    .filter((script) => new URL(script, 'https://vibeoffice.invalid/').pathname !== '/common/command-match.js');
   return JSON.stringify({ styles, scripts }, null, 2);
 }
 
@@ -118,6 +122,12 @@ export function legacyRuntime(app) {
       const output = path.resolve(options.dir);
       for (const folder of [...apps.map((name) => [legacyFolders[name], name]), ['common', 'common'], ['fonts', 'fonts'], ['icons', 'icons']]) {
         await cp(path.join(publicRoot, folder[0]), path.join(output, folder[1]), { recursive: true });
+      }
+      // The React packages consume the engine assets at the new product routes.
+      // Do not leave duplicate retired-brand route trees in production output.
+      for (const name of apps) {
+        const retired = path.join(output, legacyFolders[name]);
+        await rm(retired, { recursive: true, force: true });
       }
       for (const name of apps) {
         const html = await readFile(path.join(publicRoot, legacyFolders[name], 'index.html'), 'utf8');

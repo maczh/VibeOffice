@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface SymbolRange { index: number; label: string; start: number; end: number }
 interface SymbolOption { value: string; label: string }
@@ -11,11 +12,8 @@ interface SymbolRuntime {
   layout?: { fontStack?(font: string): string };
 }
 
-function runtime(): SymbolRuntime | undefined {
-  return (window as Window & { L?: SymbolRuntime }).L;
-}
-
 export function ExcelxSymbolDialog() {
+  const runtime = useExcelxRuntime<SymbolRuntime>();
   const [catalog, setCatalog] = useState<SymbolCatalog | null>(null);
   const [tab, setTab] = useState<'symbols' | 'special'>('symbols');
   const id = useId().replaceAll(':', '');
@@ -26,23 +24,23 @@ export function ExcelxSymbolDialog() {
   const [codePoint, setCodePoint] = useState<number | null>(null);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactSymbolCatalog?.() || null;
+      const next = runtime?.dlg?.reactSymbolCatalog?.() || null;
       setCatalog(next);
       if (next) { setTab('symbols'); setSubset(1); setFont('Arial'); setSelected(null); setCodePoint(null); setActiveSpecial(0); }
     };
-    const off = runtime()?.bus?.on('excelx-symbol-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-symbol-dialog', refresh);
     return () => {
       off?.();
-      if (runtime()?.dlg?.reactSymbolCatalog?.()) runtime()?.dlg?.reactSymbolClose?.();
+      if (runtime?.dlg?.reactSymbolCatalog?.()) runtime?.dlg?.reactSymbolClose?.();
     };
   }, []);
   const range = catalog?.ranges.find((item) => item.index === subset);
   const characters = useMemo(() => range ? Array.from({ length: range.end - range.start + 1 }, (_, index) => range.start + index) : [], [range]);
   if (!catalog) return null;
-  const translate = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
-  const close = () => runtime()?.dlg?.reactSymbolClose?.();
-  const insert = (character: string | null = selected) => { if (character) runtime()?.dlg?.reactSymbolInsert?.(character); };
-  const fontStack = runtime()?.layout?.fontStack?.(font) || `${font}, sans-serif`;
+  const translate = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
+  const close = () => runtime?.dlg?.reactSymbolClose?.();
+  const insert = (character: string | null = selected) => { if (character) runtime?.dlg?.reactSymbolInsert?.(character); };
+  const fontStack = runtime?.layout?.fontStack?.(font) || `${font}, sans-serif`;
   const tabId = (key: 'symbols' | 'special') => `${id}-symbol-tab-${key}`;
   const panelId = (key: 'symbols' | 'special') => `${id}-symbol-panel-${key}`;
   const selectSpecial = (index: number) => {

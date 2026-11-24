@@ -1,6 +1,7 @@
 // @ts-nocheck -- PresentationML export follows the existing dynamic OOXML/document contracts.
 /* PPTX — PresentationML (.pptx/.ppsx/.potx) writer. */
 export function installPptxWriter(runtime: Window): void {
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L;
   const K = L.opc;
   const X = L.xesc;

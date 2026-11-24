@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 type Item = { index: number; book: string; sheet: string; name: string; cell: string; value: string; formula: string };
 type Catalog = { items: Item[]; selected: number };
 type Runtime = { dlg?: { reactWatchCatalog?(): Catalog | null; reactWatchAction?(action: string, index?: number): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** React modeless Watch Window; watched cells and their live values remain workbook-engine state. */
 export function ExcelxWatchWindow() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   useEffect(() => {
-    const refresh = () => setCatalog(runtime()?.dlg?.reactWatchCatalog?.() || null);
-    const bus = runtime()?.bus;
+    const refresh = () => setCatalog(runtime?.dlg?.reactWatchCatalog?.() || null);
+    const bus = runtime?.bus;
     const offs = ['excelx-watch-window', 'changed'].map((event) => bus?.on(event, refresh)).filter((off): off is () => void => !!off);
     return () => offs.forEach((off) => off());
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const action = runtime()?.dlg?.reactWatchAction;
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const action = runtime?.dlg?.reactWatchAction;
   return <section className="dlg excelx-watch-window" role="dialog" aria-label={t('Watch Window')} style={{ position: 'fixed', zIndex: 1200, top: '8vh', right: '3vw', width: 'min(94vw, 760px)' }}>
     <div className="dlg-ttl">{t('Watch Window')}</div>
     <div className="dlg-body">

@@ -1,5 +1,5 @@
 // Real slide operations, retained section/custom-show identities and suite recovery.
-// node tests/lectern/membership.mjs OUTPUT_DIR (VO_CORPORA overrides ~/corpora)
+// node tests/pptx/membership.mjs OUTPUT_DIR (VO_CORPORA overrides ~/corpora)
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

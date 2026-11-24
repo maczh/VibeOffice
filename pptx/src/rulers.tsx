@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface PptxRulerCatalog {
@@ -21,12 +21,12 @@ interface RulerRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
 }
 
-function runtime(): RulerRuntime | undefined {
-  return (window as Window & { L?: RulerRuntime }).L;
+function runtime(host: HTMLElement): RulerRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: RulerRuntime }) | null)?.L;
 }
 
-function drawRuler(canvas: HTMLCanvasElement, catalog: PptxRulerCatalog, horizontal: boolean) {
-  const dpr = window.devicePixelRatio || 1;
+function drawRuler(canvas: HTMLCanvasElement, catalog: PptxRulerCatalog, horizontal: boolean, devicePixelRatio: number) {
+  const dpr = devicePixelRatio || 1;
   const size = horizontal ? catalog.width : catalog.height;
   const length = horizontal ? catalog.slideWidth : catalog.slideHeight;
   const offset = horizontal ? catalog.offsetX : catalog.offsetY;
@@ -65,15 +65,15 @@ function drawRuler(canvas: HTMLCanvasElement, catalog: PptxRulerCatalog, horizon
 
 /** React owns the PPTX ruler canvases; the engine supplies slide and look geometry only. */
 export function PptxRulers({ host }: { host: HTMLElement }) {
-  const [catalog, setCatalog] = useState<PptxRulerCatalog | null>(() => runtime()?.ed?.reactRulerCatalog?.() || null);
+  const [catalog, setCatalog] = useState<PptxRulerCatalog | null>(() => runtime(host)?.ed?.reactRulerCatalog?.() || null);
   const horizontalCanvas = useRef<HTMLCanvasElement>(null);
   const verticalCanvas = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     let off: (() => void) | undefined;
     const attach = () => {
       off?.();
-      off = runtime()?.bus?.on('pptx-rulers', () => setCatalog(runtime()?.ed?.reactRulerCatalog?.() || null));
-      setCatalog(runtime()?.ed?.reactRulerCatalog?.() || null);
+      off = runtime(host)?.bus?.on('pptx-rulers', () => setCatalog(runtime(host)?.ed?.reactRulerCatalog?.() || null));
+      setCatalog(runtime(host)?.ed?.reactRulerCatalog?.() || null);
     };
     host.addEventListener('vibeoffice-engine-runtime-ready', attach);
     attach();
@@ -84,9 +84,10 @@ export function PptxRulers({ host }: { host: HTMLElement }) {
   }, [host]);
   useLayoutEffect(() => {
     if (!catalog?.show) return;
-    if (horizontalCanvas.current) drawRuler(horizontalCanvas.current, catalog, true);
-    if (verticalCanvas.current) drawRuler(verticalCanvas.current, catalog, false);
-  }, [catalog]);
+    const dpr = host.ownerDocument.defaultView?.devicePixelRatio || 1;
+    if (horizontalCanvas.current) drawRuler(horizontalCanvas.current, catalog, true, dpr);
+    if (verticalCanvas.current) drawRuler(verticalCanvas.current, catalog, false, dpr);
+  }, [catalog, host]);
   const horizontal = host.querySelector<HTMLElement>('.ruler-h');
   const vertical = host.querySelector<HTMLElement>('.ruler-v');
   return <>

@@ -64,5 +64,7 @@
     return words(`${entry.tip} ${(entry.path || []).join(' ')}`).some((word) => word.startsWith(query)) ? 1 : 0;
   }
   const suite = root.VO || (root.VO = {});
-  suite.commandMatcher = Object.freeze({ maxResults: 10, maxRecent: 6, words, scoreWord });
+  const matcher = { maxResults: 10, maxRecent: 6, words, scoreWord };
+  Object.defineProperty(matcher, Symbol.for('vibeoffice.classicCommandMatcher'), { value: true });
+  suite.commandMatcher = Object.freeze(matcher);
 })(window);

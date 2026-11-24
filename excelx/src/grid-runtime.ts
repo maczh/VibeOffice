@@ -3,6 +3,8 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxGridRuntime(runtime: Window): void {
   const root = runtime;
+  const VO = (root as Window & { VO?: any }).VO;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.layout || !L?.render || !L?.ops || !L?.calc || !L?.formula) throw new Error("Excelx grid requires model, geometry, rendering, and operation services");
   if (installedRuntimes.has(L)) return;

@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface WorkbookProperty { name: string; type?: string; value: string }
 interface WorkbookPropertiesCatalog {
@@ -16,16 +17,13 @@ interface PropertiesRuntime {
   t?(message: string, ...args: unknown[]): string;
 }
 
-function runtime(): PropertiesRuntime | undefined {
-  return (window as Window & { L?: PropertiesRuntime }).L;
-}
-
 const summaryFields: [string, string][] = [
   ['title', '&Title:'], ['subject', '&Subject:'], ['creator', '&Author:'], ['manager', '&Manager:'],
   ['company', 'C&ompany:'], ['category', 'Ca&tegory:'], ['keywords', '&Keywords:'], ['description', 'C&omments:'],
 ];
 
 export function ExcelxPropertiesDialog() {
+  const runtime = useExcelxRuntime<PropertiesRuntime>();
   const [catalog, setCatalog] = useState<WorkbookPropertiesCatalog | null>(null);
   const [summary, setSummary] = useState<Record<string, string>>({});
   const [custom, setCustom] = useState<WorkbookProperty[]>([]);
@@ -34,20 +32,20 @@ export function ExcelxPropertiesDialog() {
   const [tab, setTab] = useState('Summary');
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactPropertiesCatalog?.() || null;
+      const next = runtime?.dlg?.reactPropertiesCatalog?.() || null;
       setCatalog(next);
       if (next) { setSummary(next.summary); setCustom(next.custom); setTab('Summary'); setName(''); setValue(''); }
     };
-    const off = runtime()?.bus?.on('excelx-properties-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-properties-dialog', refresh);
     return () => {
       off?.();
-      if (runtime()?.dlg?.reactPropertiesCatalog?.()) runtime()?.dlg?.reactPropertiesClose?.();
+      if (runtime?.dlg?.reactPropertiesCatalog?.()) runtime?.dlg?.reactPropertiesClose?.();
     };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
-  const close = () => runtime()?.dlg?.reactPropertiesClose?.();
-  const apply = () => runtime()?.dlg?.reactPropertiesApply?.(summary, custom);
+  const translate = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
+  const close = () => runtime?.dlg?.reactPropertiesClose?.();
+  const apply = () => runtime?.dlg?.reactPropertiesApply?.(summary, custom);
   const tabs = ['Summary', 'Statistics', 'Contents', 'Custom'];
   const addProperty = () => {
     const propertyName = name.trim();

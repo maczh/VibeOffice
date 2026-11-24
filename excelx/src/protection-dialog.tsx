@@ -1,38 +1,39 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host.js';
 
 type Catalog = { mode: 'protect' | 'confirm' | 'unprotect'; passwordRequired?: boolean; allow?: Record<string, boolean> };
 type Runtime = { dlg?: { reactProtectionCatalog?(): Catalog | null; reactProtectionAction?(action: string, value?: unknown): Promise<boolean> | boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 const PERMISSIONS: [string, string][] = [
   ['selectLockedCells', 'Select locked cells'], ['selectUnlockedCells', 'Select unlocked cells'], ['formatCells', 'Format cells'], ['formatColumns', 'Format columns'], ['formatRows', 'Format rows'], ['insertColumns', 'Insert columns'], ['insertRows', 'Insert rows'], ['insertHyperlinks', 'Insert hyperlinks'], ['deleteColumns', 'Delete columns'], ['deleteRows', 'Delete rows'], ['sort', 'Sort'], ['autoFilter', 'Use AutoFilter'], ['pivotTables', 'Use PivotTable reports'], ['objects', 'Edit objects'], ['scenarios', 'Edit scenarios'],
 ];
 
 /** React-owned worksheet-protection workflow; password hashes and protection edits remain in the engine adapter. */
 export function ExcelxProtectionDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [allow, setAllow] = useState<Record<string, boolean>>({});
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactProtectionCatalog?.() || null;
+      const next = runtime?.dlg?.reactProtectionCatalog?.() || null;
       setCatalog(next);
       if (next?.mode === 'protect') setAllow(next.allow || {});
       setPassword(''); setConfirmation('');
     };
-    const off = runtime()?.bus?.on('excelx-protection-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-protection-dialog', refresh);
     refresh();
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => { void runtime()?.dlg?.reactProtectionAction?.('close'); };
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const close = () => { void runtime?.dlg?.reactProtectionAction?.('close'); };
   const title = catalog.mode === 'protect' ? 'Protect Sheet' : catalog.mode === 'confirm' ? 'Confirm Password' : 'Unprotect Sheet';
   const submit = async () => {
-    if (catalog.mode === 'unprotect') await runtime()?.dlg?.reactProtectionAction?.('submit', password);
-    else if (catalog.mode === 'protect') await runtime()?.dlg?.reactProtectionAction?.('submit', { allow, password });
-    else await runtime()?.dlg?.reactProtectionAction?.('confirm', confirmation);
+    if (catalog.mode === 'unprotect') await runtime?.dlg?.reactProtectionAction?.('submit', password);
+    else if (catalog.mode === 'protect') await runtime?.dlg?.reactProtectionAction?.('submit', { allow, password });
+    else await runtime?.dlg?.reactProtectionAction?.('confirm', confirmation);
   };
   return <OfficeDialog title={t(title)} className="excelx-protection-dialog" style={{ width: 'min(94vw, 420px)' }} onRequestClose={close}>
     <div className="excelx-protection-dialog__body">
@@ -50,21 +51,21 @@ export function ExcelxProtectionDialog() {
 
 type WorkbookCatalog = { mode: 'protect' | 'unprotect'; structure?: boolean; windows?: boolean };
 type WorkbookRuntime = { dlg?: { reactWorkbookProtectionCatalog?(): WorkbookCatalog | null; reactWorkbookProtectionAction?(action: string, value?: unknown): Promise<boolean> | boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function workbookRuntime(): WorkbookRuntime | undefined { return (window as Window & { L?: WorkbookRuntime }).L; }
 
 /** React-owned workbook structure/window protection dialog. */
 export function ExcelxWorkbookProtectionDialog() {
+  const workbookRuntime = useExcelxRuntime<WorkbookRuntime>();
   const [catalog, setCatalog] = useState<WorkbookCatalog | null>(null);
   const [structure, setStructure] = useState(true);
   const [windows, setWindows] = useState(false);
   const [password, setPassword] = useState('');
   useEffect(() => {
-    const refresh = () => { const next = workbookRuntime()?.dlg?.reactWorkbookProtectionCatalog?.() || null; setCatalog(next); if (next) { setStructure(next.structure !== false); setWindows(!!next.windows); } setPassword(''); };
-    const off = workbookRuntime()?.bus?.on('excelx-workbook-protection-dialog', refresh); refresh(); return () => off?.();
+    const refresh = () => { const next = workbookRuntime?.dlg?.reactWorkbookProtectionCatalog?.() || null; setCatalog(next); if (next) { setStructure(next.structure !== false); setWindows(!!next.windows); } setPassword(''); };
+    const off = workbookRuntime?.bus?.on('excelx-workbook-protection-dialog', refresh); refresh(); return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => workbookRuntime()?.t?.(message) || message;
-  const action = workbookRuntime()?.dlg?.reactWorkbookProtectionAction;
+  const t = (message: string) => workbookRuntime?.t?.(message) || message;
+  const action = workbookRuntime?.dlg?.reactWorkbookProtectionAction;
   const close = () => { void action?.('close'); };
   const submit = () => catalog.mode === 'protect' ? action?.('protect', { structure, windows, password }) : action?.('unprotect', password);
   return <OfficeDialog title={t(catalog.mode === 'protect' ? 'Protect Workbook' : 'Unprotect Workbook')} className="excelx-workbook-protection-dialog" style={{ width: 'min(94vw, 360px)' }} onRequestClose={close}>

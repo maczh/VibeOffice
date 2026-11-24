@@ -3,6 +3,7 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxSpell(runtime: Window): void {
   const root = runtime;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.spell || !L?.model || !L?.grid || !L?.app || !L?.ui) throw new Error("Excelx spelling requires the mounted workbook runtime");
   if (installedRuntimes.has(L)) return;

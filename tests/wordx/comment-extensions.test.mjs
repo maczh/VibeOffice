@@ -1,7 +1,7 @@
 // The comment extensions Wordx adds on save (word/commentsExtended.xml: threads, resolved state) use the w15 namespace the
 // file's parts bind: Word 2016 refused files from Word 2013's preview, which bind the draft one, when they got the released
 // one (Comment012, Comment035, Comment050 of the Open XML SDK's tests; tools/ooxml/package.py, w15-namespaces).
-// node --test tests/quire/comment-extensions.test.mjs
+// node --test tests/wordx/comment-extensions.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

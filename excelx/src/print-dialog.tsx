@@ -1,24 +1,25 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host.js';
 import './print-dialog.css';
 
 type PrintOptions = { what: 'selection' | 'sheets' | 'workbook'; range: 'all' | 'pages'; from: number; to: number; copies: number };
 type Catalog = { pageCount: number; options: PrintOptions };
 type Runtime = { dlg?: { reactPrintCatalog?(): Catalog | null; reactPrintAction?(action: string, options?: PrintOptions): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 
 /** Print options are React-owned; PDF generation and preview remain in the spreadsheet print service. */
 export function ExcelxPrintDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [options, setOptions] = useState<PrintOptions>({ what: 'sheets', range: 'all', from: 1, to: 1, copies: 1 });
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactPrintCatalog?.() || null; setCatalog(next); if (next) setOptions(next.options); };
-    const off = runtime()?.bus?.on('excelx-print-dialog', refresh);
+    const refresh = () => { const next = runtime?.dlg?.reactPrintCatalog?.() || null; setCatalog(next); if (next) setOptions(next.options); };
+    const off = runtime?.bus?.on('excelx-print-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const action = (kind: string) => runtime()?.dlg?.reactPrintAction?.(kind, options);
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const action = (kind: string) => runtime?.dlg?.reactPrintAction?.(kind, options);
   const set = (patch: Partial<PrintOptions>) => setOptions((current) => ({ ...current, ...patch }));
   const radio = (group: string, value: string, label: string, selected: string, onSelect: () => void) => <label><input type="radio" name={group} value={value} checked={selected === value} onChange={onSelect} />{t(label).replace('&', '')}</label>;
   return <OfficeDialog title={t('Print')} className="excelx-print-dialog" style={{ width: 'min(94vw, 440px)' }} onRequestClose={() => action('cancel')}>

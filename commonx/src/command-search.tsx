@@ -54,11 +54,20 @@ export function CommandSearch() {
   const [active, setActive] = useState(-1);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => () => { if (blurTimer.current !== null) window.clearTimeout(blurTimer.current); }, []);
+  useEffect(() => () => {
+    const view = inputRef.current?.ownerDocument.defaultView;
+    if (blurTimer.current !== null) view?.clearTimeout(blurTimer.current);
+  }, []);
 
-  const cancelBlurClose = () => { if (blurTimer.current !== null) { window.clearTimeout(blurTimer.current); blurTimer.current = null; } };
+  const cancelBlurClose = () => {
+    if (blurTimer.current !== null) inputRef.current?.ownerDocument.defaultView?.clearTimeout(blurTimer.current);
+    blurTimer.current = null;
+  };
 
   useEffect(() => {
+    const doc = inputRef.current?.ownerDocument;
+    const view = doc?.defaultView;
+    if (!doc || !view) return;
     const focusSearch = (event: globalThis.KeyboardEvent) => {
       if (!event.altKey || event.ctrlKey || event.shiftKey || event.metaKey || (event.code !== 'KeyQ' && event.key.toLowerCase() !== 'q')) return;
       if (!inputRef.current?.closest('.vibe-editor')) return;
@@ -66,22 +75,26 @@ export function CommandSearch() {
       event.stopPropagation();
       inputRef.current.focus();
     };
-    document.addEventListener('keydown', focusSearch, true);
-    return () => document.removeEventListener('keydown', focusSearch, true);
+    doc.addEventListener('keydown', focusSearch, true);
+    return () => doc.removeEventListener('keydown', focusSearch, true);
   }, []);
 
   const search = (value: string) => {
     setQuery(value);
     setActive(-1);
-    const input = document.activeElement;
-    const engine = input instanceof HTMLElement
-      ? input.closest('.vibe-editor')?.querySelector<HTMLElement>('.vibe-editor__engine')
+    const input = inputRef.current;
+    const doc = input?.ownerDocument;
+    const view = doc?.defaultView;
+    if (!input || !doc || !view) { setResults([]); return; }
+    const activeElement = doc.activeElement;
+    const engine = activeElement instanceof view.HTMLElement
+      ? activeElement.closest('.vibe-editor')?.querySelector<HTMLElement>('.vibe-editor__engine')
       : null;
     if (!engine) { setResults([]); return; }
     let response: CommandResult[] = [];
-    engine.dispatchEvent(new CustomEvent('vibeoffice-react-search', {
+    engine.dispatchEvent(new view.CustomEvent('vibeoffice-react-search', {
       bubbles: true,
-      detail: { query: value.trim(), layout: document.documentElement.dataset.layout || 'bars', respond: (items: CommandResult[]) => { response = items; } },
+      detail: { query: value.trim(), layout: doc.documentElement.dataset.layout || 'bars', respond: (items: CommandResult[]) => { response = items; } },
     }) as SearchRequest);
     setResults(response);
   };
@@ -99,7 +112,8 @@ export function CommandSearch() {
     }
     const input = inputRef.current;
     const engine = input?.closest('.vibe-editor')?.querySelector<HTMLElement>('.vibe-editor__engine');
-    engine?.dispatchEvent(new CustomEvent('vibeoffice-react-command', { bubbles: true, detail: { type: 'vibeoffice-react-command', command: result.id, rememberSearch: true } }));
+    const view = input?.ownerDocument.defaultView;
+    if (view) engine?.dispatchEvent(new view.CustomEvent('vibeoffice-react-command', { bubbles: true, detail: { type: 'vibeoffice-react-command', command: result.id, rememberSearch: true } }));
     setOpen(false);
     setQuery('');
     setResults([]);
@@ -127,7 +141,7 @@ export function CommandSearch() {
 
   const activeResultId = active >= 0 && results[active]?.enabled ? `${id}-option-${active}` : undefined;
   return <div className="vibe-command-search">
-    <input ref={inputRef} id={id} type="search" role="combobox" aria-label={office.translate('Search commands')} aria-expanded={open && results.length > 0} aria-controls={`${id}-results`} aria-activedescendant={open ? activeResultId : undefined} aria-autocomplete="list" placeholder={office.translate('Search commands')} value={query} onChange={onChange} onFocus={() => { cancelBlurClose(); setOpen(true); search(query); }} onBlur={() => { cancelBlurClose(); blurTimer.current = window.setTimeout(() => { blurTimer.current = null; setOpen(false); }, 100); }} onKeyDown={onKeyDown} />
+    <input ref={inputRef} id={id} type="search" role="combobox" aria-label={office.translate('Search commands')} aria-expanded={open && results.length > 0} aria-controls={`${id}-results`} aria-activedescendant={open ? activeResultId : undefined} aria-autocomplete="list" placeholder={office.translate('Search commands')} value={query} onChange={onChange} onFocus={() => { cancelBlurClose(); setOpen(true); search(query); }} onBlur={() => { cancelBlurClose(); const view = inputRef.current?.ownerDocument.defaultView; if (view) blurTimer.current = view.setTimeout(() => { blurTimer.current = null; setOpen(false); }, 100); }} onKeyDown={onKeyDown} />
     {open && results.length > 0 && <ul id={`${id}-results`} className="vibe-command-search__results" role="listbox">{results.map((result, index) => <li id={`${id}-option-${index}`} key={`${result.id || result.label}-${index}`} role="option" aria-selected={index === active && result.enabled} aria-disabled={!result.enabled}><button type="button" tabIndex={-1} disabled={!result.enabled} onMouseDown={(event) => event.preventDefault()} onClick={() => run(index)}><span>{highlightedLabel(result.label, query)}</span>{result.where && <small>{result.where}</small>}</button></li>)}</ul>}
   </div>;
 }

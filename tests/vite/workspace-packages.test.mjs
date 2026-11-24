@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WordxEditor } from '@vibeoffice/wordx';
 import { ExcelxEditor } from '@vibeoffice/excelx';
 import { PptxEditor } from '@vibeoffice/pptx';
-import { AppearanceControls, OfficeDialog, VibeOfficeProvider } from '@vibeoffice/core';
+import { AppearanceControls, OfficeDialog, VibeOfficeProvider, installClipArtService, installColorPickerService, installCommandMatcher, installCommandSearchService, installReactCommandService, installReactToolbarService, installReactTooltipService, installReactUiMountService, installReactUiRefreshService, installReactUiTextService, standardColorName } from '@vibeoffice/core';
 import { createDirectEngineBridge, createIndexedDbDraftStore, openLocalDocument, resolveUnsavedChanges, saveLocalDocument } from '@vibeoffice/core';
 import { IDBFactory } from 'fake-indexeddb';
 import { createRemoteFileCallbacks, createUrlReadProvider, createWebDavProvider, remoteConflict } from '@vibeoffice/core';
@@ -19,11 +19,306 @@ const editors = [
   { component: PptxEditor, label: 'PPTX editor', id: 'pptx' },
 ];
 
+test('React Clip Art catalog restores its previous owner on editor disposal', () => {
+  const previous = { search: () => ['host'] };
+  const runtime = { L: { clipart: previous } };
+  const dispose = installClipArtService(runtime);
+  const installed = runtime.L.clipart;
+  assert.notEqual(installed, previous);
+  assert.ok(installed.search('rocket').length > 0);
+  dispose();
+  assert.equal(runtime.L.clipart, previous);
+
+  const disposeOwned = installClipArtService(runtime);
+  const laterOwner = { search: () => ['later'] };
+  runtime.L.clipart = laterOwner;
+  disposeOwned();
+  assert.equal(runtime.L.clipart, laterOwner, 'cleanup must not overwrite a newer service owner');
+});
+
+test('React command matcher initializes without loading the legacy matcher script', () => {
+  const runtime = { VO: {} };
+  installCommandMatcher(runtime);
+  assert.deepEqual(runtime.VO.commandMatcher.words('AutoSum 搜索'), ['autosum', '搜索', 'auto', 'sum']);
+  const entry = { label: 'Page Setup', alias: 'margins orientation', tip: '', path: [] };
+  assert.equal(runtime.VO.commandMatcher.scoreWord('margin', entry), 3.5, 'Office-friendly synonyms keep their ranking');
+  assert.equal(runtime.VO.commandMatcher.scoreWord('pag', entry), 4, 'prefix matches keep their ranking');
+  const hostMatcher = { words: () => ['host'], scoreWord: () => 1, maxResults: 2, maxRecent: 1 };
+  installCommandMatcher({ VO: { commandMatcher: hostMatcher } });
+  assert.equal(runtime.VO.commandMatcher.maxResults, 10, 'the React package owns its fallback matcher');
+  const embedded = { VO: { commandMatcher: hostMatcher } };
+  installCommandMatcher(embedded);
+  assert.equal(embedded.VO.commandMatcher, hostMatcher, 'an embedding host may provide its own matcher');
+  const classicMatcher = { ...hostMatcher };
+  Object.defineProperty(classicMatcher, Symbol.for('vibeoffice.classicCommandMatcher'), { value: true });
+  const reactRuntime = { VO: { commandMatcher: classicMatcher } };
+  installCommandMatcher(reactRuntime);
+  assert.notEqual(reactRuntime.VO.commandMatcher, classicMatcher, 'React replaces only the explicitly marked classic fallback');
+  assert.deepEqual(reactRuntime.VO.commandMatcher.words('AutoSum 搜索'), ['autosum', '搜索', 'auto', 'sum']);
+  assert.match(readFileSync(new URL('../../wordx/src/editor.tsx', import.meta.url), 'utf8'), /installCommandSearchService\(runtime\)/);
+  for (const app of ['wordx', 'excelx', 'pptx']) {
+    const editor = readFileSync(new URL(`../../${app}/src/editor.tsx`, import.meta.url), 'utf8');
+    assert.match(editor, /installCommandSearchService\(runtime\)/);
+    assert.match(editor, /skipLegacyScripts:[^\n]*\/common\/search\.js/);
+  }
+});
+
+test('app installer modules bind host APIs from their supplied runtime window', () => {
+  for (const [app, file] of [
+    ['wordx', 'application.ts'], ['wordx', 'app-dialogs.ts'], ['wordx', 'commands.ts'], ['wordx', 'drawing.ts'], ['wordx', 'proofing.ts'], ['wordx', 'dialogs.ts'],
+    ['excelx', 'application.ts'], ['excelx', 'panes.ts'], ['excelx', 'grid-runtime.ts'], ['pptx', 'app.ts'], ['pptx', 'panes.ts'], ['pptx', 'textedit.ts'],
+  ]) {
+    const source = readFileSync(new URL(`../../${app}/src/${file}`, import.meta.url), 'utf8');
+    assert.match(source, /const VO = (?:window\.VO|root\.VO|\((?:window|root) as Window & \{ VO\?: any \}\)\.VO);/, `${app}/${file} must not resolve host APIs from the ambient window`);
+  }
+  const application = readFileSync(new URL('../../wordx/src/application.ts', import.meta.url), 'utf8');
+  assert.match(application, /const host = document\.querySelector\('\[data-vibeoffice-engine-root\]'\) \|\| document\.body;/, 'the installer-provided document remains the mount owner');
+  for (const file of ['task-content.tsx', 'status-bar.tsx', 'selection-overlay.tsx', 'print-preview.tsx', 'notes.tsx', 'show-controls.tsx', 'slides-pane.tsx', 'rulers.tsx', 'grid-layer.tsx', 'notes-page.tsx', 'shape-grid-menu.tsx']) {
+    const source = readFileSync(new URL(`../../pptx/src/${file}`, import.meta.url), 'utf8');
+    assert.match(source, /function runtime\(host: HTMLElement\)[\s\S]*?host\.ownerDocument\.defaultView/, `PPTX ${file} resolves engine APIs from its host document`);
+    assert.doesNotMatch(source, /\bruntime\(\)/, `PPTX ${file} must not use ambient-window engine lookup`);
+    assert.doesNotMatch(source, /\bwindow\.VO\b/, `PPTX ${file} must resolve host APIs through its owner document`);
+  }
+  for (const file of ['diagram-menu.tsx', 'line-style-menu.tsx', 'shadow-style-menu.tsx']) {
+    const source = readFileSync(new URL(`../../pptx/src/${file}`, import.meta.url), 'utf8');
+    assert.match(source, /host\.ownerDocument[\s\S]*?ownerDocument\.defaultView/, `PPTX ${file} resolves runtime and browser APIs from its host`);
+    assert.doesNotMatch(source, /\bwindow\.|\bdocument\./, `PPTX ${file} must not attach menus to the ambient browser context`);
+  }
+  for (const file of ['zoom-dialog.tsx', 'grid-dialog.tsx', 'date-time-dialog.tsx', 'change-case-dialog.tsx', 'bullets-dialog.tsx', 'autocorrect-dialog.tsx', 'symbol-dialog.tsx', 'line-spacing-dialog.tsx', 'header-footer-dialog.tsx', 'setup-show-dialog.tsx', 'replace-fonts-dialog.tsx', 'insert-table-dialog.tsx', 'font-dialog.tsx', 'action-settings-dialog.tsx', 'print-dialog.tsx', 'properties-dialog.tsx', 'autocontent-dialog.tsx', 'find-dialog.tsx', 'page-setup-dialog.tsx', 'hyperlink-dialog.tsx', 'save-as-dialog.tsx', 'color-scheme-dialog.tsx', 'diagram-gallery-dialog.tsx', 'table-format-dialog.tsx', 'paste-special-dialog.tsx', 'speaker-notes-dialog.tsx', 'effect-options-dialog.tsx', 'slide-finder-dialog.tsx', 'wordart-gallery-dialog.tsx', 'wordart-text-dialog.tsx', 'options-dialog.tsx', 'photo-album-dialog.tsx', 'fill-effects-dialog.tsx', 'format-shape-dialog.tsx']) {
+    const source = readFileSync(new URL(`../../pptx/src/${file}`, import.meta.url), 'utf8');
+    assert.match(source, /usePptxRuntime<[^>]+>\(\)/, `PPTX ${file} resolves its engine through the scoped host provider`);
+    assert.doesNotMatch(source, /\bwindow\.|function runtime\(\)/, `PPTX ${file} must not use ambient-window runtime lookup`);
+  }
+  const pptxEditor = readFileSync(new URL('../../pptx/src/editor.tsx', import.meta.url), 'utf8');
+  assert.match(pptxEditor, /appLayers=\{\(host\) => <PptxHostProvider host=\{host\}>/, 'PPTX app layers receive the editor host runtime context');
+  const pptxInteractions = readFileSync(new URL('../../pptx/src/editor-interactions.tsx', import.meta.url), 'utf8');
+  assert.match(pptxInteractions, /function interactionRuntime\(host: HTMLElement\)[\s\S]*?host\.ownerDocument\.defaultView/, 'PPTX editor interactions resolve their runtime from the owning host');
+  assert.doesNotMatch(pptxInteractions, /\binteractionRuntime\(\)|\bwindow\.|\bdocument\./, 'PPTX editor interactions must bind events and services to the owner document/window');
+  for (const [app, file] of [['excelx', 'commands.ts'], ['pptx', 'commands.ts']]) {
+    const source = readFileSync(new URL(`../../${app}/src/${file}`, import.meta.url), 'utf8');
+    assert.match(source, /const window = runtime as Window & \{ L\?: any; VO\?: any \};/, `${app}/${file} must resolve host APIs from its installer-provided runtime`);
+    assert.doesNotMatch(source, /\bglobalThis\.VO\b|\bwindow\s*=\s*globalThis\.window/, `${app}/${file} must not escape its supplied runtime`);
+  }
+});
+
+test('React command registry preserves command descriptors, execution hooks, and host replacements', () => {
+  const runtime = new EventTarget();
+  runtime.CustomEvent = CustomEvent;
+  runtime.console = { warn() {}, error() {} };
+  const audit = [];
+  const ui = {
+    cmds: {}, hooks: { beforeExec() { audit.push('before'); } },
+    refresh() { audit.push('refresh'); }, msg(text, options) { audit.push(['message', text, options.icon]); },
+  };
+  runtime.L = { ui, t: (text, detail) => text.replace('{0}', detail) };
+  const commands = ui.cmds;
+  let eventDetail;
+  runtime.addEventListener('vo-command', (event) => { eventDetail = event.detail; });
+  const originalCmd = () => 'classic';
+  ui.cmd = originalCmd;
+  const dispose = installReactCommandService(runtime);
+  assert.equal(ui.cmds, commands, 'React reuses the established command catalog object');
+  const definition = { label: '&Open', enabled: () => true, checked: () => true, run: (arg, event) => ({ arg, event }) };
+  const command = ui.cmd('open', definition);
+  assert.equal(command.label, '&Open');
+  assert.equal(ui.enabled('open'), true);
+  assert.equal(ui.checked('open'), true);
+  const existing = Object.create({ inherited: 'kept' });
+  Object.defineProperties(existing, { label: { value: '&Save', enumerable: true }, run: { value: () => 'saved', enumerable: true } });
+  const registered = ui.cmd('save', existing);
+  assert.notEqual(registered, existing, 'registration wraps a definition using the legacy contract');
+  assert.equal(Object.getPrototypeOf(registered), Object.prototype);
+  assert.equal(Object.getOwnPropertyDescriptor(registered, 'label').enumerable, true);
+  assert.equal(registered.inherited, undefined);
+  const nativeEvent = new Event('click');
+  const result = ui.exec('open', 'argument', nativeEvent);
+  assert.deepEqual(result, { arg: 'argument', event: nativeEvent });
+  assert.deepEqual(audit, ['before', 'refresh']);
+  assert.deepEqual(eventDetail, { id: 'open', result });
+  command.run = () => { throw new Error('test failure'); };
+  assert.equal(ui.exec('open'), undefined);
+  assert.deepEqual(audit.slice(-3), ['before', ['message', 'That action could not be completed: test failure', 'warn'], 'refresh']);
+  const laterOwner = () => 'new owner';
+  ui.exec = laterOwner;
+  dispose();
+  assert.equal(ui.exec, laterOwner, 'disposal leaves an API installed by a later owner untouched');
+  assert.equal(ui.cmd, originalCmd, 'disposal restores classic APIs still owned by this service');
+});
+
+test('React command-search service validates its host and restores only APIs it still owns', () => {
+  assert.throws(() => installCommandSearchService({ VO: {} }), /requires the editor UI service/);
+  const originals = {
+    stripAmp: (text) => text, plainAmp: (text) => text, enabled: () => true,
+    searchCommands: () => 'classic-search', searchResults: () => 'classic-results', searchRemember: () => 'classic-remember',
+    searchBox: () => 'classic-box', searchInput: () => 'classic-input',
+  };
+  const runtime = {
+    CustomEvent,
+    dispatchEvent() {},
+    VO: {},
+    console: { warn() {}, error() {} },
+    document: { documentElement: { dataset: { layout: 'bars' } }, createElement: () => ({ setAttribute() {}, className: '', hidden: false }) },
+    L: { ui: { ...originals, stripAmp: (text) => text, plainAmp: (text) => text, ampHTML: (text) => text, enabled: () => true, cmds: {}, menus: [], $: () => [], $$: () => [] }, t: (text) => text },
+  };
+  const ui = runtime.L.ui;
+  const dispose = installCommandSearchService(runtime);
+  assert.notEqual(ui.searchCommands, originals.searchCommands);
+  const replacement = () => 'new owner';
+  ui.searchInput = replacement;
+  dispose();
+  assert.equal(ui.searchCommands, originals.searchCommands);
+  assert.equal(ui.searchResults, originals.searchResults);
+  assert.equal(ui.searchRemember, originals.searchRemember);
+  assert.equal(ui.searchBox, originals.searchBox);
+  assert.equal(ui.searchInput, replacement, 'disposal leaves APIs installed by a later owner untouched');
+});
+
 test('shared package declares every React runtime it imports as a peer dependency', () => {
   const metadata = JSON.parse(readFileSync(new URL('../../commonx/package.json', import.meta.url), 'utf8'));
   assert.equal(metadata.peerDependencies.react, '^19.0.0');
   assert.equal(metadata.peerDependencies['react-dom'], '^19.0.0');
   assert.match(readFileSync(new URL('../../commonx/src/legacy-dialog.tsx', import.meta.url), 'utf8'), /from 'react-dom\/client'/);
+});
+
+test('React toolbar service restores classic engine APIs on disposal', () => {
+  const dispatched = [];
+  const root = { isConnected: true, dispatchEvent(event) { dispatched.push(event); return true; } };
+  const classicToolbar = () => 'classic';
+  const classicButton = () => 'classic-button';
+  const ui = {
+    toolbar: classicToolbar, tbButton: classicButton, tbSplit: () => 'classic-split', tbDrop: () => 'classic-drop', reactToolbar: () => false,
+    stripAmp: (text) => text, ampHTML: (text) => text, cmds: {}, exec() {},
+  };
+  const runtime = { L: { ui, h: () => ({}) }, VO: { reactDirectHost: { root } }, CustomEvent };
+  const dispose = installReactToolbarService(runtime);
+  assert.notEqual(ui.toolbar, classicToolbar);
+  assert.equal(ui.tbButton('save').__vibeToolbarControl, 'button');
+  const target = {};
+  assert.equal(ui.reactToolbar('standard', 'Standard', target, []), true);
+  assert.equal(dispatched[0].type, 'vibeoffice-react-toolbar');
+  assert.equal(dispatched[0].detail.target, target);
+  dispose();
+  assert.equal(ui.toolbar, classicToolbar);
+  assert.equal(ui.tbButton, classicButton);
+  assert.equal(ui.reactToolbar(), false);
+});
+
+test('React color palette names are translated without the legacy shared UI initializer', () => {
+  assert.equal(standardColorName('#000000'), 'Black');
+  assert.equal(standardColorName('#800000', (label) => `translated:${label}`), 'translated:Dark Red');
+  assert.equal(standardColorName('#abc123'), '#ABC123');
+
+  const events = [];
+  const root = { isConnected: true, dispatchEvent(event) { events.push(event); return true; } };
+  const colors = ['#000000', '#800000', '#ffffff', '#abc123'];
+  const ui = {};
+  const runtime = {
+    L: { ui, color: { STANDARD: colors }, t: (label) => `translated:${label}` },
+    VO: { reactDirectHost: { root } },
+    CustomEvent,
+  };
+  installColorPickerService(runtime);
+  assert.equal(ui.colorName, undefined, 'React color labels do not depend on legacy ui.colorName');
+  ui.colorMenu({ left: 12, bottom: 34 }, { mode: 'plain' }, () => {});
+  const request = events[0].detail;
+  const palette = request.sections.find((section) => section.layout === 'grid').items;
+  assert.deepEqual(palette.map(({ label }) => label), ['translated:Black', 'translated:Dark Red', 'translated:White', '#ABC123']);
+});
+
+test('React tooltip service disposes only the hide API it owns', () => {
+  const events = [];
+  const root = { isConnected: true, dispatchEvent(event) { events.push(event); return true; } };
+  const previous = () => 'classic';
+  const ui = { hideTip: previous };
+  const runtime = { L: { ui }, VO: { reactDirectHost: { root } }, CustomEvent };
+  const dispose = installReactTooltipService(runtime);
+  assert.notEqual(ui.hideTip, previous);
+  ui.hideTip();
+  assert.equal(events[0].type, 'vibeoffice-react-hide-tooltip');
+  dispose();
+  assert.equal(ui.hideTip, previous, 'disposing the React tooltip restores the classic API');
+
+  const disposeOwned = installReactTooltipService(runtime);
+  const laterOwner = () => 'later owner';
+  ui.hideTip = laterOwner;
+  disposeOwned();
+  assert.equal(ui.hideTip, laterOwner, 'disposing never overwrites a newer API owner');
+});
+
+test('React editor mount service leaves lifecycle ownership with the direct engine', () => {
+  const root = { isConnected: true };
+  const mounted = [];
+  const unmounted = [];
+  const previousMount = (host) => { mounted.push(host); return () => {}; };
+  const previousUnmount = (host) => unmounted.push(host);
+  const ui = { mount: previousMount, unmount: previousUnmount };
+  const runtime = { L: { ui }, VO: { reactDirectHost: { root } } };
+  const dispose = installReactUiMountService(runtime);
+  const host = {};
+  const release = ui.mount(host);
+  assert.equal(typeof release, 'function');
+  ui.unmount(host);
+  release();
+  assert.deepEqual(mounted, [], 'React does not start classic UI global listeners or mount bookkeeping');
+  assert.deepEqual(unmounted, [], 'React unmount does not run the classic UI teardown');
+  dispose();
+  assert.equal(ui.mount, previousMount);
+  assert.equal(ui.unmount, previousUnmount);
+});
+
+test('React command refresh notifies Ribbon without retaining the legacy toolbar refresh loop', () => {
+  const events = [];
+  const classicRefresh = () => events.push('classic');
+  const ui = { refresh: classicRefresh };
+  const runtime = {
+    L: { ui, rafThrottle: (callback) => callback, bus: { emit: (event) => events.push(event) } },
+    VO: { reactDirectHost: { root: {} } },
+  };
+  const dispose = installReactUiRefreshService(runtime);
+  assert.notEqual(ui.refresh, classicRefresh);
+  ui.refresh();
+  assert.deepEqual(events, ['ui-refresh']);
+  dispose();
+  assert.equal(ui.refresh, classicRefresh);
+
+  const disposeOwned = installReactUiRefreshService(runtime);
+  const laterOwner = () => {};
+  ui.refresh = laterOwner;
+  disposeOwned();
+  assert.equal(ui.refresh, laterOwner, 'disposal must not overwrite a newer refresh owner');
+});
+
+test('React shared text helpers preserve translations, access keys, and platform shortcut labels', () => {
+  const translated = {
+    '&Open|menu': '&Ouvrir|menu',
+    'Ctrl|key': 'Strg', 'Shift|key': 'Umschalt', 'Alt|key': 'Alt',
+  };
+  const ui = {
+    plainAmp: () => 'classic-plain', stripAmp: () => 'classic-strip', ampHTML: () => 'classic-html',
+    accessKey: () => 'classic-key', keyText: () => 'classic-shortcut',
+  };
+  const runtime = {
+    L: { ui, t: (text) => (translated[text] || text).replace(/\|[A-Za-z][A-Za-z -]*$/, ''), esc: (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'), isMac: false },
+    VO: { reactDirectHost: { root: {} }, i18n: { plain: (text) => text.replace(/\|[A-Za-z][A-Za-z -]*$/, '') } },
+  };
+  const previous = { ...ui };
+  const dispose = installReactUiTextService(runtime);
+  assert.equal(ui.plainAmp('&&Keep &X'), '&Keep X');
+  assert.equal(ui.stripAmp('&Open|menu'), 'Ouvrir');
+  assert.equal(ui.ampHTML('Save && E&xit'), 'Save &amp; E<u>x</u>it');
+  assert.equal(ui.ampHTML('Number|Format Cells tab'), 'Number');
+  assert.equal(ui.accessKey('&Open|menu'), 'o');
+  assert.equal(ui.keyText('Ctrl+Shift+F12'), 'Strg+Umschalt+F12');
+  runtime.L.isMac = true;
+  assert.equal(ui.keyText('Alt+Shift+Ctrl+Enter'), '⌥⇧⌘Enter');
+  dispose();
+  assert.deepEqual(ui, previous, 'classic engine helper APIs are restored on editor disposal');
+
+  const disposeOwned = installReactUiTextService(runtime);
+  const laterOwner = () => 'later owner';
+  ui.stripAmp = laterOwner;
+  disposeOwned();
+  assert.equal(ui.stripAmp, laterOwner, 'disposal never overwrites a newer text-helper owner');
 });
 
 test('editor packages can be packed with the shared peer and same-origin engine assets', () => {
@@ -41,6 +336,19 @@ test('editor packages can be packed with the shared peer and same-origin engine 
     assert.equal(metadata.peerDependencies['@vibeoffice/core'], core.version);
     assert.equal(metadata.license, core.license);
     assert.ok(readFileSync(new URL(`../../${app}/standalone/${app}/runtime.json`, import.meta.url), 'utf8').includes('../common/looks.css'), `${app} runtime manifest resolves shared assets from the standalone tree`);
+    const retired = { wordx: 'quire', excelx: 'ledger', pptx: 'lectern' }[app];
+    assert.ok(existsSync(new URL(`../../suite/dist/${app}`, import.meta.url)), `suite output contains the ${app} engine route`);
+    assert.ok(!existsSync(new URL(`../../suite/dist/${retired}`, import.meta.url)), `suite output omits the retired ${retired} engine route`);
+    assert.ok(!existsSync(new URL(`../../${app}/standalone/${retired}`, import.meta.url)), `${app} standalone output omits the retired ${retired} engine route`);
+  }
+});
+
+test('React production engine assets are emitted only under the current product routes', () => {
+  const adapter = readFileSync(new URL('../../tools/vite/legacy-runtime.mjs', import.meta.url), 'utf8');
+  assert.match(adapter, /for \(const name of apps\) \{\s*const retired = path\.join\(output, legacyFolders\[name\]\);\s*await rm\(retired, \{ recursive: true, force: true \}\);/);
+  assert.match(adapter, /\['common', 'common'\]/, 'shared engine assets remain available to the renamed route');
+  for (const [app, retired] of [['wordx', 'quire'], ['excelx', 'ledger'], ['pptx', 'lectern']]) {
+    assert.match(adapter, new RegExp(`${app}: '${retired}'`), `${app} engine assets are copied to the current product route`);
   }
 });
 
@@ -108,9 +416,13 @@ test('React packages expose the same-document direct engine mount adapter', () =
   assert.match(runtime, /mountLegacyEngineDocument/);
   assert.doesNotMatch(runtime, /createElement\(['"]iframe/);
   assert.match(runtime, /shellOwnedByReact && scriptUrl\.pathname\.endsWith\('\/common\/ribbon\.js'\)/, 'React-owned editor shells skip the classic shared Ribbon module');
+  assert.match(runtime, /installReactUiMountService/, 'React-owned engine mounts bypass the classic shared UI mount lifecycle');
   const services = readFileSync(new URL('../../commonx/src/runtime-services.ts', import.meta.url), 'utf8');
   const ribbon = readFileSync(new URL('../../commonx/src/ribbon-service.ts', import.meta.url), 'utf8');
   assert.match(services, /scriptUrl\.pathname\.endsWith\('\/common\/ribbon\.js'\).*installReactRibbonService/);
+  assert.match(services, /VO\.look\s*=\s*\{/);
+  assert.match(services, /VO\.settings\.on\(\(key\) => \{ if \(key === LOOK \|\| key === null\) applyLook\(/);
+  assert.match(runtime, /directRuntime\.reactHost = true/);
   for (const method of ['init', 'select', 'collapse', 'built', 'follow']) assert.match(ribbon, new RegExp(`ribbonUI\\.${method}\\s*=`), `React Ribbon adapter provides ${method}`);
 });
 
@@ -127,12 +439,13 @@ test('the Vite host runtime leaves React package source routes to Vite when no l
 });
 
 test('React editor runtime manifests preserve ordered classic scripts and recover styles from generated legacy HTML', () => {
-  const manifest = JSON.parse(editorRuntime('<html><head><link rel="stylesheet" href="../common/ui.css"><style media="screen">.shell{display:flex}</style></head><div id="app"></div><script src="../common/core.js"></script><script src="js/app.js"></script></html>'));
+  const manifest = JSON.parse(editorRuntime('<html><head><link rel="stylesheet" href="../common/ui.css"><style media="screen">.shell{display:flex}</style></head><div id="app"></div><script src="../common/command-match.js?v=1"></script><script src="../common/core.js"></script><script src="js/app.js"></script></html>'));
   assert.deepEqual(manifest.styles, [
     { href: '../common/ui.css', media: '' },
     { css: '.shell{display:flex}', media: 'screen' },
   ]);
   assert.deepEqual(manifest.scripts, ['../common/core.js', 'js/app.js']);
+  assert.doesNotMatch(manifest.scripts.join('\n'), /command-match\.js/, 'the React runtime uses its package-owned matcher, not the classic script');
 });
 
 test('React entries initialize shared appearance services from the package instead of classic script tags', () => {
@@ -185,16 +498,23 @@ test('shared native dialog exposes an accessible title and request-close afforda
   assert.match(html, /Continue/);
 });
 
-test('React template metadata uses only Wordx, Excelx and PPTX product routes', () => {
+test('shared native dialog keeps modeless semantics when requested', () => {
+  const html = renderToStaticMarkup(createElement(OfficeDialog, { title: 'Modeless', modal: false, children: createElement('p', null, 'Content') }));
+  assert.match(html, /<dialog[^>]*aria-labelledby="[^"]+"/);
+  assert.doesNotMatch(html, /aria-modal=/);
+  assert.match(readFileSync(new URL('../../commonx/src/dialog.tsx', import.meta.url), 'utf8'), /if \(modal\) dialog\.showModal\(\); else dialog\.show\(\);/);
+});
+
+test('React template metadata uses only Wordx, Excelx and PPTX routes and preserves generated blank previews', () => {
   const source = JSON.stringify({
-    quire: [{ id: 'letter', name: 'Letter', img: 'quire/templates/letter.jpg' }],
-    ledger: [{ id: 'budget', name: 'Budget', img: 'ledger/templates/budget.jpg' }],
-    lectern: [{ id: 'meeting', name: 'Meeting', img: 'lectern/templates/meeting.jpg' }],
+    quire: [{ id: '', name: 'Blank Document', img: 'quire/templates/blank.jpg' }, { id: 'letter', name: 'Letter', img: 'quire/templates/letter.jpg' }],
+    ledger: [{ id: '', name: 'Blank Workbook', img: 'ledger/templates/blank.jpg' }, { id: 'budget', name: 'Budget', img: 'ledger/templates/budget.jpg' }],
+    lectern: [{ id: '', name: 'Blank Presentation', img: 'lectern/templates/blank.jpg' }, { id: 'meeting', name: 'Meeting', img: 'lectern/templates/meeting.jpg' }],
   });
   assert.deepEqual(JSON.parse(reactTemplates(source)), {
-    wordx: [{ id: 'letter', name: 'Letter', img: 'wordx/templates/letter.jpg' }],
-    excelx: [{ id: 'budget', name: 'Budget', img: 'excelx/templates/budget.jpg' }],
-    pptx: [{ id: 'meeting', name: 'Meeting', img: 'pptx/templates/meeting.jpg' }],
+    wordx: [{ id: '', name: 'Blank Document', img: 'wordx/templates/blank.jpg' }, { id: 'letter', name: 'Letter', img: 'wordx/templates/letter.jpg' }],
+    excelx: [{ id: '', name: 'Blank Workbook', img: 'excelx/templates/blank.jpg' }, { id: 'budget', name: 'Budget', img: 'excelx/templates/budget.jpg' }],
+    pptx: [{ id: '', name: 'Blank Presentation', img: 'pptx/templates/blank.jpg' }, { id: 'meeting', name: 'Meeting', img: 'pptx/templates/meeting.jpg' }],
   });
 });
 
@@ -245,13 +565,55 @@ test('local file-input fallback removes its picker when the mount is aborted', a
   globalThis.document = { createElement: (tag) => { assert.equal(tag, 'input'); return input; } };
   try {
     const controller = new AbortController();
-    const opening = openLocalDocument(undefined, {}, controller.signal);
+    const opening = openLocalDocument(undefined, { document: globalThis.document }, controller.signal);
     assert.equal(input.type, 'file');
     controller.abort();
     await assert.rejects(opening, { name: 'AbortError' });
     assert.equal(input.removed, true);
     assert.equal(listeners.size, 0);
   } finally { globalThis.document = previousDocument; }
+});
+
+test('local file-input fallback is created in the supplied owner window', async () => {
+  const file = new File(['owner window'], 'Owner.docx');
+  const listeners = new Map();
+  const input = { type: '', accept: '', files: [file], removed: false, addEventListener(type, listener) { listeners.set(type, listener); }, removeEventListener(type) { listeners.delete(type); }, click() { listeners.get('change')?.(); }, remove() { this.removed = true; } };
+  let globalDocumentCalls = 0;
+  const previousDocument = globalThis.document;
+  globalThis.document = { createElement() { globalDocumentCalls++; throw new Error('must use the supplied owner window'); } };
+  const ownerWindow = { document: { createElement(tag) { assert.equal(tag, 'input'); return input; } } };
+  try {
+    const opened = await openLocalDocument(undefined, ownerWindow);
+    assert.equal(opened.file, file);
+    assert.equal(input.removed, true);
+    assert.equal(globalDocumentCalls, 0);
+    assert.equal(listeners.size, 0);
+  } finally { globalThis.document = previousDocument; }
+});
+
+test('download fallback uses the supplied owner window for DOM and object URLs', async () => {
+  const previousWindow = globalThis.window;
+  const downloads = [];
+  const revoked = [];
+  let fallbackWindowCalls = 0;
+  let deferredRevoke;
+  const anchor = { href: '', download: '', hidden: false, removed: false, click() { downloads.push({ href: this.href, name: this.download, inOwnerDocument: attached }); }, remove() { this.removed = true; attached = false; } };
+  let attached = false;
+  globalThis.window = { document: { createElement() { fallbackWindowCalls++; throw new Error('must use the supplied owner window'); } } };
+  const ownerWindow = {
+    document: { body: { append(node) { assert.equal(node, anchor); attached = true; } }, createElement(tag) { assert.equal(tag, 'a'); return anchor; } },
+    URL: { createObjectURL(blob) { assert.equal(blob.type, 'application/octet-stream'); return 'blob:owner-window'; }, revokeObjectURL(url) { revoked.push(url); } },
+    setTimeout(callback, delay) { assert.equal(delay, 0); deferredRevoke = callback; return 1; },
+  };
+  try {
+    const saved = await saveLocalDocument({ file: new File([], 'Owner.bin') }, new Blob(['download'], { type: 'application/octet-stream' }), 'Owner.bin', ownerWindow);
+    assert.deepEqual(downloads, [{ href: 'blob:owner-window', name: 'Owner.bin', inOwnerDocument: true }]);
+    assert.equal(anchor.removed, true);
+    assert.equal(fallbackWindowCalls, 0);
+    assert.equal(await saved.file.text(), 'download');
+    deferredRevoke();
+    assert.deepEqual(revoked, ['blob:owner-window']);
+  } finally { globalThis.window = previousWindow; }
 });
 
 test('local save picker and draft transactions abort with their editor mount', async () => {

@@ -1,6 +1,7 @@
 import { AppearanceFields, OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useState } from 'react';
 import './options-dialog.css';
+import { useExcelxRuntime } from './editor-host';
 
 type Catalog = {
   tab: string; tabs: string[]; options: Record<string, boolean | number | string>;
@@ -12,12 +13,12 @@ type Catalog = {
   fonts: string[]; sizes: number[]; customLists: string[][];
 };
 type Runtime = { dlg?: { reactOptionsCatalog?(): Catalog | null; reactOptionsAction?(action: string, catalog?: Catalog): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 const TABS = ['View', 'Calculation', 'Edit', 'General', 'Custom Lists', 'Error Checking', 'Spelling', 'Security'];
 const VIEW_FIELDS: [keyof Catalog['view'], string][] = [['pages','Page brea&ks'],['formulas','Fo&rmulas'],['grid','&Gridlines'],['headings','Row && column h&eaders'],['zeros','&Zero values'],['outlineSymbols','Outline s&ymbols']];
 
 /** Excelx preferences UI; workbook and application settings are committed by the existing app controller. */
 export function ExcelxOptionsDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [tab, setTab] = useState('View');
   const id = useId().replaceAll(':', '');
@@ -25,12 +26,12 @@ export function ExcelxOptionsDialog() {
   const [listIndex, setListIndex] = useState(-1);
   const [listText, setListText] = useState('');
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactOptionsCatalog?.() || null; setCatalog(next); setDraft(next); if (next) { setTab(next.tab); setListIndex(-1); setListText(''); } };
-    const off = runtime()?.bus?.on('excelx-options-dialog', refresh); return () => off?.();
+    const refresh = () => { const next = runtime?.dlg?.reactOptionsCatalog?.() || null; setCatalog(next); setDraft(next); if (next) { setTab(next.tab); setListIndex(-1); setListText(''); } };
+    const off = runtime?.bus?.on('excelx-options-dialog', refresh); return () => off?.();
   }, []);
   if (!catalog || !draft) return null;
-  const t = (text: string) => runtime()?.t?.(text) || text;
-  const action = runtime()?.dlg?.reactOptionsAction;
+  const t = (text: string) => runtime?.t?.(text) || text;
+  const action = runtime?.dlg?.reactOptionsAction;
   const change = (patch: Partial<Catalog>) => setDraft((current) => current ? { ...current, ...patch } : current);
   const setOption = (key: string, value: boolean | number | string) => change({ options: { ...draft.options, [key]: value } });
   const setView = (key: string, value: boolean) => change({ view: { ...draft.view, [key]: value } });

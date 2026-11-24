@@ -10,22 +10,24 @@ export function EditorStatusMessage({ host }: { host: HTMLElement }) {
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
+    const view = host.ownerDocument.defaultView;
+    if (!view) return;
     const findTarget = () => host.querySelector<HTMLElement>('[data-react-status]');
     const updateTarget = () => setTarget(findTarget());
     updateTarget();
-    const observer = new MutationObserver(updateTarget);
+    const observer = new view.MutationObserver(updateTarget);
     observer.observe(host, { childList: true, subtree: true });
     const onStatus = (event: Event) => {
       const request = (event as CustomEvent<StatusRequest>).detail;
       if (!request || typeof request.text !== 'string') return;
-      window.clearTimeout(timer.current);
+      view.clearTimeout(timer.current);
       setText(request.text);
       if (request.duration && request.duration > 0) {
-        timer.current = window.setTimeout(() => setText((current) => current === request.text ? '' : current), request.duration);
+        timer.current = view.setTimeout(() => setText((current) => current === request.text ? '' : current), request.duration);
       }
     };
     host.addEventListener('vibeoffice-react-status', onStatus);
-    return () => { observer.disconnect(); host.removeEventListener('vibeoffice-react-status', onStatus); window.clearTimeout(timer.current); };
+    return () => { observer.disconnect(); host.removeEventListener('vibeoffice-react-status', onStatus); view.clearTimeout(timer.current); };
   }, [host]);
 
   return target ? createPortal(<span className="vibeoffice-react-status" data-react-status-content>{text}</span>, target) : null;

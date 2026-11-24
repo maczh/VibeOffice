@@ -13,7 +13,9 @@ interface NotesPageRuntime {
   t?(message: string): string;
 }
 
-function runtime(): NotesPageRuntime | undefined { return (window as Window & { L?: NotesPageRuntime }).L; }
+function runtime(host: HTMLElement): NotesPageRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: NotesPageRuntime }) | null)?.L;
+}
 
 /** React-owned Notes Page canvas with engine-backed preview art and notes history. */
 export function PptxNotesPageLayer({ host }: { host: HTMLElement }) {
@@ -27,24 +29,25 @@ export function PptxNotesPageLayer({ host }: { host: HTMLElement }) {
       slot?.classList.remove('vibeoffice-react-owned');
       slot = target;
       slot.classList.add('vibeoffice-react-owned');
-      const notesView = runtime()?.panes?.notesView;
+      const notesView = runtime(host)?.panes?.notesView;
       if (notesView) notesView.reactMounted = true;
       setMount(slot);
     };
-    const off = runtime()?.bus?.on('pptx-notespage-render', () => setRevision((value) => value + 1));
-    const observer = new MutationObserver(attach);
-    observer.observe(host, { childList: true, subtree: true });
+    const off = runtime(host)?.bus?.on('pptx-notespage-render', () => setRevision((value) => value + 1));
+    const Observer = host.ownerDocument.defaultView?.MutationObserver;
+    const observer = Observer ? new Observer(attach) : null;
+    observer?.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       off?.();
       slot?.classList.remove('vibeoffice-react-owned');
-      const notesView = runtime()?.panes?.notesView;
+      const notesView = runtime(host)?.panes?.notesView;
       if (notesView) notesView.reactMounted = false;
     };
   }, [host]);
 
-  const L = runtime();
+  const L = runtime(host);
   const presentation = L?.pres;
   const index = L?.ed?.idx ?? 0;
   const slide = presentation?.slides[index];
@@ -61,7 +64,7 @@ export function PptxNotesPageLayer({ host }: { host: HTMLElement }) {
   const artwork = thumb(presentation, slide, slideWidth, { index });
   const page = <div className="np-page" style={{ width: pageWidth, height: pageHeight }}>
     <div className="np-slide" style={{ left: (pageWidth - slideWidth) / 2, top: pageHeight * 0.075, width: slideWidth, height: slideHeight }}><PptxThumbnailArtwork element={artwork} /></div>
-    <div className="np-notes" contentEditable suppressContentEditableWarning spellCheck role="textbox" aria-label={L?.t?.('Notes') || 'Notes'} style={{ left: pageWidth * 0.1, top: notesTop, width: pageWidth * 0.8, height: pageHeight - notesTop - pageHeight * 0.08, fontSize: Math.max(11, pageWidth / 48) }} onInput={(event) => L?.panes?.notesView?.updateNotes(slide, event.currentTarget.innerText.replace(/\n$/, ''))} onPaste={(event) => { event.preventDefault(); document.execCommand('insertText', false, event.clipboardData.getData('text/plain')); }}>{slide.notes || ''}</div>
+    <div className="np-notes" contentEditable suppressContentEditableWarning spellCheck role="textbox" aria-label={L?.t?.('Notes') || 'Notes'} style={{ left: pageWidth * 0.1, top: notesTop, width: pageWidth * 0.8, height: pageHeight - notesTop - pageHeight * 0.08, fontSize: Math.max(11, pageWidth / 48) }} onInput={(event) => L?.panes?.notesView?.updateNotes(slide, event.currentTarget.innerText.replace(/\n$/, ''))} onPaste={(event) => { event.preventDefault(); event.currentTarget.ownerDocument.execCommand('insertText', false, event.clipboardData.getData('text/plain')); }}>{slide.notes || ''}</div>
     <div className="pv-hdr" style={{ right: pageWidth * 0.05, bottom: pageHeight * 0.03 }}>{String(index + (presentation.firstNum || 1))}</div>
   </div>;
   return createPortal(page, mount, `pptx-notes-page-${slide.id || index}`);

@@ -1,7 +1,8 @@
 // @ts-nocheck -- PPTX command callbacks use the established dynamic editor and application services.
 /* PPTX — command definitions (menus, toolbars, shortcuts). */
 export function installPptxCommands(runtime: Window): void {
-  const L = (runtime as Window & { L?: any }).L;
+  const window = runtime as Window & { L?: any; VO?: any };
+  const L = window.L;
   const ui = L.ui;
   const C = ui.cmd;
   const E = () => L.ed;
@@ -20,7 +21,7 @@ export function installPptxCommands(runtime: Window): void {
 
   /* ---------- File ---------- */
   /* the toolbar button makes a blank presentation; the menu and Ctrl+N show Blank and the templates */
-  C('new', { label: '&New...', menuLabel: '&New...', icon: 'new', key: 'Ctrl+N', tip: 'New', run: (arg, ev) => { if ((ev && ev.currentTarget && ev.currentTarget.closest && ev.currentTarget.closest('.toolbar')) || !window.VO) A().newPresentation(); else VO.newDialog('pptx', (id) => (id ? A().newFromTemplate(id) : A().newPresentation())); } });
+  C('new', { label: '&New...', menuLabel: '&New...', icon: 'new', key: 'Ctrl+N', tip: 'New', run: (arg, ev) => { if ((ev && ev.currentTarget && ev.currentTarget.closest && ev.currentTarget.closest('.toolbar')) || !window.VO) A().newPresentation(); else window.VO.newDialog('pptx', (id) => (id ? A().newFromTemplate(id) : A().newPresentation())); } });
   C('open', { label: '&Open...', icon: 'open', key: 'Ctrl+O', tip: 'Open', run: () => A().openDialog() });
   C('close', { label: '&Close', run: () => A().closePresentation() });
   C('save', { label: '&Save', icon: 'save', key: 'Ctrl+S', tip: 'Save', run: () => A().save() });

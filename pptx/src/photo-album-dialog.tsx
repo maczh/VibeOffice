@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useRef, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 interface PhotoAlbumCatalog { layouts: Array<[string, string]>; frames: Array<[string, string]> }
 interface AlbumPhoto { file: File; name: string; url: string }
@@ -8,10 +9,10 @@ interface PhotoAlbumRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): PhotoAlbumRuntime | undefined { return (window as Window & { L?: PhotoAlbumRuntime }).L; }
 
 /** React-owned photo selection/reordering and preview; image import and slide generation stay engine-backed. */
 export function PptxPhotoAlbumDialog() {
+  const runtime = usePptxRuntime<PhotoAlbumRuntime>();
   const [catalog, setCatalog] = useState<PhotoAlbumCatalog | null>(null);
   const [photos, setPhotos] = useState<AlbumPhoto[]>([]);
   const [selected, setSelected] = useState(-1);
@@ -23,11 +24,11 @@ export function PptxPhotoAlbumDialog() {
   const urls = useRef(new Set<string>());
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactPhotoAlbumCatalog?.() || null;
+      const next = runtime?.dlg?.reactPhotoAlbumCatalog?.() || null;
       setCatalog(next ? { layouts: [...next.layouts], frames: [...next.frames] } : null);
       if (next) { setPhotos([]); setSelected(-1); setLayout('1'); setFrame('rect'); setCaptions(false); setBusy(false); }
     };
-    const off = runtime()?.bus?.on('pptx-photo-album-dialog', refresh);
+    const off = runtime?.bus?.on('pptx-photo-album-dialog', refresh);
     return () => {
       off?.();
       for (const url of urls.current) URL.revokeObjectURL(url);
@@ -35,8 +36,8 @@ export function PptxPhotoAlbumDialog() {
     };
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactPhotoAlbumAction?.('close');
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactPhotoAlbumAction?.('close');
   const addFiles = (files: FileList | null) => {
     if (!files) return;
     const added = [...files].filter((file) => file.type.startsWith('image/')).map((file) => {
@@ -73,7 +74,7 @@ export function PptxPhotoAlbumDialog() {
   const create = async () => {
     if (!photos.length || busy) return;
     setBusy(true);
-    const result = await runtime()?.dlg?.reactPhotoAlbumAction?.('create', photos, layout, frame, captions);
+    const result = await runtime?.dlg?.reactPhotoAlbumAction?.('create', photos, layout, frame, captions);
     if (!result) setBusy(false);
   };
   return <OfficeDialog title={t('Photo Album')} className="pptx-photo-album-dialog" style={{ width: 'min(96vw, 760px)' }} onRequestClose={close}>

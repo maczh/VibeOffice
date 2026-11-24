@@ -1,5 +1,5 @@
 // Synthetic field instructions through Wordx's browser reader and writer.
-// node --test tests/quire/field-instructions.test.mjs
+// node --test tests/wordx/field-instructions.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

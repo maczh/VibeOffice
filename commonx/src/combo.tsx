@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 
 type ComboOption = string | number | { heading?: string; sep?: boolean; value?: unknown; label?: string; run?: () => unknown };
@@ -41,7 +41,7 @@ function ComboControl({ request, refresh, className }: { request: ComboControlRe
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState(currentValue(options));
-  useEffect(() => { if (!focused) setDraft(currentValue(options)); }, [focused, options, refresh]);
+  useLayoutEffect(() => { if (!focused) setDraft(currentValue(options)); }, [focused, options, refresh]);
   if (!office) return null;
   const isEnabled = () => { try { return !options.enabled || !!options.enabled(); } catch { return false; } };
   const openList = () => {
@@ -91,7 +91,7 @@ export function RibbonComboControl({ options, size, refresh = 0 }: { options: Co
 export function EditorComboLayer({ host }: { host: HTMLElement }) {
   const [requests, setRequests] = useState<ComboRequest[]>([]);
   const [refresh, setRefresh] = useState(0);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onCombo = (event: Event) => {
       const request = (event as CustomEvent<ComboRequest>).detail;
       if (!request || !(request.target instanceof HTMLDivElement) || !request.options || typeof request.options.value !== 'function') return;

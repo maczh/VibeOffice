@@ -1,5 +1,5 @@
 // A block control spans two paragraphs; only its first boundary is copied.
-// node --test tests/quire/duplicate-controls.test.mjs
+// node --test tests/wordx/duplicate-controls.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

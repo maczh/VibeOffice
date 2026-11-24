@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 type AutoCorrectOption = 'autocorrect' | 'capSentence' | 'smartQuotes';
 interface AutoCorrectCatalog { options: Record<AutoCorrectOption, boolean>; entries: Array<[string, string]>; selected: string; replacement: string }
@@ -8,11 +9,11 @@ interface AutoCorrectRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): AutoCorrectRuntime | undefined { return (window as Window & { L?: AutoCorrectRuntime }).L; }
 const options: Array<[AutoCorrectOption, string]> = [['autocorrect', 'Correct TWo INitial CApitals'], ['capSentence', 'Capitalize first letter of sentences'], ['smartQuotes', 'Replace straight quotes with smart quotes']];
 
 /** React-owned AutoCorrect dictionary and typing preferences; the text engine keeps the live dictionary. */
 export function PptxAutoCorrectDialog() {
+  const runtime = usePptxRuntime<AutoCorrectRuntime>();
   const [catalog, setCatalog] = useState<AutoCorrectCatalog | null>(null);
   const [entry, setEntry] = useState('');
   const [replacement, setReplacement] = useState('');
@@ -20,13 +21,13 @@ export function PptxAutoCorrectDialog() {
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactAutoCorrectCatalog?.() || null;
+      const next = runtime?.dlg?.reactAutoCorrectCatalog?.() || null;
       setCatalog(next ? { ...next, options: { ...next.options }, entries: [...next.entries] } : null);
       setEntry(next?.selected || '');
       setReplacement(next?.replacement || '');
       if (next) { const index = next.entries.findIndex(([key]) => key === next.selected); setActiveEntry(index >= 0 ? index : 0); }
     };
-    const off = runtime()?.bus?.on('pptx-autocorrect-dialog', refresh);
+    const off = runtime?.bus?.on('pptx-autocorrect-dialog', refresh);
     return () => off?.();
   }, []);
   useEffect(() => {
@@ -41,8 +42,8 @@ export function PptxAutoCorrectDialog() {
     else if (optionBounds.bottom > visibleBottom) list.scrollTop += optionBounds.bottom - visibleBottom;
   }, [activeEntry, catalog]);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const dispatch = (action: string, value?: string, secondary?: string | boolean) => runtime()?.dlg?.reactAutoCorrectAction?.(action, value, secondary);
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const dispatch = (action: string, value?: string, secondary?: string | boolean) => runtime?.dlg?.reactAutoCorrectAction?.(action, value, secondary);
   const select = (key: string, value: string) => { dispatch('select', key); setEntry(key); setReplacement(value); const index = catalog.entries.findIndex(([item]) => item === key); if (index >= 0) setActiveEntry(index); };
   const onEntriesKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!catalog.entries.length) return;
@@ -75,12 +76,12 @@ export function PptxAutoCorrectDialog() {
       <div className="row"><button type="button" onClick={() => {
         if (!entry) return;
         dispatch('add', entry, replacement);
-        const next = runtime()?.dlg?.reactAutoCorrectCatalog?.();
+        const next = runtime?.dlg?.reactAutoCorrectCatalog?.();
         if (next) setCatalog({ ...next, options: { ...next.options }, entries: [...next.entries] });
       }}>{t('&Add').replace('&', '')}</button><button type="button" disabled={!catalog.selected && !catalog.entries.some(([key]) => key === entry)} onClick={() => {
         dispatch('select', entry);
         dispatch('delete');
-        const next = runtime()?.dlg?.reactAutoCorrectCatalog?.();
+        const next = runtime?.dlg?.reactAutoCorrectCatalog?.();
         if (next) { setCatalog({ ...next, options: { ...next.options }, entries: [...next.entries] }); setEntry(''); setReplacement(''); }
       }}>{t('&Delete').replace('&', '')}</button></div>
     </section>

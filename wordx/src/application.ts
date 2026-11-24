@@ -1,8 +1,10 @@
 /* Wordx — application controller: window chrome, views, document lifecycle, keyboard, wiring. */
 // @ts-nocheck -- the application controller preserves the existing Wordx engine and host contracts.
+import { standardColorName } from '@vibeoffice/core';
 const installedWordxApplication = new WeakSet<object>();
 export function installWordxApplication(runtime: Window): void {
   const window = runtime as Window & { L?: any; VO?: any };
+  const document = runtime.document;
   const namespace = window.L;
   if (!namespace?.D || !namespace?.layout || !namespace?.ed || !namespace?.O || !namespace?.ui || !namespace?.dlg || !namespace?.panes) throw new Error('Wordx application dependencies are not ready');
   if (installedWordxApplication.has(namespace)) return;
@@ -10,6 +12,7 @@ export function installWordxApplication(runtime: Window): void {
 (function () {
   'use strict';
   const L = window.L, D = L.D, LY = L.layout, E = L.ed, O = L.O;
+  const VO = window.VO;
   const { h } = L;
   const ui = L.ui;
 
@@ -106,11 +109,11 @@ export function installWordxApplication(runtime: Window): void {
       { label: '&No Fill', run: () => A.setBackground(null) },
       { custom: (close) => {
         if (window.VO && VO.reactDirectHost) {
-          A.reactBackgroundCatalog = () => L.color.STANDARD.map((color) => ({ color, name: ui.colorName(color) }));
+          A.reactBackgroundCatalog = () => L.color.STANDARD.map((color) => ({ color, name: L.t(standardColorName(color)) }));
           A.reactBackgroundAction = (color) => { close(); A.setBackground(color.replace('#', '')); };
           return h('div', { id: 'react-wordx-background-menu-root' });
         }
-        const g = h('div', { class: 'color-panel' }); const grid = h('div', { class: 'cp-grid' }); for (const c of L.color.STANDARD) grid.appendChild(h('button', { class: 'cp-sw', type: 'button', style: `background:${c}`, 'aria-label': ui.colorName(c), 'data-tip': ui.colorName(c), onclick: () => { close(); A.setBackground(c.replace('#', '')); } })); g.appendChild(grid); return g;
+        const g = h('div', { class: 'color-panel' }); const grid = h('div', { class: 'cp-grid' }); for (const c of L.color.STANDARD) { const name = L.t(standardColorName(c)); grid.appendChild(h('button', { class: 'cp-sw', type: 'button', style: `background:${c}`, 'aria-label': name, 'data-tip': name, onclick: () => { close(); A.setBackground(c.replace('#', '')); } })); } g.appendChild(grid); return g;
       } },
       { label: '&More Colors...', run: () => ui.moreColors(doc().bg ? '#' + doc().bg : null, (c) => { if (c) A.setBackground(c.replace('#', '')); }) },
       'printedWatermark',

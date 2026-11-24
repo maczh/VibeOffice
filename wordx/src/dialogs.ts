@@ -1,8 +1,10 @@
 /* Wordx — dialogs, part 1: shared controls and the Format menu dialogs. */
 // @ts-nocheck -- dialog actions remain adapters over the existing Wordx document services.
+import { standardColorName } from '@vibeoffice/core';
 const installedWordxDialogs = new WeakSet<object>();
 export function installWordxDialogs(runtime: Window): void {
   const window = runtime as Window & { L?: any; VO?: any };
+  const VO = window.VO;
   const namespace = window.L;
   if (!namespace?.D || !namespace?.O || !namespace?.ed || !namespace?.layout || !namespace?.R || !namespace?.ui) throw new Error('Wordx dialog dependencies are not ready');
   if (installedWordxDialogs.has(namespace)) return;
@@ -99,7 +101,7 @@ export function installWordxDialogs(runtime: Window): void {
     const sw = h('span', { class: 'cpk-sw' });
     const lbl = h('span', { class: 'cpk-l' });
     const btn = h('button', { type: 'button', class: 'cpk', id: o.id || nid('col') }, sw, lbl, h('span', { class: 'dd-arrow' }));
-    const show = () => { sw.style.background = val && val !== 'auto' ? '#' + val : o.autoColor || (val === 'auto' ? '#000' : 'transparent'); lbl.textContent = val === 'auto' ? L.t(o.autoText || 'Automatic') : !val ? L.t(o.noneText || 'No Color') : L.t(ui.colorName('#' + val)); };
+    const show = () => { sw.style.background = val && val !== 'auto' ? '#' + val : o.autoColor || (val === 'auto' ? '#000' : 'transparent'); lbl.textContent = val === 'auto' ? L.t(o.autoText || 'Automatic') : !val ? L.t(o.noneText || 'No Color') : L.t(standardColorName('#' + val)); };
     show();
     btn.addEventListener('click', () => ui.colorMenu(btn, { mode: o.mode || 'font', automatic: o.automatic !== false }, (v) => {
       if (v && v.auto) val = 'auto';
@@ -552,8 +554,8 @@ export function installWordxDialogs(runtime: Window): void {
     let fill = shdCur.fill && shdCur.fill !== 'auto' ? shdCur.fill.toUpperCase() : null;
     const fillGrid = h('div', { class: 'cp-grid', style: 'grid-template-columns:repeat(8,18px)' });
     const fillName = h('div', { class: 'tp-note' });
-    const showFill = () => { fillName.textContent = L.t(fill ? ui.colorName('#' + fill) : 'No Fill'); L.$$('.cp-sw', fillGrid).forEach((b) => b.classList.toggle('on', b.dataset.c === fill)); pvShd.style.background = fill ? '#' + fill : '#fff'; };
-    for (const c of L.color.STANDARD) { const b = h('button', { class: 'cp-sw', type: 'button', style: `background:${c}`, 'data-c': c.replace('#', '').toUpperCase(), 'data-tip': ui.colorName(c), 'aria-label': ui.colorName(c) }); b.addEventListener('click', () => { fill = b.dataset.c; showFill(); }); fillGrid.appendChild(b); }
+    const showFill = () => { fillName.textContent = L.t(fill ? standardColorName('#' + fill) : 'No Fill'); L.$$('.cp-sw', fillGrid).forEach((b) => b.classList.toggle('on', b.dataset.c === fill)); pvShd.style.background = fill ? '#' + fill : '#fff'; };
+    for (const c of L.color.STANDARD) { const name = L.t(standardColorName(c)); const b = h('button', { class: 'cp-sw', type: 'button', style: `background:${c}`, 'data-c': c.replace('#', '').toUpperCase(), 'data-tip': name, 'aria-label': name }); b.addEventListener('click', () => { fill = b.dataset.c; showFill(); }); fillGrid.appendChild(b); }
     const pvShd = h('div', { class: 'preview-box', style: 'width:150px;height:90px' });
     const patt = ui.select(SHD_PATTERNS, shdCur.val && shdCur.val !== 'nil' ? shdCur.val : 'clear', null, { id: 'bd-patt' });
     const pattColor = G.color(shdCur.color && shdCur.color !== 'auto' ? shdCur.color : 'auto', { id: 'bd-pcol' });

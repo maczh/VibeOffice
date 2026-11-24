@@ -28,7 +28,7 @@ changed = [...new Set(changed)];
 /* rules: changed path → test files. Seconds are measured run times (2026-10-14), for the estimate. */
 const SECONDS = { 'tests/ui/smoke.test.mjs': 20, 'tests/ui/react-svg-artwork.test.mjs': 10, 'tests/ui/react-pptx-selection-overlay.test.mjs': 10, 'tests/ui/react-ribbon-pointer.test.mjs': 10, 'tests/ui/wordx.test.mjs': 175, 'tests/ui/excelx.test.mjs': 130, 'tests/ui/pptx.test.mjs': 130,
   'tests/ui/focus.test.mjs': 265, 'tests/ui/focus.test.mjs :: classic': 90, 'tests/ui/drag.test.mjs': 45, 'tests/ui/gestures.test.mjs': 480, 'tests/ui/painter.test.mjs': 40, 'tests/ui/textmap.test.mjs': 165,
-  'tests/ledger/*.test.js': 5, 'tests/quire/*.test.js': 1, 'tests/quire/lines.test.mjs': 5, 'tests/from-issues/*/*.test.mjs': 1, 'tests/scout.test.mjs': 190, 'tests/desktop/host.test.mjs': 32, 'tests/sw.test.mjs': 10,
+  'tests/excelx/*.test.js': 5, 'tests/wordx/*.test.js': 1, 'tests/wordx/lines.test.mjs': 5, 'tests/from-issues/*/*.test.mjs': 1, 'tests/scout.test.mjs': 190, 'tests/desktop/host.test.mjs': 32, 'tests/sw.test.mjs': 10,
   'tests/ribbon.test.mjs': 5, 'tests/search.test.mjs': 4, 'tests/ooxml/check.test.mjs': 3, 'tests/i18n.test.mjs': 1, 'tests/fonts.test.mjs': 1, 'tests/locales.test.mjs': 15,
   'tests/hostile/export-html.test.mjs': 6, 'tests/hostile/helpers.test.mjs': 7, 'tests/csp.test.mjs': 1 };
 const RULES = [
@@ -40,11 +40,11 @@ const RULES = [
   [/^suite\/src\//, ['tests/vite/workspace-packages.test.mjs', 'tests/ui/react-host.test.mjs', 'tests/ui/react-host-packages.test.mjs', 'tests/ui/react-suite.test.mjs', 'tests/ui/react-ribbon-pointer.test.mjs', 'tests/ui/react-pptx-selection-overlay.test.mjs', 'tests/ui/smoke.test.mjs']],
   [/^tools\/vite\/react-pwa\.mjs$/, ['tests/vite/react-pwa.test.mjs']],
   [/^public\/(quire|ledger|lectern|common)\/|^public\/[^/]+\.(html|js|css)$/, ['tests/ui/smoke.test.mjs', 'tests/licenses.test.mjs', 'tests/from-issues/*/*.test.mjs', 'tests/i18n.test.mjs']],   // and the reported issues' tests, the English catalog
-  [/^public\/ledger\/|^tools\/ledger\//, ['tests/ledger/*.test.js', 'tests/ui/excelx.test.mjs']],
-  [/^public\/quire\//, ['tests/quire/*.test.js', 'tests/ui/wordx.test.mjs']],
-  [/^public\/quire\/js\/(render|portions|layout|drawing)\.js$|^tests\/lib\/lines\.mjs$/, ['tests/quire/lines.test.mjs']],   // line heights against Word and LibreOffice
-  [/^public\/lectern\//, ['tests/ooxml/lectern-review.test.mjs', 'tests/ui/pptx.test.mjs']],
-  [/^public\/common\/(core|dml|numfmt|xml|opc|opc-order|zip|sha|crypto|metafile|geometry|charts)\.js$/, ['tests/ledger/*.test.js', 'tests/quire/*.test.js']],
+  [/^public\/ledger\/|^tools\/ledger\//, ['tests/excelx/*.test.js', 'tests/ui/excelx.test.mjs']],
+  [/^public\/quire\//, ['tests/wordx/*.test.js', 'tests/ui/wordx.test.mjs']],
+  [/^public\/quire\/js\/(render|portions|layout|drawing)\.js$|^tests\/lib\/lines\.mjs$/, ['tests/wordx/lines.test.mjs']],   // line heights against Word and LibreOffice
+  [/^public\/lectern\//, ['tests/ooxml/pptx-review.test.mjs', 'tests/ui/pptx.test.mjs']],
+  [/^public\/common\/(core|dml|numfmt|xml|opc|opc-order|zip|sha|crypto|metafile|geometry|charts)\.js$/, ['tests/excelx/*.test.js', 'tests/wordx/*.test.js']],
   [/^public\/common\/(ui|ribbon|search)\.js$/, ['tests/ui/focus.test.mjs :: classic', 'tests/ui/drag.test.mjs']],   // focus in the Classic look
   [/^public\/common\/(ui\.css|looks\.css)$|^public\/[^/]+\/css\//, ['tests/looks.test.mjs']],
   [/^public\/common\/ribbon\.js$|^public\/[^/]+\/js\/ribbon\.js$/, ['tests/ribbon.test.mjs']],

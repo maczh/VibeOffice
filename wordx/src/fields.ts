@@ -475,7 +475,7 @@ export function installWordxFields(runtime: Window): void {
   };
   /* dynamic fields in headers refresh after layout */
   F.reactLayoutDone = () => { if (LY.refreshDynamic) LY.refreshDynamic(); };
-  if (!window.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('layout-done', F.reactLayoutDone);
+  if (!runtime.__VIBE_OFFICE_DIRECT_HOST__) L.bus.on('layout-done', F.reactLayoutDone);
 
   /* ================= tables of contents, figures, index ================= */
   /** text width of the main section for right-aligned tab stops */

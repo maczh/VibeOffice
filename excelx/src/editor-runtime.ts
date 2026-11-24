@@ -3,6 +3,7 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxEditorRuntime(runtime: Window): void {
   const root = runtime;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.layout || !L?.render || !L?.ops || !L?.formula || !L?.numfmt || !L?.grid) throw new Error("Excelx editing requires initialized grid and render services");
   if (installedRuntimes.has(L)) return;

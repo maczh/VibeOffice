@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 type HyperlinkKind = 'web' | 'place' | 'mail';
 interface HyperlinkPlace { value: string; label: string }
@@ -9,25 +10,25 @@ interface HyperlinkRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string, ...args: unknown[]): string;
 }
-function runtime(): HyperlinkRuntime | undefined { return (window as Window & { L?: HyperlinkRuntime }).L; }
 
 /** React-owned hyperlink destination forms; links continue through the selected text/object history APIs. */
 export function PptxHyperlinkDialog() {
+  const runtime = usePptxRuntime<HyperlinkRuntime>();
   const [catalog, setCatalog] = useState<HyperlinkCatalog | null>(null);
   const id = useId().replaceAll(':', '');
   const tabId = (kind: HyperlinkKind) => `${id}-hyperlink-tab-${kind}`;
   const panelId = `${id}-hyperlink-panel`;
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactHyperlinkCatalog?.() || null; setCatalog(next ? { ...next, places: [...next.places] } : null); };
-    const off = runtime()?.bus?.on('pptx-hyperlink-dialog', refresh);
+    const refresh = () => { const next = runtime?.dlg?.reactHyperlinkCatalog?.() || null; setCatalog(next ? { ...next, places: [...next.places] } : null); };
+    const off = runtime?.bus?.on('pptx-hyperlink-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
+  const t = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
   const update = (changes: Partial<HyperlinkCatalog>) => setCatalog({ ...catalog, ...changes });
   const values = { kind: catalog.kind, display: catalog.display, address: catalog.address, tip: catalog.tip, email: catalog.email, subject: catalog.subject, place: catalog.place };
-  const dispatch = (action: string) => runtime()?.dlg?.reactHyperlinkAction?.(action, values);
-  const close = () => runtime()?.dlg?.reactHyperlinkAction?.('close');
+  const dispatch = (action: string) => runtime?.dlg?.reactHyperlinkAction?.(action, values);
+  const close = () => runtime?.dlg?.reactHyperlinkAction?.('close');
   const kinds: Array<[HyperlinkKind, string]> = [['web', 'Existing File or Web Page'], ['place', 'Place in This Document'], ['mail', 'E-mail Address']];
   return <OfficeDialog title={t(catalog.title)} className="pptx-hyperlink-dialog" style={{ width: 'min(94vw, 640px)' }} onRequestClose={close}>
     <div className="col">

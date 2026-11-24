@@ -1,47 +1,51 @@
-// @ts-nocheck -- OMML parsing and MathML generation use existing OOXML/DOM contracts.
 /* Wordx — Office Math (OMML) to MathML, so equations from Word render as real two-dimensional math.
  * Covers the structures Word's equation tools produce: fractions, scripts, radicals, delimiters,
  * n-ary operators, functions, accents, bars, group characters, limits, matrices, equation arrays,
  * boxes, phantoms and pre-scripts. Rendering relies on the browser's MathML Core support. */
 export function installWordxOmml(runtime: Window): void {
-  const L = (runtime as Window & { L?: any }).L;
+  interface OmmlResult { math: MathMLElement; display: boolean; jc: string | null }
+  interface OmmlApi { fontSize(node: Element): number | null; toMathML(source: string | Node | null | undefined): OmmlResult | null }
+  const L = (runtime as Window & { L?: { omml?: OmmlApi } }).L;
   if (!L) throw new Error('Wordx document runtime is not ready for OMML');
   const MNS = 'http://www.w3.org/1998/Math/MathML';
-  const M = (L.omml = {});
+  const M = (L.omml = {} as OmmlApi);
 
-  const lname = (n) => n.localName || n.nodeName.replace(/^.*:/, '');
-  const kids = (n, name) => Array.from(n.childNodes).filter((c) => c.nodeType === 1 && (!name || lname(c) === name));
-  const kid = (n, name) => (n ? kids(n, name)[0] || null : null);
-  const val = (n) => {
+  type XmlElement = Element;
+  type MathElement = MathMLElement;
+  const lname = (n: Node | null | undefined): string => n ? (n as Element).localName || n.nodeName.replace(/^.*:/, '') : '';
+  const kids = (n: Node | null | undefined, name?: string): XmlElement[] => n ? Array.from(n.childNodes).filter((c): c is XmlElement => c.nodeType === 1 && (!name || lname(c) === name)) : [];
+  const kid = (n: Node | null | undefined, name: string): XmlElement | null => kids(n, name)[0] || null;
+  const val = (n: Node | null | undefined): string | null => {
     if (!n) return null;
-    for (const a of Array.from(n.attributes || [])) if (a.localName === 'val') return a.value;
+    for (const a of Array.from((n as Element).attributes || [])) if (a.localName === 'val') return a.value;
     return null;
   };
-  const prop = (n, pr, name) => val(kid(kid(n, pr), name));
-  const onOff = (v) => v != null && v !== '0' && v !== 'false' && v !== 'off';
+  const prop = (n: Node | null | undefined, pr: string, name: string): string | null => val(kid(kid(n, pr), name));
+  const onOff = (v: string | null): boolean => v != null && v !== '0' && v !== 'false' && v !== 'off';
 
-  function mk(tag, text, attrs) {
+  function mk(tag: string, text: string | null = null, attrs?: Record<string, string | null | undefined>): MathElement {
     const e = runtime.document.createElementNS(MNS, tag);
     if (text != null) e.textContent = text;
     if (attrs) for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
     return e;
   }
-  function row(nodes) {
-    const list = nodes.filter(Boolean);
-    if (list.length === 1) return list[0];
+  function row(nodes: Array<MathElement | null | undefined>): MathElement {
+    const list = nodes.filter((node): node is MathElement => Boolean(node));
+    if (list.length === 1) return list[0]!;
     const r = mk('mrow');
     for (const n of list) r.appendChild(n);
     return r;
   }
 
   /* ---------- styled alphabets (m:scr) ---------- */
-  const HOLES = {
+  const HOLES: Record<string, Record<string, number>> = {
     'double-struck': { C: 0x2102, H: 0x210D, N: 0x2115, P: 0x2119, Q: 0x211A, R: 0x211D, Z: 0x2124 },
     script: { B: 0x212C, E: 0x2130, F: 0x2131, H: 0x210B, I: 0x2110, L: 0x2112, M: 0x2133, R: 0x211B, e: 0x212F, g: 0x210A, o: 0x2134 },
     fraktur: { C: 0x212D, H: 0x210C, I: 0x2111, R: 0x211C, Z: 0x2128 },
   };
-  const BASE = { 'double-struck': 0x1D538, script: 0x1D49C, fraktur: 0x1D504, 'sans-serif': 0x1D5A0, monospace: 0x1D670 };
-  function styled(ch, scr) {
+  const BASE: Record<string, number> = { 'double-struck': 0x1D538, script: 0x1D49C, fraktur: 0x1D504, 'sans-serif': 0x1D5A0, monospace: 0x1D670 };
+  const DIGIT_BASES: Record<string, number> = { 'double-struck': 0x1D7D8, 'sans-serif': 0x1D7E2, monospace: 0x1D7F6 };
+  function styled(ch: string, scr: string): string {
     const b = BASE[scr];
     if (!b) return ch;
     const h = HOLES[scr] && HOLES[scr][ch];
@@ -50,7 +54,7 @@ export function installWordxOmml(runtime: Window): void {
     if (c >= 65 && c <= 90) return String.fromCodePoint(b + c - 65);
     if (c >= 97 && c <= 122) return String.fromCodePoint(b + 26 + c - 97);
     if (c >= 48 && c <= 57 && (scr === 'double-struck' || scr === 'sans-serif' || scr === 'monospace')) {
-      return String.fromCodePoint({ 'double-struck': 0x1D7D8, 'sans-serif': 0x1D7E2, monospace: 0x1D7F6 }[scr] + c - 48);
+      return String.fromCodePoint(DIGIT_BASES[scr]! + c - 48);
     }
     return ch;
   }
@@ -58,7 +62,7 @@ export function installWordxOmml(runtime: Window): void {
   /* ---------- runs ---------- */
   const LETTER = /\p{L}|\p{M}/u;
   const BRACKETS = /[()[\]{}⟨⟩|‖⌈⌉⌊⌋〈〉⟦⟧]/;
-  function runNodes(r) {
+  function runNodes(r: XmlElement): MathElement[] {
     const rp = kid(r, 'rPr');
     const sty = prop(r, 'rPr', 'sty');
     const nor = rp && kid(rp, 'nor') && onOff(val(kid(rp, 'nor')) == null ? '1' : val(kid(rp, 'nor')));
@@ -81,17 +85,17 @@ export function installWordxOmml(runtime: Window): void {
     const chars = Array.from(text);
     let i = 0;
     while (i < chars.length) {
-      const ch = chars[i];
+      const ch = chars[i]!;
       if (/\s/.test(ch)) { out.push(mk('mspace', null, { width: '0.25em' })); i++; continue; }
       if (/[0-9]/.test(ch)) {
         let s = ch; i++;
-        while (i < chars.length && (/[0-9]/.test(chars[i]) || (chars[i] === '.' && /[0-9]/.test(chars[i + 1] || '')))) s += chars[i++];
+        while (i < chars.length && (/[0-9]/.test(chars[i] || '') || (chars[i] === '.' && /[0-9]/.test(chars[i + 1] || '')))) s += chars[i++];
         out.push(mk('mn', scr ? Array.from(s).map((c) => styled(c, scr)).join('') : s));
         continue;
       }
       if (LETTER.test(ch) || ch === '∞' || ch === '∂' || ch === '∅' || ch === 'ℏ') {
         let s = ch; i++;
-        while (i < chars.length && (LETTER.test(chars[i]))) s += chars[i++];
+        while (i < chars.length && LETTER.test(chars[i] || '')) s += chars[i++];
         if (scr) s = Array.from(s).map((c) => styled(c, scr)).join('');
         if (upright || scr) out.push(mk('mi', s, { mathvariant: 'normal' }));
         else for (const c of Array.from(s)) out.push(mk('mi', c));
@@ -113,16 +117,16 @@ export function installWordxOmml(runtime: Window): void {
   const INTEGRALS = /[∫∬∭∮∯∰∱∲∳⨌]/;
 
   /** convert the children of an argument element (m:e, m:num, …) */
-  function arg(n) { return n ? row(seq(n)) : mk('mrow'); }
-  function seq(n) {
+  function arg(n: XmlElement | null): MathElement { return n ? row(seq(n)) : mk('mrow'); }
+  function seq(n: Node): MathElement[] {
     const out = [];
     for (const c of kids(n)) {
-      const x = conv(c);
+      const x: MathElement | MathElement[] | null = conv(c);
       if (Array.isArray(x)) out.push(...x); else if (x) out.push(x);
     }
     return out;
   }
-  function conv(c) {
+  function conv(c: XmlElement): MathElement | MathElement[] | null {
     switch (lname(c)) {
       case 'r': return runNodes(c);
       case 'f': {
@@ -151,7 +155,7 @@ export function installWordxOmml(runtime: Window): void {
       }
       case 'd': {
         const pr = kid(c, 'dPr');
-        const g = (name, dflt) => { const v = val(kid(pr, name)); return v == null ? dflt : v; };
+        const g = (name: string, dflt: string): string => { const v = val(kid(pr, name)); return v == null ? dflt : v; };
         const beg = g('begChr', '('), end = g('endChr', ')'), sep = g('sepChr', '|');
         const parts = [];
         const grow = val(kid(pr, 'grow'));
@@ -171,7 +175,7 @@ export function installWordxOmml(runtime: Window): void {
         const loc = val(kid(pr, 'limLoc')) || (INTEGRALS.test(chr) ? 'subSup' : 'undOvr');
         const op = mk('mo', chr, { largeop: 'true', movablelimits: 'false' });
         const sub = subHide ? null : kid(c, 'sub'), sup = supHide ? null : kid(c, 'sup');
-        const filled = (n) => !!n && kids(n).some((k) => lname(k) !== 'ctrlPr' && lname(k) !== 'argPr');
+        const filled = (n: XmlElement | null): boolean => !!n && kids(n).some((k) => lname(k) !== 'ctrlPr' && lname(k) !== 'argPr');
         const hasSub = filled(sub), hasSup = filled(sup);
         let base = op;
         const under = loc === 'undOvr';
@@ -182,10 +186,10 @@ export function installWordxOmml(runtime: Window): void {
       }
       case 'func': {
         const name = kid(c, 'fName');
-        const fn = name ? row(seq(name).map((n) => { if (n.localName === 'mi' && n.textContent.length === 1) n.setAttribute('mathvariant', 'normal'); return n; })) : null;
+        const fn: MathElement | null = name ? row(seq(name).map((n) => { if (n.localName === 'mi' && n.textContent.length === 1) n.setAttribute('mathvariant', 'normal'); return n; })) : null;
         /* function names are upright: merge consecutive single letters into one identifier */
         if (fn && fn.localName === 'mrow') {
-          const txt = Array.from(fn.childNodes).every((n) => n.localName === 'mi') ? fn.textContent : null;
+          const txt = Array.from(fn.childNodes).every((n) => (n as Element).localName === 'mi') ? fn.textContent : null;
           if (txt) return row([mk('mi', txt), mk('mo', '⁡'), arg(kid(c, 'e'))]);
         }
         return row([fn, mk('mo', '⁡'), arg(kid(c, 'e'))]);
@@ -193,7 +197,8 @@ export function installWordxOmml(runtime: Window): void {
       case 'acc': {
         const ch = prop(c, 'accPr', 'chr') || '̂';
         const e = mk('mover', null, { accent: 'true' });
-        e.append(arg(kid(c, 'e')), mk('mo', ACCENT[ch] || ch, { stretchy: /[→←↔¯]/.test(ACCENT[ch] || ch) ? 'true' : 'false' }));
+        const accent = (ACCENT as Record<string, string>)[ch] || ch;
+        e.append(arg(kid(c, 'e')), mk('mo', accent, { stretchy: /[→←↔¯]/.test(accent) ? 'true' : 'false' }));
         return e;
       }
       case 'bar': {
@@ -242,11 +247,12 @@ export function installWordxOmml(runtime: Window): void {
   }
 
   /** first explicit font size (pt) in the equation, from w:rPr/w:sz inside its runs */
-  M.fontSize = function (node) {
-    const all = node.getElementsByTagNameNS ? node.getElementsByTagNameNS('*', 'sz') : [];
-    for (const s of Array.from(all)) {
-      const p = s.parentNode;
-      if (p && lname(p) === 'rPr' && p.parentNode && lname(p.parentNode) === 'r') { const v = +val(s); if (v) return v / 2; }
+  M.fontSize = function (node: Element): number | null {
+    const all = Array.from(node.getElementsByTagNameNS('*', 'sz'));
+    for (const s of all) {
+      const parent = s.parentNode as Element | null;
+      const run = parent?.parentNode as Element | null | undefined;
+      if (parent && run && lname(parent) === 'rPr' && lname(run) === 'r') { const size = val(s); const value = size ? Number(size) : 0; if (value) return value / 2; }
     }
     return null;
   };
@@ -255,17 +261,19 @@ export function installWordxOmml(runtime: Window): void {
    * Build a <math> element from an m:oMath / m:oMathPara element or its serialized XML.
    * Returns {math, display: bool, jc} or null when the input cannot be parsed.
    */
-  M.toMathML = function (src) {
-    let node = src;
+  M.toMathML = function (src: string | Node | null | undefined): OmmlResult | null {
+    let node: Node | null | undefined;
     if (typeof src === 'string') {
       const xml = /xmlns:m=/.test(src) ? src : src.replace(/^<m:(oMath\w*)/, '<m:$1 xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"');
-      const doc = new runtime.DOMParser().parseFromString(xml, 'application/xml');
+      const Parser = runtime.document.defaultView?.DOMParser;
+      if (!Parser) return null;
+      const doc = new Parser().parseFromString(xml, 'application/xml');
       if (doc.getElementsByTagName('parsererror').length) return null;
       node = doc.documentElement;
-    }
+    } else node = src;
     if (!node) return null;
     const isPara = lname(node) === 'oMathPara';
-    const math = mk('math', null, isPara ? { display: 'block' } : null);
+    const math = mk('math', null, isPara ? { display: 'block' } : undefined);
     if (isPara) {
       const maths = kids(node, 'oMath');
       if (maths.length > 1) {

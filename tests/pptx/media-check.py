@@ -1,7 +1,7 @@
 """Independent media fidelity oracle for media.mjs, using Python ZIP/XML.
 
-python3 tests/lectern/media-check.py ORIGINALS OPERATIONS_DIR
-python3 tests/lectern/media-check.py --sounds ORIGINALS RESULTS.jsonl SAVED_ROOT
+python3 tests/pptx/media-check.py ORIGINALS OPERATIONS_DIR
+python3 tests/pptx/media-check.py --sounds ORIGINALS RESULTS.jsonl SAVED_ROOT
 Checks bytes and intended relationship targets, unedited picture properties,
 playback behaviours, and exact undo/redo package restoration (except timestamps).
 """

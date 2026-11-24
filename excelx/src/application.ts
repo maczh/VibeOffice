@@ -3,12 +3,14 @@
 const installedExcelxApplication = new WeakSet<object>();
 export function installExcelxApplication(runtime: Window): void {
   const window = runtime as Window & { L?: any; VO?: any };
+  const document = runtime.document;
   const namespace = window.L;
   if (!namespace?.model || !namespace?.layout || !namespace?.ops || !namespace?.formula || !namespace?.calc || !namespace?.ui) throw new Error('Excelx application dependencies are not ready');
   if (installedExcelxApplication.has(namespace)) return;
   installedExcelxApplication.add(namespace);
 (function (root) {
   'use strict';
+  const VO = root.VO;
   const L = root.L;
   const M = L.model, LY = L.layout, O = L.ops, F = L.formula, NF = L.numfmt, C = L.calc;
   const { h } = L;

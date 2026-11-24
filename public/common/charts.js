@@ -385,67 +385,9 @@
     else sr.fill = solidC;
   };
 
-  /* ---------- React-owned direct-host chart editor ---------- */
-  let reactEditor = null;
-  function notifyReactEditor() { if (L.bus) L.bus.emit('common-chart-editor'); }
-  function reactPreview() {
-    if (!reactEditor) return '';
-    const c = reactEditor.chart, shape = reactEditor.shape;
-    const W = shape && shape.w || 300, H = shape && shape.h || 190;
-    if (c.v === 2) CH.syncV2(c);
-    const k = c.v === 2 ? Math.min(300 / W, 190 / H) : 1;
-    const svg = CH.render(c, c.v === 2 ? W : 300, c.v === 2 ? H : 190, curDesign());
-    svg.setAttribute('width', L.round((c.v === 2 ? W : 300) * k, 2));
-    svg.setAttribute('height', L.round((c.v === 2 ? H : 190) * k, 2));
-    return svg.outerHTML;
-  }
-  CH.reactEditorCatalog = function () {
-    if (!reactEditor) return null;
-    const c = reactEditor.chart;
-    return { kind: c.kind, kinds: CH.kinds().map(([value, label]) => ({ value, label: L.t(label) })), title: c.title || '', legend: c.legend || 'r', legends: [['r', 'Right'], ['b', 'Bottom'], ['t', 'Top'], ['l', 'Left'], ['none', 'None']].map(([value, label]) => ({ value, label: L.t(label) })), gridY: c.gridY !== false, labels: !!c.labels, cats: c.cats.slice(), series: c.series.map((series, index) => ({ index, name: series.name, vals: series.vals.slice(), color: series.color || CH.PALETTE[index % CH.PALETTE.length] })), preview: reactPreview() };
-  };
-  CH.reactEditorAction = function (action, first, second) {
-    if (!reactEditor) return false;
-    const c = reactEditor.chart;
-    if (action === 'close') { reactEditor = null; notifyReactEditor(); return true; }
-    if (action === 'commit') {
-      const done = reactEditor.onDone;
-      CH.syncV2(c); c.edited = true;
-      reactEditor = null; notifyReactEditor(); done(c);
-      return true;
-    }
-    if (action === 'kind' && CH.kinds().some(([value]) => value === first)) { const prev = c.kind; c.kind = first; CH.syncV2(c, prev); }
-    else if (action === 'title' && typeof first === 'string') c.title = first.slice(0, 255);
-    else if (action === 'legend' && ['r', 'b', 't', 'l', 'none'].includes(first)) c.legend = first;
-    else if (action === 'grid' && typeof first === 'boolean') c.gridY = first;
-    else if (action === 'labels' && typeof first === 'boolean') c.labels = first;
-    else if (action === 'category' && Number.isInteger(first) && first >= 0 && first < c.cats.length && typeof second === 'string') c.cats[first] = second.slice(0, 255);
-    else if (action === 'series-name' && Number.isInteger(first) && first >= 0 && first < c.series.length && typeof second === 'string') c.series[first].name = second.slice(0, 255);
-    else if (action === 'value' && Number.isInteger(first) && first >= 0 && first < c.series.length && Number.isInteger(second?.category) && second.category >= 0 && second.category < c.cats.length && Number.isFinite(second.value)) c.series[first].vals[second.category] = second.value;
-    else if (action === 'add-category') { c.cats.push(`Col ${c.cats.length + 1}`); c.series.forEach((series) => series.vals.push(0)); }
-    else if (action === 'delete-category' && c.cats.length > 1) { c.cats.pop(); c.series.forEach((series) => series.vals.pop()); }
-    else if (action === 'add-series') c.series.push({ name: `Series ${c.series.length + 1}`, vals: c.cats.map(() => 0), color: CH.PALETTE[c.series.length % CH.PALETTE.length] });
-    else if (action === 'delete-series' && c.series.length > 1) c.series.pop();
-    else if (action === 'series-color' && Number.isInteger(first) && first >= 0 && first < c.series.length && typeof second === 'string') CH.setSeriesColor(c, c.series[first], second);
-    else return false;
-    CH.syncV2(c);
-    notifyReactEditor();
-    return true;
-  };
-  CH.reactEditorColorMenu = function (index, anchor) {
-    if (!reactEditor || !Number.isInteger(index) || index < 0 || index >= reactEditor.chart.series.length || !(anchor instanceof HTMLElement)) return false;
-    L.ui.colorMenu(anchor, { mode: 'plain' }, (color) => { if (typeof color === 'string') CH.reactEditorAction('series-color', index, color); });
-    return true;
-  };
-
   CH.edit = function (shape, onDone) {
     const c = L.clone(shape.chart || CH.sample());
     const ui = L.ui;
-    if (window.VO?.reactDirectHost?.root?.isConnected) {
-      reactEditor = { chart: c, shape, onDone };
-      notifyReactEditor();
-      return;
-    }
     const sheet = h('div', { class: 'datasheet' });
     const preview = h('div', { class: 'chart-preview' });
     const kind = ui.select(CH.kinds().map(([k, n]) => [k, n]), c.kind, (v) => { const prev = c.kind; c.kind = v; CH.syncV2(c, prev); draw(); });

@@ -236,7 +236,7 @@ export function installWordxFind(runtime: Window): void {
       for (const m of matches.slice(0, 3000)) {
         const a = LY.posToDom(m.a), b = LY.posToDom(m.b);
         if (!a || !b) continue;
-        try { const r = new Range(); r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); ranges.push(r); } catch (e) { /* skip */ }
+        try { const r = new runtime.Range(); r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); ranges.push(r); } catch (e) { /* skip */ }
       }
     }
     runtime.CSS.highlights.set('wordx-find', new runtime.Highlight(...ranges));

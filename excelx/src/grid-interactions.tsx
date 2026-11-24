@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface ExcelxRuntime {
   grid?: { reactMountInteractions?(): () => void; reactInteractionMounted?: boolean; reactPointerLeave?(): void };
@@ -6,20 +7,19 @@ interface ExcelxRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
 }
 
-function runtime(): ExcelxRuntime | undefined {
-  return (window as Window & { L?: ExcelxRuntime }).L;
-}
-
 /** Own the canvas grid's interaction listeners for the lifetime of the React editor mount. */
 export function ExcelxGridInteractionLayer({ host }: { host: HTMLElement }) {
+  const runtime = useExcelxRuntime<ExcelxRuntime>();
+  const ownerDocument = host.ownerDocument;
+  const ownerWindow = ownerDocument.defaultView;
   useEffect(() => {
-    const offTrace = runtime()?.bus?.on('grid-paint', () => runtime()?.app?.reactDrawTrace?.());
-    const pointerLeave = () => runtime()?.grid?.reactPointerLeave?.();
-    const keydown = (event: KeyboardEvent) => runtime()?.app?.reactAppKeydown?.(event);
-    const beforeUnload = (event: BeforeUnloadEvent) => runtime()?.app?.reactBeforeUnload?.(event);
-    document.addEventListener('pointerleave', pointerLeave);
+    const offTrace = runtime?.bus?.on('grid-paint', () => runtime?.app?.reactDrawTrace?.());
+    const pointerLeave = () => runtime?.grid?.reactPointerLeave?.();
+    const keydown = (event: KeyboardEvent) => runtime?.app?.reactAppKeydown?.(event);
+    const beforeUnload = (event: BeforeUnloadEvent) => runtime?.app?.reactBeforeUnload?.(event);
+    ownerDocument.addEventListener('pointerleave', pointerLeave);
     host.addEventListener('keydown', keydown);
-    window.addEventListener('beforeunload', beforeUnload);
+    ownerWindow?.addEventListener('beforeunload', beforeUnload);
     let target: HTMLElement | null = null;
     let dispose: (() => void) | null = null;
     const attach = () => {
@@ -27,23 +27,24 @@ export function ExcelxGridInteractionLayer({ host }: { host: HTMLElement }) {
       if (next === target && (dispose || !next)) return;
       dispose?.();
       target = next;
-      dispose = target ? runtime()?.grid?.reactMountInteractions?.() || null : null;
+      dispose = target ? runtime?.grid?.reactMountInteractions?.() || null : null;
     };
-    const observer = new MutationObserver(attach);
-    observer.observe(host, { childList: true, subtree: true });
-    const off = runtime()?.bus?.on('app-ready', attach);
+    const Observer = ownerWindow?.MutationObserver;
+    const observer = Observer ? new Observer(attach) : null;
+    observer?.observe(host, { childList: true, subtree: true });
+    const off = runtime?.bus?.on('app-ready', attach);
     attach();
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       off?.();
       offTrace?.();
-      document.removeEventListener('pointerleave', pointerLeave);
+      ownerDocument.removeEventListener('pointerleave', pointerLeave);
       host.removeEventListener('keydown', keydown);
-      window.removeEventListener('beforeunload', beforeUnload);
+      ownerWindow?.removeEventListener('beforeunload', beforeUnload);
       dispose?.();
       dispose = null;
       target = null;
     };
-  }, [host]);
+  }, [host, ownerDocument, ownerWindow, runtime]);
   return null;
 }

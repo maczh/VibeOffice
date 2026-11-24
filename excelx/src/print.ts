@@ -3,6 +3,7 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxPrint(runtime: Window): void {
   const root = runtime;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.layout || !L?.formula || !L?.calc || !L?.numfmt || !L?.ui) throw new Error("Excelx printing requires workbook layout services");
   if (installedRuntimes.has(L)) return;

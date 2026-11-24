@@ -20,6 +20,7 @@
  */
 // @ts-nocheck -- rendered DOM and document model contracts are owned by the Wordx engine.
 export function installWordxLineBoxes(runtime: Window): void {
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L;
   if (!L?.R) throw new Error('Wordx paragraph renderer is not ready for line metrics');
   const R = L.R;

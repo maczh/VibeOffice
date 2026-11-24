@@ -1008,7 +1008,7 @@ export function installWordxPreservation(runtime: Window): void {
     if (!c || !typed(c) || c.converted) return;
     const apply = value => L.ed.edit('Content Control Value', () => P.setControlValue(c.key, value));
     if (c.type === 'checkbox') { apply(!c.checked); return; }
-    if (window.VO && VO.reactDirectHost) {
+    if (runtime.VO?.reactDirectHost) {
       const selectedChoice = (c.choices || []).find(choice => c.value === choice.value || record.text === choice.text);
       const value = c.type === 'date' ? (c.value || attr(child(child(K.parse(c.shell.xml), 'sdtPr'), 'date'), 'fullDate') || '').slice(0, 10) : selectedChoice?.value ?? c.value ?? record.text;
       P.reactControlState = { name: c.name, type: c.type, value, choices: (c.choices || []).map(choice => ({ ...choice })) };

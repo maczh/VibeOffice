@@ -72,9 +72,9 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   line is as tall as that font makes it, though it is drawn in Arial. A Word-saved 19-page walkthrough
   that made 20 pages (two pictures pushed a page break onto a page of its own) now breaks where Word's
   PDF does on every page, and two lines that follow each other there are as far apart as in Word
-  within 0.51pt (`tests/quire/lines.test.mjs`); 15 synthetic cases match LibreOffice within 0.2pt. Of
+  within 0.51pt (`tests/wordx/lines.test.mjs`); 15 synthetic cases match LibreOffice within 0.2pt. Of
   2,289 Word-saved corpus files, 2,136 show Word's stored page count (2,127 before); the 10 whose count
-  changed all moved toward Word's, none away (`tools/quire-pages.mjs`).
+  changed all moved toward Word's, none away (`tools/wordx-pages.mjs`).
   Not covered yet: a picture in a line with exact spacing or a rotated inline picture (Word clips
   these vertically to the line), a picture alone
   with multiple spacing or on a grid, a line of only a small picture (Wordx follows LibreOffice: the

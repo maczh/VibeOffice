@@ -294,7 +294,7 @@ export function installWordxHtmlIo(runtime: Window): void {
   H.htmlToBlocks = async function (html, opts) {
     opts = opts || {};
     const d = doc();
-    const dp = new DOMParser();
+    const dp = new runtime.DOMParser();
     const dom = dp.parseFromString(String(html).replace(/<!--\[if[\s\S]*?<!\[endif\]-->/g, ''), 'text/html');
     const root = dom.body || dom.documentElement;
     const blocks = [];
@@ -489,7 +489,7 @@ export function installWordxHtmlIo(runtime: Window): void {
     const prev = D.doc;
     D.doc = d;
     try {
-      const dp = new DOMParser();
+      const dp = new runtime.DOMParser();
       const dom = dp.parseFromString(html, 'text/html');
       const t = dom.querySelector('title');
       if (t) d.props.title = t.textContent.trim();

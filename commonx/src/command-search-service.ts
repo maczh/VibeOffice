@@ -1,3 +1,6 @@
+import { installCommandMatcher } from './command-matcher.js';
+import { installReactCommandService } from './command-service.js';
+
 type SearchEntry = {
   id?: string;
   label: string;
@@ -20,9 +23,11 @@ interface CommandMatcher { maxResults: number; maxRecent: number; words(value: s
 type SearchRuntime = Window & { L?: Record<string, any>; VO?: { commandMatcher?: CommandMatcher; reactDirectHost?: { root?: HTMLElement } } };
 
 /** Installs the shared command catalog/matcher used by the React command-search component. */
-export function installCommandSearchService(runtime: Window): void {
+export function installCommandSearchService(runtime: Window): () => void {
   const legacy = (runtime as SearchRuntime).L;
   if (!legacy?.ui) throw new Error('The shared command search requires the editor UI service');
+  installCommandMatcher(runtime);
+  const disposeCommands = installReactCommandService(runtime);
   const matcher = (runtime as SearchRuntime).VO?.commandMatcher;
   if (!matcher) throw new Error('The shared command search requires the common command matcher');
   const L = legacy;
@@ -118,21 +123,36 @@ export function installCommandSearchService(runtime: Window): void {
     const all = entries(layout);
     return ids.map((id) => all.find((entry) => entry.id === id)).filter((entry): entry is SearchEntry => !!entry).map((entry) => ({ ...(entry.id ? { id: entry.id } : {}), label: entry.label, where: entry.path ? entry.path.join(' ▸ ') : '', enabled: isEnabled(entry), entry }));
   };
-  ui.searchCommands = searchCommands;
-  ui.searchResults = (query: string, layout?: string) => query ? searchCommands(query, layout) : recentResults(layout);
-  ui.searchRemember = (id: string) => {
+  const installed = new Map<string, unknown>();
+  const originals = new Map<string, unknown>();
+  const replace = (name: string, value: unknown) => {
+    originals.set(name, ui[name]);
+    installed.set(name, value);
+    ui[name] = value;
+  };
+  replace('searchCommands', searchCommands);
+  replace('searchResults', (query: string, layout?: string) => query ? searchCommands(query, layout) : recentResults(layout));
+  replace('searchRemember', (id: string) => {
     if (!id || !L.store) return;
     L.store.set('searchRecent', [id, ...L.store.get('searchRecent', []).filter((item: string) => item !== id)].slice(0, matcher.maxRecent));
-  };
-  ui.searchBox = () => {
+  });
+  replace('searchBox', () => {
     const placeholder = runtime.document.createElement('div');
     placeholder.className = 'cmd-search cmd-search-react-owned';
     placeholder.setAttribute('aria-hidden', 'true');
     placeholder.hidden = true;
     return placeholder;
-  };
-  ui.searchInput = () => {
+  });
+  replace('searchInput', () => {
     const editor = (runtime as SearchRuntime).VO?.reactDirectHost?.root?.closest('.vibe-editor');
     return editor?.querySelector<HTMLInputElement>('.vibe-command-search input') ?? null;
+  });
+  return () => {
+    for (const [name, value] of installed) if (ui[name] === value) {
+      const original = originals.get(name);
+      if (original === undefined) delete ui[name];
+      else ui[name] = original;
+    }
+    disposeCommands();
   };
 }

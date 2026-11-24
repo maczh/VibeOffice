@@ -3,6 +3,8 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxPanes(runtime: Window): void {
   const root = runtime;
+  const VO = (root as Window & { VO?: any }).VO;
+  const window = root;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.formula || !L?.ops || !L?.ui) throw new Error("Excelx panes require workbook operations and shared UI services");
   if (installedRuntimes.has(L)) return;

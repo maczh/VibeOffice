@@ -4,6 +4,7 @@
  * with CSS transforms (editor zoom, thumbnails, slide show).
  */
 export function installPptxRender(runtime: Window): void {
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L;
   const { h, s } = L;
   const R = (L.render = {});

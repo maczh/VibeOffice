@@ -1,6 +1,6 @@
 // ActiveX controls are kept while their pictures are unchanged: unedited, moved, resized; deleted ones go quietly;
 // an edited picture, a copy or a rotation is saved as the picture, with a notice.
-// node --test tests/lectern/activex.test.mjs
+// node --test tests/pptx/activex.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

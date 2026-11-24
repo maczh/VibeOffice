@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initializeSharedRuntime } from '@vibeoffice/core';
-import { AboutDialog, AppearanceControls, createUrlReadProvider, createWebDavProvider, OfficeDialog, saveLocalDocument, VibeOfficeProvider, useVibeOffice } from '@vibeoffice/core';
+import { AboutDialog, AppearanceFields, createUrlReadProvider, createWebDavProvider, OfficeDialog, saveLocalDocument, VibeOfficeProvider, useVibeOffice } from '@vibeoffice/core';
 import { createIndexedDbDraftStore } from '@vibeoffice/core';
 import type { LocalDocument, LocalDraft, RemoteFile, RemoteStorageProvider, SaveFileOperation } from '@vibeoffice/core';
 import { WordxEditor } from '@vibeoffice/wordx';
@@ -38,6 +38,33 @@ function appForName(name: string): Entry | undefined {
   return apps.find((candidate) => candidate.extensions.includes(extension || ''));
 }
 
+function AppIcon({ app }: { app: AppId }) {
+  const color = 'var(--p-accent)';
+  return <svg className={`suite-app-icon ${app}`} viewBox="0 0 80 100" width="24" height="30" aria-hidden="true">
+    <path d="M4 2h54l18 18v76H4z" fill="var(--surface)" stroke="var(--field-border)" />
+    <path d="M58 2v18h18" fill="var(--p-accent-soft)" stroke="var(--field-border)" />
+    {app === 'excelx'
+      ? <><rect x="14" y="22" width="52" height="54" fill="var(--surface)" stroke={color} /><path d="M14 31h52M14 40h52M14 49h52M14 58h52M14 67h52M30 22v54M48 22v54" stroke={color} strokeOpacity=".55" /><rect x="14" y="22" width="52" height="9" fill="var(--p-accent-mid)" /></>
+      : app === 'pptx'
+        ? <><rect x="12" y="28" width="56" height="40" rx="2" fill="var(--p-accent-soft)" stroke={color} /><rect x="18" y="34" width="44" height="8" fill={color} /><path d="M20 50h40M20 57h30" stroke={color} strokeWidth="3" strokeLinecap="round" strokeOpacity=".6" /></>
+        : <path d="M18 26h44M18 34h44M18 42h44M18 50h44M18 58h30" stroke={color} strokeWidth="3" strokeLinecap="round" />}
+  </svg>;
+}
+
+function StartActionIcon({ action }: { action: 'open' | 'create' }) {
+  return action === 'open'
+    ? <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M1.5 5.5v11h14l3-8h-14l-3 8" fill="var(--p-accent-mid)" stroke="var(--p-accent-ink)" /><path d="M1.5 16V3.5h5l1.5 2h6.5v3" fill="var(--p-accent-soft)" stroke="var(--p-accent-ink)" /></svg>
+    : <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 1.5h9l4 4v13h-13z" fill="var(--surface)" stroke="var(--field-border)" /><path d="M12.5 1.5v4h4" fill="var(--p-accent-soft)" stroke="var(--field-border)" /><circle cx="14" cy="14.5" r="4.5" fill="var(--p-accent)" /><path d="M14 12v5M11.5 14.5h5" stroke="var(--surface)" strokeWidth="1.8" /></svg>;
+}
+
+function StartFooterIcon({ kind }: { kind: 'install' | 'feedback' | 'settings' | 'themes' | 'about' }) {
+  if (kind === 'install') return <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="12" rx="1.5" fill="var(--surface)" stroke="var(--field-border)" /><path d="M10 5.5v6M7 9l3 3 3-3" fill="none" stroke="var(--p-accent)" strokeWidth="1.8" /><path d="M6 17.5h8" stroke="var(--field-border)" /></svg>;
+  if (kind === 'feedback') return <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><path fill="var(--pane-ink)" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" /></svg>;
+  if (kind === 'settings') return <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" fill="none" stroke="var(--muted)" strokeWidth="2.6" strokeDasharray="2.2 2.2" /><circle cx="8" cy="8" r="4" fill="var(--p-accent-soft)" stroke="var(--field-border)" strokeWidth="1.2" /><circle cx="8" cy="8" r="1.6" fill="var(--surface)" stroke="var(--field-border)" /></svg>;
+  if (kind === 'themes') return <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 1 0 0 13c1 0 1.4-.8 1-1.6-.5-1 .1-2 1.2-2h1.6a2.7 2.7 0 0 0 2.7-2.9C14.3 4.3 11.5 1.5 8 1.5z" fill="var(--surface)" stroke="var(--field-border)" /><circle cx="5" cy="6.5" r="1.3" fill="var(--p-accent)" /><circle cx="8.2" cy="4.6" r="1.3" fill="var(--p-accent-mid)" /><circle cx="11.3" cy="6.4" r="1.3" fill="var(--p-accent-soft)" /><circle cx="5.2" cy="10" r="1.3" fill="var(--p-accent-ink)" /></svg>;
+  return <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.8" fill="var(--p-accent)" /><path d="M8 7v4.6" stroke="var(--surface)" strokeWidth="1.9" /><circle cx="8" cy="4.7" r="1.15" fill="var(--surface)" /></svg>;
+}
+
 function requestEditorClose(): Promise<boolean> {
   if (!document.querySelector('.suite-frame .vibe-editor__engine > *')) return Promise.resolve(true);
   return window.VO?.reactClose ? window.VO.reactClose().catch(() => false) : Promise.resolve(true);
@@ -70,6 +97,7 @@ function Suite() {
   const [canInstall, setCanInstall] = useState(false);
   const installPrompt = useRef<InstallPromptEvent | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState<'settings' | 'themes' | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const [credentialAsk, setCredentialAsk] = useState<{ label: string; secret: boolean; finish: (value: string | null) => void } | null>(null);
   const [credentialInput, setCredentialInput] = useState('');
@@ -297,12 +325,14 @@ function Suite() {
 
   return <div className="suite-start">
     <nav className="suite-side" aria-label={translate('Start')}>
-      <div className="suite-brand"><img src="/icons/icon.svg" alt="" /><span><b translate="no">VibeOffice.work</b><small>{translate('A free office suite')}</small></span></div>
-      <button className="suite-action" type="button" onClick={() => picker.current?.click()}>{translate('Open File…')}</button>
-      <button className="suite-action suite-action-on" type="button" aria-current="page">{translate('Create File')}</button>
-      <section className="suite-app-links" aria-label={translate('Create a blank file')}>
-        <h2>{translate('Create a blank file')}</h2>
-        {apps.map((app) => <button type="button" key={app.id} onClick={() => create(app)}><span className={`suite-app-mark ${app.id}`} aria-hidden="true" /><span><b>{translate(app.label)}</b><small>{translate(app.description)}</small></span></button>)}
+      <div className="suite-brand"><img src="/icons/icon.svg" alt="" /><span><b translate="no">VibeOffice.work</b><small>{translate('Office suite in your browser')}</small></span></div>
+      <div className="suite-actions">
+        <button className="suite-action" type="button" onClick={() => picker.current?.click()}><StartActionIcon action="open" />{translate('Open File…')}</button>
+        <button className="suite-action suite-action-on" type="button" aria-current="page"><StartActionIcon action="create" />{translate('Create File')}</button>
+      </div>
+      <section className="suite-app-links" aria-label={translate('Apps')}>
+        <h2>{translate('Apps')}</h2>
+        {apps.map((app) => <button type="button" key={app.id} onClick={() => create(app)}><AppIcon app={app.id} /><span><b>{translate(app.label)}</b><small>{translate(app.description)}</small></span></button>)}
       </section>
       <div className="suite-side-grow" />
       <div className="suite-side-links">
@@ -310,12 +340,15 @@ function Suite() {
           const prompt = installPrompt.current;
           if (!prompt) return;
           void prompt.prompt().then(() => prompt.userChoice).finally(() => { installPrompt.current = null; setCanInstall(false); });
-        }}>{translate('Install VibeOffice.work')}</button>}
-        <a href="https://github.com/tcchen2026/VibeOffice" target="_blank" rel="noopener">{translate('Feedback on our GitHub')}</a>
-        <button type="button" onClick={() => setAboutOpen(true)}>{translate('About')}</button>
+        }}><StartFooterIcon kind="install" />{translate('Install VibeOffice.work')}</button>}
+        <a href="https://github.com/tcchen2026/VibeOffice" target="_blank" rel="noopener"><StartFooterIcon kind="feedback" />{translate('Feedback on our GitHub')}</a>
       </div>
-      <p className="suite-local-note">{translate('Your files stay on this computer.')}</p>
-      <AppearanceControls onLanguageChange={() => location.reload()} />
+      <p className="suite-local-note">{translate('Your files stay on this computer.')}<br /><span className="suite-version" translate="no">{window.VO?.VERSION ?? 'dev'}</span></p>
+      <div className="suite-side-links suite-footer-links">
+        <button type="button" onClick={() => setAppearanceOpen('settings')}><StartFooterIcon kind="settings" />{translate('Settings')}</button>
+        <button type="button" onClick={() => setAppearanceOpen('themes')}><StartFooterIcon kind="themes" />{translate('Themes')}</button>
+        <button type="button" onClick={() => setAboutOpen(true)}><StartFooterIcon kind="about" />{translate('About')}</button>
+      </div>
       <input ref={picker} type="file" hidden onChange={(event) => { const selected = event.currentTarget.files?.[0]; event.currentTarget.value = ''; openFile(selected); }} />
     </nav>
     <main className="suite-main">
@@ -323,13 +356,27 @@ function Suite() {
         <button type="button" onClick={openUrl}>{translate(UI_TEXT.openUrl)}</button><button type="button" onClick={() => openWebDav()}>{translate(UI_TEXT.webdav)}</button>
       </header>
       <section className="suite-gallery" aria-label={translate('Create File')}>
-      {apps.map((app) => <section className="app" key={app.id}><h2><span className={`suite-app-mark ${app.id}`} aria-hidden="true" />{translate(app.label)}</h2><div className="cards">
-        <button type="button" onClick={() => create(app)}><span className={`suite-template-thumb suite-blank-preview ${app.id}`} aria-hidden="true"><span /></span><span className="suite-template-name">{translate('Blank')}</span></button>
-        {(templates[app.id] || []).map((template) => <button type="button" key={template.id} onClick={() => create(app, template.id)}><span className="suite-template-thumb">{template.img && <img src={template.img} alt="" loading="lazy" />}</span><span className="suite-template-name">{translate(template.name)}</span></button>)}
+      {apps.map((app) => <section className="app" key={app.id}><h2><span className={`suite-app-mark ${app.id}`} aria-hidden="true" />{translate(app.id === 'wordx' ? 'Documents' : app.id === 'excelx' ? 'Spreadsheets' : 'Presentations')}<small>· {translate(app.label)}</small></h2><div className="cards">
+        {(templates[app.id] || []).map((template) => <button type="button" key={template.id || 'blank'} title={translate(template.id ? 'New document from “{0}”' : app.id === 'wordx' ? 'New blank document' : app.id === 'excelx' ? 'New blank spreadsheet' : 'New blank presentation', ...(template.id ? [translate(template.name)] : []))} onClick={() => create(app, template.id || undefined)}><span className="suite-template-thumb">{template.img ? <img src={`/${template.img}`} alt="" loading="lazy" /> : <span className={`suite-blank-preview ${app.id}`} aria-hidden="true"><span /></span>}</span><span className="suite-template-name">{translate(template.name)}</span></button>)}
+        {!(templates[app.id] || []).some((template) => !template.id) && <button type="button" title={translate(app.id === 'wordx' ? 'New blank document' : app.id === 'excelx' ? 'New blank spreadsheet' : 'New blank presentation')} onClick={() => create(app)}><span className="suite-template-thumb"><span className={`suite-blank-preview ${app.id}`} aria-hidden="true"><span /></span></span><span className="suite-template-name">{translate(app.id === 'wordx' ? 'Blank Document' : app.id === 'excelx' ? 'Blank Workbook' : 'Blank Presentation')}</span></button>}
       </div></section>)}
       </section>
     </main>
     {urlOpen && <OfficeDialog title={translate(UI_TEXT.openUrl)} className="credential" onRequestClose={() => setUrlOpen(false)}><form onSubmit={(event) => void submitUrl(event)}><label>{translate('URL')}<input autoFocus required type="url" aria-label={translate('URL')} value={urlValue} onChange={(event) => setUrlValue(event.currentTarget.value)} /></label><button type="button" onClick={() => setUrlOpen(false)}>{translate(UI_TEXT.cancel)}</button><button type="submit" disabled={urlBusy}>{translate('Open')}</button></form>{urlError && <p role="alert">{urlError}</p>}</OfficeDialog>}
+    {appearanceOpen && <OfficeDialog title={translate(appearanceOpen === 'settings' ? 'Settings' : 'Themes')} className="credential suite-preferences" onRequestClose={() => setAppearanceOpen(null)}>
+      <AppearanceFields
+        look={office.look}
+        looks={appearanceOpen === 'themes' ? office.looks.map(({ id, name }) => ({ value: id, label: translate(name) })) : []}
+        language={office.language}
+        languages={appearanceOpen === 'settings' ? office.languages.map(({ id, name }) => ({ value: id, label: translate(name) })) : []}
+        onLookChange={(look) => office.setLook(look as typeof office.look)}
+        onLanguageChange={(language) => { office.setLanguage(language as typeof office.language); location.reload(); }}
+        translate={translate}
+        lookLabel="Look"
+        languageLabel="Language"
+      />
+      <button type="button" onClick={() => setAppearanceOpen(null)}>{translate('OK')}</button>
+    </OfficeDialog>}
     {aboutOpen && <AboutDialog request={{ name: 'VibeOffice.work', version: translate('Web edition'), text: ['A browser office suite with Wordx, Excelx, and PPTX. Your documents stay on this computer.'], licensesUrl: '/oss-licenses.html' }} onClose={() => setAboutOpen(false)} />}
     {webDavDialog}
     {credentialAsk && <OfficeDialog title={credentialAsk.label} className="credential" onRequestClose={() => finishCredential(null)}><form onSubmit={(event) => { event.preventDefault(); finishCredential(credentialInput); }}><label>{credentialAsk.label}<input autoFocus type={credentialAsk.secret ? 'password' : 'text'} value={credentialInput} onChange={(event) => setCredentialInput(event.currentTarget.value)} /></label><button type="button" onClick={() => finishCredential(null)}>{translate(UI_TEXT.cancel)}</button><button type="submit">{translate(UI_TEXT.continue)}</button></form></OfficeDialog>}

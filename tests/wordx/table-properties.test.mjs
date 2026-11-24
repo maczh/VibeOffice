@@ -2,7 +2,7 @@
 // revisions) and a cell's width as the file gives it (a percentage, auto) while the table's grid is unchanged; they were
 // rebuilt from the model, every width in twips. A row's exceptions (w:tblPrEx) and the columns' tracked change
 // (w:tblGridChange) are kept too; both were dropped.
-// node --test tests/quire/table-properties.test.mjs
+// node --test tests/wordx/table-properties.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

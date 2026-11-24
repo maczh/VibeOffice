@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Isolate batch-2 comment repair without reserializing unrelated XML.
 
-python3 tests/quire/comment-office-copies.py BATCH PREVIOUS_BATCH OUTPUT
+python3 tests/wordx/comment-office-copies.py BATCH PREVIOUS_BATCH OUTPUT
 These are diagnostic copies, not proposed preservation behavior.
 """
 import argparse

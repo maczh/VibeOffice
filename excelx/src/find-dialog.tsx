@@ -1,25 +1,25 @@
 import { useEffect, useId, useState } from 'react';
 import './find-dialog.css';
+import { useExcelxRuntime } from './editor-host';
 
 type SearchState = { what: string; with: string; within: 'sheet' | 'workbook'; by: 'rows' | 'cols'; lookIn: 'formulas' | 'values' | 'comments'; matchCase: boolean; whole: boolean; more: boolean };
 type Result = { index: number; book: string; sheet: string; name: string; cell: string; value: string; formula: string };
 type Catalog = { mode: number; state: SearchState; results: Result[]; status: string };
 type Action = (action: string, key?: string, value?: string | number | boolean) => boolean;
 type Runtime = { dlg?: { reactFindCatalog?(): Catalog | null; reactFindAction?: Action }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string, ...args: unknown[]): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** Modeless React Find/Replace window; workbook matching and replacement remain in Excelx operations. */
 export function ExcelxFindDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const id = useId().replaceAll(':', '');
   useEffect(() => {
-    const refresh = () => setCatalog(runtime()?.dlg?.reactFindCatalog?.() || null);
-    const off = runtime()?.bus?.on('excelx-find-dialog', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactFindCatalog?.()) runtime()?.dlg?.reactFindAction?.('close'); };
+    const refresh = () => setCatalog(runtime?.dlg?.reactFindCatalog?.() || null);
+    const off = runtime?.bus?.on('excelx-find-dialog', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactFindCatalog?.()) runtime?.dlg?.reactFindAction?.('close'); };
   }, []);
   if (!catalog) return null;
-  const t = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
-  const action = runtime()?.dlg?.reactFindAction;
+  const t = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
+  const action = runtime?.dlg?.reactFindAction;
   const set = (key: keyof SearchState, value: string | boolean) => action?.('set', key, value);
   const mnemonic = (value: string) => t(value).replace('&', '');
   const labels = [t('Fi&nd').replace('&', ''), t('Re&place').replace('&', '')];

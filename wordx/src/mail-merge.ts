@@ -75,7 +75,7 @@ export function installWordxMailMerge(runtime: Window): void {
         else rows = res.doc.main.blocks.filter((b) => b.t === 'p' && D.plainText(b).trim()).map((p) => D.plainText(p).split('\t'));
         setData(f.name, rows);
       } else if (/\.html?$/i.test(f.name)) {
-        const dom = new DOMParser().parseFromString(await L.readAsText(f), 'text/html');
+        const dom = new runtime.DOMParser().parseFromString(await L.readAsText(f), 'text/html');
         const t = dom.querySelector('table');
         if (!t) { ui.msg('No table was found in that file.', { icon: 'warn' }); return; }
         setData(f.name, Array.from(t.rows).map((r) => Array.from(r.cells).map((c) => c.textContent.trim())));

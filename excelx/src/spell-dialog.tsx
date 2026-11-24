@@ -1,20 +1,20 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
 import './spell-dialog.css';
+import { useExcelxRuntime } from './editor-host';
 
 type Catalog = { title: string; word: string; before: string; after: string; suggestions: string[]; language: string; languages: { value: string; label: string }[]; replacement: string };
 type Runtime = { spell?: { reactSpellCatalog?(): Catalog | null; reactSpellAction?(action: string, patch?: Record<string, string>): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** React owns the spelling review dialog; dictionary lookup and cell edits stay in the spelling service. */
 export function ExcelxSpellDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [value, setValue] = useState('');
   const [suggestion, setSuggestion] = useState('');
-  useEffect(() => { const refresh = () => { const next = runtime()?.spell?.reactSpellCatalog?.() || null; setCatalog(next); if (next) { setValue(next.word); setSuggestion(next.suggestions[0] || ''); } }; const off = runtime()?.bus?.on('excelx-spell-dialog', refresh); return () => { off?.(); runtime()?.spell?.reactSpellAction?.('unmount'); }; }, []);
+  useEffect(() => { const refresh = () => { const next = runtime?.spell?.reactSpellCatalog?.() || null; setCatalog(next); if (next) { setValue(next.word); setSuggestion(next.suggestions[0] || ''); } }; const off = runtime?.bus?.on('excelx-spell-dialog', refresh); return () => { off?.(); runtime?.spell?.reactSpellAction?.('unmount'); }; }, []);
   if (!catalog) return null;
-  const t = (text: string) => runtime()?.t?.(text) || text;
-  const action = (name: string, patch?: Record<string, string>) => runtime()?.spell?.reactSpellAction?.(name, patch);
+  const t = (text: string) => runtime?.t?.(text) || text;
+  const action = (name: string, patch?: Record<string, string>) => runtime?.spell?.reactSpellAction?.(name, patch);
   const close = () => { action('cancel'); setCatalog(null); };
   const choose = (name: string) => action(name, { value: value !== catalog.word ? value : suggestion });
   return <OfficeDialog title={t(catalog.title)} className="excelx-spell-dialog" style={{ width: 'min(94vw, 540px)' }} onRequestClose={close}>

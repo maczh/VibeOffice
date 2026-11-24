@@ -41,24 +41,24 @@ function slideBackground(target: HTMLElement | null): SlideBackground | null {
   return { target, ...source };
 }
 
-function runtime(): GridRuntime | undefined {
-  return (window as Window & { L?: GridRuntime }).L;
+function runtime(host: HTMLElement): GridRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: GridRuntime }) | null)?.L;
 }
 
 /** React owns the grid texture and guide nodes; the engine retains guide coordinates and snap behavior. */
 export function PptxGridLayer({ host }: { host: HTMLElement }) {
-  const [catalog, setCatalog] = useState<PptxGridCatalog | null>(() => runtime()?.ed?.reactGridCatalog?.() || null);
+  const [catalog, setCatalog] = useState<PptxGridCatalog | null>(() => runtime(host)?.ed?.reactGridCatalog?.() || null);
   useEffect(() => {
     let offGrid: (() => void) | undefined;
     let offSlide: (() => void) | undefined;
     const refresh = () => {
-      setCatalog(runtime()?.ed?.reactGridCatalog?.() || null);
+      setCatalog(runtime(host)?.ed?.reactGridCatalog?.() || null);
     };
     const attach = () => {
       offGrid?.();
       offSlide?.();
-      offGrid = runtime()?.bus?.on('pptx-grid', refresh);
-      offSlide = runtime()?.bus?.on('slide-rendered', refresh);
+      offGrid = runtime(host)?.bus?.on('pptx-grid', refresh);
+      offSlide = runtime(host)?.bus?.on('slide-rendered', refresh);
       refresh();
     };
     host.addEventListener('vibeoffice-engine-runtime-ready', attach);
@@ -85,6 +85,11 @@ export function PptxGridLayer({ host }: { host: HTMLElement }) {
     };
   }, [background?.target, background?.image, background?.color]);
   const target = host.querySelector<HTMLElement>('.ed-grid');
+  useLayoutEffect(() => {
+    if (!target) return;
+    target.hidden = !catalog?.visible;
+    return () => { target.hidden = true; };
+  }, [target, catalog?.visible]);
   return <>
     {background && createPortal(<div data-react-owned="pptx-slide-background" style={{ position: 'absolute', inset: 0, backgroundImage: background.image, backgroundColor: background.color, backgroundRepeat: background.repeat, backgroundPosition: background.position, backgroundSize: background.size }} />, background.target)}
     {catalog?.visible && target ? createPortal(

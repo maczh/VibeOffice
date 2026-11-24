@@ -1,23 +1,24 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
 import './insert-function-dialog.css';
+import { useExcelxRuntime } from './editor-host';
 
 type Catalog = { categories: string[]; category: string; search: string; names: string[]; selected: string | null; syntax: string; description: string };
 type Runtime = { dlg?: { reactFunctionCatalog?(): Catalog | null; reactFunctionAction?(action: string, value?: string): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 
 /** React function picker; formula syntax, evaluation, MRU storage and argument editing remain engine-backed. */
 export function ExcelxInsertFunctionDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [search, setSearch] = useState('');
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactFunctionCatalog?.() || null; setCatalog(next); if (next) setSearch(next.search); };
-    const off = runtime()?.bus?.on('excelx-insert-function-dialog', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactFunctionCatalog?.()) runtime()?.dlg?.reactFunctionAction?.('close'); };
+    const refresh = () => { const next = runtime?.dlg?.reactFunctionCatalog?.() || null; setCatalog(next); if (next) setSearch(next.search); };
+    const off = runtime?.bus?.on('excelx-insert-function-dialog', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactFunctionCatalog?.()) runtime?.dlg?.reactFunctionAction?.('close'); };
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const action = runtime()?.dlg?.reactFunctionAction;
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const action = runtime?.dlg?.reactFunctionAction;
   const open = () => action?.('open');
   const searchNow = () => action?.('search', search);
   return <OfficeDialog title={t('Insert Function')} className="excelx-insert-function-dialog" style={{ width: 'min(94vw, 520px)' }} onRequestClose={() => action?.('close')}>

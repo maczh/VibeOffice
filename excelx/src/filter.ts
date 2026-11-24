@@ -3,6 +3,8 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxFilter(runtime: Window): void {
   const root = runtime;
+  const window = root;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.grid || !L?.app || !L?.layout || !L?.numfmt || !L?.calc || !L?.ui) throw new Error("Excelx filtering requires the mounted workbook runtime");
   if (installedRuntimes.has(L)) return;

@@ -1,6 +1,10 @@
 // @ts-nocheck -- Presentation application orchestration uses the established dynamic runtime contracts.
 /* PPTX — application controller. */
+import { standardColorName } from '@vibeoffice/core';
 export function installPptxApp(runtime: Window): void {
+  const window = runtime as Window & { L?: any; VO?: any };
+  const VO = window.VO;
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L;
   const { h } = L;
   const ui = L.ui;
@@ -898,7 +902,7 @@ addEventListener('resize',fit);fit();show(0);`;
     return state ? {
       slots: M.SCHEME_SLOTS.map(([key, label]) => ({ key, label: L.t(label), color: state.colors[key], hex: M.resolveColor(state.colors[key], state.design) })),
       theme: M.schemeRow(state.design).map((item) => ({ value: item.ref, label: item.tip || item.ref, hex: item.hex })),
-      standard: L.color.STANDARD.map((hex) => ({ value: hex, label: ui.colorName(hex), hex })),
+      standard: L.color.STANDARD.map((hex) => ({ value: hex, label: L.t(standardColorName(hex)), hex })),
     } : null;
   };
   A.reactColorSchemeAction = (action, key, value) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 
 type SelectOption = [unknown, unknown] | unknown;
@@ -38,7 +38,7 @@ function SelectControl({ request }: { request: SelectRequest }) {
 /** React-owned native selects for shared legacy feature APIs in direct-host mode. */
 export function EditorSelectLayer({ host }: { host: HTMLElement }) {
   const [requests, setRequests] = useState<SelectRequest[]>([]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onSelect = (event: Event) => {
       const request = (event as CustomEvent<SelectRequest>).detail;
       if (!request || !(request.target instanceof HTMLDivElement) || !request.options || !Array.isArray(request.options.options)) return;

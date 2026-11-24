@@ -16,7 +16,7 @@ const blank = (t, selector) => t.evaluate(`(() => { const box = document.querySe
   return null; })()`);
 /** click the button of a command, on the ribbon tab that holds it in Paper 2016 */
 async function commandButton(t, cmd, tab) {
-  if (await t.evaluate(`!!document.querySelector('.rb-tabs')`)) await t.click(await t.el(`.rb-tab[data-tab="${tab}"]`));
+  if (await t.evaluate(`!![...document.querySelectorAll('.rb-tabs')].find((element)=>element.getClientRects().length)`)) await t.click(await t.el(`.rb-tab[data-tab="${tab}"]`));
   const b = await t.button(cmd);
   assert.ok(b, `the ${cmd} button`);
   await t.click(b);

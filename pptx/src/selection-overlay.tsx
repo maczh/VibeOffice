@@ -16,8 +16,8 @@ interface SelectionOverlayRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
 }
 
-function runtime(): SelectionOverlayRuntime | undefined {
-  return (window as Window & { L?: SelectionOverlayRuntime }).L;
+function runtime(host: HTMLElement): SelectionOverlayRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: SelectionOverlayRuntime }) | null)?.L;
 }
 
 function renderNode(node: PptxSelectionOverlayNode): ReactNode {
@@ -33,13 +33,13 @@ function renderNode(node: PptxSelectionOverlayNode): ReactNode {
 
 /** React owns PPTX selection frames and their delegated pointer targets inside the engine overlay host. */
 export function PptxSelectionOverlay({ host }: { host: HTMLElement }) {
-  const [nodes, setNodes] = useState<PptxSelectionOverlayNode[]>(() => runtime()?.ed?.reactSelectionOverlayCatalog?.() || []);
+  const [nodes, setNodes] = useState<PptxSelectionOverlayNode[]>(() => runtime(host)?.ed?.reactSelectionOverlayCatalog?.() || []);
   useEffect(() => {
-    const refresh = () => setNodes(runtime()?.ed?.reactSelectionOverlayCatalog?.() || []);
+    const refresh = () => setNodes(runtime(host)?.ed?.reactSelectionOverlayCatalog?.() || []);
     let attachedBus: SelectionOverlayRuntime['bus'];
     let offs: Array<() => void> = [];
     const attach = () => {
-      const bus = runtime()?.bus;
+      const bus = runtime(host)?.bus;
       if (bus && bus !== attachedBus) {
         offs.forEach((off) => off());
         attachedBus = bus;

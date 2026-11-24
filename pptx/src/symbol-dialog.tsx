@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 interface SymbolCatalog {
   font: string;
@@ -17,20 +18,20 @@ interface SymbolRuntime {
   t?(message: string): string;
   fontStack?(font: string): string;
 }
-function runtime(): SymbolRuntime | undefined { return (window as Window & { L?: SymbolRuntime }).L; }
 
 /** React-owned Unicode symbol picker; character insertion and custom-bullet callbacks remain engine-backed. */
 export function PptxSymbolDialog() {
+  const runtime = usePptxRuntime<SymbolRuntime>();
   const [catalog, setCatalog] = useState<SymbolCatalog | null>(null);
   useEffect(() => {
-    const refresh = () => setCatalog(runtime()?.dlg?.reactSymbolCatalog?.() || null);
-    const off = runtime()?.bus?.on('pptx-symbol-dialog', refresh);
+    const refresh = () => setCatalog(runtime?.dlg?.reactSymbolCatalog?.() || null);
+    const off = runtime?.bus?.on('pptx-symbol-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
+  const t = (message: string) => runtime?.t?.(message) || message;
   const act = (action: string, value?: unknown) => {
-    const next = runtime()?.dlg?.reactSymbolAction?.(action, value) || null;
+    const next = runtime?.dlg?.reactSymbolAction?.(action, value) || null;
     setCatalog(next ? { ...next, glyphs: [...next.glyphs], recent: [...next.recent] } : null);
   };
   const close = () => act('close');
@@ -43,7 +44,7 @@ export function PptxSymbolDialog() {
         {catalog.subsets.map((subset, index) => <option key={`${index}:${subset}`} value={index}>{subset}</option>)}
       </select></label>
     </div>
-    <div className="sym-grid" translate="no" aria-label={catalog.subsets[catalog.subset]} style={{ fontFamily: catalog.font === 'normal' ? undefined : runtime()?.fontStack?.(catalog.font) }}>
+    <div className="sym-grid" translate="no" aria-label={catalog.subsets[catalog.subset]} style={{ fontFamily: catalog.font === 'normal' ? undefined : runtime?.fontStack?.(catalog.font) }}>
       {catalog.glyphs.map((glyph) => <button key={glyph} type="button" className={catalog.selected === glyph ? 'on' : ''} aria-label={`U+${glyph.codePointAt(0)?.toString(16).toUpperCase()}`} onClick={() => act('select', glyph)} onDoubleClick={() => { act('select', glyph); act('insert'); }}>{glyph}</button>)}
     </div>
     <label>{t('Recently used symbols:')}</label>

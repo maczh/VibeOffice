@@ -1,9 +1,9 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useExcelxRuntime } from './editor-host.js';
 
 type Catalog = { options: Record<string, boolean>; entries: [string, string][] };
 type Runtime = { dlg?: { reactAutoCorrectCatalog?(): Catalog | null; reactAutoCorrectAction?(action: string, from?: string, to?: string, options?: Record<string, boolean>): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 const OPTIONS: [string, string][] = [
   ['acTwoCaps', 'Correct TWo INitial CApitals'], ['acSentence', 'Capitalize first letter of &sentences'],
   ['acDays', 'Capitalize &names of days'], ['acCapsLock', 'Correct accidental use of cAPS &LOCK key'],
@@ -12,6 +12,7 @@ const OPTIONS: [string, string][] = [
 
 /** React-owned AutoCorrect UI; the legacy engine retains its dictionary and option persistence. */
 export function ExcelxAutoCorrectDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [options, setOptions] = useState<Record<string, boolean>>({});
   const [entries, setEntries] = useState<[string, string][]>([]);
@@ -20,17 +21,17 @@ export function ExcelxAutoCorrectDialog() {
   const [activeEntry, setActiveEntry] = useState(0);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactAutoCorrectCatalog?.() || null;
+      const next = runtime?.dlg?.reactAutoCorrectCatalog?.() || null;
       setCatalog(next);
       if (next) { setOptions(next.options); setEntries(next.entries); const index = next.entries.findIndex(([key]) => key === from); setActiveEntry(index >= 0 ? index : 0); }
     };
-    const off = runtime()?.bus?.on('excelx-auto-correct-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-auto-correct-dialog', refresh);
     refresh();
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const action = runtime()?.dlg?.reactAutoCorrectAction;
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const action = runtime?.dlg?.reactAutoCorrectAction;
   const close = () => action?.('close');
   const choose = (key: string, value: string) => { setFrom(key); setTo(value); const index = entries.findIndex(([item]) => item === key); if (index >= 0) setActiveEntry(index); };
   const onEntriesKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

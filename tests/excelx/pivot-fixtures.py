@@ -1,6 +1,6 @@
 """Author the pivot source kinds absent from the pinned public corpus.
 
-Usage: python3 tests/ledger/pivot-fixtures.py CORPUS_DIR OUT_DIR
+Usage: python3 tests/excelx/pivot-fixtures.py CORPUS_DIR OUT_DIR
 
 These are structural fixtures, not Office-authored or Office-accepted samples.
 The named source keeps the public workbook's data and cache. The consolidation

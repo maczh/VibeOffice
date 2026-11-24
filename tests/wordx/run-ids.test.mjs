@@ -2,7 +2,7 @@
 // Word 2016 places text per rsid run, so a save without them moved the text by fractions of a pixel (the Fluent
 // Ribbon walkthrough), and Compare and Combine use them. A copied paragraph doesn't repeat its paragraph id. Text is
 // written with xml:space="preserve" only where it needs it, as Word does.
-// node --test tests/quire/run-ids.test.mjs
+// node --test tests/wordx/run-ids.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

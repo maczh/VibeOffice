@@ -1,6 +1,9 @@
 // @ts-nocheck -- Dialog adapters retain dynamic feature/legacy callback contracts.
 /* PPTX — dialog boxes. */
+import { standardColorName } from '@vibeoffice/core';
 export function installPptxDialogs(runtime: Window): void {
+  const window = runtime as Window & { VO?: any };
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L;
   const { h } = L;
   const ui = L.ui;
@@ -815,7 +818,7 @@ export function installPptxDialogs(runtime: Window): void {
       const fullW = s0.w / (1 - crop.l - crop.r), fullH = s0.h / (1 - crop.t - crop.b), tx = s0.tx;
       const colors = [
         ...(ui.schemeColors ? ui.schemeColors(d).map((color) => ({ value: color.ref, label: color.tip || color.ref, color: color.hex })) : []),
-        ...L.color.STANDARD.map((color) => ({ value: color, label: ui.colorName(color), color })),
+        ...L.color.STANDARD.map((color) => ({ value: color, label: L.t(standardColorName(color)), color })),
       ];
       reactFormatShape = { shapes, shape: s0, title, isPic, isLine, isWA, hasText: !!tx,
         fill: L.clone(srcFill || { t: 'none' }), line: L.clone(srcLine || { t: 'none' }), colors,
@@ -922,7 +925,7 @@ export function installPptxDialogs(runtime: Window): void {
       const d = design();
       const colors = [
         ...(ui.schemeColors ? ui.schemeColors(d).map((color) => ({ value: color.ref, label: color.tip || color.ref, color: color.hex })) : []),
-        ...L.color.STANDARD.map((color) => ({ value: color, label: ui.colorName(color), color })),
+        ...L.color.STANDARD.map((color) => ({ value: color, label: L.t(standardColorName(color)), color })),
       ];
       reactBackground = { slide, fill: L.clone(slide.bg || d.bg), omit: !!slide.hideMaster, colors };
       L.bus.emit('pptx-background-dialog');
@@ -1254,7 +1257,7 @@ export function installPptxDialogs(runtime: Window): void {
     patterns: Object.keys(L.render.PATTERNS).map((key) => ({ key, label: (L.geom.PATTERN_NAMES || {})[key] || key, src: L.render.patternURL(key, '#000000', '#FFFFFF') })),
     colors: [
       ...(ui.schemeColors ? ui.schemeColors(design()).map((color) => ({ value: color.ref, label: color.tip || color.ref, color: color.hex })) : []),
-      ...L.color.STANDARD.map((color) => ({ value: color, label: ui.colorName(color), color })),
+      ...L.color.STANDARD.map((color) => ({ value: color, label: L.t(standardColorName(color)), color })),
     ],
   } : null;
   D.reactFillEffectsBuild = (config) => {

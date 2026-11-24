@@ -1,13 +1,13 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
 import './save-as-dialog.css';
+import { useExcelxRuntime } from './editor-host';
 
 type Catalog = { name: string; type: string; types: [string, string][]; password: string };
 type Runtime = { dlg?: { reactSaveAsCatalog?(): Catalog | null; reactSaveAsAction?(action: string, name?: string, type?: string, password?: string): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** Save As and its encryption-password confirmation are React-owned; workbook writing stays in the engine. */
 export function ExcelxSaveAsDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [view, setView] = useState<'save' | 'options' | 'confirm'>('save');
   const [name, setName] = useState('');
@@ -16,12 +16,12 @@ export function ExcelxSaveAsDialog() {
   const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState('');
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactSaveAsCatalog?.() || null; setCatalog(next); if (next) { setName(next.name); setType(next.type); setPassword(next.password); setConfirmation(''); setError(''); setView('save'); } };
-    const off = runtime()?.bus?.on('excelx-save-as-dialog', refresh); return () => off?.();
+    const refresh = () => { const next = runtime?.dlg?.reactSaveAsCatalog?.() || null; setCatalog(next); if (next) { setName(next.name); setType(next.type); setPassword(next.password); setConfirmation(''); setError(''); setView('save'); } };
+    const off = runtime?.bus?.on('excelx-save-as-dialog', refresh); return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (text: string) => runtime()?.t?.(text) || text;
-  const action = runtime()?.dlg?.reactSaveAsAction;
+  const t = (text: string) => runtime?.t?.(text) || text;
+  const action = runtime?.dlg?.reactSaveAsAction;
   const cancel = () => action?.('cancel');
   const save = () => {
     if (password) { setConfirmation(''); setError(''); setView('confirm'); return; }

@@ -1,5 +1,5 @@
 // Real media objects, actual model transactions, clipboard transport and recovery.
-// Usage: node tests/lectern/media.mjs FILE_OR_LIST OUTDIR
+// Usage: node tests/pptx/media.mjs FILE_OR_LIST OUTDIR
 import fs from 'node:fs';
 import path from 'node:path';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

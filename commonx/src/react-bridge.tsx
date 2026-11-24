@@ -20,12 +20,13 @@ export interface VibeOfficeServices {
 }
 
 interface LegacyVibeOffice {
+  VERSION?: string;
   t?: (message: string, ...values: Array<string | number>) => string;
   N?: (message: string) => string;
   reactClose?: () => Promise<boolean>;
   look?: { get?: () => LookId; set: (look: LookId) => void };
   lang?: { set: (language: LanguageId) => void };
-  reactDirectHost?: { root?: HTMLElement | null };
+  reactDirectHost?: { root?: HTMLElement & { dataset: DOMStringMap } | null };
 }
 
 declare global {
@@ -59,7 +60,9 @@ const languages: readonly Choice<LanguageId>[] = [
 const Context = createContext<VibeOfficeServices | null>(null);
 
 function currentLook(): LookId {
-  const value = typeof window !== 'undefined' ? window.VO?.look?.get?.() : undefined;
+  const value = typeof window !== 'undefined'
+    ? window.VO?.look?.get?.() ?? window.VO?.reactDirectHost?.root?.dataset.look
+    : undefined;
   return looks.some(({ id }) => id === value) ? value as LookId : 'classic';
 }
 
@@ -76,6 +79,11 @@ function defaultTranslate(message: string, ...values: Array<string | number>): s
 function defaultSetLook(look: LookId): void {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.VO?.look) window.VO.look.set(look);
+  else if (window.VO?.reactDirectHost?.root) {
+    window.VO.reactDirectHost.root.dataset.look = look;
+    window.VO.reactDirectHost.root.dataset.layout = look === 'paper2016' ? 'ribbon' : 'bars';
+    window.dispatchEvent(new Event('vo-look'));
+  }
   else {
     document.documentElement.dataset.look = look;
     document.documentElement.dataset.layout = look === 'paper2016' ? 'ribbon' : 'bars';

@@ -1,6 +1,6 @@
 // A file that names no default formatting gets Word's (Calibri 11 pt, 8 pt after, 1.08 lines), measured in Word 2016;
 // one that names a default but leaves a value out keeps the format's own (Times New Roman, 10 pt, single).
-// node --test tests/quire/default-formatting.test.mjs
+// node --test tests/wordx/default-formatting.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

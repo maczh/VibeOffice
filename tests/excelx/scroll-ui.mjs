@@ -1,6 +1,6 @@
 // Mouse-wheel and keyboard scrolling in every direction, with the page repainting between steps
 // (the scroll clamp once used the pane's current first row, so up/left stopped where they were).
-// node tests/ledger/scroll-ui.mjs
+// node tests/excelx/scroll-ui.mjs
 import { openPage, ensureServer } from '../../tools/ooxml/cdp.mjs';
 const stop = await ensureServer(), page = await openPage('ledger', { persistence: false });
 try {

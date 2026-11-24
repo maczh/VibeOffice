@@ -1,5 +1,5 @@
 // Numbering metadata through real list commands, copies, history and drafts.
-// node tests/quire/numbering.mjs CORPUS OUTPUT
+// node tests/wordx/numbering.mjs CORPUS OUTPUT
 import fs from 'node:fs';
 import path from 'node:path';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

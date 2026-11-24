@@ -1,22 +1,22 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 type NameItem = { key: string; name: string; ref: string; comment: string };
 type Catalog = { names: NameItem[]; name: string; ref: string; comment: string; error: string };
 type Runtime = { dlg?: { reactDefinedNamesCatalog?(): Catalog | null; reactDefinedNamesAction?(action: string, value?: unknown): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** React owner for workbook defined-name browsing and editing. */
 export function ExcelxDefinedNamesDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   useEffect(() => {
-    const refresh = () => setCatalog(runtime()?.dlg?.reactDefinedNamesCatalog?.() || null);
-    const off = runtime()?.bus?.on('excelx-defined-names', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactDefinedNamesCatalog?.()) runtime()?.dlg?.reactDefinedNamesAction?.('close'); };
+    const refresh = () => setCatalog(runtime?.dlg?.reactDefinedNamesCatalog?.() || null);
+    const off = runtime?.bus?.on('excelx-defined-names', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactDefinedNamesCatalog?.()) runtime?.dlg?.reactDefinedNamesAction?.('close'); };
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const action = runtime()?.dlg?.reactDefinedNamesAction;
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const action = runtime?.dlg?.reactDefinedNamesAction;
   const change = (key: 'name' | 'ref' | 'comment', value: string) => action?.('change', { [key]: value });
   return <OfficeDialog title={t('Define Name')} className="excelx-defined-names-dialog" style={{ width: 'min(94vw, 520px)' }} onRequestClose={() => action?.('close')}>
     <div className="excelx-defined-names-dialog__body">

@@ -11,53 +11,49 @@ export function installSharedLook(runtime: Window): void {
   (function () {
   'use strict';
   const VO = window.VO || (window.VO = {});
-  const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-  /* the desktop app's copy */
-  const desk = window.__VO_HOST__ && window.__TAURI_INTERNALS__ ? Object.assign({}, window.__VO_SETTINGS__) : null;
-  delete window.__VO_SETTINGS__;
   const listeners = new Set();
-  let sending = Promise.resolve();
-  const take = (key, value) => {
-    if ((has(desk, key) ? desk[key] : null) === value) return;
-    if (value == null) delete desk[key]; else desk[key] = value;
-    for (const fn of listeners) fn(key, value);
-  };
   VO.settings = {
     /** the string kept for key, else dflt */
     get(key, dflt = null) {
-      if (desk) return has(desk, key) ? desk[key] : dflt;
       try { const v = localStorage.getItem(key); return v == null ? dflt : v; } catch (e) { return dflt; }
     },
     /** keeps value (a string; null removes the key) for every window of the suite; false if it can't be kept */
     set(key, value) {
       value = value == null ? null : String(value);
-      if (!desk) {
-        try { if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value); return true; } catch (e) { return false; }
-      }
-      const before = has(desk, key) ? desk[key] : null;
-      if (before === value) return true;
-      if (value == null) delete desk[key]; else desk[key] = value;
-      // one at a time, so the app takes them in the order they were made
-      sending = sending.then(() => window.__TAURI_INTERNALS__.invoke('host_set_setting', { key, value })).catch((e) => {
-        console.error('setting not kept:', key, e);
-        if ((has(desk, key) ? desk[key] : null) === value) take(key, before);
-      });
-      return true;
+      try { if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value); return true; } catch (e) { return false; }
     },
     remove: (key) => VO.settings.set(key, null),
-    /** resolves once every change made here has reached the desktop app (before this page reloads) */
-    kept: () => sending,
+    /** Workspace settings are persisted synchronously by the browser storage API. */
+    kept: () => Promise.resolve(),
     /** fn(key, value) when another window changes a setting (value null: removed; key null: all may have); returns
      *  the function that stops it */
     on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   };
-  if (desk) window.addEventListener('vo-settings', (e) => take(e.detail.key, e.detail.value));
-  else window.addEventListener('storage', (e) => { if (e.storageArea === localStorage) for (const fn of listeners) fn(e.key, e.newValue); });
+  window.addEventListener('storage', (e) => { if (e.storageArea === localStorage) for (const fn of listeners) fn(e.key, e.newValue); });
 
-  const directRoot = () => window.__VIBE_OFFICE_DIRECT_HOST__?.root?.isConnected ? window.__VIBE_OFFICE_DIRECT_HOST__.root : null;
-  const d = directRoot() || document.documentElement, l = VO.settings.get('vibeoffice.look') || 'classic';
-  d.dataset.look = l;
-  d.dataset.layout = l === 'paper2016' ? 'ribbon' : 'bars';
+  const LOOKS = [{ id: 'classic' }, { id: 'paper' }, { id: 'paper2016', layout: 'ribbon' }];
+  const LOOK = 'vibeoffice.look';
+  const lookRoot = () => window.__VIBE_OFFICE_DIRECT_HOST__?.preserveHostLook && window.__VIBE_OFFICE_DIRECT_HOST__?.root?.isConnected && window.__VIBE_OFFICE_DIRECT_HOST__.root.dataset.lookRoot !== undefined ? window.__VIBE_OFFICE_DIRECT_HOST__.root : document.documentElement;
+  const applyLook = (id) => {
+    if (!LOOKS.some((look) => look.id === id)) return;
+    const root = lookRoot();
+    const changed = root.dataset.look !== id;
+    root.dataset.look = id;
+    root.dataset.layout = LOOKS.find((look) => look.id === id).layout || 'bars';
+    if (changed) window.dispatchEvent(new window.Event('vo-look'));
+  };
+  VO.look = {
+    list: () => LOOKS.map((look) => ({ ...look, name: ({ classic: 'Classic', paper: 'Paper', paper2016: 'Paper 2016' })[look.id] })),
+    get: () => lookRoot().dataset.look || 'classic',
+    layout: () => lookRoot().dataset.layout || 'bars',
+    set(id) {
+      if (!LOOKS.some((look) => look.id === id)) return;
+      VO.settings.set(LOOK, id);
+      applyLook(id);
+    },
+  };
+  applyLook(VO.settings.get(LOOK) || 'classic');
+  VO.settings.on((key) => { if (key === LOOK || key === null) applyLook(VO.settings.get(LOOK) || 'classic'); });
 
   })();
 }
@@ -134,7 +130,7 @@ export function installSharedI18n(runtime: Window, scriptUrl: URL): void {
       (a file name A|B.docx filled into a message, "Revenue | Expenses") */
   const plain = (s) => s.replace(/(\S)\|[A-Za-z][A-Za-z -]*$/, '$1');
   /* Locale catalogs are also consumed by the out-of-scope desktop app; keep them unchanged and brand only web UI. */
-  const webBrand = (s) => window.__VO_HOST__ && window.__TAURI_INTERNALS__ ? s : s.replace(/\bQuire\b/g, 'Wordx').replace(/\bLedger\b/g, 'Excelx').replace(/\bLectern\b/g, 'PPTX');
+  const webBrand = (s) => s.replace(/\bQuire\b/g, 'Wordx').replace(/\bLedger\b/g, 'Excelx').replace(/\bLectern\b/g, 'PPTX');
 
   let dict = null;
   /* in the pseudo-locale, the text asked for that the catalog lacks (tools/i18n.mjs harvest reads it) */

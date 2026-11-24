@@ -1,8 +1,10 @@
 /* Excelx — primary dialog engine and React dialog adapters. */
 // @ts-nocheck -- dialog actions preserve existing workbook and legacy standalone contracts.
+import { standardColorName } from '@vibeoffice/core';
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxDialogs(runtime: Window): void {
   const root = runtime;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.ops || !L?.formula || !L?.numfmt || !L?.layout || !L?.calc || !L?.ui) throw new Error("Excelx dialogs require workbook operations and shared UI services");
   if (installedRuntimes.has(L)) return;
@@ -720,7 +722,7 @@ export function installExcelxDialogs(runtime: Window): void {
     const pal = h('div', { class: 'fc-pal' });
     pal.appendChild(h('button', { type: 'button', class: 'cp-wide', text: 'No Color', onclick: () => { fillColor = null; changed.fill = true; showP(); } }));
     const grid = h('div', { class: 'cp-grid' });
-    for (const c of L.color.STANDARD) grid.appendChild(h('button', { type: 'button', class: 'cp-sw', style: `background:${c}`, 'aria-label': ui.colorName(c), 'data-tip': ui.colorName(c), onclick: () => { fillColor = c; changed.fill = true; showP(); } }));
+    for (const c of L.color.STANDARD) { const name = L.t(standardColorName(c)); grid.appendChild(h('button', { type: 'button', class: 'cp-sw', style: `background:${c}`, 'aria-label': name, 'data-tip': name, onclick: () => { fillColor = c; changed.fill = true; showP(); } })); }
     pal.appendChild(grid);
     const PATTERNS = ['solid', 'darkGray', 'mediumGray', 'lightGray', 'gray125', 'gray0625', 'darkHorizontal', 'darkVertical', 'darkDown', 'darkUp', 'darkGrid', 'darkTrellis', 'lightHorizontal', 'lightVertical', 'lightDown', 'lightUp', 'lightGrid', 'lightTrellis'];
     /* each pattern's name, as Excel's tips name them */
@@ -733,7 +735,7 @@ export function installExcelxDialogs(runtime: Window): void {
         const g2 = h('div', { class: 'pat-grid' });
         for (const p of PATTERNS) { const b = h('button', { type: 'button', style: `background:#fff url("${patternURL(p, '#000', '#fff')}")`, 'aria-label': PAT_NAMES[p], 'data-tip': PAT_NAMES[p], 'data-pattern': p }); b.addEventListener('click', () => { close(); pattern = p === 'solid' ? null : p; changed.fill = true; showP(); }); g2.appendChild(b); }
         const g3 = h('div', { class: 'cp-grid' });
-        for (const c of L.color.STANDARD) g3.appendChild(h('button', { type: 'button', class: 'cp-sw', style: `background:${c}`, 'aria-label': ui.colorName(c), 'data-tip': ui.colorName(c), onclick: () => { close(); patColor = c; changed.fill = true; showP(); } }));
+        for (const c of L.color.STANDARD) { const name = L.t(standardColorName(c)); g3.appendChild(h('button', { type: 'button', class: 'cp-sw', style: `background:${c}`, 'aria-label': name, 'data-tip': name, onclick: () => { close(); patColor = c; changed.fill = true; showP(); } })); }
         return h('div', null, g2, h('div', { class: 'cp-sep' }), h('div', { class: 'tp-note', text: 'Pattern color:' }), g3);
       } }], { left: r.left, bottom: r.bottom });
     });
@@ -832,7 +834,7 @@ export function installExcelxDialogs(runtime: Window): void {
           return reactFormatCells.fontColors;
         },
         fill: { fillColor, pattern, patColor },
-        fillColors: L.color.STANDARD.map((color) => ({ value: color, label: ui.colorName(color) })),
+        fillColors: L.color.STANDARD.map((color) => ({ value: color, label: L.t(standardColorName(color)) })),
         patterns: PATTERNS.map((value) => ({ value, label: PAT_NAMES[value], preview: patternURL(value, '#000000', '#FFFFFF') })),
         onFillChange: (patch) => {
           for (const key of Object.keys(patch)) {
@@ -1054,7 +1056,7 @@ export function installExcelxDialogs(runtime: Window): void {
     let pick = sheets[0].tabColor ? M.colorHex(w, sheets[0].tabColor) : null;
     const apply = (color) => tryRun(() => { O.tx(w, 'Tab Color', () => { for (const s of sheets) O.sheetProp(w, s, 'tabColor', color ? M.rgb(color) : null); }); A().renderTabs(); });
     if (root.VO && root.VO.reactDirectHost && root.VO.reactDirectHost.root && root.VO.reactDirectHost.root.isConnected) {
-      reactTabColor = { options: L.color.STANDARD.map((color) => ({ color, label: ui.colorName(color) })), selected: pick };
+      reactTabColor = { options: L.color.STANDARD.map((color) => ({ color, label: L.t(standardColorName(color)) })), selected: pick };
       reactTabColorApply = apply;
       L.bus.emit('excelx-tab-color-dialog');
       return;
@@ -1063,7 +1065,7 @@ export function installExcelxDialogs(runtime: Window): void {
     const none = h('button', { type: 'button', class: 'cp-wide', text: 'No Color' });
     const mark = () => { L.$$('.cp-sw', grid).forEach((b) => b.classList.toggle('on', b.dataset.c === pick)); none.classList.toggle('on', !pick); };
     none.addEventListener('click', () => { pick = null; mark(); });
-    for (const c of L.color.STANDARD) { const b = h('button', { type: 'button', class: 'cp-sw', style: `background:${c}`, 'data-tip': ui.colorName(c), 'aria-label': ui.colorName(c) }); b.dataset.c = c; b.addEventListener('click', () => { pick = c; mark(); }); grid.appendChild(b); }
+    for (const c of L.color.STANDARD) { const name = L.t(standardColorName(c)); const b = h('button', { type: 'button', class: 'cp-sw', style: `background:${c}`, 'data-tip': name, 'aria-label': name }); b.dataset.c = c; b.addEventListener('click', () => { pick = c; mark(); }); grid.appendChild(b); }
     mark();
     ui.dialog({ title: 'Format Tab Color', width: 260, body: h('div', { class: 'col' }, ui.group('Tab Color', none, grid)), buttons: [{ label: 'OK', primary: true, onClick: () => apply(pick) }, { label: 'Cancel' }] });
   };

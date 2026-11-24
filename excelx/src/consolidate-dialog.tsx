@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface ConsolidateChoice { value: string; label: string }
 interface ConsolidateState { refs: string[]; fn: string; top: boolean; left: boolean }
@@ -9,24 +10,23 @@ interface ConsolidateRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): ConsolidateRuntime | undefined { return (window as Window & { L?: ConsolidateRuntime }).L; }
-
 export function ExcelxConsolidateDialog() {
+  const runtime = useExcelxRuntime<ConsolidateRuntime>();
   const [catalog, setCatalog] = useState<ConsolidateCatalog | null>(null);
   const [state, setState] = useState<ConsolidateState>({ refs: [], fn: 'SUM', top: false, left: false });
   const [reference, setReference] = useState('');
   const [selected, setSelected] = useState(-1);
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactConsolidateCatalog?.() || null; setCatalog(next); if (next) { setState({ refs: next.refs, fn: next.fn, top: next.top, left: next.left }); setSelected(-1); } };
-    const off = runtime()?.bus?.on('excelx-consolidate-dialog', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactConsolidateCatalog?.()) runtime()?.dlg?.reactConsolidateClose?.(); };
+    const refresh = () => { const next = runtime?.dlg?.reactConsolidateCatalog?.() || null; setCatalog(next); if (next) { setState({ refs: next.refs, fn: next.fn, top: next.top, left: next.left }); setSelected(-1); } };
+    const off = runtime?.bus?.on('excelx-consolidate-dialog', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactConsolidateCatalog?.()) runtime?.dlg?.reactConsolidateClose?.(); };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactConsolidateClose?.();
-  const apply = () => runtime()?.dlg?.reactConsolidateApply?.(state);
-  const add = () => { if (runtime()?.dlg?.reactConsolidateAdd?.(reference)) setReference(''); };
-  const remove = () => { if (runtime()?.dlg?.reactConsolidateDelete?.(selected)) setSelected(-1); };
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactConsolidateClose?.();
+  const apply = () => runtime?.dlg?.reactConsolidateApply?.(state);
+  const add = () => { if (runtime?.dlg?.reactConsolidateAdd?.(reference)) setReference(''); };
+  const remove = () => { if (runtime?.dlg?.reactConsolidateDelete?.(selected)) setSelected(-1); };
   const update = (patch: Partial<ConsolidateState>) => setState((current) => ({ ...current, ...patch }));
   return <OfficeDialog title={translate('Consolidate')} className="excelx-consolidate-dialog" style={{ width: 'min(92vw, 480px)' }} onRequestClose={close}>
     <div className="excelx-consolidate-dialog__body">

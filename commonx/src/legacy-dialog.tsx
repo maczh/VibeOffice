@@ -62,11 +62,12 @@ function LegacyDialog({ request }: { request: LegacyDialogMountRequest }) {
   useLayoutEffect(() => {
     const body = bodyRef.current;
     const dialog = dialogRef.current;
+    const view = dialog?.ownerDocument.defaultView;
     if (body && options.body) body.append(options.body);
-    if (!dialog || !body) return;
-    dialog.style.width = `${Math.min(options.width || 380, window.innerWidth - 16)}px`;
+    if (!dialog || !body || !view) return;
+    dialog.style.width = `${Math.min(options.width || 380, view.innerWidth - 16)}px`;
     const rect = dialog.getBoundingClientRect();
-    setPosition({ left: Math.max(4, (window.innerWidth - rect.width) / 2), top: Math.max(4, (window.innerHeight - rect.height) / 2.4) });
+    setPosition({ left: Math.max(4, (view.innerWidth - rect.width) / 2), top: Math.max(4, (view.innerHeight - rect.height) / 2.4) });
     const api: LegacyDialogApi = {
       el: dialog,
       body,
@@ -80,18 +81,20 @@ function LegacyDialog({ request }: { request: LegacyDialogMountRequest }) {
       : body.querySelector<HTMLElement>('input:not([type=checkbox]):not([type=radio]),select,textarea')
         || buttonRefs.current.find((button, index) => buttons[index]?.primary)
         || buttonRefs.current[0];
-    if (focus instanceof HTMLElement) { focus.focus(); if (focus instanceof HTMLInputElement) focus.select(); }
+    if (focus instanceof view.HTMLElement) { focus.focus(); if (focus instanceof view.HTMLInputElement) focus.select(); }
     options.onOpen?.(dialog);
   }, []);
 
   useEffect(() => {
+    const view = dialogRef.current?.ownerDocument.defaultView;
+    if (!view) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (options.modeless || request.stack.at(-1) !== request.token) return;
       if (event.key === 'Escape') {
         event.preventDefault(); event.stopPropagation();
         const index = buttons.findIndex((button) => button.cancel || /^cancel$|^close$/i.test(button.label.replace(/&([^&\s])/g, '$1')));
         if (index >= 0) buttonRefs.current[index]?.click(); else request.close(null);
-      } else if (event.key === 'Enter' && !event.shiftKey && !(event.target instanceof HTMLElement && (event.target.tagName === 'TEXTAREA' || event.target.tagName === 'BUTTON' || event.target.isContentEditable || event.target.tagName === 'SELECT'))) {
+      } else if (event.key === 'Enter' && !event.shiftKey && !(event.target instanceof view.HTMLElement && (event.target.tagName === 'TEXTAREA' || event.target.tagName === 'BUTTON' || event.target.isContentEditable || event.target.tagName === 'SELECT'))) {
         const index = buttons.findIndex((button) => button.primary);
         if (index >= 0) { event.preventDefault(); event.stopPropagation(); buttonRefs.current[index]?.click(); }
       } else if (event.key === 'Tab') {
@@ -99,13 +102,13 @@ function LegacyDialog({ request }: { request: LegacyDialogMountRequest }) {
         if (!dialog) return;
         const focusable = [...dialog.querySelectorAll<HTMLElement>('input,select,textarea,button,[tabindex="0"]')].filter((element) => !(element as HTMLButtonElement).disabled && element.offsetParent !== null);
         if (!focusable.length) return;
-        const index = focusable.indexOf(document.activeElement as HTMLElement);
+        const index = focusable.indexOf(view.document.activeElement as HTMLElement);
         if (event.shiftKey && index <= 0) { event.preventDefault(); focusable[focusable.length - 1]?.focus(); }
         else if (!event.shiftKey && index === focusable.length - 1) { event.preventDefault(); focusable[0]?.focus(); }
       }
     };
-    document.addEventListener('keydown', onKeyDown, true);
-    return () => document.removeEventListener('keydown', onKeyDown, true);
+    view.document.addEventListener('keydown', onKeyDown, true);
+    return () => view.document.removeEventListener('keydown', onKeyDown, true);
   }, [buttons, options.modeless, request]);
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -118,10 +121,12 @@ function LegacyDialog({ request }: { request: LegacyDialogMountRequest }) {
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const start = drag.current, dialog = dialogRef.current;
     if (!start || !dialog) return;
+    const view = dialog.ownerDocument.defaultView;
+    if (!view) return;
     const rect = dialog.getBoundingClientRect();
     setPosition({
-      left: Math.max(-rect.width + 60, Math.min(window.innerWidth - 60, start.left + event.clientX - start.x)),
-      top: Math.max(0, Math.min(window.innerHeight - 30, start.top + event.clientY - start.y)),
+      left: Math.max(-rect.width + 60, Math.min(view.innerWidth - 60, start.left + event.clientX - start.x)),
+      top: Math.max(0, Math.min(view.innerHeight - 30, start.top + event.clientY - start.y)),
     });
   };
 

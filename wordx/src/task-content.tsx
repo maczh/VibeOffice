@@ -1,7 +1,20 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AppearanceFields, DraftRecoveryPane, OfficeDialog } from '@vibeoffice/core';
+import { AppearanceFields, DraftRecoveryPane, OfficeDialog, SvgArtwork } from '@vibeoffice/core';
 import { WordxAutocompleteTip } from './autocomplete-tip.js';
+
+const WordxTaskHostContext = createContext<HTMLElement | null>(null);
+
+function useWordxTaskHost(): HTMLElement {
+  const host = useContext(WordxTaskHostContext);
+  if (!host) throw new Error('Wordx task UI must be rendered inside WordxTaskHostContext');
+  return host;
+}
+
+function hostMutationObserver(host: HTMLElement, callback: MutationCallback): MutationObserver {
+  const Observer = host.ownerDocument.defaultView?.MutationObserver || MutationObserver;
+  return new Observer(callback);
+}
 
 type HelpEntry = [string, string];
 interface ClipArtItem { id: string; name: string; svg: string }
@@ -84,11 +97,13 @@ interface WordxRuntime {
   t?(text: string, ...args: unknown[]): string;
   bus?: { on(event: string, listener: () => void): () => void; emit?(event: string, ...args: unknown[]): void };
 }
-function runtime(): WordxRuntime | undefined { return (window as Window & { L?: WordxRuntime }).L; }
+function runtime(host: HTMLElement): WordxRuntime | undefined { return (host.ownerDocument.defaultView as (Window & { L?: WordxRuntime }) | null)?.L; }
 function tr(L: WordxRuntime, text: string): string { return L.t?.(text) || text; }
 
 function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
-  const host = (window as Window & { VO?: { reactDirectHost?: { root?: HTMLElement | null } } }).VO?.reactDirectHost?.root || document.body;
+  const host = useWordxTaskHost();
+  const doc = host.ownerDocument;
+  const view = doc.defaultView;
   const spellStatus = () => (L.app as (typeof L.app & { reactSpellStatusUpdate?(): void }) | undefined)?.reactSpellStatusUpdate?.();
   useEffect(() => {
     const offs = [
@@ -111,7 +126,8 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       L.spell?.reactAttachRoot?.(L.layout?.root);
     };
     const offReady = L.bus?.on('app-ready', attach);
-    const observer = new MutationObserver(attach);
+    const Observer = view?.MutationObserver || MutationObserver;
+    const observer = new Observer(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     const pagePointerDown = (event: PointerEvent) => { if (!L.drawtool?.active) L.ed?.reactPagePointerDown?.(event); };
@@ -119,29 +135,29 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     const dragEnd = () => L.ed?.reactDragEnd?.();
     host.addEventListener('pointerdown', pagePointerDown, true);
     host.addEventListener('dragend', dragEnd, true);
-    document.addEventListener('selectionchange', selectionChange);
-    return () => { offs.forEach((off) => off?.()); offReady?.(); observer.disconnect(); scroller?.removeEventListener('scroll', onScroll); host.removeEventListener('pointerdown', pagePointerDown, true); host.removeEventListener('dragend', dragEnd, true); document.removeEventListener('selectionchange', selectionChange); };
+    doc.addEventListener('selectionchange', selectionChange);
+    return () => { offs.forEach((off) => off?.()); offReady?.(); observer.disconnect(); scroller?.removeEventListener('scroll', onScroll); host.removeEventListener('pointerdown', pagePointerDown, true); host.removeEventListener('dragend', dragEnd, true); doc.removeEventListener('selectionchange', selectionChange); };
   }, [host, L]);
   useEffect(() => {
     let timer = 0;
-    const onLayout = () => { window.clearTimeout(timer); timer = window.setTimeout(() => L.drawing?.reactLayoutDone?.(), 0); };
+    const onLayout = () => { view?.clearTimeout(timer); timer = view?.setTimeout(() => L.drawing?.reactLayoutDone?.(), 0) || 0; };
     const offLayout = L.bus?.on('layout-done', onLayout);
     const offSelection = L.bus?.on('objsel', () => L.drawing?.reactObjectSelection?.());
-    return () => { offLayout?.(); offSelection?.(); window.clearTimeout(timer); };
-  }, [L]);
+    return () => { offLayout?.(); offSelection?.(); view?.clearTimeout(timer); };
+  }, [L, view]);
   useEffect(() => {
     let timer = 0;
     const offFind = L.bus?.on('layout-done', () => {
       const find = L.find as (typeof L.find & { reactLayoutChanged?(): void }) | undefined;
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => find?.reactLayoutChanged?.(), 0);
+      view?.clearTimeout(timer);
+      timer = view?.setTimeout(() => find?.reactLayoutChanged?.(), 0) || 0;
     });
     const offSplit = L.bus?.on('layout-done', () => {
       const app = L.app as (typeof L.app & { reactSplitLayoutChanged?(): void }) | undefined;
       app?.reactSplitLayoutChanged?.();
     });
-    return () => { offFind?.(); offSplit?.(); window.clearTimeout(timer); };
-  }, [L]);
+    return () => { offFind?.(); offSplit?.(); view?.clearTimeout(timer); };
+  }, [L, view]);
   useEffect(() => {
     const off = L.bus?.on('sel', () => L.autocorrect?.reactSelectionChanged?.());
     return () => off?.();
@@ -260,7 +276,7 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       }
       if (app) observer?.disconnect();
     };
-    observer = new MutationObserver(attach);
+    observer = hostMutationObserver(host, attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); if (app) types.forEach((type) => app?.removeEventListener(type, handlers[type])); };
@@ -277,21 +293,21 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       splitter?.addEventListener('pointerdown', pointerDown);
       if (splitter) observer?.disconnect();
     };
-    observer = new MutationObserver(attach);
+    observer = hostMutationObserver(host, attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); splitter?.removeEventListener('pointerdown', pointerDown); };
   }, [host, L]);
   useEffect(() => {
     const resize = () => L.app?.reactResize?.();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, [L]);
+    view?.addEventListener('resize', resize);
+    return () => view?.removeEventListener('resize', resize);
+  }, [L, view]);
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => L.app?.reactBeforeUnload?.(event);
-    window.addEventListener('beforeunload', beforeUnload);
-    return () => window.removeEventListener('beforeunload', beforeUnload);
-  }, [L]);
+    view?.addEventListener('beforeunload', beforeUnload);
+    return () => view?.removeEventListener('beforeunload', beforeUnload);
+  }, [L, view]);
   useEffect(() => {
     const scroll = () => L.app?.reactScroll?.();
     let scroller: HTMLElement | null = null;
@@ -308,7 +324,7 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     };
     const tablePointerMove = (event: PointerEvent) => L.tables?.reactPointerMove?.(event);
     const tablePointerDown = (event: PointerEvent) => L.tables?.reactPointerDown?.(event);
-    observer = new MutationObserver(attach);
+    observer = hostMutationObserver(host, attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); scroller?.removeEventListener('scroll', scroll); scroller?.removeEventListener('pointermove', tablePointerMove); scroller?.removeEventListener('pointerdown', tablePointerDown, true); };
@@ -319,7 +335,7 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
     let root: HTMLElement | null = null;
     let observer: MutationObserver | null = null;
     const attach = () => {
-      const next = (window as Window & { VO?: { reactDirectHost?: { root?: HTMLElement | null } } }).VO?.reactDirectHost?.root || null;
+      const next = host;
       if (next === root) { if (next) observer?.disconnect(); return; }
       root?.removeEventListener('keydown', keydown);
       root?.removeEventListener('keyup', keyup);
@@ -328,8 +344,8 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
       root?.addEventListener('keyup', keyup);
       if (root) observer?.disconnect();
     };
-    observer = new MutationObserver(attach);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer = hostMutationObserver(host, attach);
+    observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); root?.removeEventListener('keydown', keydown); root?.removeEventListener('keyup', keyup); };
   }, [L]);
@@ -337,6 +353,7 @@ function OutlineInteractionBridge({ L }: { L: WordxRuntime }) {
 }
 
 function DrawToolInteractionBridge({ L, host }: { L: WordxRuntime; host: HTMLElement }) {
+  const view = host.ownerDocument.defaultView;
   type Session = { opts: { line?: boolean; geom?: string }; hit: { r: DOMRect }; k: number; sc: HTMLElement; sr: DOMRect; x0: number; y0: number; pointerId: number };
   const [gesture, setGesture] = useState<{ session: Session; x: number; y: number; moved: boolean } | null>(null);
   const [drawingMode, setDrawingMode] = useState(!!L.drawtool?.active);
@@ -360,7 +377,8 @@ function DrawToolInteractionBridge({ L, host }: { L: WordxRuntime; host: HTMLEle
       if (target !== next) { target?.classList.remove('drawing-mode'); target = next; }
       target?.classList.toggle('drawing-mode', drawingModeRef.current);
     };
-    const observer = new MutationObserver(sync);
+    const Observer = view?.MutationObserver || MutationObserver;
+    const observer = new Observer(sync);
     observer.observe(host, { childList: true, subtree: true }); sync();
     return () => { observer.disconnect(); target?.classList.remove('drawing-mode'); };
   }, [host]);
@@ -411,14 +429,15 @@ function DrawToolInteractionBridge({ L, host }: { L: WordxRuntime; host: HTMLEle
       target?.addEventListener('pointerdown', onDown, true);
       if (target) observer?.disconnect();
     };
-    observer = new MutationObserver(attach); observer.observe(host, { childList: true, subtree: true }); attach();
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onCancel);
-    const root = (window as Window & { VO?: { reactDirectHost?: { root?: HTMLElement | null } } }).VO?.reactDirectHost?.root;
+    const Observer = view?.MutationObserver || MutationObserver;
+    observer = new Observer(attach); observer.observe(host, { childList: true, subtree: true }); attach();
+    view?.addEventListener('pointermove', onMove);
+    view?.addEventListener('pointerup', onUp);
+    view?.addEventListener('pointercancel', onCancel);
+    const root = host;
     root?.addEventListener('keydown', onKeyDown);
-    return () => { observer?.disconnect(); target?.removeEventListener('pointerdown', onDown, true); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onCancel); root?.removeEventListener('keydown', onKeyDown); active.current = null; };
-  }, [host, L]);
+    return () => { observer?.disconnect(); target?.removeEventListener('pointerdown', onDown, true); view?.removeEventListener('pointermove', onMove); view?.removeEventListener('pointerup', onUp); view?.removeEventListener('pointercancel', onCancel); root.removeEventListener('keydown', onKeyDown); active.current = null; };
+  }, [host, L, view]);
   if (!gesture || !scroller) return null;
   const { session, x, y } = gesture;
   const dx = x - session.x0, dy = y - session.y0;
@@ -502,7 +521,7 @@ function ClipboardPane({ L }: { L: WordxRuntime }) {
     </div>
     <div className="tp-note">{L.t?.('{0} of 24 - Clipboard. Click an item to paste.', items.length) || `${items.length} of 24 - Clipboard. Click an item to paste.`}</div>
     {items.map((item) => <button className="cb-item" key={item.index} type="button" onClick={() => L.panes?.reactPasteClipboard?.(item.index)}>
-      <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.get(item.table ? 'table' : 'font') || '' }} />
+      <span aria-hidden="true"><SvgArtwork markup={L.icons?.get(item.table ? 'table' : 'font') || ''} owner="wordx-task-content" /></span>
       <span className="cb-t" translate="no">{item.text}</span>
     </button>)}
   </div>;
@@ -510,9 +529,9 @@ function ClipboardPane({ L }: { L: WordxRuntime }) {
 
 function GettingStartedPane({ L }: { L: WordxRuntime }) {
   const [query, setQuery] = useState('');
-  const action = (key: string, label: string, icon?: string) => <button className="tp-link" type="button" key={key} onClick={() => L.panes?.reactGettingStartedAction?.(key)}>{icon && <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} />}<span>{tr(L, label)}</span></button>;
+  const action = (key: string, label: string, icon?: string) => <button className="tp-link" type="button" key={key} onClick={() => L.panes?.reactGettingStartedAction?.(key)}>{icon && <span aria-hidden="true"><SvgArtwork markup={L.icons?.get(icon) || ''} owner="wordx-task-content" /></span>}<span>{tr(L, label)}</span></button>;
   return <div className="tp-body">
-    <div className="tp-row"><span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.app?.(32) || '' }} /><b translate="no" style={{ color: 'var(--pane-ink)' }}>Wordx</b></div>
+    <div className="tp-row"><span aria-hidden="true"><SvgArtwork markup={L.icons?.app?.(32) || ''} owner="wordx-task-content" /></span><b translate="no" style={{ color: 'var(--pane-ink)' }}>Wordx</b></div>
     <section className="tp-sec"><div className="tp-h">{tr(L, 'Search for:')}</div><div className="tp-row"><input aria-label={tr(L, 'Search help')} placeholder={tr(L, 'Search help')} value={query} style={{ flex: 1, minWidth: 0 }} onChange={(event) => setQuery(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter' && query.trim()) L.panes?.reactGettingStartedAction?.(`help:${query.trim()}`); event.stopPropagation(); }} /><button className="btn small" type="button" onClick={() => { if (query.trim()) L.panes?.reactGettingStartedAction?.(`help:${query.trim()}`); }}>{tr(L, 'Go')}</button></div></section>
     <section className="tp-sec"><div className="tp-h">{tr(L, 'Open')}</div>{action('open', 'More...', 'open')}{action('new', 'Create a new document...', 'new')}{action('sample', 'Open the welcome document', 'sample')}</section>
     <section className="tp-sec"><div className="tp-h">{tr(L, 'Learn')}</div>{action('help', 'Keyboard shortcuts and help', 'help')}{action('styles', 'Styles and Formatting', 'stylesPane')}{action('mailmerge', 'Mail Merge wizard', 'mailMerge')}</section>
@@ -606,7 +625,8 @@ function DocumentMap({ L, host }: { L: WordxRuntime; host: HTMLElement }) {
     const events = ['wordx-docmap-render', 'sel', 'doc-changed', 'doc-loaded'];
     const offs = events.map((event) => L.bus?.on(event, () => refresh((value) => value + 1))).filter(Boolean) as Array<() => void>;
     const target = host.querySelector('#docmap');
-    const observer = target && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => refresh((value) => value + 1)) : null;
+    const ResizeObserverCtor = host.ownerDocument.defaultView?.ResizeObserver;
+    const observer = target && ResizeObserverCtor ? new ResizeObserverCtor(() => refresh((value) => value + 1)) : null;
     if (target && observer) observer.observe(target);
     return () => { offs.forEach((off) => off()); observer?.disconnect(); };
   }, [host, L]);
@@ -672,7 +692,7 @@ function ReadingToolbar({ L }: { L: WordxRuntime }) {
   const [, refresh] = useState(0);
   useEffect(() => L.bus?.on('view', () => refresh((value) => value + 1)), [L]);
   if (L.app?.view !== 'reading') return null;
-  const button = (icon: string, label: string, action: string, tip?: string) => <button className={`tb-btn${label ? ' with-label' : ''}`} type="button" aria-label={tr(L, tip || label)} data-tip={tr(L, tip || label)} onPointerDown={(event) => event.preventDefault()} onClick={() => L.panes?.reactReadingAction?.(action)}>{icon ? <span dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} /> : null}{label ? <span className="tb-lbl">{tr(L, label)}</span> : null}</button>;
+  const button = (icon: string, label: string, action: string, tip?: string) => <button className={`tb-btn${label ? ' with-label' : ''}`} type="button" aria-label={tr(L, tip || label)} data-tip={tr(L, tip || label)} onPointerDown={(event) => event.preventDefault()} onClick={() => L.panes?.reactReadingAction?.(action)}>{icon ? <span><SvgArtwork markup={L.icons?.get(icon) || ''} owner="wordx-task-content" /></span> : null}{label ? <span className="tb-lbl">{tr(L, label)}</span> : null}</button>;
   return <div className="readbar" role="toolbar" aria-label={tr(L, 'Reading Layout')}>
     {button('docMap', 'Document Map', 'docmap')}{button('thumbnails', 'Thumbnails', 'thumbs')}{button('find', 'Find', 'find')}{button('research', 'Research', 'research')}<span className="tb-sep" />
     {button('growFont', '', 'grow', 'Increase Text Size')}{button('shrinkFont', '', 'shrink', 'Decrease Text Size')}{button('onePage', '', 'page', 'Actual Page')}{button('multiPage', '', 'pages', 'Allow Multiple Pages')}<span className="tb-sep" />{button('', 'Close', 'close')}
@@ -695,7 +715,7 @@ function PrintPreviewToolbar({ L }: { L: WordxRuntime }) {
   }, [L, L.app?.view, L.layout?.scroller]);
   if (L.app?.view !== 'preview') return null;
   const action = (name: string, value?: string, anchor?: HTMLButtonElement) => L.panes?.reactPreviewAction?.(name, value, anchor);
-  const button = (icon: string, label: string, name: string, tip?: string, on?: boolean) => <button className={`tb-btn${label ? ' with-label' : ''}${on ? ' on' : ''}`} type="button" aria-label={tr(L, tip || label)} data-tip={tr(L, tip || label)} aria-pressed={on} onPointerDown={(event) => event.preventDefault()} onClick={(event) => action(name, undefined, event.currentTarget)}>{icon ? <span dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} /> : null}{label ? <span className="tb-lbl">{tr(L, label)}</span> : null}</button>;
+  const button = (icon: string, label: string, name: string, tip?: string, on?: boolean) => <button className={`tb-btn${label ? ' with-label' : ''}${on ? ' on' : ''}`} type="button" aria-label={tr(L, tip || label)} data-tip={tr(L, tip || label)} aria-pressed={on} onPointerDown={(event) => event.preventDefault()} onClick={(event) => action(name, undefined, event.currentTarget)}>{icon ? <span><SvgArtwork markup={L.icons?.get(icon) || ''} owner="wordx-task-content" /></span> : null}{label ? <span className="tb-lbl">{tr(L, label)}</span> : null}</button>;
   const zoom = Math.round((L.layout?.zoom || 1) * 100);
   return <div className="toolbar preview-bar" id="tb-preview" role="toolbar" aria-label={tr(L, 'Print Preview')}>
     <span className="tb-grip" />{button('print', '', 'print', 'Print')}{button('zoom', '', 'magnifier', 'Magnifier', !!L.panes?.preview?.mag)}{button('onePage', '', 'page', 'One Page')}{button('multiPage', '', 'multi', 'Multiple Pages')}
@@ -705,6 +725,7 @@ function PrintPreviewToolbar({ L }: { L: WordxRuntime }) {
 }
 
 function TaskPaneHeader({ L }: { L: WordxRuntime }) {
+  const doc = useWordxTaskHost().ownerDocument;
   const [, refresh] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0 });
@@ -717,12 +738,12 @@ function TaskPaneHeader({ L }: { L: WordxRuntime }) {
     const outside = (event: PointerEvent) => {
       if (!menu.current?.contains(event.target as Node) && !trigger.current?.contains(event.target as Node)) setMenuOpen(false);
     };
-    document.addEventListener('pointerdown', outside);
-    return () => document.removeEventListener('pointerdown', outside);
-  }, [menuOpen]);
+    doc.addEventListener('pointerdown', outside);
+    return () => doc.removeEventListener('pointerdown', outside);
+  }, [menuOpen, doc]);
   const state = L.panes?.reactTaskShellState?.();
   if (!state) return null;
-  const button = (action: string, icon: string, label: string, disabled = false) => <button className="tp-nav" type="button" aria-label={tr(L, label)} data-tip={tr(L, label)} disabled={disabled} onClick={(event) => L.panes?.reactTaskShellAction?.(action, event.currentTarget)}><span dangerouslySetInnerHTML={{ __html: L.icons?.get(icon) || '' }} /></button>;
+  const button = (action: string, icon: string, label: string, disabled = false) => <button className="tp-nav" type="button" aria-label={tr(L, label)} data-tip={tr(L, label)} disabled={disabled} onClick={(event) => L.panes?.reactTaskShellAction?.(action, event.currentTarget)}><span><SvgArtwork markup={L.icons?.get(icon) || ''} owner="wordx-task-content" /></span></button>;
   const openMenu = () => {
     if (!trigger.current) return;
     const { left, bottom } = trigger.current.getBoundingClientRect();
@@ -735,7 +756,7 @@ function TaskPaneHeader({ L }: { L: WordxRuntime }) {
     const items = [...(menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') || [])];
     if (!items.length) return;
     event.preventDefault();
-    const current = items.indexOf(document.activeElement as HTMLButtonElement);
+    const current = items.indexOf(doc.activeElement as HTMLButtonElement);
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
     items[next]?.focus();
   };
@@ -761,7 +782,7 @@ function WordxStatusBar({ L }: { L: WordxRuntime }) {
     const action = actions[cell.id];
     const handleKey = (event: KeyboardEvent<HTMLDivElement>) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(cell.id); } };
     const props = { className: `${cell.className} ${cell.id}`, 'data-tip': cell.tip || undefined, role: action ? 'button' : undefined, tabIndex: action ? 0 : undefined, onClick: cell.id === 'spell' ? () => activate(cell.id) : undefined, onDoubleClick: cell.id !== 'spell' && action ? () => activate(cell.id) : undefined, onKeyDown: action ? handleKey : undefined };
-    return cell.html ? <div key={cell.id} {...props} dangerouslySetInnerHTML={{ __html: cell.html }} /> : <div key={cell.id} {...props}>{cell.text}</div>;
+    return cell.html ? <div key={cell.id} {...props}><SvgArtwork markup={cell.html} owner="wordx-task-content" /></div> : <div key={cell.id} {...props}>{cell.text}</div>;
   })}</div>;
 }
 
@@ -799,6 +820,7 @@ type FindInputAdapter = {
 };
 
 function FindReplaceInput({ L, replace }: { L: WordxRuntime; replace: boolean }) {
+  const view = useWordxTaskHost().ownerDocument.defaultView;
   const adapter = L.find as FindInputAdapter | undefined;
   const initial = adapter?.reactFindState?.() || { text: '', replace: '' };
   const id = replace ? 'fr-repl' : 'fr-find';
@@ -822,7 +844,7 @@ function FindReplaceInput({ L, replace }: { L: WordxRuntime; replace: boolean })
       valueRef.current = next;
       setValue(next);
       adapter?.reactFindAction?.('value', { [replace ? 'replace' : 'text']: next });
-      requestAnimationFrame(() => {
+      view?.requestAnimationFrame(() => {
         if (!node.isConnected) return;
         node.focus();
         node.setSelectionRange(start + code.length, start + code.length);
@@ -849,6 +871,7 @@ function FindFooterActions({ L }: { L: WordxRuntime }) {
 }
 
 function FindTabs({ L }: { L: WordxRuntime }) {
+  const doc = useWordxTaskHost().ownerDocument;
   const adapter = L.find as FindInputAdapter | undefined;
   const [active, setActive] = useState(() => adapter?.reactFindTab?.() ?? 0);
   useEffect(() => L.bus?.on('wordx-find-tab', () => setActive(adapter?.reactFindTab?.() ?? 0)), [L, adapter]);
@@ -856,7 +879,7 @@ function FindTabs({ L }: { L: WordxRuntime }) {
   return <div role="tablist" aria-label={tr(L, 'Find and Replace')} className="tp-btns">
     {tabs.map((label, index) => <button key={label} id={`react-wordx-find-tab-${index}`} type="button" role="tab" aria-selected={active === index} aria-controls={`react-wordx-find-panel-${index}`} tabIndex={active === index ? 0 : -1} className="btn" onClick={() => adapter?.reactFindAction?.('tab', String(index))} onKeyDown={(event) => {
       const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
-      if (next >= 0) { event.preventDefault(); adapter?.reactFindAction?.('tab', String(next)); document.getElementById(`react-wordx-find-tab-${next}`)?.focus(); }
+      if (next >= 0) { event.preventDefault(); adapter?.reactFindAction?.('tab', String(next)); doc.getElementById(`react-wordx-find-tab-${next}`)?.focus(); }
     }}>{tr(L, label)}</button>)}
   </div>;
 }
@@ -912,16 +935,17 @@ function MailMergeRecipientsDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 function NewAddressListDialogBody({ L }: { L: WordxRuntime }) {
+  const view = useWordxTaskHost().ownerDocument.defaultView;
   const catalog = L.mailmerge?.reactAddressListCatalog?.() || { fields: [], rows: [] };
   const [rows, setRows] = useState(() => catalog.rows.map((row) => row.slice()));
   const [current, setCurrent] = useState(0);
   const firstInput = useRef<HTMLInputElement>(null);
   const focusTimer = useRef<number | null>(null);
-  useEffect(() => () => { if (focusTimer.current !== null) window.clearTimeout(focusTimer.current); }, []);
+  useEffect(() => () => { if (focusTimer.current !== null) view?.clearTimeout(focusTimer.current); }, [view]);
   const updateRows = (next: string[][]) => { setRows(next); L.mailmerge?.reactAddressListSetRows?.(next); };
   const updateCell = (column: number, value: string) => updateRows(rows.map((row, index) => index === current ? row.map((cell, cellIndex) => cellIndex === column ? value : cell) : row));
   const navigate = (index: number) => setCurrent(Math.max(0, Math.min(rows.length - 1, index)));
-  const add = () => { const next = [...rows, catalog.fields.map(() => '')]; updateRows(next); setCurrent(next.length - 1); if (focusTimer.current !== null) window.clearTimeout(focusTimer.current); focusTimer.current = window.setTimeout(() => { focusTimer.current = null; if (firstInput.current?.isConnected) firstInput.current.focus(); }, 0); };
+  const add = () => { const next = [...rows, catalog.fields.map(() => '')]; updateRows(next); setCurrent(next.length - 1); if (focusTimer.current !== null) view?.clearTimeout(focusTimer.current); focusTimer.current = view?.setTimeout(() => { focusTimer.current = null; if (firstInput.current?.isConnected) firstInput.current.focus(); }, 0) ?? 0; };
   const remove = () => { if (rows.length <= 1) return; const next = rows.filter((_, index) => index !== current); updateRows(next); setCurrent(Math.min(current, next.length - 1)); };
   return <div className="col">
     <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '3px 8px', maxHeight: 300, overflow: 'auto', paddingRight: 4 }} translate="no">
@@ -1104,7 +1128,7 @@ function RulerTabSelector({ L }: { L: WordxRuntime }) {
 function RulerMarkerLayer({ L }: { L: WordxRuntime }) {
   const [markers, setMarkers] = useState(() => L.rulers?.reactMarkers?.() || []);
   useEffect(() => L.bus?.on('wordx-ruler-marks', () => setMarkers(L.rulers?.reactMarkers?.() || [])), [L]);
-  return <>{markers.map((marker, index) => <div key={`${marker.kind || 'mark'}-${marker.pos ?? marker.cid ?? index}`} className={marker.className} data-tip={tr(L, marker.tip)} data-kind={marker.kind} data-pos={marker.pos} data-cid={marker.cid} style={{ left: `${marker.left}px`, top: marker.top == null ? undefined : `${marker.top}px`, width: marker.width == null ? undefined : `${marker.width}px`, zIndex: 2 }} onPointerDown={(event) => { event.stopPropagation(); L.rulers?.reactMarkerDown?.(event.nativeEvent); }} onDoubleClick={(event) => { event.stopPropagation(); L.rulers?.reactRulerDoubleClick?.(event.nativeEvent); }} dangerouslySetInnerHTML={{ __html: marker.html }} />)}</>;
+  return <>{markers.map((marker, index) => <div key={`${marker.kind || 'mark'}-${marker.pos ?? marker.cid ?? index}`} className={marker.className} data-tip={tr(L, marker.tip)} data-kind={marker.kind} data-pos={marker.pos} data-cid={marker.cid} style={{ left: `${marker.left}px`, top: marker.top == null ? undefined : `${marker.top}px`, width: marker.width == null ? undefined : `${marker.width}px`, zIndex: 2 }} onPointerDown={(event) => { event.stopPropagation(); L.rulers?.reactMarkerDown?.(event.nativeEvent); }} onDoubleClick={(event) => { event.stopPropagation(); L.rulers?.reactRulerDoubleClick?.(event.nativeEvent); }}><SvgArtwork markup={marker.html} owner="wordx-task-content" /></div>)}</>;
 }
 
 function RulerEventSurface({ L }: { L: WordxRuntime }) {
@@ -1594,24 +1618,25 @@ function WordartDialogBody({ L }: { L: WordxRuntime }) {
   const adapter = L.dlg as (typeof L.dlg & { reactWordartCatalog?(): { selected: number; previews: string[] }; reactWordartAction?(action: string, value?: number): { selected: number; previews: string[] } | void }) | undefined;
   const [state, setState] = useState(adapter?.reactWordartCatalog?.() || { selected: 0, previews: [] });
   const act = (action: string, value?: number) => { const next = adapter?.reactWordartAction?.(action, value); if (next) setState(next); };
-  return <div className="col" id="react-wordx-wordart-body"><div>{tr(L, 'Select a LettersArt style:')}</div><div className="wa-grid">{state.previews.map((svg, index) => <button key={index} type="button" aria-label={L.t?.('LettersArt style {0}', index + 1)} className={state.selected === index ? 'on' : ''} onClick={() => act('select', index)} onDoubleClick={() => { act('select', index); act('apply'); }} dangerouslySetInnerHTML={{ __html: svg }} />)}</div></div>;
+  return <div className="col" id="react-wordx-wordart-body"><div>{tr(L, 'Select a LettersArt style:')}</div><div className="wa-grid">{state.previews.map((svg, index) => <button key={index} type="button" aria-label={L.t?.('LettersArt style {0}', index + 1)} className={state.selected === index ? 'on' : ''} onClick={() => act('select', index)} onDoubleClick={() => { act('select', index); act('apply'); }}><SvgArtwork markup={svg} owner="wordx-task-content" /></button>)}</div></div>;
 }
 
 function AutoShapeMenu({ L }: { L: WordxRuntime }) {
   const shapes = L.app?.reactShapeMenuCatalog?.() || [];
-  return <div className="shape-grid">{shapes.map((shape) => <button key={shape.kind} type="button" data-tip={tr(L, shape.label)} aria-label={tr(L, shape.label)} onClick={() => L.app?.reactShapeMenuAction?.(shape.kind)} dangerouslySetInnerHTML={{ __html: shape.svg }} />)}</div>;
+  return <div className="shape-grid">{shapes.map((shape) => <button key={shape.kind} type="button" data-tip={tr(L, shape.label)} aria-label={tr(L, shape.label)} onClick={() => L.app?.reactShapeMenuAction?.(shape.kind)}><SvgArtwork markup={shape.svg} owner="wordx-task-content" /></button>)}</div>;
 }
 
 function ObjectShadowMenu({ L }: { L: WordxRuntime }) {
   const choices = L.app?.reactShadowMenuCatalog?.() || [];
-  return <div className="shape-grid" style={{ gridTemplateColumns: 'repeat(4,30px)' }}>{choices.map((choice) => <button key={choice.index} type="button" style={{ width: 30, height: 30 }} aria-label={tr(L, choice.label)} onClick={() => L.app?.reactShadowMenuAction?.(choice.index)} dangerouslySetInnerHTML={{ __html: choice.svg }} />)}</div>;
+  return <div className="shape-grid" style={{ gridTemplateColumns: 'repeat(4,30px)' }}>{choices.map((choice) => <button key={choice.index} type="button" style={{ width: 30, height: 30 }} aria-label={tr(L, choice.label)} onClick={() => L.app?.reactShadowMenuAction?.(choice.index)}><SvgArtwork markup={choice.svg} owner="wordx-task-content" /></button>)}</div>;
 }
 
 type LettersArtTextState = { text: string; font: string; sz: number; b: boolean; i: boolean; fonts: string[]; sizes: number[] };
 function LettersArtTextDialogBody({ L, host }: { L: WordxRuntime; host: HTMLElement }) {
+  const view = host.ownerDocument.defaultView;
   const adapter = L.dlg as (typeof L.dlg & { reactLettersArtTextCatalog?(): LettersArtTextState; reactLettersArtTextAction?(action: string, value?: Partial<LettersArtTextState>): LettersArtTextState }) | undefined;
   const [state, setState] = useState<LettersArtTextState>(adapter?.reactLettersArtTextCatalog?.() || { text: '', font: 'Arial Black', sz: 36, b: false, i: false, fonts: [], sizes: [] });
-  useLayoutEffect(() => { const timer = window.setTimeout(() => host.querySelector<HTMLTextAreaElement>('#react-wordx-lettersart-text-body textarea')?.focus(), 50); return () => window.clearTimeout(timer); }, [host]);
+  useLayoutEffect(() => { const timer = view?.setTimeout(() => host.querySelector<HTMLTextAreaElement>('#react-wordx-lettersart-text-body textarea')?.focus(), 50); return () => { if (timer !== undefined) view?.clearTimeout(timer); }; }, [host, view]);
   const update = (value: Partial<LettersArtTextState>) => { const next = adapter?.reactLettersArtTextAction?.('change', value); if (next) setState(next); };
   return <div className="col" id="react-wordx-lettersart-text-body">
     <div className="row">
@@ -1825,7 +1850,7 @@ function FillEffectsDialogBody({ L }: { L: WordxRuntime }) {
     <div id={panelId} aria-labelledby={tabId(Math.max(0,tabs.findIndex(([key])=>key===state.tab)))} role="tabpanel">
     {state.tab==='gradient'&&<div className="col"><fieldset className="col"><legend>{tr(L,'Colors')}</legend>{([['one','One color'],['two','Two colors'],['preset','Preset']] as const).map(([value,label])=><label key={value}><input type="radio" name="react-wordx-fill-effects-colors" value={value} checked={state.colors===value} onChange={()=>update('colors',value)}/>{tr(L,label)}</label>)}{state.colors!=='preset'?<div className="row">{pick('color1')}{state.colors==='two'&&pick('color2')}</div>:<label>{tr(L,'Preset colors:')}<select value={state.preset} onChange={(event)=>update('preset',event.currentTarget.value)}>{state.presets.map((name)=><option key={name}>{tr(L,name)}</option>)}</select></label>}</fieldset><fieldset className="col"><legend>{tr(L,'Shading styles')}</legend><div className="row">{state.styles.map(([value,label])=><button type="button" className={`btn small${state.style===value?' on':''}`} aria-pressed={state.style===value} key={value} onClick={()=>update('style',value)}>{tr(L,label)}</button>)}</div></fieldset></div>}
     {state.tab==='texture'&&<div className="tp-note">{tr(L,'Textures are drawn as patterns; choose a pattern or a picture.')}</div>}
-    {state.tab==='pattern'&&<div className="col"><div className="shape-grid" style={{gridTemplateColumns:'repeat(8,26px)'}}>{state.patterns.map((item)=><button type="button" key={item.key} className={state.pattern===item.key?'on':''} aria-label={tr(L,item.name)} title={tr(L,item.name)} onClick={()=>update('pattern',item.key)} dangerouslySetInnerHTML={{__html:item.svg}}/>)}</div><div className="row">{pick('foreground')}{pick('background')}</div></div>}
+    {state.tab==='pattern'&&<div className="col"><div className="shape-grid" style={{gridTemplateColumns:'repeat(8,26px)'}}>{state.patterns.map((item)=><button type="button" key={item.key} className={state.pattern===item.key?'on':''} aria-label={tr(L,item.name)} title={tr(L,item.name)} onClick={()=>update('pattern',item.key)}><SvgArtwork markup={item.svg} owner="wordx-task-content" /></button>)}</div><div className="row">{pick('foreground')}{pick('background')}</div></div>}
     {state.tab==='picture'&&<div className="col"><button type="button" className="btn small" onClick={()=>adapter?.reactFillEffectsAction?.('picture')}>{tr(L,'Select Picture...')}</button><div className="tp-note">{tr(L,state.pictureName)}</div></div>}
     </div>
   </div>;
@@ -1904,6 +1929,9 @@ function AutoCorrectExceptionsDialogBody({ L }: { L: WordxRuntime }) {
 
 type AutoCorrectMainState={options:Record<string,boolean>;entries:Array<[string,string]>;selected:string};
 function AutoCorrectDialogBody({ L, initialTab = 0 }: { L: WordxRuntime; initialTab?: number }) {
+  const host = useWordxTaskHost();
+  const doc = host.ownerDocument;
+  const view = doc.defaultView;
   const [tab, setTab] = useState(initialTab);
   const focusFrame = useRef<number | null>(null);
   const pendingTabFocus = useRef<number | null>(null);
@@ -1911,17 +1939,17 @@ function AutoCorrectDialogBody({ L, initialTab = 0 }: { L: WordxRuntime; initial
   useLayoutEffect(() => {
     const index = pendingTabFocus.current;
     if (index === null || index !== tab) return;
-    document.getElementById(`react-wordx-autocorrect-tab-${index}`)?.focus();
+    doc.getElementById(`react-wordx-autocorrect-tab-${index}`)?.focus();
     pendingTabFocus.current = null;
   }, [tab]);
   const tabs = ['AutoCorrect', 'AutoFormat As You Type', 'AutoText'];
   const panelIds = tabs.map((_, index) => `react-wordx-autocorrect-panel-${index}`);
   useEffect(() => () => {
-    if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+    if (focusFrame.current !== null) view?.cancelAnimationFrame(focusFrame.current);
     focusFrame.current = null;
     removeFocusCleanup.current();
     removeFocusCleanup.current = () => {};
-  }, []);
+  }, [view]);
   return <div className="col" id="react-wordx-autocorrect-dialog">
     <div className="tabs-head" role="tablist" aria-label={tr(L, 'AutoCorrect settings')}>
       {tabs.map((label, index) => <button key={label} type="button" role="tab" id={`react-wordx-autocorrect-tab-${index}`} aria-selected={tab === index} aria-controls={panelIds[index]} tabIndex={tab === index ? 0 : -1} className={`tab${tab === index ? ' on' : ''}`} onClick={() => setTab(index)} onKeyDown={(event) => {
@@ -1930,18 +1958,18 @@ function AutoCorrectDialogBody({ L, initialTab = 0 }: { L: WordxRuntime; initial
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
         pendingTabFocus.current = next;
         setTab(next);
-        if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+        if (focusFrame.current !== null) view?.cancelAnimationFrame(focusFrame.current);
         removeFocusCleanup.current();
-        const frame = requestAnimationFrame(() => {
+        const frame = view?.requestAnimationFrame(() => {
           if (focusFrame.current !== frame) return;
           focusFrame.current = null;
           removeFocusCleanup.current();
           removeFocusCleanup.current = () => {};
-          document.getElementById(`react-wordx-autocorrect-tab-${next}`)?.focus();
-        });
+          doc.getElementById(`react-wordx-autocorrect-tab-${next}`)?.focus();
+        }) ?? 0;
         focusFrame.current = frame;
         removeFocusCleanup.current = L.addMountCleanup?.(() => {
-          cancelAnimationFrame(frame);
+          view?.cancelAnimationFrame(frame);
           if (focusFrame.current === frame) focusFrame.current = null;
           removeFocusCleanup.current = () => {};
         }) || (() => {});
@@ -2247,7 +2275,7 @@ function TemplatePickerDialogBody({ L }: { L: WordxRuntime }) {
   };
   return <div className="row" id="react-wordx-template-picker-body">
     <div className="col" style={{ flex: 1, minWidth: 240 }}><div className="tabs-head" role="tablist" aria-label={tr(L,'Template categories')}>{catalog.categories.map((item,index) => <button key={item.name} id={tabId(item.name)} type="button" role="tab" aria-controls={panelId} aria-selected={item.name === category} tabIndex={item.name===category?0:-1} className={`tab${item.name === category ? ' on' : ''}`} onClick={() => { setCategory(item.name); if (item.items[0]) { setSelected(item.items[0].id); adapter?.reactTemplatePickerAction?.('select',item.items[0].id); } }} onKeyDown={(event)=>tabKeyDown(event,index)}>{tr(L,item.name)}</button>)}</div>
-      <div className="preset-grid" id={panelId} role="tabpanel" aria-labelledby={tabId(category)}>{(active?.items || []).map((entry) => <button key={entry.id} type="button" className={entry.id === selected ? 'on' : ''} aria-pressed={entry.id === selected} data-template-id={entry.id} onClick={() => { setSelected(entry.id); adapter?.reactTemplatePickerAction?.('select', entry.id); }} onDoubleClick={() => adapter?.reactTemplatePickerAction?.('accept', entry.id)}><span aria-hidden="true" dangerouslySetInnerHTML={{ __html: L.icons?.get?.('new') || '' }} /><span>{tr(L,entry.name)}</span></button>)}</div>
+      <div className="preset-grid" id={panelId} role="tabpanel" aria-labelledby={tabId(category)}>{(active?.items || []).map((entry) => <button key={entry.id} type="button" className={entry.id === selected ? 'on' : ''} aria-pressed={entry.id === selected} data-template-id={entry.id} onClick={() => { setSelected(entry.id); adapter?.reactTemplatePickerAction?.('select', entry.id); }} onDoubleClick={() => adapter?.reactTemplatePickerAction?.('accept', entry.id)}><span aria-hidden="true"><SvgArtwork markup={L.icons?.get?.('new') || ''} owner="wordx-task-content" /></span><span>{tr(L,entry.name)}</span></button>)}</div>
     </div>
     <div className="col"><div className="cd-cap">{tr(L,'Preview')}</div><div className="preview-box" style={{ width: 150, height: 190 }}><div className="ps-page" style={{ width: 110, height: 140 }}>{Array.from({ length: item?.id === 'blank' ? 0 : 14 }, (_, index) => <i key={index} style={{ top: 14 + index * 8, ...(index % 5 === 4 ? { right: 40 } : {}) }} />)}</div></div></div>
   </div>;
@@ -2372,20 +2400,21 @@ function InsertObjectDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 function EquationDialogBody({ L }: { L: WordxRuntime }) {
+  const view = useWordxTaskHost().ownerDocument.defaultView;
   const [value, setValue] = useState('');
   const updateValue = (next: string) => { setValue(next); L.dlg?.reactEquationDraftSet?.(next); };
   const symbols = '±×÷≠≈≤≥∞√∛∑∏∫∂∆∇πθαβγδλμσφωΩ→⇒∈∉⊂⊃∪∩∀∃¬∧∨²³⁴ⁿ₀₁₂ᵢ½';
   const input = useRef<HTMLTextAreaElement>(null);
   const focusFrame = useRef<number | null>(null);
-  useEffect(() => () => { if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); }, []);
+  useEffect(() => () => { if (focusFrame.current !== null) view?.cancelAnimationFrame(focusFrame.current); }, [view]);
   const insertSymbol = (symbol: string) => {
     const node = input.current;
     const start = node?.selectionStart ?? value.length;
     const end = node?.selectionEnd ?? start;
     const next = value.slice(0, start) + symbol + value.slice(end);
     updateValue(next);
-    if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
-    focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; if (!node?.isConnected) return; node.focus(); node.setSelectionRange(start + symbol.length, start + symbol.length); });
+    if (focusFrame.current !== null) view?.cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = view?.requestAnimationFrame(() => { focusFrame.current = null; if (!node?.isConnected) return; node.focus(); node.setSelectionRange(start + symbol.length, start + symbol.length); }) ?? null;
   };
   return <div className="col">
     <div className="sym-recent" style={{ gridTemplateColumns: 'repeat(16,26px)' }}>{[...symbols].map((symbol, index) => <button key={`${symbol}-${index}`} type="button" onClick={() => insertSymbol(symbol)}>{symbol}</button>)}</div>
@@ -2465,6 +2494,7 @@ function CellOperationDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 function InsertTableDialogBody({ L }: { L: WordxRuntime }) {
+  const view = useWordxTaskHost().ownerDocument.defaultView;
   const initial = L.dlg?.reactInsertTableState?.() || { columns: 5, rows: 2 };
   const [columns, setColumns] = useState(initial.columns);
   const [rows, setRows] = useState(initial.rows);
@@ -2475,9 +2505,9 @@ function InsertTableDialogBody({ L }: { L: WordxRuntime }) {
   const updateDraft = (key: 'columns' | 'rows' | 'fit' | 'width' | 'remember', value: number | string | boolean) => L.dlg?.reactInsertTableDraftSet?.(key, value);
   useEffect(() => {
     const onStyle = (event: Event) => setStyle((event as CustomEvent<{ name: string }>).detail.name);
-    window.addEventListener('wordx-insert-table-style', onStyle);
-    return () => window.removeEventListener('wordx-insert-table-style', onStyle);
-  }, []);
+    view?.addEventListener('wordx-insert-table-style', onStyle);
+    return () => view?.removeEventListener('wordx-insert-table-style', onStyle);
+  }, [view]);
   return <div className="col">
     <fieldset><legend>{tr(L, 'Table size')}</legend><label>{tr(L, 'Number of columns:')} <input id="react-wordx-table-columns" type="number" min={1} max={63} value={columns} onChange={(event) => { const value=Number(event.currentTarget.value); setColumns(value); updateDraft('columns', value); }} /></label><label>{tr(L, 'Number of rows:')} <input id="react-wordx-table-rows" type="number" min={1} max={32767} value={rows} onChange={(event) => { const value=Number(event.currentTarget.value); setRows(value); updateDraft('rows', value); }} /></label></fieldset>
     <fieldset><legend>{tr(L, 'AutoFit behavior')}</legend><label><input type="radio" name="react-wordx-table-fit" data-table-fit="fixed" checked={fit === 'fixed'} onChange={() => { setFit('fixed'); updateDraft('fit', 'fixed'); }} />{tr(L, 'Fixed column width:')} <input id="react-wordx-table-width" type="text" value={width} onChange={(event) => { const value=event.currentTarget.value; setWidth(value); updateDraft('width', value); }} /></label><label><input type="radio" name="react-wordx-table-fit" data-table-fit="contents" checked={fit === 'contents'} onChange={() => { setFit('contents'); updateDraft('fit', 'contents'); }} />{tr(L, 'AutoFit to contents')}</label><label><input type="radio" name="react-wordx-table-fit" data-table-fit="window" checked={fit === 'window'} onChange={() => { setFit('window'); updateDraft('fit', 'window'); }} />{tr(L, 'AutoFit to window')}</label></fieldset>
@@ -2534,6 +2564,7 @@ function TableToTextDialogBody({ L }: { L: WordxRuntime }) {
 }
 
 function FormulaDialogBody({ L }: { L: WordxRuntime }) {
+  const view = useWordxTaskHost().ownerDocument.defaultView;
   const catalog = L.dlg?.reactFormulaCatalog?.() || { guess: '=', functions: [], bookmarks: [], formats: [] };
   const adapter = L.dlg as (typeof L.dlg & { reactFormulaDraftSet?(key: string, value: string): void }) | undefined;
   const [formula, setFormula] = useState(catalog.guess);
@@ -2542,7 +2573,7 @@ function FormulaDialogBody({ L }: { L: WordxRuntime }) {
   const [bookmark, setBookmark] = useState('');
   const input = useRef<HTMLInputElement>(null);
   const focusFrame = useRef<number | null>(null);
-  useEffect(() => () => { if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); }, []);
+  useEffect(() => () => { if (focusFrame.current !== null) view?.cancelAnimationFrame(focusFrame.current); }, [view]);
   const updateFormula = (value: string) => { setFormula(value); adapter?.reactFormulaDraftSet?.('formula', value); };
   const updateFormat = (value: string) => { setFormat(value); adapter?.reactFormulaDraftSet?.('format', value); };
   const addFunction = (name: string) => {
@@ -2553,8 +2584,8 @@ function FormulaDialogBody({ L }: { L: WordxRuntime }) {
     const next = formula.slice(0, start) + `${name}()` + formula.slice(end);
     updateFormula(next);
     setSelectedFunction('');
-    if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
-    focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; if (!node?.isConnected) return; node.focus(); node.setSelectionRange(start + name.length + 1, start + name.length + 1); });
+    if (focusFrame.current !== null) view?.cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = view?.requestAnimationFrame(() => { focusFrame.current = null; if (!node?.isConnected) return; node.focus(); node.setSelectionRange(start + name.length + 1, start + name.length + 1); }) ?? null;
   };
   const addBookmark = (name: string) => { if (name) updateFormula(formula + name); setBookmark(''); input.current?.focus(); };
   return <div className="col">
@@ -2715,7 +2746,8 @@ function WordxStyleDialogBody({L}:{L:WordxRuntime}){
 }
 
 /** React-owned Wordx Help body, backed by the editor's existing localized topic and shortcut catalog. */
-export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
+function WordxTaskContentBody({ host }: { host: HTMLElement }) {
+  const view = host.ownerDocument.defaultView;
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [mapMount, setMapMount] = useState<HTMLElement | null>(null);
   const [reviewMount, setReviewMount] = useState<HTMLElement | null>(null);
@@ -2839,7 +2871,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   const [diagramMount, setDiagramMount] = useState<HTMLElement | null>(null);
   const [, refresh] = useState(0);
   const [dropHintActive, setDropHintActive] = useState(false);
-  const L = runtime();
+  const L = runtime(host);
   const current = L?.panes?.task?.current;
   useEffect(() => {
     if (!L) return;
@@ -2991,7 +3023,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
       reviewTarget = null; setReviewMount(null);
     };
     const attach = () => {
-      const engine = runtime();
+      const engine = runtime(host);
       const next = host.querySelector<HTMLElement>('#react-wordx-task-body');
       if (next !== target) {
         target?.classList.remove('vibeoffice-react-owned');
@@ -3010,7 +3042,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
         if (mapTarget) {
           mapTarget.classList.add('vibeoffice-react-docmap');
           for (const child of Array.from(mapTarget.children) as HTMLElement[]) { hiddenChildren.set(child, child.style.display); child.style.display = 'none'; }
-          mapRoot = document.createElement('div'); mapRoot.id = 'react-wordx-docmap'; mapTarget.append(mapRoot); setMapMount(mapRoot);
+          mapRoot = host.ownerDocument.createElement('div'); mapRoot.id = 'react-wordx-docmap'; mapTarget.append(mapRoot); setMapMount(mapRoot);
         }
       }
       const nextReview = host.querySelector<HTMLElement>('#revpane');
@@ -3019,7 +3051,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
         reviewTarget = nextReview;
         if (reviewTarget) {
           for (const child of Array.from(reviewTarget.children) as HTMLElement[]) { hiddenReviewChildren.set(child, child.style.display); child.style.display = 'none'; }
-          reviewRoot = document.createElement('div'); reviewRoot.id = 'react-wordx-reviewpane'; reviewTarget.append(reviewRoot); setReviewMount(reviewRoot);
+          reviewRoot = host.ownerDocument.createElement('div'); reviewRoot.id = 'react-wordx-reviewpane'; reviewTarget.append(reviewRoot); setReviewMount(reviewRoot);
         }
       }
       const nextReading = host.querySelector<HTMLElement>('#toolbars');
@@ -3027,7 +3059,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
         readingRoot?.remove(); readingRoot = null;
         readingTarget = nextReading;
         if (readingTarget) {
-          readingRoot = document.createElement('div'); readingRoot.id = 'react-wordx-reading-toolbar'; readingTarget.append(readingRoot); setReadingMount(readingRoot);
+          readingRoot = host.ownerDocument.createElement('div'); readingRoot.id = 'react-wordx-reading-toolbar'; readingTarget.append(readingRoot); setReadingMount(readingRoot);
         } else setReadingMount(null);
       }
       const nextTaskHead = host.querySelector<HTMLElement>('#taskpane > .tp-head');
@@ -3038,7 +3070,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
         if (taskHeadTarget) {
           taskHeadLegacyDisplay = taskHeadTarget.style.display;
           taskHeadTarget.style.display = 'none';
-          taskHeadRoot = document.createElement('div'); taskHeadRoot.id = 'react-wordx-task-head'; taskHeadRoot.className = 'react-task-head-root vibeoffice-react-owned'; host.querySelector('#taskpane')?.append(taskHeadRoot); setTaskHeadMount(taskHeadRoot);
+          taskHeadRoot = host.ownerDocument.createElement('div'); taskHeadRoot.id = 'react-wordx-task-head'; taskHeadRoot.className = 'react-task-head-root vibeoffice-react-owned'; host.querySelector('#taskpane')?.append(taskHeadRoot); setTaskHeadMount(taskHeadRoot);
         } else setTaskHeadMount(null);
       }
       const nextStatus = host.querySelector<HTMLElement>('#statusbar');
@@ -3047,7 +3079,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
         hiddenStatusChildren.forEach((display, child) => { child.style.display = display; }); hiddenStatusChildren.clear();
         statusTarget = nextStatus;
         if (statusTarget) {
-          statusRoot = document.createElement('div'); statusRoot.id = 'react-wordx-statusbar'; statusTarget.insertBefore(statusRoot, statusTarget.querySelector('[data-react-status]')); setStatusMount(statusRoot);
+          statusRoot = host.ownerDocument.createElement('div'); statusRoot.id = 'react-wordx-statusbar'; statusTarget.insertBefore(statusRoot, statusTarget.querySelector('[data-react-status]')); setStatusMount(statusRoot);
         } else setStatusMount(null);
       }
       if (statusTarget) for (const child of Array.from(statusTarget.children) as HTMLElement[]) if (child !== statusRoot && !child.hasAttribute('data-react-status') && !hiddenStatusChildren.has(child)) { hiddenStatusChildren.set(child, child.style.display); child.style.display = 'none'; }
@@ -3283,7 +3315,7 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
       if (nextDiagram !== diagramTarget) { diagramTarget = nextDiagram; setDiagramMount(diagramTarget); }
       if (!off && engine?.bus) off = engine.bus.on('wordx-task-render', () => refresh((value) => value + 1));
     };
-    const observer = new MutationObserver(attach);
+    const observer = hostMutationObserver(host, attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => { observer.disconnect(); off?.(); target?.classList.remove('vibeoffice-react-owned'); target?.style.removeProperty('display'); restoreMap(); restoreReview(); readingRoot?.remove(); readingRoot = null; taskHeadRoot?.remove(); if (taskHeadTarget) taskHeadTarget.style.display = taskHeadLegacyDisplay; statusRoot?.remove(); hiddenStatusChildren.forEach((display, child) => { child.style.display = display; }); hiddenStatusChildren.clear(); };
@@ -3415,4 +3447,8 @@ export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
   else if (current === 'help') pane = createPortal(<HelpPane key="wordx-help" L={L} />, mount);
   else if (current === 'recovery') pane = createPortal(<DraftRecoveryPane key="wordx-draft-recovery" host={host} editor="wordx" />, mount);
   return <><OutlineInteractionBridge L={L} />{dropHint}{pane}{docMap}{review}{reading}{preview}{taskHead}{status}{goto}{findInput}{replaceInput}{findAux}{findOptions}{findFormat}{findFormatSummary}{replaceFormatSummary}{findMore}{findActions}{sortDialog}{tableAutoFormatDialog}{tabsDialog}{paragraphDialog}{bordersDialog}{tablePropsDialog}{rulerTabSelector}{rulerCanvas}{verticalRulerCanvas}{rulerEvents}{verticalRulerEvents}{rulerMarkers}{verticalRulerMarkers}{changeCaseDialog}{textDirectionDialog}{themeDialog}{languageDialog}{dropCapDialog}{lineNumbersDialog}{columnsDialog}{pageSetupDialog}{captionDialog}{captionNumberingDialog}{watermarkDialog}{hyperlinkDialog}{symbolDialog}{bulletsDialog}{wordartDialog}{wordCountDialog}{summarizeDialog}{zoomDialog}{hyphenationDialog}{pasteSpecialDialog}{macrosDialog}{optionsViewDialog}{optionsGeneralDialog}{optionsEditDialog}{optionsPrintDialog}{optionsSaveDialog}{optionsTrackDialog}{optionsUserDialog}{optionsCompatDialog}{optionsSecurityDialog}{confirmPasswordDialog}{optionsSpellingDialog}{customDictionaryDialog}{formatObjectColorsDialog}{fillEffectsDialog}{formatObjectWebDialog}{formatObjectSizeDialog}{formatObjectLayoutDialog}{formatObjectAdvancedDialog}{formatObjectTextBoxDialog}{formatObjectPictureDialog}{autoCorrectExceptionsDialog}{customizeDialog}{drawingGridDialog}{autoFormatDialog}{autoFormatReviewDialog}{envelopesDialog}{indexTablesDialog}{letterWizardDialog}{organizerDialog}{templatesDialog}{propertiesDialog}{saveAsDialog}{templatePickerDialog}{printDialog}{bookmark}{object}{equation}{breakDialog}{dateTimeDialog}{pageNumbersDialog}{pageNumberFormatDialog}{cellOperationDialog}{insertTableDialog}{splitCellsDialog}{textToTableDialog}{tableToTextDialog}{formulaDialog}{crossRefDialog}{markEntryDialog}{fieldDialog}{footnoteDialog}{convertNotesDialog}{styleDialog}{diagramDialog}</>;
+}
+
+export function WordxTaskContentLayer({ host }: { host: HTMLElement }) {
+  return <WordxTaskHostContext.Provider value={host}><WordxTaskContentBody host={host} /></WordxTaskHostContext.Provider>;
 }

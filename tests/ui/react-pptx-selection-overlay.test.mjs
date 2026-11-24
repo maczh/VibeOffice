@@ -21,7 +21,7 @@ test('PPTX selection controls are React-owned and retain their resize handles', 
   try {
     for (let n = 0; n < 40 && !await fetch(base).then((response) => response.ok).catch(() => false); n++) await new Promise((resolve) => setTimeout(resolve, 100));
     page = await openPage(undefined, { timeout: 30000, bypassServiceWorker: true });
-    await page.evaluate("document.querySelector('.suite-app-links .suite-app-mark.pptx')?.closest('button')?.click()");
+    await page.evaluate("document.querySelector('.suite-app-links .suite-app-icon.pptx')?.closest('button')?.click()");
     let result = { ready: false, shape: false };
     for (let i = 0; i < 80; i++) {
       result = await page.evaluate(`(() => {
@@ -30,12 +30,20 @@ test('PPTX selection controls are React-owned and retain their resize handles', 
         if (!shape) return { ready: true, shape: false };
         if (!window.__selectionOverlayTestSelected) { window.__selectionOverlayTestSelected = shape.id; L.ed.select(shape.id); }
         const frame = document.querySelector('.ed-overlay .sel-frame[data-sid="' + CSS.escape(shape.id) + '"]');
-        return { ready: true, shape: true, owned: frame?.dataset.reactOwned === 'pptx-selection-control', handles: frame?.querySelectorAll('.hd').length || 0, frame: !!frame };
+        return { ready: true, shape: true, owned: frame?.dataset.reactOwned === 'pptx-selection-control', handles: frame?.querySelectorAll('.hd').length || 0, frame: !!frame, events:Object.keys(L.ed.reactEvents||{}), host:!!window.__VIBE_OFFICE_DIRECT_HOST__, mounted:L.app.reactMounted, empty:document.querySelector('.ed-empty')?.outerHTML };
       })()`);
       if (result.frame) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    assert.deepEqual(result, { ready: true, shape: true, owned: true, handles: 9, frame: true }, `React-owned PPTX selection overlay: ${JSON.stringify({ result, errors: page.errors })}`);
+    const emptyInteractionBefore = await page.evaluate("document.querySelector('.ed-empty')?.dataset.reactInteractions || ''");
+    const canvasVisibility = await page.evaluate(`new Promise((resolve) => {
+      const presentation=L.pres, slides=presentation.slides, view=L.ed.view, index=L.ed.idx, selection=L.ed.sel.slice();
+      const wait=(expected,done)=>{const end=Date.now()+1500;const poll=()=>{const canvas=document.querySelector('.ed-canvas'),empty=document.querySelector('.ed-empty');if(canvas?.hidden===expected&&empty?.hidden!==expected)done(true);else if(Date.now()>end)done(false);else setTimeout(poll,20)};poll()};
+      L.ed.view='normal';presentation.slides=[];L.ed.render();
+      wait(true,(emptyState)=>{const empty=document.querySelector('.ed-empty');let action='';const exec=L.ui.exec;L.ui.exec=(id)=>{action=id};empty?.dispatchEvent(new MouseEvent('click',{bubbles:true}));L.ui.exec=exec;presentation.slides=slides;L.ed.view=view;L.ed.idx=index;L.ed.sel=selection;L.ed.render();wait(false,(slideState)=>resolve({emptyState,slideState,action,reactOwned:document.querySelector('.ed-canvas')?.dataset.reactCanvasState==='pptx',interaction:empty?.dataset.reactInteractions||''}))});
+    })`);
+    assert.deepEqual(canvasVisibility, { emptyState: true, slideState: true, action: 'newSlide', reactOwned: true, interaction: 'pptx-empty' }, `React owns the direct-host canvas/empty-state visibility and the prompt's create-slide action (before=${emptyInteractionBefore}, mount=${JSON.stringify(result)}): ${JSON.stringify(canvasVisibility)}`);
+    assert.deepEqual({ ready: result.ready, shape: result.shape, owned: result.owned, handles: result.handles, frame: result.frame }, { ready: true, shape: true, owned: true, handles: 9, frame: true }, `React-owned PPTX selection overlay: ${JSON.stringify({ result, errors: page.errors })}`);
     const reactThumbnails = await page.evaluate(`new Promise((resolve) => {
       L.app.toggleLeft(true);
       L.panes.left.setTab('slides');
@@ -84,6 +92,40 @@ test('PPTX selection controls are React-owned and retain their resize handles', 
       });
     })`);
     assert.deepEqual(taskPreviews, { navigationIcons: 4, icon: { tag: 'svg', hasArtwork: true }, design: { tag: 'DIV', className: 'thumb-box', hasArtwork: true }, layout: { tag: 'svg', hasArtwork: true } }, 'PPTX pane chrome and task-pane icons, design and layout previews render as React-owned element trees');
+    const taskRecovery = await page.evaluate(`new Promise((resolve) => {
+      const target=window, previous=target.__vibeofficeDraftRecoveries?.pptx, root=VO.reactDirectHost.root;
+      let restored=0, discarded=0;
+      const draft={id:'pptx-react-recovery-test',editor:'pptx',name:'Recovered.pptx',updatedAt:Date.now(),snapshot:new Blob(['draft'])};
+      let update;
+      update={editor:'pptx',drafts:[draft],restore:()=>restored++,discard:async(id)=>{discarded++;const empty={...update,drafts:[]};target.__vibeofficeDraftRecoveries.pptx=empty;target.dispatchEvent(new CustomEvent('vibeoffice-drafts-update',{detail:empty}))}};
+      (target.__vibeofficeDraftRecoveries ||= {}).pptx=update;
+      target.dispatchEvent(new CustomEvent('vibeoffice-drafts-update',{detail:update}));
+      L.panes.task.show('getting-started');
+      const gettingEnd=Date.now()+1000;
+      const waitGetting=()=>{if(root.querySelector('#react-task-body-root .tp-link')){L.panes.task.show('recovery');L.bus.emit('pptx-task-render');}else if(Date.now()<gettingEnd)setTimeout(waitGetting,20)};
+      waitGetting();
+      const end=Date.now()+3000;
+      const poll=()=>{
+        const body=root.querySelector('#react-task-body-root .tp-body');
+        const buttons=[...(body?.querySelectorAll('button')||[])];
+        const restore=buttons.find(button=>button.textContent.trim()==='Restore');
+        if(restore){
+          const rendered=body.innerText.includes('Recovered.pptx');
+          restore.click();
+          buttons.find(button=>button.textContent.trim()==='Discard')?.click();
+          setTimeout(()=>{
+            const emptied=!root.querySelector('#react-task-body-root .tp-body')?.innerText.includes('Recovered.pptx');
+            if(previous)target.__vibeofficeDraftRecoveries.pptx=previous;else delete target.__vibeofficeDraftRecoveries.pptx;
+            target.dispatchEvent(new CustomEvent('vibeoffice-drafts-update',{detail:previous||{editor:'pptx',drafts:[]}}));
+            L.panes.task.show('getting-started');
+            resolve({rendered,restored,discarded,emptied,reactOwned:L.panes.task.reactMounted});
+          },60);
+        } else if(Date.now()>end){if(previous)target.__vibeofficeDraftRecoveries.pptx=previous;else delete target.__vibeofficeDraftRecoveries.pptx;resolve({rendered:false,restored,discarded,body:body?.innerText,html:root.querySelector('#react-task-body-root')?.innerHTML,current:L.panes.task.current,reactOwned:L.panes.task.reactMounted,appReactMounted:L.app.reactMounted,root:!!root.querySelector('#react-task-body-root'),context:L.ribbonSpec().contextual.filter(item=>item.set===L.panes.task.registry.recovery.title).map(item=>item.id)})}
+        else setTimeout(poll,25);
+      };
+      poll();
+    })`);
+    assert.deepEqual(taskRecovery, { rendered: true, restored: 1, discarded: 1, emptied: true, reactOwned: true }, `PPTX Document Recovery renders in React and delegates local draft actions: ${JSON.stringify({ taskRecovery, errors: page.errors })}`);
     const notesArtwork = await page.evaluate(`new Promise((resolve) => {
       L.app.setView('notes');
       const end=Date.now()+3000;
@@ -140,9 +182,9 @@ test('PPTX selection controls are React-owned and retain their resize handles', 
       L.bus.emit('pptx-rulers');
       const expected=(parseFloat(before)+37)+'px';
       const end=Date.now()+2000;
-      const poll=()=>{const canvas=document.querySelector('.ruler-h canvas[data-react-owned="pptx-ruler"]');if(canvas?.style.width===expected)resolve({before,after:canvas.style.width});else if(Date.now()>end)resolve({before,after:canvas?.style.width,expected});else setTimeout(poll,20)};
+      const restore=()=>{L.ed.reactRulerCatalog=original};
+      const poll=()=>{const canvas=document.querySelector('.ruler-h canvas[data-react-owned="pptx-ruler"]');if(canvas?.style.width===expected){restore();resolve({before,after:canvas.style.width})}else if(Date.now()>end){restore();resolve({before,after:canvas?.style.width,expected})}else setTimeout(poll,20)};
       poll();
-      setTimeout(()=>{L.ed.reactRulerCatalog=original},0);
     })`);
     assert.equal(rulerRefresh.after, `${parseFloat(rulerRefresh.before) + 37}px`, 'React redraws the ruler canvas when the engine publishes updated geometry');
     await page.evaluate('L.app.opts.ruler=window.__pptxRulerPreference;L.ed.drawRulers();delete window.__pptxRulerPreference');
@@ -155,6 +197,14 @@ test('PPTX selection controls are React-owned and retain their resize handles', 
       poll();
     })`);
     assert.deepEqual(gridReady, { texture: true, guides: 2, axes: ['x', 'y'] }, 'React renders the grid texture and both reference guides from engine state');
+    const gridHidden = await page.evaluate(`new Promise((resolve) => {
+      Object.assign(L.ed.grid, { show: false, guides: false });
+      L.ed.layout();
+      const end=Date.now()+1000;
+      const poll=()=>{const root=document.querySelector('.ed-grid'),paint=root?.querySelector('[data-react-owned="pptx-grid"]');root?.hidden===true&&!paint?resolve({hidden:true,ownedGrid:!!paint}):Date.now()>end?resolve({hidden:!!root?.hidden,ownedGrid:!!paint}):setTimeout(poll,20)};
+      poll();
+    })`);
+    assert.deepEqual(gridHidden, { hidden: true, ownedGrid: false }, 'React hides and unmounts its owned grid layer when both display options are off');
     await page.evaluate('Object.assign(L.ed.grid,window.__pptxGridBefore);delete window.__pptxGridBefore;L.ed.layout()');
     assert.deepEqual(page.errors, []);
     await page.evaluate("document.querySelector('.suite-editor .back')?.click()");

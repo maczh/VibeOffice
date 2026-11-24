@@ -1,20 +1,20 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 type Catalog = { reference: string; expression: string; start: number; end: number; complete: boolean };
 type Runtime = { dlg?: { reactEvaluateCatalog?(): Catalog | null; reactEvaluateAction?(action: string): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** React formula-evaluation walkthrough; AST reduction and calculation use the spreadsheet engine. */
 export function ExcelxEvaluateFormulaDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   useEffect(() => {
-    const refresh = () => setCatalog(runtime()?.dlg?.reactEvaluateCatalog?.() || null);
-    const off = runtime()?.bus?.on('excelx-evaluate-formula-dialog', refresh); return () => off?.();
+    const refresh = () => setCatalog(runtime?.dlg?.reactEvaluateCatalog?.() || null);
+    const off = runtime?.bus?.on('excelx-evaluate-formula-dialog', refresh); return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const action = runtime()?.dlg?.reactEvaluateAction;
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const action = runtime?.dlg?.reactEvaluateAction;
   const before = catalog.start >= 0 ? catalog.expression.slice(0, catalog.start) : catalog.expression;
   const part = catalog.start >= 0 ? catalog.expression.slice(catalog.start, catalog.end) : '';
   const after = catalog.end >= 0 ? catalog.expression.slice(catalog.end) : '';

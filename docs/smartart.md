@@ -20,7 +20,7 @@ IntelliArt is PPTX's name for its diagrams; in files they are Office SmartArt. F
   - Open XML SDK and `package.py` on every layout;
   - LibreOffice draws every layout from the stored drawing;
   - PPTX reopens every layout editable;
-  - `tests/lectern/smartart-office.py`: 43/43 corpus decks;
+  - `tests/pptx/smartart-office.py`: 43/43 corpus decks;
   - `frames.mjs`: 25/25.
 - **PowerPoint:**
   - every test file opened without a repair prompt;
@@ -129,7 +129,7 @@ stretched shape went only when the definition had a single count branch or when 
 (`n000`, `n001`, … through the whole definition); renaming one bad node fixed the radial but not the process, whose
 other arrow stretched instead, and moving its values changed nothing. The cause in PowerPoint is not known; names
 numbered once per definition fixed every stretched shape in all 63 slides of final5's decks (`tmp/office/final6`),
-so the writer now names them that way. `tests/lectern/smartart-definitions.test.mjs` covers both.
+so the writer now names them that way. `tests/pptx/smartart-definitions.test.mjs` covers both.
 
 1. **Newer PowerPoint:** confirm the two fixes there (final6's decks); round 7's re-saves are no longer needed.
    Also: one slide per new style family (filled with gradients and shadows, outlined, tinted) and a palette range

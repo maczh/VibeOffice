@@ -343,7 +343,7 @@ an external connection. Excel performs any requested refresh when it opens the s
 | Save, reopen or recover a draft | Write the current pivot state and original identities; drafts retain the same refresh requests and pending notices without showing or acknowledging the checker. |
 
 The pinned inventory contains 105 pivot workbooks, including 14 with shared caches, but no
-defined-name or consolidation source. `tests/ledger/pivot-fixtures.py` supplies those two
+defined-name or consolidation source. `tests/excelx/pivot-fixtures.py` supplies those two
 structural fixtures from a pinned range-source workbook. Both have zero package/SDK diagnostics;
 an independent reader confirms their source kinds, and the consolidation's ten input values match
 its cache and output. Twelve focused pivot cases pass, covering all five source kinds, shared caches,
@@ -495,7 +495,7 @@ zoom, scrolling, frozen panes, hidden anchors and an XML Spreadsheet 2003 merge;
 workbooks fail before the fix, and the fifth fails with the new drawing alone. The fixtures and API
 evidence are in `tests/from-issues/22/`.
 
-Formula recalculation, CSV, XML Spreadsheet 2003 and UI harnesses remain in `tests/ledger/`.
+Formula recalculation, CSV, XML Spreadsheet 2003 and UI harnesses remain in `tests/excelx/`.
 Their earlier broad-corpus measurements are archived with the run history, rather than mixed into
 the current OOXML preservation figures. Current preservation does not imply exact print layout or
 support for every formula or external data source.
@@ -548,7 +548,7 @@ The React Excelx package owns the direct-host worksheet chrome and stable grid s
 | `../common/scout/` | Scout, the assistant: Help ▸ Show the Assistant ([suite.md](suite.md#the-assistant-scout)) |
 | `js/ribbon.js`, `../common/ribbon.js` | The Paper 2016 look's ribbon: Excel's tabs and groups over Excelx's commands ([suite.md](suite.md#the-ribbon)) |
 | `../common/dict/` | Spelling word lists (English U.S. and U.K.) and their licences (shared with Wordx) |
-| `tests/ledger/` | The test harnesses described above (Node.js and Playwright) |
+| `tests/excelx/` | The test harnesses described above (Node.js and Playwright) |
 
 Excelx is an independent program. Microsoft, Excel and Office are trademarks of Microsoft Corporation;
 Excelx is not affiliated with Microsoft. More in the README (Legal).

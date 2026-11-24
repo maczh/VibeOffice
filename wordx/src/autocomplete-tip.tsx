@@ -3,7 +3,10 @@ import { createPortal } from 'react-dom';
 
 interface AutocompleteTipState { text: string; x: number; y: number }
 interface AutocompleteRuntime { bus?: { on(event: string, listener: (detail?: unknown) => void): () => void } }
-function runtime(): AutocompleteRuntime | undefined { return (window as Window & { L?: AutocompleteRuntime }).L; }
+function runtime(host: HTMLElement): AutocompleteRuntime | undefined {
+  const view = host.ownerDocument.defaultView;
+  return (view as (Window & { L?: AutocompleteRuntime }) | null)?.L;
+}
 
 /** React-owned AutoComplete hint; candidate selection and insertion remain in the Wordx document engine. */
 export function WordxAutocompleteTip({ host }: { host: HTMLElement }) {
@@ -13,7 +16,7 @@ export function WordxAutocompleteTip({ host }: { host: HTMLElement }) {
     let offHide: (() => void) | undefined;
     let attached: AutocompleteRuntime | undefined;
     const attach = () => {
-      const L = runtime();
+      const L = runtime(host);
       if (!L?.bus || L === attached) return;
       offShow?.(); offHide?.();
       attached = L;

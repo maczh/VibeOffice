@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host.js';
 
 type SeriesType = 'linear' | 'growth' | 'date' | 'auto';
 type SeriesUnit = 'day' | 'weekday' | 'month' | 'year';
@@ -11,32 +12,29 @@ interface SeriesRuntime {
   t?(message: string): string;
 }
 
-function runtime(): SeriesRuntime | undefined {
-  return (window as Window & { L?: SeriesRuntime }).L;
-}
-
 const types: [SeriesType, string][] = [['linear', '&Linear'], ['growth', '&Growth'], ['date', 'Da&te'], ['auto', 'Auto&Fill']];
 const units: [SeriesUnit, string][] = [['day', '&Day'], ['weekday', '&Weekday'], ['month', '&Month'], ['year', '&Year']];
 
 export function ExcelxSeriesDialog() {
+  const runtime = useExcelxRuntime<SeriesRuntime>();
   const [catalog, setCatalog] = useState<SeriesCatalog | null>(null);
   const [state, setState] = useState<SeriesState>({ rows: true, type: 'linear', unit: 'day', trend: false, step: '1', stop: '' });
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactSeriesCatalog?.() || null;
+      const next = runtime?.dlg?.reactSeriesCatalog?.() || null;
       setCatalog(next);
       if (next) setState(next.state);
     };
-    const off = runtime()?.bus?.on('excelx-series-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-series-dialog', refresh);
     return () => {
       off?.();
-      if (runtime()?.dlg?.reactSeriesCatalog?.()) runtime()?.dlg?.reactSeriesClose?.();
+      if (runtime?.dlg?.reactSeriesCatalog?.()) runtime?.dlg?.reactSeriesClose?.();
     };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactSeriesClose?.();
-  const apply = () => runtime()?.dlg?.reactSeriesApply?.(state);
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactSeriesClose?.();
+  const apply = () => runtime?.dlg?.reactSeriesApply?.(state);
   const radioGroup = <T extends string,>(name: string, options: [T, string][], value: T, update: (value: T) => void) => <div role="radiogroup" aria-label={translate(name)}>{options.map(([key, label]) => <label key={key}><input type="radio" name={`excelx-series-${name}`} value={key} checked={value === key} onChange={() => update(key)} />{translate(label).replace('&', '')}</label>)}</div>;
   return <OfficeDialog title={translate('Series')} className="excelx-series-dialog" style={{ width: 'min(94vw, 560px)' }} onRequestClose={close}>
     <div className="excelx-series-dialog__groups">

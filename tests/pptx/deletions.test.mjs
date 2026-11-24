@@ -1,6 +1,6 @@
 // What the user deletes takes its parts along, recorded as deleted (not as the writer's loss alarm, unreferenced:);
 // an unedited save records nothing of the kind.
-// node --test tests/lectern/deletions.test.mjs
+// node --test tests/pptx/deletions.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

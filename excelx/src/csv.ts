@@ -3,6 +3,7 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxCsv(runtime: Window): void {
   const root = runtime;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.numfmt || !L?.formula || !L?.ui) throw new Error("Excelx CSV service requires workbook and UI primitives");
   if (installedRuntimes.has(L)) return;

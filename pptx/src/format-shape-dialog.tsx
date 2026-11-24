@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 interface Fill { t: string; c?: string; a?: number; [key: string]: unknown }
 interface ColorOption { value: string; label: string; color: string }
@@ -21,15 +22,15 @@ interface Runtime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string, ...args: unknown[]): string;
 }
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 function ColorFill({ label, fill, colors, line = false, onChange }: { label: string; fill: Fill; colors: ColorOption[]; line?: boolean; onChange(value: Fill): void }) {
+  const runtime = usePptxRuntime<Runtime>();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const trigger = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const id = `${useId().replaceAll(':', '')}-colors`;
-  const t = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
-  const swatch = fill.t === 'none' ? 'repeating-linear-gradient(45deg,#fff 0 4px,#eee 4px 8px)' : line ? fill.c || '#111111' : runtime()?.dlg?.reactFormatShapePreview?.(fill) || fill.c || '#FFFFFF';
+  const t = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
+  const swatch = fill.t === 'none' ? 'repeating-linear-gradient(45deg,#fff 0 4px,#eee 4px 8px)' : line ? fill.c || '#111111' : runtime?.dlg?.reactFormatShapePreview?.(fill) || fill.c || '#FFFFFF';
   const colorStart = line ? 1 : 0;
   const lastItem = colorStart + colors.length - 1 + (line ? 0 : 1);
   useLayoutEffect(() => {
@@ -57,11 +58,12 @@ function ColorFill({ label, fill, colors, line = false, onChange }: { label: str
     itemRefs.current[next]?.focus();
   };
   const choose = (value: Fill) => { onChange(value); close(); };
-  return <div className="col" style={{ position: 'relative' }}><label>{t(label)}</label><button ref={trigger} type="button" className="btn small" aria-label={t(label)} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen((value) => !value)}><span aria-hidden="true" style={{ display: 'inline-block', width: 70, height: 14, border: '1px solid var(--field-border)', background: swatch }} /><span className="dd-arrow" /></button>{open && <div id={id} className="vibeoffice-format-shape-colors" data-menu-keyboard-owner="react" role="menu" aria-label={t(`${label} colors`)} onKeyDown={onKeyDown} style={{ position: 'absolute', zIndex: 2, top: '100%', left: 0, display: 'grid', gridTemplateColumns: 'repeat(8,24px)', gap: 3, padding: 6, border: '1px solid var(--menu-border)', background: 'var(--surface)', width: 'max-content' }}>{line && <button ref={(element) => { itemRefs.current[0] = element; }} type="button" role="menuitem" className="cp-wide" tabIndex={activeIndex === 0 ? 0 : -1} style={{ gridColumn: '1 / -1' }} onFocus={() => setActiveIndex(0)} onClick={() => choose({ t: 'none' })}>{t('No Line')}</button>}{colors.map((color, index) => { const itemIndex = colorStart + index; return <button ref={(element) => { itemRefs.current[itemIndex] = element; }} key={`${color.value}-${index}`} type="button" role="menuitem" aria-label={color.label} title={color.label} tabIndex={activeIndex === itemIndex ? 0 : -1} style={{ width: 24, height: 22, padding: 0, background: color.color }} onFocus={() => setActiveIndex(itemIndex)} onClick={() => choose({ t: 'solid', c: color.value, a: 1 })} />; })}<label className="cp-wide" style={{ gridColumn: '1 / -1' }}>{t('More Fill Colors...')}<input type="color" aria-label={t(`${label} custom color`)} value={/^#[0-9a-f]{6}$/i.test(fill.c || '') ? fill.c : '#3366CC'} onChange={(event) => choose({ t: 'solid', c: event.currentTarget.value.toUpperCase(), a: 1 })} /></label>{!line && <button ref={(element) => { itemRefs.current[lastItem] = element; }} type="button" role="menuitem" className="cp-wide" tabIndex={activeIndex === lastItem ? 0 : -1} style={{ gridColumn: '1 / -1' }} onFocus={() => setActiveIndex(lastItem)} onClick={async () => { const selected = await runtime()?.dlg?.reactFormatShapeEffects?.(fill); if (selected) onChange(selected); close(); }}>{t('Fill Effects...')}</button>}</div>}</div>;
+  return <div className="col" style={{ position: 'relative' }}><label>{t(label)}</label><button ref={trigger} type="button" className="btn small" aria-label={t(label)} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen((value) => !value)}><span aria-hidden="true" style={{ display: 'inline-block', width: 70, height: 14, border: '1px solid var(--field-border)', background: swatch }} /><span className="dd-arrow" /></button>{open && <div id={id} className="vibeoffice-format-shape-colors" data-menu-keyboard-owner="react" role="menu" aria-label={t(`${label} colors`)} onKeyDown={onKeyDown} style={{ position: 'absolute', zIndex: 2, top: '100%', left: 0, display: 'grid', gridTemplateColumns: 'repeat(8,24px)', gap: 3, padding: 6, border: '1px solid var(--menu-border)', background: 'var(--surface)', width: 'max-content' }}>{line && <button ref={(element) => { itemRefs.current[0] = element; }} type="button" role="menuitem" className="cp-wide" tabIndex={activeIndex === 0 ? 0 : -1} style={{ gridColumn: '1 / -1' }} onFocus={() => setActiveIndex(0)} onClick={() => choose({ t: 'none' })}>{t('No Line')}</button>}{colors.map((color, index) => { const itemIndex = colorStart + index; return <button ref={(element) => { itemRefs.current[itemIndex] = element; }} key={`${color.value}-${index}`} type="button" role="menuitem" aria-label={color.label} title={color.label} tabIndex={activeIndex === itemIndex ? 0 : -1} style={{ width: 24, height: 22, padding: 0, background: color.color }} onFocus={() => setActiveIndex(itemIndex)} onClick={() => choose({ t: 'solid', c: color.value, a: 1 })} />; })}<label className="cp-wide" style={{ gridColumn: '1 / -1' }}>{t('More Fill Colors...')}<input type="color" aria-label={t(`${label} custom color`)} value={/^#[0-9a-f]{6}$/i.test(fill.c || '') ? fill.c : '#3366CC'} onChange={(event) => choose({ t: 'solid', c: event.currentTarget.value.toUpperCase(), a: 1 })} /></label>{!line && <button ref={(element) => { itemRefs.current[lastItem] = element; }} type="button" role="menuitem" className="cp-wide" tabIndex={activeIndex === lastItem ? 0 : -1} style={{ gridColumn: '1 / -1' }} onFocus={() => setActiveIndex(lastItem)} onClick={async () => { const selected = await runtime?.dlg?.reactFormatShapeEffects?.(fill); if (selected) onChange(selected); close(); }}>{t('Fill Effects...')}</button>}</div>}</div>;
 }
 
 /** React-owned Format Shape/Picture controls; the legacy model transaction remains authoritative. */
 export function PptxFormatShapeDialog({ initialTab }: { initialTab?: string }) {
+  const runtime = usePptxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<FormatCatalog | null>(null);
   const [changes, setChanges] = useState<Record<string, unknown>>({});
   const [tab, setTab] = useState('');
@@ -69,16 +71,16 @@ export function PptxFormatShapeDialog({ initialTab }: { initialTab?: string }) {
   const panelId = `${id}-format-shape-panel`;
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactFormatShapeCatalog?.() || null;
+      const next = runtime?.dlg?.reactFormatShapeCatalog?.() || null;
       setCatalog(next ? { ...next, crop: { ...next.crop }, margins: [...next.margins], colors: [...next.colors] } : null);
       setChanges({});
       if (next) setTab(initialTab && ['Colors and Lines', 'Size', 'Position', 'Picture', 'Text Box', 'Web'].includes(initialTab) ? initialTab : 'Colors and Lines');
     };
-    const off = runtime()?.bus?.on('pptx-format-shape-dialog', refresh);
+    const off = runtime?.bus?.on('pptx-format-shape-dialog', refresh);
     return () => off?.();
   }, [initialTab]);
   if (!catalog) return null;
-  const t = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
+  const t = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
   const update = (key: string, value: unknown) => setChanges((current) => ({ ...current, [key]: value }));
   const value = <T,>(key: string, original: T): T => Object.hasOwn(changes, key) ? changes[key] as T : original;
   const number = (label: string, key: string, original: number, min: number, max: number, step = .01, unit = '') => <label className="col">{t(label)}<span className="row" style={{ alignItems: 'center' }}><input aria-label={t(label)} type="number" min={min} max={max} step={step} value={value(key, original)} onChange={(event) => update(key, Number(event.currentTarget.value))} />{unit}</span></label>;
@@ -97,8 +99,8 @@ export function PptxFormatShapeDialog({ initialTab }: { initialTab?: string }) {
     setChanges((current) => ({ ...current, [key]: nextValue, ...(locked && key === 'h' && currentHeight ? { w: currentWidth * nextValue / currentHeight } : {}), ...(locked && key === 'w' && currentWidth ? { h: currentHeight * nextValue / currentWidth } : {}) }));
   }} />in</span></label>;
   const style: CSSProperties = { minWidth: 0 };
-  const commit = () => runtime()?.dlg?.reactFormatShapeAction?.('apply', changes);
-  return <OfficeDialog title={t(catalog.title)} className="pptx-format-shape-dialog" style={{ width: 'min(96vw, 560px)' }} onRequestClose={() => runtime()?.dlg?.reactFormatShapeAction?.('close')}>
+  const commit = () => runtime?.dlg?.reactFormatShapeAction?.('apply', changes);
+  return <OfficeDialog title={t(catalog.title)} className="pptx-format-shape-dialog" style={{ width: 'min(96vw, 560px)' }} onRequestClose={() => runtime?.dlg?.reactFormatShapeAction?.('close')}>
     <div role="tablist" aria-label={t('Format options')} className="row" style={{ flexWrap: 'wrap', gap: 3 }}>{tabs.map((name, index) => <button key={name} id={`${id}-format-shape-tab-${index}`} type="button" role="tab" aria-controls={panelId} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => setTab(name)} onKeyDown={(event) => {
       const current = tabs.indexOf(name);
       const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
@@ -123,6 +125,6 @@ export function PptxFormatShapeDialog({ initialTab }: { initialTab?: string }) {
       {tab === 'Text Box' && <div className="col" style={{ gap: 10 }}><label>{t('Text anchor point')}<select aria-label={t('Text anchor point')} value={value('anchor',catalog.anchor)} onChange={(event)=>update('anchor',event.currentTarget.value)}>{anchors.map(([key,name])=><option key={key} value={key}>{t(name)}</option>)}</select></label><fieldset className="row" style={{flexWrap:'wrap'}}><legend>{t('Internal margin')}</legend>{(['Left:','Top:','Right:','Bottom:'] as const).map((label,index)=><label key={label}>{t(label)}<input aria-label={t(label)} type="number" min="0" max="20" step=".01" value={((value('ins',catalog.margins.map((margin)=>margin*72)) as number[])[index]||0)/72} onChange={(event)=>{const margins=[...(value('ins',catalog.margins.map((margin)=>margin*72)) as number[])];margins[index]=Number(event.currentTarget.value)*72;update('ins',margins)}} /></label>)}</fieldset><label><input type="checkbox" checked={value('wrap',catalog.wrap)} onChange={(event)=>update('wrap',event.currentTarget.checked)} />{t('Word wrap text in AutoShape')}</label><label><input type="checkbox" checked={value('autofit',catalog.autofit)} onChange={(event)=>update('autofit',event.currentTarget.checked)} />{t('Resize AutoShape to fit text')}</label><label><input type="checkbox" checked={value('vert',catalog.verticalText)} onChange={(event)=>update('vert',event.currentTarget.checked)} />{t('Rotate text within AutoShape by 90°')}</label></div>}
       {tab === 'Web' && <div className="col"><label>{t('Alternative text')}<textarea aria-label={t('Alternative text')} rows={5} value={value('alt',catalog.alt)} onChange={(event)=>update('alt',event.currentTarget.value)} /></label><div className="tp-note">{t('Screen readers and web pages use alternative text to describe the object.')}</div></div>}
     </div>
-    <div className="vibeoffice-dialog__actions"><button type="button" className="primary" onClick={commit}>{t('OK')}</button><button type="button" onClick={()=>runtime()?.dlg?.reactFormatShapeAction?.('close')}>{t('Cancel')}</button></div>
+    <div className="vibeoffice-dialog__actions"><button type="button" className="primary" onClick={commit}>{t('OK')}</button><button type="button" onClick={()=>runtime?.dlg?.reactFormatShapeAction?.('close')}>{t('Cancel')}</button></div>
   </OfficeDialog>;
 }

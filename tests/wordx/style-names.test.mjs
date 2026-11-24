@@ -1,5 +1,5 @@
 // Styles a file has under ids of its own (Word in German writes Überschrift1 for heading 1) are not written a second time.
-// node --test tests/quire/style-names.test.mjs
+// node --test tests/wordx/style-names.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

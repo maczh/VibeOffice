@@ -3,6 +3,7 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxFormulaPrintDialogs(runtime: Window): void {
   const root = runtime;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.dlg || !L?.model || !L?.ops || !L?.formula || !L?.calc || !L?.ui) throw new Error("Excelx dialog extensions require primary dialogs and workbook services");
   if (installedRuntimes.has(L)) return;

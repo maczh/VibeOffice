@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface DataFormCatalog { title: string; fields: string[]; values: string[]; readOnly: boolean[]; count: string; criteriaMode: boolean }
 type DataFormAction = 'new' | 'delete' | 'restore' | 'prev' | 'next' | 'criteria' | 'enter' | 'close';
@@ -8,19 +9,18 @@ interface DataFormRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): DataFormRuntime | undefined { return (window as Window & { L?: DataFormRuntime }).L; }
-
 export function ExcelxDataFormDialog() {
+  const runtime = useExcelxRuntime<DataFormRuntime>();
   const [catalog, setCatalog] = useState<DataFormCatalog | null>(null);
   const [values, setValues] = useState<string[]>([]);
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactDataFormCatalog?.() || null; setCatalog(next); if (next) setValues(next.values); };
-    const off = runtime()?.bus?.on('excelx-data-form-dialog', refresh);
-    return () => { off?.(); runtime()?.dlg?.reactDataFormClose?.(); };
+    const refresh = () => { const next = runtime?.dlg?.reactDataFormCatalog?.() || null; setCatalog(next); if (next) setValues(next.values); };
+    const off = runtime?.bus?.on('excelx-data-form-dialog', refresh);
+    return () => { off?.(); runtime?.dlg?.reactDataFormClose?.(); };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const action = (name: DataFormAction) => runtime()?.dlg?.reactDataFormAction?.(name, values);
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const action = (name: DataFormAction) => runtime?.dlg?.reactDataFormAction?.(name, values);
   const close = () => action('close');
   const update = (index: number, value: string) => setValues((current) => current.map((item, i) => i === index ? value : item));
   const buttons: { action: DataFormAction; label: string }[] = [

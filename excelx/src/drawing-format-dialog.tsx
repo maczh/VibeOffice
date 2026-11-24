@@ -1,23 +1,24 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useState } from 'react';
 import './drawing-format-dialog.css';
+import { useExcelxHost, useExcelxRuntime } from './editor-host';
 
 type Catalog = { title: string; kind: string; fill: string | null; line: string | null; lineW: number; width: number; height: number; editAs: string; alt: string; locked: boolean; print: boolean; aspect: boolean; hasLine: boolean; hasPosition: boolean; hasChart: boolean };
 type Runtime = { drawing?: { reactFormatCatalog?(): Catalog | null; reactFormatAction?(action: string, patch?: Record<string, unknown>): boolean }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 /** React-owned Format Object dialog; drawing geometry and workbook mutations stay in drawing.js. */
 export function ExcelxDrawingFormatDialog() {
+  const host = useExcelxHost();
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [tab, setTab] = useState('');
   const id = useId().replaceAll(':', '');
-  const t = (text: string) => runtime()?.t?.(text) || text;
-  const action = (name: string, patch?: Record<string, unknown>) => runtime()?.drawing?.reactFormatAction?.(name, patch);
+  const t = (text: string) => runtime?.t?.(text) || text;
+  const action = (name: string, patch?: Record<string, unknown>) => runtime?.drawing?.reactFormatAction?.(name, patch);
   const listen = (eventName: string) => {
     const handler = (event: Event) => { const detail = (event as CustomEvent<Catalog | null>).detail; setCatalog(detail); if (detail) setTab(detail.hasChart ? 'Chart' : detail.hasLine ? 'Colors and Lines' : 'Size'); };
-    document.addEventListener(eventName, handler); return () => document.removeEventListener(eventName, handler);
+    host.ownerDocument.addEventListener(eventName, handler); return () => host.ownerDocument.removeEventListener(eventName, handler);
   };
-  useEffect(() => { const dispose = listen('excelx-drawing-format'); return () => { dispose(); runtime()?.drawing?.reactFormatAction?.('cancel'); }; }, []);
+  useEffect(() => { const dispose = listen('excelx-drawing-format'); return () => { dispose(); runtime?.drawing?.reactFormatAction?.('cancel'); }; }, [host, runtime]);
   if (!catalog) return null;
   const change = (patch: Record<string, unknown>) => action('update', patch);
   const close = () => { action('cancel'); setCatalog(null); };

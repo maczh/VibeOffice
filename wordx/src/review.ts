@@ -438,6 +438,8 @@ export function installWordxReview(runtime: Window): void {
   const data = (cls, s, style) => { const el = h('div', { class: cls, style, translate: 'no' }); el.textContent = s; return el; };
   RV.reactPaneCatalog = () => {
     const d = doc(), items = [];
+    // React task panes can mount before the engine has created its first document.
+    if (!d?.main) return [];
     for (const revision of RV.list(d.main)) items.push({ kind: 'rev', revision, paragraph: revision.p, offset: revision.a });
     D.reindex(d);
     for (const paragraph of d.main.paras || []) { let offset = 0; for (const run of paragraph.runs) { if (run.t === 'cs' && d.comments[run.id]) items.push({ kind: 'cmt', id: run.id, paragraph, offset }); offset += D.ilen(run); } }

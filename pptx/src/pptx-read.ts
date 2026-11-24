@@ -1,6 +1,8 @@
 // @ts-nocheck -- PresentationML import follows the existing dynamic OOXML/document contracts.
 /* PPTX — PresentationML reader (.pptx / .ppsx / .potx / .pptm). */
 export function installPptxReader(runtime: Window): void {
+  const document = runtime.document;
+  const DOMParser = runtime.DOMParser;
   const L = (runtime as Window & { L?: any }).L, K = L.opc;
   const pt = L.emu2pt;
   const NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';

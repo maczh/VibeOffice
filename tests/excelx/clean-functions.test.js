@@ -3,8 +3,8 @@
    gamma function. The baseline was written by the code before each rewrite, except GAMMA(170.5) and GAMMA(171.6),
    which overflowed to #NUM! there though both are finite (Γ(171.6) ≈ 1.586e308), and the t and F right tails, GAUSS
    and the inverses, written again when they were made exact to mpmath (stat-tails.test.js):
-     node tests/ledger/clean-functions.test.js --write    (only on that code)
-     node tests/ledger/clean-functions.test.js            (checks; also run by node --test) */
+     node tests/excelx/clean-functions.test.js --write    (only on that code)
+     node tests/excelx/clean-functions.test.js            (checks; also run by node --test) */
 const fs = require('fs');
 const path = require('path');
 require('../../public/common/core.js');

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AccessLabel } from './access-label.js';
 
@@ -32,7 +32,7 @@ function ChoiceControl({ request }: { request: ChoiceRequest }) {
 /** React-owned checkbox/radio controls preserving the legacy imperative input reference. */
 export function EditorChoiceLayer({ host }: { host: HTMLElement }) {
   const [requests, setRequests] = useState<ChoiceRequest[]>([]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onChoice = (event: Event) => {
       const request = (event as CustomEvent<ChoiceRequest>).detail;
       if (!request || !(request.target instanceof HTMLSpanElement) || !request.options || !['checkbox', 'radio'].includes(request.options.type)) return;

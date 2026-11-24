@@ -1,27 +1,27 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 type ScenarioCell = { r: number; c: number; label?: string; v: string | number };
 type Scenario = { name: string; comment: string; cells: ScenarioCell[] };
 type Edit = { index: number; name: string; comment: string; reference: string };
 type Catalog = { stage: 'manager' | 'edit' | 'values'; selected: number; scenarios: Scenario[]; edit?: Edit; refs?: ScenarioCell[] };
 type Runtime = { dlg?: { reactScenarioCatalog?(): Catalog | null; reactScenarioAction?(action: string, ...args: unknown[]): unknown; reactScenarioClose?(): void }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
-
 export function ExcelxScenariosDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [stage, setStage] = useState<Catalog['stage']>('manager');
   const [edit, setEdit] = useState<Edit>({ index: -1, name: '', comment: '', reference: '' });
   const [values, setValues] = useState<string[]>([]);
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactScenarioCatalog?.() || null; setCatalog(next); if (next) { setStage(next.stage); if (next.edit) setEdit(next.edit); } };
-    const off = runtime()?.bus?.on('excelx-scenarios-dialog', refresh);
-    return () => { off?.(); runtime()?.dlg?.reactScenarioClose?.(); };
+    const refresh = () => { const next = runtime?.dlg?.reactScenarioCatalog?.() || null; setCatalog(next); if (next) { setStage(next.stage); if (next.edit) setEdit(next.edit); } };
+    const off = runtime?.bus?.on('excelx-scenarios-dialog', refresh);
+    return () => { off?.(); runtime?.dlg?.reactScenarioClose?.(); };
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const run = (action: string, ...args: unknown[]) => runtime()?.dlg?.reactScenarioAction?.(action, ...args);
-  const close = () => runtime()?.dlg?.reactScenarioClose?.();
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const run = (action: string, ...args: unknown[]) => runtime?.dlg?.reactScenarioAction?.(action, ...args);
+  const close = () => runtime?.dlg?.reactScenarioClose?.();
   const scenario = catalog.scenarios[catalog.selected];
   const begin = (index: number) => { setEdit({ index, name: index >= 0 ? catalog.scenarios[index]?.name || '' : '', comment: index >= 0 ? catalog.scenarios[index]?.comment || '' : '', reference: index >= 0 ? catalog.scenarios[index]?.cells.map((cell) => cell.label).join(',') || '' : '' }); run('begin', index); };
   const prepare = () => { const result = run('prepare', edit.reference, edit.name, edit.comment); if (Array.isArray(result)) setValues(result.map(String)); };

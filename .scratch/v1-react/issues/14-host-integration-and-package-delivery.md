@@ -6,7 +6,12 @@
 
 **Status:** in-progress
 
+- 2026-11-24 verification: After rebuilding all workspace packages, standalone entries, and the Suite, production external-host Open/Save integration and independent standalone launch both pass on isolated Chromium (`tests/ui/react-host-packages.test.mjs`, `react-standalone.test.mjs`: 2/2). This confirms those currently exercised integration paths, not completion of the ticket: the shared/app UI and legacy runtime migrations listed as blockers remain open.
+- 2026-11-24 post-build rerun: After a fresh `npm run typecheck` and `npm run build:apps`, the isolated-CDP production external-host provider Open/Save test and all three standalone package launch checks pass again (2/2, 6.2s). This is current integration evidence; unresolved shared engine instance/lifecycle boundaries and module migration still gate completion.
+
 The React packages now mount their current editor engines directly in the consumer's document without iframes. Their engines and much of the shared/app UI still come from the legacy public script bundles, so package delivery remains dependent on the full module migrations and final brand audit.
+
+- 2026-11-24 regression hardening: Standalone production look coverage now verifies that selecting Paper 2016 updates the mounted editor while preserving whatever look the host document already had. This avoids assuming a fresh localStorage origin always starts at `classic`; the production test passes three consecutive runs. The React package mount and legacy-module migration remain in progress.
 
 - 2026-11-18 follow-up: Made the shared `@vibeoffice/core` peer publishable, gave it an explicit `dist/` package file set and corrected its stylesheet export to the actual `dist/index.css` output. Wordx/Excelx/PPTX now package only their distributable `dist/` and same-origin `standalone/` assets, and each `prepack` builds both before npm creates the archive. Added workspace-contract checks and consumer instructions for serving each runtime tree under a same-origin prefix. `npm pack --dry-run` verified all four archives: each editor archive includes ESM, declarations, CSS, runtime manifest, shared CSS and fonts but excludes source/tests/build configs; core includes ESM, declarations and its valid stylesheet. Typecheck, workspace package tests (30/30), all three editor prepack builds, complete quick (11/11 groups), and `git diff --check` pass. #14 remains open pending completion of app/shared UI migration and broader parity acceptance.
 

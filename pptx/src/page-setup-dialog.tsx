@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 interface SlideSize { key: string; name: string; width: number; height: number }
 interface PageSetupCatalog { sizes: SlideSize[]; preset: string; width: number; height: number; firstNum: number; portrait: boolean; asDefault: boolean }
@@ -8,25 +9,25 @@ interface PageSetupRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): PageSetupRuntime | undefined { return (window as Window & { L?: PageSetupRuntime }).L; }
 
 /** React-owned slide size/orientation controls; resizing, defaults and slide-number metadata remain engine-owned. */
 export function PptxPageSetupDialog() {
+  const runtime = usePptxRuntime<PageSetupRuntime>();
   const [catalog, setCatalog] = useState<PageSetupCatalog | null>(null);
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactPageSetupCatalog?.() || null; setCatalog(next ? { ...next, sizes: [...next.sizes] } : null); };
-    const off = runtime()?.bus?.on('pptx-page-setup-dialog', refresh);
+    const refresh = () => { const next = runtime?.dlg?.reactPageSetupCatalog?.() || null; setCatalog(next ? { ...next, sizes: [...next.sizes] } : null); };
+    const off = runtime?.bus?.on('pptx-page-setup-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
+  const t = (message: string) => runtime?.t?.(message) || message;
   const update = (changes: Partial<PageSetupCatalog>) => setCatalog({ ...catalog, ...changes });
   const orientation = (portrait: boolean) => {
     if (catalog.portrait === portrait) return;
     update({ portrait, width: catalog.height, height: catalog.width });
   };
-  const close = () => runtime()?.dlg?.reactPageSetupAction?.('close');
-  const apply = () => runtime()?.dlg?.reactPageSetupAction?.('apply', { preset: catalog.preset, width: catalog.width, height: catalog.height, firstNum: catalog.firstNum, portrait: catalog.portrait, asDefault: catalog.asDefault });
+  const close = () => runtime?.dlg?.reactPageSetupAction?.('close');
+  const apply = () => runtime?.dlg?.reactPageSetupAction?.('apply', { preset: catalog.preset, width: catalog.width, height: catalog.height, firstNum: catalog.firstNum, portrait: catalog.portrait, asDefault: catalog.asDefault });
   return <OfficeDialog title={t('Page Setup')} className="pptx-page-setup-dialog" style={{ width: 'min(94vw, 560px)' }} onRequestClose={close}>
     <div className="row" style={{ gap: 16 }}>
       <section className="col" style={{ flex: '1 1 300px' }}>

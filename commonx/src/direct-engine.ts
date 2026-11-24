@@ -1,4 +1,20 @@
 import { installReactBrushService } from './brush.js';
+import { installReactDialogService } from './react-dialog-service.js';
+import { installReactTooltipService } from './tooltip-service.js';
+import { installReactMenuService } from './menu-service.js';
+import { installReactLegacyDialogService } from './legacy-dialog-service.js';
+import { installReactButtonService } from './button-service.js';
+import { installReactChoiceService } from './choice-service.js';
+import { installReactSelectService } from './select-service.js';
+import { installReactSpinService } from './spin-service.js';
+import { installReactStructureService } from './structure-service.js';
+import { installReactComboService } from './combo-service.js';
+import { installReactToolbarService } from './toolbar-service.js';
+import { installReactDragService } from './drag-service.js';
+import { installReactUiMountService } from './ui-mount-service.js';
+import { installReactUiRefreshService } from './ui-refresh-service.js';
+import { installReactUiTextService } from './ui-text-service.js';
+import { installReactCommandService } from './command-service.js';
 
 export interface DirectEngineDocument {
   host: HTMLElement;
@@ -6,7 +22,7 @@ export interface DirectEngineDocument {
   fetch?: typeof fetch;
   directHost?: Record<string, unknown> & { editor?: 'wordx' | 'excelx' | 'pptx' };
   skipLegacyScripts?: readonly string[];
-  beforeLegacyScript?: (runtime: Window, script: URL) => void;
+  beforeLegacyScript?: (runtime: Window, script: URL) => void | (() => void);
   shellOwnedByReact?: boolean;
 }
 
@@ -178,16 +194,20 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
     ? host.querySelector<HTMLElement>('.vibeoffice-legacy-root[data-vibeoffice-engine-root][data-vibeoffice-react-shell]')
     : document.createElement('div');
   if (!root) throw new Error('The React editor shell is missing its engine root');
+  root.dataset.lookRoot = '';
   if (!shellOwnedByReact) {
     root.className = 'vibeoffice-legacy-root';
     root.dataset.vibeofficeEngineRoot = '';
   }
   const runtimeWindow = view as Window & {
     __VIBE_OFFICE_DIRECT_HOST__?: Record<string, unknown> & { root?: HTMLElement | null };
-    L?: { mountDomRoot?: (element: HTMLElement) => () => void; APP_ID?: string; APP_NAME?: string; APP?: string };
+    L?: { mountDomRoot?: (element: HTMLElement) => () => void; APP_ID?: string; APP_NAME?: string; APP?: string; ui?: Record<string, unknown> };
     VO?: { t?: (value: string, ...args: unknown[]) => string; N?: (value: string) => string };
+    console: Console;
   };
   const directRuntime = runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ || {};
+  directRuntime.reactHost = true;
+  directRuntime.preserveHostLook = true;
   if (directRuntime.root?.isConnected) throw new Error('Only one VibeOffice editor can be mounted in a host document at a time');
   const hostEngineDescriptor = Object.getOwnPropertyDescriptor(runtimeWindow, 'L');
   const hostEngineNamespace = runtimeWindow.L;
@@ -204,22 +224,40 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
   }
   let restoreDomRoot: (() => void) | undefined;
   let restoreBrushService: (() => void) | undefined;
+  const restoreReactServices: Array<() => void> = [];
   let hostEngineNamespaceActive = preserveHostEngineNamespace;
+  let disposed = false;
   const cleanup = () => {
-    releaseReservation();
-    if (runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ === directRuntime && directRuntime.root === root) {
-      directRuntime.root = null;
-      for (const key of ['launch', 'open', 'save', 'saveAs', 'ready']) delete directRuntime[key];
-    }
-    restoreDomRoot?.();
+    if (disposed) return;
+    disposed = true;
+    const errors: unknown[] = [];
+    const attempt = (action: () => void) => { try { action(); } catch (error) { errors.push(error); } };
+    attempt(releaseReservation);
+    attempt(() => {
+      if (runtimeWindow.__VIBE_OFFICE_DIRECT_HOST__ === directRuntime && directRuntime.root === root) {
+        directRuntime.root = null;
+        for (const key of ['launch', 'open', 'save', 'saveAs', 'ready']) delete directRuntime[key];
+      }
+    });
+    const restoreDomRootNow = restoreDomRoot;
     restoreDomRoot = undefined;
-    restoreBrushService?.();
+    if (restoreDomRootNow) attempt(restoreDomRootNow);
+    const restoreBrushNow = restoreBrushService;
     restoreBrushService = undefined;
-    styles.forEach((style) => style.remove());
-    if (!shellOwnedByReact) root.remove();
+    if (restoreBrushNow) attempt(restoreBrushNow);
+    for (const restore of restoreReactServices.splice(0).reverse()) attempt(restore);
+    for (const style of styles.splice(0)) attempt(() => style.remove());
+    if (!shellOwnedByReact) attempt(() => root.remove());
     if (hostEngineNamespaceActive) {
       hostEngineNamespaceActive = false;
-      Object.defineProperty(runtimeWindow, 'L', hostEngineDescriptor!);
+      attempt(() => Object.defineProperty(runtimeWindow, 'L', hostEngineDescriptor!));
+    }
+    if (errors.length) {
+      const cleanupError = new AggregateError(errors, 'One or more VibeOffice editor cleanup actions failed');
+      try {
+        if (typeof runtimeWindow.reportError === 'function') runtimeWindow.reportError(cleanupError);
+        else runtimeWindow.console.error(cleanupError);
+      } catch { /* reporting must not interrupt the remaining mount failure/disposal path */ }
     }
   };
   if (!shellOwnedByReact) host.append(root);
@@ -253,7 +291,7 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
     root.appendChild(copy);
   }
 
-  Object.assign(directRuntime, directHost, { root });
+  Object.assign(directRuntime, directHost, { root, reactHost: true });
   const loadedScripts = Array.isArray(directRuntime.loadedLegacyScripts) ? directRuntime.loadedLegacyScripts as string[] : [];
   loadedScripts.length = 0;
   directRuntime.loadedLegacyScripts = loadedScripts;
@@ -263,13 +301,56 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
       if (signal.aborted) throw abortError();
       const scriptUrl = new URL(script, source);
       assertSameOrigin(scriptUrl, base);
-      beforeLegacyScript?.(runtimeWindow, scriptUrl);
+      const disposeScriptService = beforeLegacyScript?.(runtimeWindow, scriptUrl);
+      if (typeof disposeScriptService === 'function') restoreReactServices.push(disposeScriptService);
       if (preserveHostEngineNamespace && runtimeWindow.L && runtimeWindow.L !== hostEngineNamespace) {
         engineNamespaces.add(runtimeWindow.L);
         engineNamespacesByHost.set(view, runtimeWindow.L);
       }
       if (signal.aborted) throw abortError();
-      if (skipLegacyScripts.some((path) => scriptUrl.pathname.endsWith(path)) || (shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ribbon.js'))) continue;
+      const reactOwnsSharedUi = shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ui.js');
+      if (reactOwnsSharedUi) {
+        if (!runtimeWindow.L) throw new Error('The shared engine namespace must load before the React UI services');
+        const reactUi = runtimeWindow.L.ui || (runtimeWindow.L.ui = {});
+        if (!reactUi.cmds || typeof reactUi.cmds !== 'object') reactUi.cmds = {};
+        if (!reactUi.hooks) reactUi.hooks = { beforeExec() {}, refocus() {}, commitEdit() {}, ownsText() { return false; } };
+        for (const name of ['dialogOpen', 'dialogKey', 'menuOpen', 'menuKey']) if (typeof reactUi[name] !== 'function') reactUi[name] = () => false;
+        const originals = new Map<string, PropertyDescriptor | undefined>();
+        for (const name of Object.keys(reactUi)) originals.set(name, Object.getOwnPropertyDescriptor(reactUi, name));
+        [
+          installReactCommandService,
+          installReactDialogService,
+          installReactTooltipService,
+          installReactMenuService,
+          installReactLegacyDialogService,
+          installReactButtonService,
+          installReactChoiceService,
+          installReactSelectService,
+          installReactSpinService,
+          installReactStructureService,
+          installReactComboService,
+          installReactToolbarService,
+          installReactDragService,
+          installReactUiMountService,
+          installReactUiRefreshService,
+          installReactUiTextService,
+        ].forEach((install) => { const restore = install(runtimeWindow); if (typeof restore === 'function') restoreReactServices.push(restore); });
+        restoreBrushService = installReactBrushService(runtimeWindow);
+        const installed = new Map<string, PropertyDescriptor>();
+        for (const name of Object.keys(reactUi)) {
+          const descriptor = Object.getOwnPropertyDescriptor(reactUi, name);
+          if (descriptor && descriptor.value !== originals.get(name)?.value) installed.set(name, descriptor);
+        }
+        restoreReactServices.push(() => {
+          for (const [name, descriptor] of installed) {
+            if (Object.getOwnPropertyDescriptor(reactUi, name)?.value !== descriptor.value) continue;
+            const original = originals.get(name);
+            if (original) Object.defineProperty(reactUi, name, original);
+            else delete reactUi[name];
+          }
+        });
+      }
+      if (reactOwnsSharedUi || skipLegacyScripts.some((path) => scriptUrl.pathname.endsWith(path)) || (shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ribbon.js'))) continue;
       loadedScripts.push(scriptUrl.pathname);
       await loadScript(document, scriptUrl, signal);
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L && runtimeWindow.VO?.t) {
@@ -279,7 +360,6 @@ export async function mountLegacyEngineDocument(url: string | URL, { host, signa
         engineNamespaces.add(runtimeWindow.L);
         engineNamespacesByHost.set(view, runtimeWindow.L);
       }
-      if (shellOwnedByReact && scriptUrl.pathname.endsWith('/common/ui.js')) restoreBrushService = installReactBrushService(runtimeWindow);
       if (scriptUrl.pathname.endsWith('/common/core.js') && runtimeWindow.L?.mountDomRoot) {
         restoreDomRoot = runtimeWindow.L.mountDomRoot(root);
         const editor = directHost.editor;

@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host.js';
 
 interface SortKey { c: number | null; desc: boolean }
 interface SortState { keys: SortKey[]; caseSensitive: boolean; byCols: boolean; list: number | null; header: boolean }
@@ -11,30 +12,27 @@ interface SortRuntime {
   t?(message: string, ...args: unknown[]): string;
 }
 
-function runtime(): SortRuntime | undefined {
-  return (window as Window & { L?: SortRuntime }).L;
-}
-
 export function ExcelxSortDialog() {
+  const runtime = useExcelxRuntime<SortRuntime>();
   const [catalog, setCatalog] = useState<SortCatalog | null>(null);
   const [state, setState] = useState<SortState>({ keys: [{ c: null, desc: false }, { c: null, desc: false }, { c: null, desc: false }], caseSensitive: false, byCols: false, list: null, header: false });
   const [optionsOpen, setOptionsOpen] = useState(false);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactSortCatalog?.() || null;
+      const next = runtime?.dlg?.reactSortCatalog?.() || null;
       setCatalog(next);
       if (next) { setState({ ...next.state, header: next.header }); setOptionsOpen(false); }
     };
-    const off = runtime()?.bus?.on('excelx-sort-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-sort-dialog', refresh);
     return () => {
       off?.();
-      if (runtime()?.dlg?.reactSortCatalog?.()) runtime()?.dlg?.reactSortClose?.();
+      if (runtime?.dlg?.reactSortCatalog?.()) runtime?.dlg?.reactSortClose?.();
     };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
-  const close = () => { setOptionsOpen(false); runtime()?.dlg?.reactSortClose?.(); };
-  const apply = () => runtime()?.dlg?.reactSortApply?.(state);
+  const translate = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
+  const close = () => { setOptionsOpen(false); runtime?.dlg?.reactSortClose?.(); };
+  const apply = () => runtime?.dlg?.reactSortApply?.(state);
   const updateKey = (index: number, update: Partial<SortKey>) => setState((previous) => ({ ...previous, keys: previous.keys.map((key, i) => i === index ? { ...key, ...update } : key) }));
   const options = state.byCols ? catalog.rows : catalog.columns;
   const orientation = (byCols: boolean) => setState((previous) => ({ ...previous, byCols, keys: previous.keys.map((key) => ({ ...key, c: null })).map((key, index) => index === 0 ? { ...key, c: byCols ? catalog.selection.row : catalog.selection.column } : key) }));

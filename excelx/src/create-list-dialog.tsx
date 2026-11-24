@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host.js';
 
 interface CreateListCatalog { reference: string; header: boolean }
 interface CreateListRuntime {
@@ -8,31 +9,28 @@ interface CreateListRuntime {
   t?(message: string): string;
 }
 
-function runtime(): CreateListRuntime | undefined {
-  return (window as Window & { L?: CreateListRuntime }).L;
-}
-
 export function ExcelxCreateListDialog() {
+  const runtime = useExcelxRuntime<CreateListRuntime>();
   const [catalog, setCatalog] = useState<CreateListCatalog | null>(null);
   const [reference, setReference] = useState('');
   const [header, setHeader] = useState(false);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactCreateListCatalog?.() || null;
+      const next = runtime?.dlg?.reactCreateListCatalog?.() || null;
       setCatalog(next);
       if (next) { setReference(next.reference); setHeader(next.header); }
     };
-    const off = runtime()?.bus?.on('excelx-create-list-dialog', refresh);
+    const off = runtime?.bus?.on('excelx-create-list-dialog', refresh);
     return () => {
       off?.();
-      if (runtime()?.dlg?.reactCreateListCatalog?.()) runtime()?.dlg?.reactCreateListClose?.();
+      if (runtime?.dlg?.reactCreateListCatalog?.()) runtime?.dlg?.reactCreateListClose?.();
     };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactCreateListClose?.();
-  const apply = () => runtime()?.dlg?.reactCreateListApply?.(reference, header);
-  const pickSelection = () => setReference(runtime()?.dlg?.reactCreateListSelection?.() || reference);
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactCreateListClose?.();
+  const apply = () => runtime?.dlg?.reactCreateListApply?.(reference, header);
+  const pickSelection = () => setReference(runtime?.dlg?.reactCreateListSelection?.() || reference);
   return <OfficeDialog title={translate('Create List')} className="excelx-create-list-dialog" style={{ width: 'min(92vw, 380px)' }} onRequestClose={close}>
     <div className="excelx-create-list-dialog__body">
       <div>{translate('Where is the data for your list?')}</div>

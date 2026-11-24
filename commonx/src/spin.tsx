@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface SpinOptions {
@@ -46,7 +46,7 @@ function SpinControl({ request }: { request: SpinRequest }) {
     options.value = next;
     options.onChange?.(next);
   };
-  useEffect(() => {
+  useLayoutEffect(() => {
     const updateDisabled = () => setDisabled(!!(target as SpinTarget).__reactSpinDisabled);
     target.addEventListener('vibeoffice-react-spin-disabled', updateDisabled);
     if (inputRef.current) options.onMount?.(inputRef.current);

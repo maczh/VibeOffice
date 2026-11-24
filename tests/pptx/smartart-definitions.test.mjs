@@ -1,7 +1,7 @@
 // What PowerPoint 2016 needs from our IntelliArt parts: presentation links that name the layout part (or it draws
 // nothing, and a hierarchy closes PowerPoint), and layout nodes numbered once per definition (or a few shapes are drawn
 // across the whole diagram). Both were found with the Office 2016 PDF exports (docs/smartart.md).
-// node --test tests/lectern/smartart-definitions.test.mjs
+// node --test tests/pptx/smartart-definitions.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

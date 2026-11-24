@@ -14,7 +14,7 @@ export function remoteConflict(current?: RemoteRevision): RemoteConflictError {
 
 export interface WebDavOptions {
   baseUrl: string | URL;
-  credentials?: () => Promise<{ username: string; password: string } | undefined>;
+  credentials?: (signal?: AbortSignal) => Promise<{ username: string; password: string } | undefined>;
   allowedOrigins: readonly string[];
   fetcher?: typeof fetch;
 }
@@ -30,12 +30,28 @@ export function createWebDavProvider(options: WebDavOptions): RemoteStorageProvi
     const basePath = base.pathname.endsWith('/') ? base.pathname : `${base.pathname}/`;
     const inBase = url.pathname === base.pathname.replace(/\/$/, '') || url.pathname.startsWith(basePath);
     if (url.origin !== base.origin || url.username || url.password || !inBase) throw new TypeError('WebDAV path escaped its configured base URL');
+    const relativePath = url.pathname.slice(base.pathname.replace(/\/$/, '').length).replace(/^\/+/, '');
+    const unsafeSegment = (segment: string) => {
+      let decoded = segment;
+      for (let depth = 0; depth < 8; depth++) {
+        if (decoded === '.' || decoded === '..' || decoded.includes('/') || decoded.includes('\\')) return true;
+        if (!decoded.includes('%')) return false;
+        let next: string;
+        try { next = decodeURIComponent(decoded); } catch { return true; }
+        if (next === decoded) return false;
+        decoded = next;
+      }
+      return decoded.includes('%');
+    };
+    if (relativePath.split('/').some(unsafeSegment)) throw new TypeError('WebDAV path contains an encoded separator or traversal segment');
     return url;
   };
   const request = async (url: URL, method: string, headers: Record<string, string> = {}, body?: BodyInit, signal?: AbortSignal) => {
-    const auth = await options.credentials?.();
+    if (signal?.aborted) throw signal.reason ?? new DOMException('The operation was aborted', 'AbortError');
+    const auth = await options.credentials?.(signal);
+    if (signal?.aborted) throw signal.reason ?? new DOMException('The operation was aborted', 'AbortError');
     const authorization = auth ? `Basic ${btoa(`${auth.username}:${auth.password}`)}` : undefined;
-    const response = await fetcher(url, { method, headers: { ...(authorization ? { Authorization: authorization } : {}), ...headers }, ...(body ? { body } : {}), ...(signal ? { signal } : {}) });
+    const response = await fetcher(url, { method, headers: { ...(authorization ? { Authorization: authorization } : {}), ...headers }, ...(body ? { body } : {}), redirect: 'error', ...(signal ? { signal } : {}) });
     if (response.status === 412 || response.status === 409) throw remoteConflict();
     if (!response.ok && response.status !== 207) throw new Error(`WebDAV ${method} failed (${response.status})`);
     return response;
@@ -46,17 +62,21 @@ export function createWebDavProvider(options: WebDavOptions): RemoteStorageProvi
   };
   return {
     async list(parentId, signal) {
-      const response = await request(urlFor(parentId), 'PROPFIND', { Depth: '1', 'Content-Type': 'application/xml; charset=utf-8' }, '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:getetag/><d:getcontenttype/><d:getlastmodified/><d:resourcetype/></d:prop></d:propfind>', signal);
+      const parentUrl = urlFor(parentId);
+      const response = await request(parentUrl, 'PROPFIND', { Depth: '1', 'Content-Type': 'application/xml; charset=utf-8' }, '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:getetag/><d:getcontenttype/><d:getlastmodified/><d:resourcetype/></d:prop></d:propfind>', signal);
       const xml = new DOMParser().parseFromString(await response.text(), 'application/xml');
       if (xml.querySelector('parsererror')) throw new Error('WebDAV returned invalid XML');
-      return [...xml.getElementsByTagNameNS('DAV:', 'response')].map((node) => {
+      const resources = [...xml.getElementsByTagNameNS('DAV:', 'response')].map((node) => {
         const href = node.getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '';
-        const name = node.getElementsByTagNameNS('DAV:', 'displayname')[0]?.textContent || decodeURIComponent(href.split('/').filter(Boolean).pop() || '');
+        const url = urlFor(new URL(href, parentUrl).href);
+        const name = node.getElementsByTagNameNS('DAV:', 'displayname')[0]?.textContent || decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() || '');
         const etag = node.getElementsByTagNameNS('DAV:', 'getetag')[0]?.textContent || undefined;
         const mimeType = node.getElementsByTagNameNS('DAV:', 'getcontenttype')[0]?.textContent || undefined;
         const isDirectory = node.getElementsByTagNameNS('DAV:', 'collection').length > 0;
-        return { id: href, name, isDirectory, ...(mimeType ? { mimeType } : {}), ...(etag ? { revision: { value: etag, kind: 'etag' as const } } : {}) };
-      }).filter((file) => file.id !== urlFor(parentId).pathname);
+        return { id: url.pathname + url.search, name, isDirectory, ...(mimeType ? { mimeType } : {}), ...(etag ? { revision: { value: etag, kind: 'etag' as const } } : {}), parentPath: url.pathname };
+      });
+      const canonicalPath = (pathname: string) => pathname.replace(/\/+$/, '') || '/';
+      return resources.filter((file) => canonicalPath(file.parentPath) !== canonicalPath(parentUrl.pathname)).map(({ parentPath: _parentPath, ...file }) => file);
     },
     async read(id, signal) {
       const url = urlFor(id);
@@ -64,12 +84,15 @@ export function createWebDavProvider(options: WebDavOptions): RemoteStorageProvi
       return { file: { id: url.pathname, name: decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() || 'Document'), ...(response.headers.get('Content-Type') ? { mimeType: response.headers.get('Content-Type')! } : {}), ...(revision(response) ? { revision: revision(response) } : {}) }, blob: await response.blob() };
     },
     async create(parentId, name, blob, signal) {
+      if (!name || name === '.' || name === '..' || /[\\/\u0000-\u001f\u007f]/.test(name)) throw new TypeError('WebDAV file name is invalid');
       const url = urlFor((parentId ? parentId.replace(/\/$/, '') + '/' : '') + encodeURIComponent(name));
+      if (url.pathname.endsWith('/')) throw new TypeError('WebDAV file name is invalid');
       const response = await request(url, 'PUT', { 'If-None-Match': '*' }, blob, signal);
       return { id: url.pathname, name, ...(revision(response) ? { revision: revision(response) } : {}) };
     },
     async save(id, blob, options) {
       const url = urlFor(id);
+      if (url.pathname === base.pathname.replace(/\/$/, '') || url.pathname.endsWith('/')) throw new TypeError('WebDAV save target must be a file');
       const headers: Record<string, string> = {};
       if (options?.ifRevision?.kind === 'etag') headers['If-Match'] = options.ifRevision.value;
       const response = await request(url, 'PUT', headers, blob, options?.signal);
@@ -83,7 +106,7 @@ export function createUrlReadProvider(allowedOrigins: readonly string[], fetcher
   return { async read(id, signal) {
     const url = new URL(id);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !allowed.has(url.origin)) throw new TypeError('URL origin is not allowed');
-    const response = await fetcher(url, { ...(signal ? { signal } : {}) });
+    const response = await fetcher(url, { redirect: 'error', ...(signal ? { signal } : {}) });
     if (!response.ok) throw new Error(`URL open failed (${response.status})`);
     return { file: { id: url.href, name: decodeURIComponent(url.pathname.split('/').pop() || 'Document'), ...(response.headers.get('ETag') ? { revision: { value: response.headers.get('ETag')!, kind: 'etag' as const } } : {}) }, blob: await response.blob() };
   } };

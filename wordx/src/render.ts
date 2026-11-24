@@ -12,6 +12,7 @@ export function installWordxRender(runtime: Window): void {
   installedRenderers.add(namespace);
 (function () {
   'use strict';
+  const document = window.document;
   const L = window.L, D = L.D;
   const R = (L.R = {});
   const PX = D.PX;

@@ -1,9 +1,9 @@
-// Issue #20: a Word 2010 (compat 14) report had two blank pages in Quire that Word doesn't make, and its centred tables,
+// Issue #20: a Word 2010 (compat 14) report had two blank pages in Wordx that Word doesn't make, and its centred tables,
 // wider than the text, hung off the right edge of the page. Word keeps the paragraph mark of a page break that ends a
 // section's last paragraph on the page of the break, and an empty paragraph holding only a section break, after a page
 // break, at the foot of that page, when the next section starts on a new page anyway; a centred table wider than its
 // column overhangs both margins evenly, a right-aligned one the left margin (public/quire/js/layout.js). The documents
-// are built here; the rules were checked against the page counts Word stored in the corpus (tools/quire-pages.mjs):
+// are built here; the rules were checked against the page counts Word stored in the corpus (tools/wordx-pages.mjs):
 //   node --test tests/from-issues/20/pages.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

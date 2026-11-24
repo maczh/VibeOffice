@@ -1,5 +1,5 @@
 // Real DOCX regression for typed chart bytes surviving text edits, undo and copying.
-// Usage: node tests/quire/history.mjs FILE.docx
+// Usage: node tests/wordx/history.mjs FILE.docx
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

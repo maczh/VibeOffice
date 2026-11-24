@@ -12,6 +12,7 @@ export function installWordxLayout(runtime: Window): void {
   installedLayouts.add(namespace);
 (function () {
   'use strict';
+  const document = window.document;
   const L = window.L, D = L.D, R = L.R;
   const LY = (L.layout = {});
   const PX = D.PX;

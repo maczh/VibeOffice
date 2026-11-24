@@ -1,12 +1,21 @@
 {
- "commit": "6d6b634218049f630ca25771ff9e62e204bb3cca",
+ "commit": "c9970a814d86fc3811d1f852540300d12bba2b33",
  "dirty": false,
- "public": "6b138791d09ca96c794ffbfed01e8626e38480b7",
- "date": "2026-11-18T11:57:07.734Z",
- "minutes": 23.2,
- "tests": 600,
- "pass": 599,
- "fail": 0,
- "todo": 1,
- "failures": []
+ "public": "27438adcca8eea209ff02b25fd9206f0f7bc7a32",
+ "date": "2026-11-23T18:59:48.369Z",
+ "minutes": 22.6,
+ "tests": 609,
+ "pass": 598,
+ "fail": 11,
+ "todo": 0,
+ "failures": [
+  "S11c After a click on a toolbar's background, the arrow keys and Delete still work on the sheet",
+  "quire, classic: the keyboard stays with the document › a dialog from the toolbar, closed with Cancel",
+  "ledger, classic: the keyboard stays with the document › a dialog from the toolbar, closed with Cancel",
+  "lectern, classic: the keyboard stays with the document › a dialog from the toolbar, closed with Cancel",
+  "each independent React editor installs and switches the shared look service",
+  "React suite starts at Create File and mounts each full editor package",
+  "Q4 after a text drag dropped outside the document, text dragged in from the font box is inserted and nothing else moves",
+  "the toolbar's Insert Table grid: a move over 2 × 3 and a click insert that table"
+ ]
 }

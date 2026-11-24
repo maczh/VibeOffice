@@ -5,6 +5,7 @@
  * pie explosion, doughnut holes, radar webs and bubbles. Charts made in PPTX itself (model v1) keep the
  * PowerPoint 2003 look drawn by charts.js. */
 export function installPptxChartDraw(runtime: Window): void {
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L;
   const CH = L.chart;
   const s = L.s;

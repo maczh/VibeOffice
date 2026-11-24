@@ -1,10 +1,10 @@
 /* Excelx engine fuzz campaign, October 2026. All generators and cases live here.
  *
- *   node tests/ledger-fuzz/202610/fuzz.cjs
- *   node tests/ledger-fuzz/202610/fuzz.cjs --libreoffice
- *   node tests/ledger-fuzz/202610/fuzz.cjs --strict --libreoffice
- *   node tests/ledger-fuzz/202610/fuzz.cjs --libreoffice --seed=20261012 --count=32
- *   node tests/ledger-fuzz/202610/fuzz.cjs --libreoffice --modern
+ *   node tests/excelx-fuzz/202610/fuzz.cjs
+ *   node tests/excelx-fuzz/202610/fuzz.cjs --libreoffice
+ *   node tests/excelx-fuzz/202610/fuzz.cjs --strict --libreoffice
+ *   node tests/excelx-fuzz/202610/fuzz.cjs --libreoffice --seed=20261012 --count=32
+ *   node tests/excelx-fuzz/202610/fuzz.cjs --libreoffice --modern
  *
  * KNOWN_FAIL cases assert the desired behavior and separately recognize the
  * exact current failure. They execute, never skip. Unexpected failures AND
@@ -44,7 +44,7 @@
  * real formula result. No automatic "all mismatches are known" allowlist.
  *
  * Reports, replay inputs, original XLSX and Calc's saved XLSX go in a unique
- * tmp/ledger-fuzz-202610/run-* directory (--out=DIR changes the parent). Each
+ * tmp/excelx-fuzz-202610/run-* directory (--out=DIR changes the parent). Each
  * finding records its seed, expected/actual values and source-file hashes.
  * This synthetic campaign is not the public corpus or an Excel acceptance run.
  */
@@ -55,7 +55,7 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const { spawn, spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '../../..');
-const L = require('../../ledger/load.js');
+const L = require('../../excelx/load.js');
 require('../../../public/ledger/js/layout.js');
 require('../../../public/ledger/js/ops.js');
 const { model: M, calc: C, formula: F, ops: O } = L;
@@ -63,7 +63,7 @@ const BASELINE = '8f48d5254bd1b892cc36f8eb7467ff9891d2c6bb';
 
 function options() {
   const o = { seed: 20261011, count: 32, strict: false, libreoffice: false, modern: false,
-    out: path.join(ROOT, 'tmp/ledger-fuzz-202610') };
+    out: path.join(ROOT, 'tmp/excelx-fuzz-202610') };
   for (const arg of process.argv.slice(2)) {
     if (arg === '--strict') o.strict = true;
     else if (arg === '--libreoffice') o.libreoffice = true;
@@ -526,7 +526,7 @@ function knownCase(family, seed) {
 }
 
 function legacyHarnessCase() {
-  const file = path.join(ROOT, 'tests/ledger/calc.test.js');
+  const file = path.join(ROOT, 'tests/excelx/calc.test.js');
   const runner = `
     const fs = require('node:fs'), Module = require('node:module'), path = require('node:path');
     const file = process.argv[1], original = fs.readFileSync(file, 'utf8');
@@ -547,9 +547,9 @@ function legacyHarnessCase() {
 // Confirmed directly in LibreOffice 25.2.3.2, October 12. One representative
 // per cause, not one "bug" per function/seed. Excel 2016 has these functions;
 // these are Calc compatibility regressions, NOT an executed Excel acceptance.
-// Round 1 exploration: tmp/ledger-fuzz-202610/distinct-ZJG1o5/.
-// Round 2 exploration: tmp/ledger-fuzz-202610/boundary-numeric-N2S3Xl/;
-// minimized direct checks: tmp/ledger-fuzz-202610/boundary-minimized-ahCe6r/.
+// Round 1 exploration: tmp/excelx-fuzz-202610/distinct-ZJG1o5/.
+// Round 2 exploration: tmp/excelx-fuzz-202610/boundary-numeric-N2S3Xl/;
+// minimized direct checks: tmp/excelx-fuzz-202610/boundary-minimized-ahCe6r/.
 // Every retained reproducer is reverified by --libreoffice, independent of tmp.
 const NEW_FAILURES = {
   'database-error': { expected: { error: '#N/A' }, actual: 0,
@@ -739,7 +739,7 @@ def canonical_errors(target, watch, values):
 profile = root / 'lo-profile'; profile.mkdir()
 inputs = root / 'lo-input'; inputs.mkdir()
 outputs = root / 'lo-output'; outputs.mkdir()
-pipe = 'ledger_fuzz_' + uuid.uuid4().hex
+pipe = 'excelx_fuzz_' + uuid.uuid4().hex
 def terminate(signum, frame):
     raise SystemExit('LibreOffice verification was terminated')
 signal.signal(signal.SIGTERM, terminate)
@@ -822,7 +822,7 @@ async function main() {
   const o = options(); fs.mkdirSync(o.out, { recursive: true });
   const directory = fs.mkdtempSync(path.join(o.out, 'run-'));
   const results = [], jobs = [], counts = {}, sourceHashes = {};
-  const sources = [...Object.keys(require.cache).filter(file => file.startsWith(path.join(ROOT, 'public') + path.sep)), __filename, path.join(ROOT, 'tests/ledger/calc.test.js')];
+  const sources = [...Object.keys(require.cache).filter(file => file.startsWith(path.join(ROOT, 'public') + path.sep)), __filename, path.join(ROOT, 'tests/excelx/calc.test.js')];
   for (const file of sources.sort()) sourceHashes[path.relative(ROOT, file)] = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
   const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout.trim();
   const record = result => { results.push(result); counts[result.status] = (counts[result.status] || 0) + 1; };

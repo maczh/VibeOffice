@@ -4,6 +4,10 @@
  * model (split runs → apply → re-render) so markup never drifts.
  */
 export function installPptxTextEdit(runtime: Window): void {
+  const window = runtime as Window & { VO?: any };
+  const VO = window.VO;
+  const document = runtime.document;
+  const NodeFilter = runtime.NodeFilter;
   const L = (runtime as Window & { L?: any }).L;
   const T = L.txt;
   const E = L.ed;

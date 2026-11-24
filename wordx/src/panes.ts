@@ -3,6 +3,7 @@
  * page thumbnails, Print Preview and the Reading Layout toolbar.
  */
 // @ts-nocheck -- pane catalog and view helpers retain existing Wordx engine contracts.
+import { standardColorName } from '@vibeoffice/core';
 const installedWordxPanes = new WeakSet<object>();
 export function installWordxPanes(runtime: Window): void {
   const window = runtime as Window & { L?: any; VO?: any };
@@ -12,6 +13,7 @@ export function installWordxPanes(runtime: Window): void {
   installedWordxPanes.add(namespace);
 (function () {
   'use strict';
+  const document = window.document;
   const L = window.L, D = L.D, O = L.O, E = L.ed, LY = L.layout, R = L.R;
   const { h } = L;
   const ui = L.ui;
@@ -162,7 +164,7 @@ export function installWordxPanes(runtime: Window): void {
     const font = [row(L.N('FONT:'), [`${r.font || ''} ${r.sz || 12} pt`, r.b && L.t('Bold'), r.i && L.t('Italic')].filter(Boolean).join(', '))];
     if (r.color && r.color !== 'auto') font.push(row('Font color:', '#' + r.color));
     if (r.u && r.u !== 'none') font.push(row('Underline:', L.t(underline ? underline[1] : r.u)));
-    if (r.hl) font.push(row('Highlight:', L.t(ui.colorName(L.R.HIGHLIGHT[r.hl] || r.hl))));
+    if (r.hl) font.push(row('Highlight:', L.t(standardColorName(L.R.HIGHLIGHT[r.hl] || r.hl))));
     if (r.caps) font.push(row('Effects:', L.t('All caps')));
     if (r.smallCaps) font.push(row('Effects:', L.t('Small caps')));
     if (r.vert) font.push(row('Position:', L.t({ superscript: L.N('Superscript'), subscript: L.N('Subscript') }[r.vert] || r.vert)));
@@ -707,7 +709,7 @@ export function installWordxPanes(runtime: Window): void {
       const lineSp = !sp.line ? L.t('single') : sp.rule === 'auto' || !sp.rule ? (sp.line === 1 ? L.t('single') : sp.line === 2 ? L.t('double') : L.t('{0} lines', sp.line)) : sp.rule === 'exact' ? L.t('Exactly {0} pt', sp.line) : L.t('At least {0} pt', sp.line);
       const ul = (L.dlg.UNDERLINES || []).find((x) => x[0] === r.u);
       const START = { nextPage: L.N('New page'), continuous: L.N('Continuous'), evenPage: L.N('Even page'), oddPage: L.N('Odd page'), nextColumn: L.N('New column') };
-      box.append(...[head(L.N('Font'), () => L.dlg.font()), row(L.N('FONT:'), [`${r.font || ''} ${r.sz || 12} pt`, r.b && L.t('Bold'), r.i && L.t('Italic')].filter(Boolean).join(', ')), r.color && r.color !== 'auto' ? row('Font color:', '#' + r.color) : null, r.u && r.u !== 'none' ? row('Underline:', L.t(ul ? ul[1] : r.u)) : null, r.hl ? row('Highlight:', L.t(ui.colorName(L.R.HIGHLIGHT[r.hl] || r.hl))) : null, r.caps ? row('Effects:', L.t('All caps')) : null, r.smallCaps ? row('Effects:', L.t('Small caps')) : null, r.vert ? row('Position:', L.t({ superscript: L.N('Superscript'), subscript: L.N('Subscript') }[r.vert] || r.vert)) : null, row('Language:', L.t(r.lang ? A().langName(r.lang) : 'English (U.S.)')),
+      box.append(...[head(L.N('Font'), () => L.dlg.font()), row(L.N('FONT:'), [`${r.font || ''} ${r.sz || 12} pt`, r.b && L.t('Bold'), r.i && L.t('Italic')].filter(Boolean).join(', ')), r.color && r.color !== 'auto' ? row('Font color:', '#' + r.color) : null, r.u && r.u !== 'none' ? row('Underline:', L.t(ul ? ul[1] : r.u)) : null, r.hl ? row('Highlight:', L.t(standardColorName(L.R.HIGHLIGHT[r.hl] || r.hl))) : null, r.caps ? row('Effects:', L.t('All caps')) : null, r.smallCaps ? row('Effects:', L.t('Small caps')) : null, r.vert ? row('Position:', L.t({ superscript: L.N('Superscript'), subscript: L.N('Subscript') }[r.vert] || r.vert)) : null, row('Language:', L.t(r.lang ? A().langName(r.lang) : 'English (U.S.)')),
         head(L.N('Paragraph'), () => L.dlg.paragraph()), row('Paragraph Style:', D.styleDisplayName(d.styles[p.pPr.style || 'Normal'])), row('Alignment:', L.t(JC[pp.jc || 'left'] || pp.jc)), row('Indentation:', !ind.fl ? L.t('Left: {0}, Right: {1}', fl(ind.l), fl(ind.r)) : ind.fl < 0 ? L.t('Left: {0}, Right: {1}, Hanging: {2}', fl(ind.l), fl(ind.r), fl(-ind.fl)) : L.t('Left: {0}, Right: {1}, First line: {2}', fl(ind.l), fl(ind.r), fl(ind.fl))),
         row('Spacing:', L.t('Before: {0} pt, After: {1} pt, Line spacing: {2}', L.round(sp.b || 0, 1), L.round(sp.a || 0, 1), lineSp)),
         pp.keepNext || pp.keepLines || pp.pageBreakBefore ? row('Line and Page Breaks:', [pp.keepNext && L.t('Keep with next'), pp.keepLines && L.t('Keep lines together'), pp.pageBreakBefore && L.t('Page break before')].filter(Boolean).join(', ')) : null,

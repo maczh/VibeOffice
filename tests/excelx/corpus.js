@@ -41,7 +41,7 @@ if (args[0] === '--worker') {
   const save = opt('--save', ''), limit = +opt('--limit', Infinity), timeout = +opt('--timeout', 120000), jobs = +opt('--jobs', 2);
   const edit = flag('--edit'), resume = flag('--resume');
   const scenarios = opt('--scenarios', edit ? 'text,format,insert-row,delete-row,insert-column,delete-column,rename-sheet,geometry,duplicate,delete-object,delete-sheet' : 'save,repeat').split(',');
-  if (scenarios.includes('draft')) throw new Error('Use tests/ledger/browser-corpus.mjs --scenarios draft for actual snapshot/recovery hooks');
+  if (scenarios.includes('draft')) throw new Error('Use tests/excelx/browser-corpus.mjs --scenarios draft for actual snapshot/recovery hooks');
   const [source, output] = args;
   if (!source || !output || args.length !== 2) throw new Error('Usage: corpus.js DIR RESULTS.jsonl [--save DIR] [--edit | --scenarios LIST]');
   const ext = /\.(xlsx|xlsm|xltx|xltm)$/i;

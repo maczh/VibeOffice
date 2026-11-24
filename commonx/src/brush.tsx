@@ -20,7 +20,7 @@ export interface EditorBrush<Value = unknown> {
 }
 
 interface BrushUi {
-  brush(options: BrushOptions): EditorBrush;
+  brush?: (options: BrushOptions) => EditorBrush;
   brushOn?(): EditorBrush | null;
   brushReactOwned?: boolean;
   refresh?(): void;
@@ -33,7 +33,7 @@ interface BrushRuntime extends Window {
   VO?: { reactDirectHost?: { root?: HTMLElement | null } };
 }
 
-/** Replace the direct-host Format Painter controller after the shared compatibility API loads. */
+/** Install the direct-host Format Painter API in the shared React runtime. */
 export function installReactBrushService(view: Window): () => void {
   const runtime = view as BrushRuntime;
   const ui = runtime.L?.ui;
@@ -94,7 +94,10 @@ export function installReactBrushService(view: Window): () => void {
   ui.brushReactOwned = true;
   return () => {
     active?.stop();
-    if (ui.brush === brushFactory) ui.brush = previousBrush;
+    if (ui.brush === brushFactory) {
+      if (previousBrush) ui.brush = previousBrush;
+      else delete ui.brush;
+    }
     if (ui.brushOn === brushOn) {
       if (previousBrushOn) ui.brushOn = previousBrushOn;
       else delete ui.brushOn;

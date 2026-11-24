@@ -1,5 +1,5 @@
 // Comment ownership, independently checked author/anchor references, history and suite drafts.
-// node tests/lectern/comments.mjs OUTPUT_DIR FIXTURE_DIR
+// node tests/pptx/comments.mjs OUTPUT_DIR FIXTURE_DIR
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

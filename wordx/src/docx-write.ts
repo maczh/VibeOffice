@@ -4,6 +4,7 @@
 // @ts-nocheck -- OOXML read/write preserves the established document package contracts.
 const installedRuntimes = new WeakSet<object>();
 export function installWordxDocxWrite(runtime: Window): void {
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L, D = L.D, X = L.xesc, emu = L.pt2emu;
   if (installedRuntimes.has(L)) return;
   const W = (L.docx = L.docx || {});

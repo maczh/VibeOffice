@@ -1,5 +1,5 @@
 // What the user deletes (a picture, a chart) is recorded as deleted, not as the writer's loss alarm (unreferenced:).
-// node --test tests/quire/deletions.test.mjs
+// node --test tests/wordx/deletions.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

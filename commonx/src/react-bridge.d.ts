@@ -16,6 +16,7 @@ export interface VibeOfficeServices {
     execute: (command: string) => void;
 }
 interface LegacyVibeOffice {
+    VERSION?: string;
     t?: (message: string, ...values: Array<string | number>) => string;
     look?: {
         set: (look: LookId) => void;

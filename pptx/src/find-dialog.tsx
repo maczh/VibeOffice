@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 interface FindCatalog { what: string; with: string; mc: boolean; ww: boolean; replace: boolean }
 interface FindRuntime {
@@ -7,19 +8,19 @@ interface FindRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): FindRuntime | undefined { return (window as Window & { L?: FindRuntime }).L; }
 
 /** React-owned Find/Replace controls; matching and presentation mutations remain in the presentation engine. */
 export function PptxFindDialog() {
+  const runtime = usePptxRuntime<FindRuntime>();
   const [catalog, setCatalog] = useState<FindCatalog | null>(null);
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactFindCatalog?.() || null; setCatalog(next ? { ...next } : null); };
-    const off = runtime()?.bus?.on('pptx-find-dialog', refresh);
+    const refresh = () => { const next = runtime?.dlg?.reactFindCatalog?.() || null; setCatalog(next ? { ...next } : null); };
+    const off = runtime?.bus?.on('pptx-find-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const dispatch = (action: string, values?: FindCatalog) => runtime()?.dlg?.reactFindAction?.(action, values);
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const dispatch = (action: string, values?: FindCatalog) => runtime?.dlg?.reactFindAction?.(action, values);
   const update = (changes: Partial<FindCatalog>) => {
     const next = { ...catalog, ...changes };
     setCatalog(next);

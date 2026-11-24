@@ -36,8 +36,8 @@ interface WordxMenuRuntime {
   t?(text: string, ...args: unknown[]): string;
 }
 
-function runtime(): WordxMenuRuntime | undefined {
-  return (window as Window & { L?: WordxMenuRuntime }).L;
+function runtime(host: HTMLElement): WordxMenuRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: WordxMenuRuntime }) | null)?.L;
 }
 
 function TableGrid({ L }: { L: WordxMenuRuntime }) {
@@ -132,10 +132,15 @@ function ColumnsPicker({ L }: { L: WordxMenuRuntime }) {
 
 function HistoryMenu({ L }: { L: WordxMenuRuntime }) {
   const catalog = L.app?.reactHistoryMenuCatalog?.();
+  const catalogReader = L.app?.reactHistoryMenuCatalog;
+  const action = L.app?.reactHistoryMenuAction;
   const [hovered, setHovered] = useState<number | null>(null);
   useEffect(() => () => {
-    if (L.app) { delete L.app.reactHistoryMenuCatalog; delete L.app.reactHistoryMenuAction; }
-  }, [L]);
+    const app = L.app;
+    if (!app) return;
+    if (!app.reactHistoryMenuCatalog || app.reactHistoryMenuCatalog === catalogReader) delete app.reactHistoryMenuCatalog;
+    if (!app.reactHistoryMenuAction || app.reactHistoryMenuAction === action) delete app.reactHistoryMenuAction;
+  }, [L, catalogReader, action]);
   if (!catalog) return null;
   const kindLabel = catalog.kind === 'undo' ? 'Undo' : 'Redo';
   const status = (count: number) => L.t?.(count === 1 ? `${kindLabel} {0} Action` : `${kindLabel} {0} Actions`, count) || `${kindLabel} ${count} ${count === 1 ? 'Action' : 'Actions'}`;
@@ -225,20 +230,30 @@ function MultiPagePicker({ L }: { L: WordxMenuRuntime }) {
 }
 
 function FindFormatMenu({ L }: { L: WordxMenuRuntime }) {
-  const items = L.find?.reactFindFormatMenuCatalog?.() || [];
+  const find = L.find;
+  const catalogReader = find?.reactFindFormatMenuCatalog;
+  const action = find?.reactFindFormatMenuAction;
+  const items = catalogReader?.() || [];
   useEffect(() => () => {
-    if (L.find) { delete L.find.reactFindFormatMenuCatalog; delete L.find.reactFindFormatMenuAction; }
-  }, [L]);
+    if (L.find !== find || !find) return;
+    if (!find.reactFindFormatMenuCatalog || find.reactFindFormatMenuCatalog === catalogReader) delete find.reactFindFormatMenuCatalog;
+    if (!find.reactFindFormatMenuAction || find.reactFindFormatMenuAction === action) delete find.reactFindFormatMenuAction;
+  }, [L, find, catalogReader, action]);
   return <div id="react-wordx-find-format-menu" role="group">{items.map(({ id, label }) => <button key={id} type="button" role="menuitem" className="m-item" onClick={() => L.find?.reactFindFormatMenuAction?.(id)}>
     <span className="m-ico" /><span className="m-lbl">{label}</span><span /><span />
   </button>)}</div>;
 }
 
 function FindSpecialMenu({ L }: { L: WordxMenuRuntime }) {
-  const items = L.find?.reactFindSpecialMenuCatalog?.() || [];
+  const find = L.find;
+  const catalogReader = find?.reactFindSpecialMenuCatalog;
+  const action = find?.reactFindSpecialMenuAction;
+  const items = catalogReader?.() || [];
   useEffect(() => () => {
-    if (L.find) { delete L.find.reactFindSpecialMenuCatalog; delete L.find.reactFindSpecialMenuAction; }
-  }, [L]);
+    if (L.find !== find || !find) return;
+    if (!find.reactFindSpecialMenuCatalog || find.reactFindSpecialMenuCatalog === catalogReader) delete find.reactFindSpecialMenuCatalog;
+    if (!find.reactFindSpecialMenuAction || find.reactFindSpecialMenuAction === action) delete find.reactFindSpecialMenuAction;
+  }, [L, find, catalogReader, action]);
   return <div id="react-wordx-find-special-menu" role="group">{items.map(({ code, label }) => <button key={code} type="button" role="menuitem" className="m-item" onClick={() => L.find?.reactFindSpecialMenuAction?.(code)}>
     <span className="m-ico" /><span className="m-lbl">{label}</span><span /><span />
   </button>)}</div>;
@@ -264,12 +279,13 @@ export function WordxMenuContentLayer({ host }: { host: HTMLElement }) {
       findFormat: host.querySelector<HTMLElement>('#react-wordx-find-format-menu-root'),
       findSpecial: host.querySelector<HTMLElement>('#react-wordx-find-special-menu-root'),
     });
-    const observer = new MutationObserver(scan);
+    const Observer = host.ownerDocument.defaultView?.MutationObserver || MutationObserver;
+    const observer = new Observer(scan);
     observer.observe(host, { childList: true, subtree: true });
     scan();
     return () => observer.disconnect();
   }, [host]);
-  const L = runtime();
+  const L = runtime(host);
   if (!L) return null;
   return <>
     {targets.history ? createPortal(<HistoryMenu L={L} />, targets.history) : null}

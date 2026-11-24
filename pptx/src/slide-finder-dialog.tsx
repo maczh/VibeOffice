@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 import { PptxPreviewArtwork } from './slides-pane.js';
 
 interface FinderSlide { index: number; title: string; thumb: string }
@@ -9,31 +10,31 @@ interface SlideFinderRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string, ...args: unknown[]): string;
 }
-function runtime(): SlideFinderRuntime | undefined { return (window as Window & { L?: SlideFinderRuntime }).L; }
 
 /** React owns slide selection and import controls; presentation parsing and insertion stay engine-backed. */
 export function PptxSlideFinderDialog() {
+  const runtime = usePptxRuntime<SlideFinderRuntime>();
   const [catalog, setCatalog] = useState<SlideFinderCatalog | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [keep, setKeep] = useState(false);
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactSlideFinderCatalog?.() || null;
+      const next = runtime?.dlg?.reactSlideFinderCatalog?.() || null;
       setCatalog(next ? { ...next, slides: [...next.slides], selected: [...next.selected] } : null);
       if (next) { setSelected([...next.selected]); setKeep(next.keep); }
     };
-    const off = runtime()?.bus?.on('pptx-slide-finder-dialog', refresh);
+    const off = runtime?.bus?.on('pptx-slide-finder-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string, ...args: unknown[]) => runtime()?.t?.(message, ...args) || message;
-  const close = () => runtime()?.dlg?.reactSlideFinderAction?.('close');
+  const t = (message: string, ...args: unknown[]) => runtime?.t?.(message, ...args) || message;
+  const close = () => runtime?.dlg?.reactSlideFinderAction?.('close');
   const toggle = (index: number, checked: boolean) => {
-    runtime()?.dlg?.reactSlideFinderAction?.('select', index, checked);
+    runtime?.dlg?.reactSlideFinderAction?.('select', index, checked);
     setSelected((current) => checked ? [...new Set([...current, index])].sort((a, b) => a - b) : current.filter((item) => item !== index));
   };
-  const setKeepFormatting = (checked: boolean) => { setKeep(checked); runtime()?.dlg?.reactSlideFinderAction?.('keep', undefined, checked); };
-  const insert = (all: boolean) => runtime()?.dlg?.reactSlideFinderAction?.(all ? 'insert-all' : 'insert');
+  const setKeepFormatting = (checked: boolean) => { setKeep(checked); runtime?.dlg?.reactSlideFinderAction?.('keep', undefined, checked); };
+  const insert = (all: boolean) => runtime?.dlg?.reactSlideFinderAction?.(all ? 'insert-all' : 'insert');
   return <OfficeDialog title={t('Slide Finder')} className="pptx-slide-finder-dialog" style={{ width: 'min(96vw, 700px)' }} onRequestClose={close}>
     <div className="col">
       <div>{t('Presentation: {0}', catalog.name)}</div>

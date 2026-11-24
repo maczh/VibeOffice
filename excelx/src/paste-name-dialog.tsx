@@ -1,21 +1,22 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { useExcelxRuntime } from './editor-host.js';
 
 type Catalog = { names: Array<{ key: string; name: string }>; pick: string };
 type Runtime = { dlg?: { reactPasteNameCatalog?(): Catalog | null; reactPasteNameAction?(action: string, value?: string): boolean }; bus?: { on(event: string, listener: () => void): () => void }; t?(message: string): string };
-function runtime(): Runtime | undefined { return (window as Window & { L?: Runtime }).L; }
 
 /** React dialog for inserting a workbook name or pasting the complete name list. */
 export function ExcelxPasteNameDialog() {
+  const runtime = useExcelxRuntime<Runtime>();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   useEffect(() => {
-    const refresh = () => setCatalog(runtime()?.dlg?.reactPasteNameCatalog?.() || null);
-    const off = runtime()?.bus?.on('excelx-paste-name', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactPasteNameCatalog?.()) runtime()?.dlg?.reactPasteNameAction?.('close'); };
+    const refresh = () => setCatalog(runtime?.dlg?.reactPasteNameCatalog?.() || null);
+    const off = runtime?.bus?.on('excelx-paste-name', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactPasteNameCatalog?.()) runtime?.dlg?.reactPasteNameAction?.('close'); };
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const action = runtime()?.dlg?.reactPasteNameAction;
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const action = runtime?.dlg?.reactPasteNameAction;
   const insert = () => action?.('insert');
   return <OfficeDialog title={t('Paste Name')} className="excelx-paste-name-dialog" style={{ width: 'min(92vw, 360px)' }} onRequestClose={() => action?.('close')}>
     <label className="excelx-paste-name-dialog__label">{t('Paste &name').replace('&', '')}

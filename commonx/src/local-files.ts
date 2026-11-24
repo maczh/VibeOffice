@@ -51,6 +51,7 @@ export interface SaveFilePickerOptions {
 }
 
 export type FilePickerWindow = Window & {
+  URL?: typeof URL;
   showOpenFilePicker?: (options?: OpenFilePickerOptions) => Promise<Array<FileSystemFileHandle>>;
   showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
 };
@@ -121,7 +122,7 @@ export async function openLocalDocument(accept?: Record<string, Array<string>>, 
   }
 
   const file = await new Promise<File>((resolve, reject) => {
-    const input = document.createElement('input');
+    const input = target.document.createElement('input');
     input.type = 'file';
     if (accept) input.accept = Object.values(accept).flat().join(',');
     let onChange: EventListener;
@@ -180,14 +181,15 @@ export async function saveLocalDocument(
   }
 
   if (signal?.aborted) throw abortError('File save was cancelled');
-  const url = URL.createObjectURL(blob);
-  const anchor = window.document.createElement('a');
+  const urlApi = target.URL ?? URL;
+  const url = urlApi.createObjectURL(blob);
+  const anchor = target.document.createElement('a');
   anchor.href = url;
   anchor.download = suggestedName;
   anchor.hidden = true;
-  window.document.body.append(anchor);
+  target.document.body.append(anchor);
   anchor.click();
   anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  target.setTimeout(() => urlApi.revokeObjectURL(url), 0);
   return { file: new File([blob], suggestedName, { type: blob.type, lastModified: Date.now() }) };
 }

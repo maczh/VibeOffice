@@ -19,7 +19,7 @@ export interface DirectHostOptions {
   onDraftsAvailable?: (drafts: LocalDraft<Blob>[], restore: (draft: LocalDraft<Blob>) => void) => void;
   configureRuntime?: (runtime: Window) => void;
   skipLegacyScripts?: readonly string[];
-  beforeLegacyScript?: (runtime: Window, script: URL) => void;
+  beforeLegacyScript?: (runtime: Window, script: URL) => void | (() => void);
   shellOwnedByReact?: boolean;
 }
 
@@ -51,6 +51,7 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
     let stopEngine: void | (() => void);
     let latestDraftUpdate: { editor: string; drafts: LocalDraft<Blob>[]; restore(draft: LocalDraft<Blob>): void; discard(id: string): Promise<void> } | undefined;
     const live = () => !disposed && !signal.aborted;
+    const cancelled = () => new view.DOMException('The editor mount was cancelled', 'AbortError');
     const restore = (draft: LocalDraft<Blob>) => {
       if (!isDraft(draft, options.editor)) throw new TypeError(`Invalid ${options.editor} draft`);
       if (!hooks?.open) return;
@@ -137,11 +138,19 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
       },
     };
     const cleanupDocument = await mountLegacyEngineDocument(source, { host, signal, directHost: runtime, ...(options.skipLegacyScripts ? { skipLegacyScripts: options.skipLegacyScripts } : {}), ...(options.beforeLegacyScript ? { beforeLegacyScript: options.beforeLegacyScript } : {}), ...(options.shellOwnedByReact ? { shellOwnedByReact: true } : {}) });
+    if (!live()) { cleanupDocument(); throw cancelled(); }
     const root = host.querySelector<HTMLElement>('[data-vibeoffice-engine-root]');
     const runtimeWindow = view as Window & { L?: { app?: { mount?: (element: HTMLElement) => void | (() => void) | Promise<void | (() => void)>; newDocument?: () => void; newWorkbook?: () => void; newPresentation?: () => void }; ui?: { exec?(id: string): unknown; searchResults?(query: string, layout: string): unknown[]; searchRemember?(id: string): void } } };
     if (!root || !runtimeWindow.L?.app?.mount) { cleanupDocument(); throw new Error(`The ${options.editor} runtime does not expose a direct mount API`); }
-    options.configureRuntime?.(runtimeWindow);
+    try {
+      options.configureRuntime?.(runtimeWindow);
+    } catch (error) {
+      cleanupDocument();
+      throw error;
+    }
+    if (!live()) { cleanupDocument(); throw cancelled(); }
     root.dispatchEvent(new CustomEvent('vibeoffice-engine-runtime-ready', { bubbles: true, detail: { editor: options.editor } }));
+    if (!live()) { cleanupDocument(); throw cancelled(); }
     const onCommand = (event: Event) => {
       const detail = (event as CustomEvent<{ command?: unknown; rememberSearch?: boolean }>).detail;
       const command = detail?.command;
@@ -181,15 +190,6 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
     host.addEventListener('vibeoffice-react-chrome', onChrome);
     host.addEventListener('vibeoffice-react-open-url', onOpenUrl);
     host.addEventListener('vibeoffice-react-search', onSearch);
-    try { stopEngine = await runtimeWindow.L.app.mount(root); }
-    catch (error) {
-      host.removeEventListener('vibeoffice-react-command', onCommand);
-      host.removeEventListener('vibeoffice-react-chrome', onChrome);
-      host.removeEventListener('vibeoffice-react-open-url', onOpenUrl);
-      host.removeEventListener('vibeoffice-react-search', onSearch);
-      cleanupDocument();
-      throw error;
-    }
     const dispose = () => {
       if (disposed) return;
       disposed = true;
@@ -200,10 +200,31 @@ export function createDirectEngineBridge(options: DirectHostOptions): EditorMoun
       const recoveryWindow = view as Window & { __vibeofficeDraftRecoveries?: Record<string, typeof latestDraftUpdate> };
       const publishedDrafts = recoveryWindow.__vibeofficeDraftRecoveries;
       if (publishedDrafts && publishedDrafts[options.editor] === latestDraftUpdate) delete publishedDrafts[options.editor];
-      if (typeof stopEngine === 'function') stopEngine();
-      cleanupDocument();
+      if (typeof stopEngine === 'function') {
+        const stop = stopEngine;
+        stopEngine = undefined;
+        try { stop(); }
+        finally { cleanupDocument(); }
+      } else {
+        cleanupDocument();
+      }
     };
     signal.addEventListener('abort', dispose, { once: true });
+    try {
+      if (!live()) throw cancelled();
+      stopEngine = await runtimeWindow.L.app.mount(root);
+      // The host may unmount while an asynchronous engine mount is still settling.
+      // Abort cleanup runs immediately; release anything the mount returns afterward.
+      if (disposed && typeof stopEngine === 'function') {
+        const stop = stopEngine;
+        stopEngine = undefined;
+        stop();
+      }
+    } catch (error) {
+      signal.removeEventListener('abort', dispose);
+      dispose();
+      throw error;
+    }
     return () => { signal.removeEventListener('abort', dispose); dispose(); };
   };
 }

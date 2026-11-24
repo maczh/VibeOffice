@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 interface EffectOptionsCatalog {
   title: string;
@@ -21,12 +22,12 @@ interface EffectOptionsRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): EffectOptionsRuntime | undefined { return (window as Window & { L?: EffectOptionsRuntime }).L; }
 const startOptions: Array<[string, string]> = [['click', 'On Click'], ['with', 'With Previous'], ['after', 'After Previous']];
 const repeatOptions: Array<[number, string]> = [[1, '(none)'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [10, '10']];
 
 /** React owns the three-tab animation options form; the presentation callback commits it. */
 export function PptxEffectOptionsDialog() {
+  const runtime = usePptxRuntime<EffectOptionsRuntime>();
   const [catalog, setCatalog] = useState<EffectOptionsCatalog | null>(null);
   const [tab, setTab] = useState(0);
   const [dir, setDir] = useState('');
@@ -41,17 +42,17 @@ export function PptxEffectOptionsDialog() {
   const tabId = (index: number) => `${id}-animation-options-tab-${index}`;
   useEffect(() => {
     const refresh = () => {
-      const next = runtime()?.dlg?.reactEffectOptionsCatalog?.() || null;
+      const next = runtime?.dlg?.reactEffectOptionsCatalog?.() || null;
       setCatalog(next ? { ...next, directions: [...next.directions], speeds: [...next.speeds] } : null);
       if (next) { setTab(0); setDir(next.dir); setAmount(next.amount || 150); setStart(next.start); setDelay(next.delay); setDur(next.dur); setRepeat(next.repeat); setBy(next.by); }
     };
-    const off = runtime()?.bus?.on('pptx-effect-options-dialog', refresh);
+    const off = runtime?.bus?.on('pptx-effect-options-dialog', refresh);
     return () => off?.();
   }, []);
   if (!catalog) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactEffectOptionsAction?.('close');
-  const apply = () => runtime()?.dlg?.reactEffectOptionsAction?.('apply', { dir, amount, start, delay, dur, repeat, by });
+  const t = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactEffectOptionsAction?.('close');
+  const apply = () => runtime?.dlg?.reactEffectOptionsAction?.('apply', { dir, amount, start, delay, dur, repeat, by });
   const tabs = ['Effect', 'Timing', 'Text Animation'];
   return <OfficeDialog title={catalog.title} className="pptx-effect-options-dialog" style={{ width: 'min(96vw, 420px)' }} onRequestClose={close}>
     <div role="tablist" aria-label={t('Animation options')} className="row">

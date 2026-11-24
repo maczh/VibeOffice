@@ -32,21 +32,26 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
 
   useLayoutEffect(() => {
     if (!panel.current) return;
+    const view = panel.current.ownerDocument.defaultView;
+    if (!view) return;
     const bounds = panel.current.getBoundingClientRect();
-    panel.current.style.left = `${Math.max(4, Math.min(request.left, window.innerWidth - bounds.width - 4))}px`;
-    panel.current.style.top = `${Math.max(4, Math.min(request.bottom, window.innerHeight - bounds.height - 4))}px`;
+    panel.current.style.left = `${Math.max(4, Math.min(request.left, view.innerWidth - bounds.width - 4))}px`;
+    panel.current.style.top = `${Math.max(4, Math.min(request.bottom, view.innerHeight - bounds.height - 4))}px`;
     const buttons = [...panel.current.querySelectorAll<HTMLButtonElement>('button')].filter((button) => !button.disabled);
     buttons.forEach((button, index) => { button.tabIndex = index === 0 ? 0 : -1; });
     buttons[0]?.focus();
   }, [request]);
 
   useEffect(() => {
+    const panelDocument = panel.current?.ownerDocument;
+    const view = panelDocument?.defaultView;
+    if (!panelDocument || !view) return;
     const outside = (event: PointerEvent) => {
       const target = event.target;
-      if (target instanceof Node && !panel.current?.contains(target) && !request.anchor?.contains(target)) onClose();
+      if (target instanceof view.Node && !panel.current?.contains(target) && !request.anchor?.contains(target)) onClose();
     };
     const keydown = (event: KeyboardEvent) => {
-      if (!(event.target instanceof Node) || !panel.current?.contains(event.target)) return;
+      if (!(event.target instanceof view.Node) || !panel.current?.contains(event.target)) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
@@ -54,18 +59,18 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
         const anchor = request.anchor as (Element & { focus?: () => void }) | undefined;
         if (typeof anchor?.focus === 'function') {
           let removeCleanup = () => {};
-          const frame = window.requestAnimationFrame(() => {
+          const frame = view.requestAnimationFrame(() => {
             removeCleanup();
             if (anchor.isConnected) anchor.focus?.();
           });
-          const runtime = (window as Window & { L?: { addMountCleanup?: (cleanup: () => void) => () => void } }).L;
-          removeCleanup = runtime?.addMountCleanup?.(() => window.cancelAnimationFrame(frame)) || (() => {});
+          const runtime = (view as Window & { L?: { addMountCleanup?: (cleanup: () => void) => () => void } }).L;
+          removeCleanup = runtime?.addMountCleanup?.(() => view.cancelAnimationFrame(frame)) || (() => {});
         }
         return;
       }
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === 'End') {
         const buttons = [...(panel.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])].filter((button) => !button.disabled);
-        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        const index = buttons.indexOf(panelDocument.activeElement as HTMLButtonElement);
         if (buttons.length) {
           event.preventDefault(); event.stopPropagation();
           const next = event.key === 'End' ? buttons.length - 1 : (index + 1 + buttons.length) % buttons.length;
@@ -75,7 +80,7 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
       }
       if (event.key === 'ArrowLeft' || event.key === 'ArrowUp' || event.key === 'Home') {
         const buttons = [...(panel.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])].filter((button) => !button.disabled);
-        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        const index = buttons.indexOf(panelDocument.activeElement as HTMLButtonElement);
         if (buttons.length) {
           event.preventDefault(); event.stopPropagation();
           const next = event.key === 'Home' ? 0 : (index - 1 + buttons.length) % buttons.length;
@@ -84,11 +89,11 @@ export function ColorMenu({ request, onClose }: ColorMenuProps) {
         }
       }
     };
-    document.addEventListener('pointerdown', outside, true);
-    document.addEventListener('keydown', keydown, true);
+    panelDocument.addEventListener('pointerdown', outside, true);
+    panelDocument.addEventListener('keydown', keydown, true);
     return () => {
-      document.removeEventListener('pointerdown', outside, true);
-      document.removeEventListener('keydown', keydown, true);
+      panelDocument.removeEventListener('pointerdown', outside, true);
+      panelDocument.removeEventListener('keydown', keydown, true);
     };
   }, [onClose, request]);
 

@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useState } from 'react';
+import { usePptxRuntime } from './editor-host.js';
 
 interface DateFormat { id: string; label: string }
 interface HeaderFooterState { date: boolean; automatic: boolean; format: string; fixedText: string; number: boolean; footer: boolean; footerText: string; notOnTitle: boolean; formats: DateFormat[] }
@@ -9,21 +10,21 @@ interface HeaderFooterRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): HeaderFooterRuntime | undefined { return (window as Window & { L?: HeaderFooterRuntime }).L; }
 
 /** React-owned slide header/footer form; slide and presentation history transactions stay in the engine. */
 export function PptxHeaderFooterDialog() {
+  const runtime = usePptxRuntime<HeaderFooterRuntime>();
   const [state, setState] = useState<HeaderFooterState | null>(null);
   useEffect(() => {
-    const refresh = () => setState(runtime()?.dlg?.reactHeaderFooterCatalog?.() || null);
-    const off = runtime()?.bus?.on('pptx-header-footer-dialog', refresh);
+    const refresh = () => setState(runtime?.dlg?.reactHeaderFooterCatalog?.() || null);
+    const off = runtime?.bus?.on('pptx-header-footer-dialog', refresh);
     return () => off?.();
   }, []);
   if (!state) return null;
-  const t = (message: string) => runtime()?.t?.(message) || message;
+  const t = (message: string) => runtime?.t?.(message) || message;
   const update = (changes: Partial<HeaderFooterState>) => setState({ ...state, ...changes });
   const commit: HeaderFooterCommit = { dt: state.date, dtAuto: state.automatic, dtFmt: state.format, dtText: state.fixedText, num: state.number, ftr: state.footer, ftrText: state.footerText, notOnTitle: state.notOnTitle };
-  const act = (action: string, all?: boolean) => runtime()?.dlg?.reactHeaderFooterAction?.(action, action === 'apply' ? commit : undefined, all);
+  const act = (action: string, all?: boolean) => runtime?.dlg?.reactHeaderFooterAction?.(action, action === 'apply' ? commit : undefined, all);
   return <OfficeDialog title={t('Header and Footer')} className="pptx-header-footer-dialog" style={{ width: 'min(94vw, 470px)' }} onRequestClose={() => act('close')}>
     <section className="col" aria-label={t('Slide')}>
       <strong>{t('Include on slide')}</strong>

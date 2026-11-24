@@ -3,6 +3,8 @@
 const installedRuntimes = new WeakSet<object>();
 export function installExcelxDrawing(runtime: Window): void {
   const root = runtime;
+  const window = root;
+  const document = root.document;
   const L = (root as Window & { L?: any }).L;
   if (!L?.model || !L?.ops || !L?.layout || !L?.ui) throw new Error("Excelx drawing requires workbook geometry and UI services");
   if (installedRuntimes.has(L)) return;

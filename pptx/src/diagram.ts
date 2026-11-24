@@ -8,6 +8,8 @@
  * Items are plain text; colours and styles name theme slots, so a new design recolours the diagram.
  */
 export function installPptxDiagram(runtime: Window): void {
+  const window = runtime as Window & { VO?: any };
+  const document = runtime.document;
   const L = (runtime as Window & { L?: any }).L, ui = L.ui, { h } = L;
   const SA = L.smartart, M = L.model, T = L.txt;
   const E = () => L.ed;

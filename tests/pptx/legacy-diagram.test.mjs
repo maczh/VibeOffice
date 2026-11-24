@@ -1,5 +1,5 @@
 // A PowerPoint 97-2003 diagram (an organization chart in the slide's VML, com:legacyDrawing) is kept as it was.
-// node --test tests/lectern/legacy-diagram.test.mjs
+// node --test tests/pptx/legacy-diagram.test.mjs
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

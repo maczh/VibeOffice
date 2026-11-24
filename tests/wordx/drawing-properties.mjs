@@ -1,5 +1,5 @@
 // Property edits, table alternatives and original watermarks through the real writer/history/draft hooks.
-// node tests/quire/drawing-properties.mjs CORPUS OUTPUT
+// node tests/wordx/drawing-properties.mjs CORPUS OUTPUT
 import fs from 'node:fs';
 import path from 'node:path';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

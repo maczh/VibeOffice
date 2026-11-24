@@ -1,5 +1,6 @@
 import { OfficeDialog } from '@vibeoffice/core';
 import { useEffect, useId, useState } from 'react';
+import { useExcelxRuntime } from './editor-host';
 
 interface ValidationState { type: string; op: string; allowBlank: boolean; showDrop: boolean; showInput: boolean; showError: boolean; errorStyle: string; value1: string; value2: string; promptTitle: string; prompt: string; errorTitle: string; error: string; ime: string; applyAll: boolean }
 type Choice = [string, string];
@@ -9,23 +10,22 @@ interface ValidationRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string): string;
 }
-function runtime(): ValidationRuntime | undefined { return (window as Window & { L?: ValidationRuntime }).L; }
-
 export function ExcelxValidationDialog() {
+  const runtime = useExcelxRuntime<ValidationRuntime>();
   const [catalog, setCatalog] = useState<ValidationCatalog | null>(null);
   const id = useId().replaceAll(':', '');
   const [state, setState] = useState<ValidationState>({ type: 'none', op: 'between', allowBlank: true, showDrop: true, showInput: true, showError: true, errorStyle: 'stop', value1: '', value2: '', promptTitle: '', prompt: '', errorTitle: '', error: '', ime: '', applyAll: false });
   const [tab, setTab] = useState(0);
   useEffect(() => {
-    const refresh = () => { const next = runtime()?.dlg?.reactValidationCatalog?.() || null; setCatalog(next); if (next) { setState(next.state); setTab(0); } };
-    const off = runtime()?.bus?.on('excelx-validation-dialog', refresh);
-    return () => { off?.(); if (runtime()?.dlg?.reactValidationCatalog?.()) runtime()?.dlg?.reactValidationClose?.(); };
+    const refresh = () => { const next = runtime?.dlg?.reactValidationCatalog?.() || null; setCatalog(next); if (next) { setState(next.state); setTab(0); } };
+    const off = runtime?.bus?.on('excelx-validation-dialog', refresh);
+    return () => { off?.(); if (runtime?.dlg?.reactValidationCatalog?.()) runtime?.dlg?.reactValidationClose?.(); };
   }, []);
   if (!catalog) return null;
-  const translate = (message: string) => runtime()?.t?.(message) || message;
-  const close = () => runtime()?.dlg?.reactValidationClose?.();
-  const apply = () => runtime()?.dlg?.reactValidationApply?.(state);
-  const clear = () => runtime()?.dlg?.reactValidationClear?.();
+  const translate = (message: string) => runtime?.t?.(message) || message;
+  const close = () => runtime?.dlg?.reactValidationClose?.();
+  const apply = () => runtime?.dlg?.reactValidationApply?.(state);
+  const clear = () => runtime?.dlg?.reactValidationClear?.();
   const update = (patch: Partial<ValidationState>) => setState((current) => ({ ...current, ...patch }));
   const select = (label: string, value: string, choices: Choice[], onChange: (value: string) => void) => <label>{translate(label)}<select value={value} onChange={(event) => onChange(event.currentTarget.value)}>{choices.map(([key, name]) => <option key={key} value={key}>{translate(name)}</option>)}</select></label>;
   const ranged = ['whole', 'decimal', 'date', 'time', 'textLength'].includes(state.type);

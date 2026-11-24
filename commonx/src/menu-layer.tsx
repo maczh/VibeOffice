@@ -91,6 +91,13 @@ export function MenuLayer({ host }: MenuLayerProps) {
     activeHost(keepDepth > 0);
   }, [activeHost]);
 
+  // Keep the host-facing lifecycle flag aligned with committed React state.
+  // Window resize/blur can close a menu while another event is still queued;
+  // publishing from the committed stack prevents a stale `menuOpen` value.
+  useLayoutEffect(() => {
+    activeHost(stack.length > 0);
+  }, [activeHost, stack.length]);
+
   useEffect(() => {
     const open = (event: Event) => {
       const request = (event as CustomEvent<ReactMenuRequest & { depth?: number }>).detail;

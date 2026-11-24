@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { useExcelxRuntime } from './editor-host';
 
 interface SheetTab { index: number; name: string; color: string | null; active: boolean; selected: boolean }
 interface SheetsApi {
@@ -19,10 +20,11 @@ interface SheetsApi {
 interface SheetRuntime { app?: SheetsApi; dlg?: { insertSheetDlg?(): void; moveCopySheet?(): void; tabColor?(): void }; grid?: { paint(): void }; ui?: { openMenu(items: unknown[], at: { x: number; y: number }): void }; bus?: { on(event: string, listener: (index?: number) => void): () => void }; t?(message: string, ...args: unknown[]): string }
 interface Gesture { pointerId: number; from: number; startX: number; moved: boolean; target: number | null }
 interface ResizeGesture { pointerId: number; startX: number; startWidth: number; before: string }
-function runtime(): SheetRuntime | undefined { return (window as Window & { L?: SheetRuntime }).L; }
-
 /** React-owned worksheet tabs; workbook operations and tab context menus remain engine commands. */
 export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
+  const runtime = useExcelxRuntime<SheetRuntime>();
+  const ownerDocument = host.ownerDocument;
+  const ownerWindow = ownerDocument.defaultView;
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [navMount, setNavMount] = useState<HTMLElement | null>(null);
   const [splitMount, setSplitMount] = useState<HTMLElement | null>(null);
@@ -48,32 +50,33 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
       previousRole = target.getAttribute('role');
       previousLabel = target.getAttribute('aria-label');
       target.setAttribute('role', 'tablist');
-      target.setAttribute('aria-label', runtime()?.t?.('Worksheets') || 'Worksheets');
+      target.setAttribute('aria-label', runtime?.t?.('Worksheets') || 'Worksheets');
       setNavMount(host.querySelector<HTMLElement>('#tabnav'));
       setSplitMount(host.querySelector<HTMLElement>('#tabsplit'));
       off?.();
-      off = runtime()?.bus?.on('sheet-tabs', () => setTabs(runtime()?.app?.sheetTabs?.() || []));
+      off = runtime?.bus?.on('sheet-tabs', () => setTabs(runtime?.app?.sheetTabs?.() || []));
       offRename?.();
-      offRename = runtime()?.bus?.on('sheet-tab-rename', (index) => {
-        const tab = runtime()?.app?.sheetTabs?.().find((item) => item.index === index);
+      offRename = runtime?.bus?.on('sheet-tab-rename', (index) => {
+        const tab = runtime?.app?.sheetTabs?.().find((item) => item.index === index);
         if (!tab) return;
         setRenaming(tab.index);
         setNameDraft(tab.name);
       });
-      setTabs(runtime()?.app?.sheetTabs?.() || []);
+      setTabs(runtime?.app?.sheetTabs?.() || []);
     };
-    const observer = new MutationObserver(attach);
-    observer.observe(host, { childList: true, subtree: true });
+    const Observer = ownerWindow?.MutationObserver;
+    const observer = Observer ? new Observer(attach) : null;
+    observer?.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
-      observer.disconnect(); off?.(); offRename?.();
-      if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+      observer?.disconnect(); off?.(); offRename?.();
+      if (focusFrame.current !== null) ownerWindow?.cancelAnimationFrame(focusFrame.current);
       if (attached) {
         if (previousRole === null) attached.removeAttribute('role'); else attached.setAttribute('role', previousRole);
         if (previousLabel === null) attached.removeAttribute('aria-label'); else attached.setAttribute('aria-label', previousLabel);
       }
     };
-  }, [host]);
+  }, [host, ownerWindow, runtime]);
   useEffect(() => {
     const active = mount?.querySelector<HTMLElement>('.stab.on');
     if (!active || !mount) return;
@@ -91,15 +94,15 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
       setResizing(false);
       const grip = splitMount?.querySelector<HTMLElement>('.tabsplit-react-grip');
       if (grip?.hasPointerCapture(active.pointerId)) grip.releasePointerCapture(active.pointerId);
-      if (mount) { mount.style.width = active.before; runtime()?.grid?.paint(); }
+      if (mount) { mount.style.width = active.before; runtime?.grid?.paint(); }
     };
-    window.addEventListener('keydown', escape, true);
-    return () => window.removeEventListener('keydown', escape, true);
-  }, [resizing, mount, splitMount]);
+    ownerWindow?.addEventListener('keydown', escape, true);
+    return () => ownerWindow?.removeEventListener('keydown', escape, true);
+  }, [resizing, mount, splitMount, ownerWindow]);
   if (!mount) return null;
 
   const finishRename = (tab: SheetTab, save: boolean) => {
-    if (save && !runtime()?.app?.renameSheet(tab.index, nameDraft)) {
+    if (save && !runtime?.app?.renameSheet(tab.index, nameDraft)) {
       const input = mount?.querySelector<HTMLInputElement>(`input[data-sheet-index="${tab.index}"]`);
       input?.focus(); input?.select();
       return;
@@ -110,12 +113,12 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
     if (renaming === tab.index) return;
     if ((event.ctrlKey || event.metaKey) && event.key === ' ') {
       event.preventDefault();
-      runtime()?.app?.toggleSheetSel(tab.index);
+      runtime?.app?.toggleSheetSel(tab.index);
       return;
     }
     if (event.shiftKey && event.key === ' ') {
       event.preventDefault();
-      runtime()?.app?.rangeSheetSel(tab.index);
+      runtime?.app?.rangeSheetSel(tab.index);
       return;
     }
     const current = tabs.findIndex((item) => item.index === tab.index);
@@ -127,24 +130,24 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
       event.preventDefault();
       const next = tabs[destination];
       if (!next) return;
-      runtime()?.app?.activateSheet(next.index);
-      if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
-      focusFrame.current = requestAnimationFrame(() => { focusFrame.current = null; mount?.querySelector<HTMLElement>(`[data-sheet-index="${next.index}"]`)?.focus(); });
+      runtime?.app?.activateSheet(next.index);
+      if (focusFrame.current !== null) ownerWindow?.cancelAnimationFrame(focusFrame.current);
+      focusFrame.current = ownerWindow?.requestAnimationFrame(() => { focusFrame.current = null; mount?.querySelector<HTMLElement>(`[data-sheet-index="${next.index}"]`)?.focus(); }) ?? null;
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      runtime()?.app?.activateSheet(tab.index);
+      runtime?.app?.activateSheet(tab.index);
     }
   };
   const pointerDown = (event: PointerEvent<HTMLDivElement>, tab: SheetTab) => {
     if (event.target instanceof HTMLInputElement || event.button === 2) {
-      if (event.button === 2 && !tab.selected && !tab.active) runtime()?.app?.activateSheet(tab.index);
+      if (event.button === 2 && !tab.selected && !tab.active) runtime?.app?.activateSheet(tab.index);
       return;
     }
     event.preventDefault();
     if (event.button !== 0) return;
-    if (event.ctrlKey || event.metaKey) { runtime()?.app?.toggleSheetSel(tab.index); return; }
-    if (event.shiftKey) { runtime()?.app?.rangeSheetSel(tab.index); return; }
-    runtime()?.app?.activateSheet(tab.index);
+    if (event.ctrlKey || event.metaKey) { runtime?.app?.toggleSheetSel(tab.index); return; }
+    if (event.shiftKey) { runtime?.app?.rangeSheetSel(tab.index); return; }
+    runtime?.app?.activateSheet(tab.index);
     setDrag({ from: tab.index, target: null });
     gesture.current = { pointerId: event.pointerId, from: tab.index, startX: event.clientX, moved: false, target: null };
   };
@@ -153,7 +156,7 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
     if (!active || active.pointerId !== event.pointerId) return;
     if (!active.moved && Math.abs(event.clientX - active.startX) < 6) return;
     active.moved = true;
-    const element = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('.stab');
+    const element = ownerDocument.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('.stab');
     const rect = element?.getBoundingClientRect();
     active.target = element && rect && event.clientX < rect.left + rect.width / 2 ? Number(element.dataset.sheetIndex) : null;
     setDrag({ from: active.from, target: active.target });
@@ -163,7 +166,7 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
     if (!active || active.pointerId !== event.pointerId) return;
     gesture.current = null;
     setDrag(null);
-    if (active.moved) runtime()?.app?.reorderSheet(active.from, active.target, event.ctrlKey || event.metaKey);
+    if (active.moved) runtime?.app?.reorderSheet(active.from, active.target, event.ctrlKey || event.metaKey);
   };
   const resizeMove = (event: PointerEvent<HTMLDivElement>) => {
     const active = resizeGesture.current;
@@ -171,14 +174,14 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
     const rowWidth = host.querySelector<HTMLElement>('#tabrow')?.offsetWidth || active.startWidth + 120;
     const maxWidth = Math.max(40, rowWidth - 120);
     mount.style.width = `${Math.max(40, Math.min(maxWidth, active.startWidth + event.clientX - active.startX))}px`;
-    runtime()?.grid?.paint();
+    runtime?.grid?.paint();
   };
   const stopResize = (cancel: boolean) => {
     const active = resizeGesture.current;
     if (!active) return;
     resizeGesture.current = null;
     setResizing(false);
-    if (cancel && mount) { mount.style.width = active.before; runtime()?.grid?.paint(); }
+    if (cancel && mount) { mount.style.width = active.before; runtime?.grid?.paint(); }
   };
   const resizeDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !mount) return;
@@ -189,11 +192,11 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
   };
   const openNavigationMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    runtime()?.ui?.openMenu(tabs.map((tab) => ({ label: tab.name.replace(/&/g, '&&'), raw: true, checked: () => tab.active, radio: true, run: () => runtime()?.app?.activateSheet(tab.index) })), { x: event.clientX, y: event.clientY });
+    runtime?.ui?.openMenu(tabs.map((tab) => ({ label: tab.name.replace(/&/g, '&&'), raw: true, checked: () => tab.active, radio: true, run: () => runtime?.app?.activateSheet(tab.index) })), { x: event.clientX, y: event.clientY });
   };
   const openTabMenu = (event: ReactMouseEvent<HTMLDivElement>, index: number) => {
     event.preventDefault();
-    const L = runtime();
+    const L = runtime;
     const app = L?.app;
     if (!L?.ui || !app) return;
     L.ui.openMenu([
@@ -219,10 +222,10 @@ export function ExcelxSheetTabsLayer({ host }: { host: HTMLElement }) {
     </div>;
     }), mount, 'excelx-sheet-tabs')}
     {navMount && createPortal(<>
-      {(['first', 'prev', 'next', 'last'] as const).map((destination) => <button key={destination} type="button" tabIndex={-1} aria-label={`${destination.charAt(0).toUpperCase()}${destination.slice(1)} sheet`} data-tip={`${destination.charAt(0).toUpperCase()}${destination.slice(1)} sheet`} data-react-sheet-navigation={destination} onClick={() => runtime()?.app?.scrollSheetTabs(destination)} onContextMenu={openNavigationMenu}>
+      {(['first', 'prev', 'next', 'last'] as const).map((destination) => <button key={destination} type="button" tabIndex={-1} aria-label={`${destination.charAt(0).toUpperCase()}${destination.slice(1)} sheet`} data-tip={`${destination.charAt(0).toUpperCase()}${destination.slice(1)} sheet`} data-react-sheet-navigation={destination} onClick={() => runtime?.app?.scrollSheetTabs(destination)} onContextMenu={openNavigationMenu}>
         <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">{destination === 'first' ? <><path d="M1.5 1v7" stroke="#000" /><path d="M7 1.5L3 4.5 7 7.5z" fill="#000" /></> : destination === 'prev' ? <path d="M6.5 1.5L2.5 4.5 6.5 7.5z" fill="#000" /> : destination === 'next' ? <path d="M2.5 1.5L6.5 4.5 2.5 7.5z" fill="#000" /> : <><path d="M7.5 1v7" stroke="#000" /><path d="M2 1.5L6 4.5 2 7.5z" fill="#000" /></>}</svg>
       </button>)}
     </>, navMount, 'excelx-sheet-tab-navigation')}
-    {splitMount && createPortal(<div className="tabsplit-react-grip" style={{ width: '100%', height: '100%', minHeight: 1, cursor: 'col-resize' }} role="separator" aria-orientation="vertical" aria-label={runtime()?.t?.('Resize') || 'Resize'} onPointerDown={resizeDown} onPointerMove={resizeMove} onPointerUp={() => stopResize(false)} onPointerCancel={() => stopResize(true)} onLostPointerCapture={() => stopResize(true)} />, splitMount, 'excelx-sheet-tab-resize')}
+    {splitMount && createPortal(<div className="tabsplit-react-grip" style={{ width: '100%', height: '100%', minHeight: 1, cursor: 'col-resize' }} role="separator" aria-orientation="vertical" aria-label={runtime?.t?.('Resize') || 'Resize'} onPointerDown={resizeDown} onPointerMove={resizeMove} onPointerUp={() => stopResize(false)} onPointerCancel={() => stopResize(true)} onLostPointerCapture={() => stopResize(true)} />, splitMount, 'excelx-sheet-tab-resize')}
   </>;
 }

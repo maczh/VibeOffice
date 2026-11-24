@@ -10,15 +10,15 @@ export function installWordxDrawTool(runtime: Window): void {
   let selectTimer = 0, removeSelectCleanup = () => {};
   function scheduleShapeSelection(callback: () => void) {
     removeSelectCleanup();
-    clearTimeout(selectTimer);
-    selectTimer = window.setTimeout(() => {
+    runtime.clearTimeout(selectTimer);
+    selectTimer = runtime.setTimeout(() => {
       selectTimer = 0;
       removeSelectCleanup();
       removeSelectCleanup = () => {};
       callback();
     }, 30);
     removeSelectCleanup = L.addMountCleanup(() => {
-      clearTimeout(selectTimer);
+      runtime.clearTimeout(selectTimer);
       selectTimer = 0;
       removeSelectCleanup = () => {};
     });

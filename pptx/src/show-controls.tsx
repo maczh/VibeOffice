@@ -10,11 +10,13 @@ interface ShowRuntime {
   bus?: { on(event: string, listener: () => void): () => void };
   t?(message: string, ...args: unknown[]): string;
 }
-function runtime(): ShowRuntime | undefined { return (window as Window & { L?: ShowRuntime }).L; }
+function runtime(host: HTMLElement): ShowRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: ShowRuntime }) | null)?.L;
+}
 
 /** React-owned navigation controls for the engine-owned full-screen slide show. */
 export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
-  const L = runtime();
+  const L = runtime(host);
   const show = L?.show;
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [rehearseMount, setRehearseMount] = useState<HTMLElement | null>(null);
@@ -60,7 +62,7 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
     host.addEventListener('vibeoffice-react-show-start', onShowStart);
     host.addEventListener('vibeoffice-react-show-end', onShowEnd);
     const attach = () => {
-      const engine = runtime();
+      const engine = runtime(host);
       if (engine?.show) engine.show.reactMounted = true;
       if (!offRehearse && engine?.bus) offRehearse = engine.bus.on('pptx-show-rehearse', () => setRevision((value) => value + 1));
       if (!offGoto && engine?.bus) offGoto = engine.bus.on('pptx-show-goto', () => {
@@ -100,7 +102,8 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
         setOverlayMount(overlaySlot);
       }
     };
-    const observer = new MutationObserver(attach);
+    const Observer = host.ownerDocument.defaultView?.MutationObserver || MutationObserver;
+    const observer = new Observer(attach);
     observer.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
@@ -114,22 +117,25 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
       timerSlot?.classList.remove('vibeoffice-react-owned');
       gotoSlot?.classList.remove('vibeoffice-react-owned');
       overlaySlot?.classList.remove('vibeoffice-react-owned');
-      const show = runtime()?.show;
+      const show = runtime(host)?.show;
       if (show) show.reactMounted = false;
     };
   }, [host]);
   useEffect(() => {
     const events = show?.reactEvents;
     if (!showRoot || !events) return;
+    const ownerDocument = host.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
     showRoot.addEventListener('pointerdown', events.pointerdown);
     showRoot.addEventListener('pointermove', events.pointermove);
     showRoot.addEventListener('pointerup', events.pointerup);
     showRoot.addEventListener('pointercancel', events.pointercancel);
     showRoot.addEventListener('contextmenu', events.contextmenu);
     showRoot.addEventListener('wheel', events.wheel, { passive: true });
-    document.addEventListener('keydown', events.keydown, true);
-    window.addEventListener('blur', events.blur);
-    window.addEventListener('resize', events.resize);
+    ownerDocument.addEventListener('keydown', events.keydown, true);
+    ownerWindow.addEventListener('blur', events.blur);
+    ownerWindow.addEventListener('resize', events.resize);
     return () => {
       showRoot.removeEventListener('pointerdown', events.pointerdown);
       showRoot.removeEventListener('pointermove', events.pointermove);
@@ -137,9 +143,9 @@ export function PptxShowControlsLayer({ host }: { host: HTMLElement }) {
       showRoot.removeEventListener('pointercancel', events.pointercancel);
       showRoot.removeEventListener('contextmenu', events.contextmenu);
       showRoot.removeEventListener('wheel', events.wheel);
-      document.removeEventListener('keydown', events.keydown, true);
-      window.removeEventListener('blur', events.blur);
-      window.removeEventListener('resize', events.resize);
+      ownerDocument.removeEventListener('keydown', events.keydown, true);
+      ownerWindow.removeEventListener('blur', events.blur);
+      ownerWindow.removeEventListener('resize', events.resize);
     };
   }, [show, showRoot]);
   useEffect(() => {

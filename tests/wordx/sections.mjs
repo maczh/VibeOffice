@@ -1,5 +1,5 @@
 // Section settings through the actual reader/writer, history and draft hooks.
-// node tests/quire/sections.mjs CORPUS OUTPUT [--fixture]
+// node tests/wordx/sections.mjs CORPUS OUTPUT [--fixture]
 import fs from 'node:fs';
 import path from 'node:path';
 import { ensureServer, openPage } from '../../tools/ooxml/cdp.mjs';

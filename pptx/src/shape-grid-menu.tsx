@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { SvgArtwork } from '@vibeoffice/core';
 
 interface ShapeChoice { kind: string; label: string; svg: string }
 interface ShapeMenuApp {
@@ -9,7 +10,9 @@ interface ShapeMenuApp {
 }
 interface ShapeMenuRuntime { app?: ShapeMenuApp; t?(message: string): string }
 
-function runtime(): ShapeMenuRuntime | undefined { return (window as Window & { L?: ShapeMenuRuntime }).L; }
+function runtime(host: HTMLElement): ShapeMenuRuntime | undefined {
+  return (host.ownerDocument.defaultView as (Window & { L?: ShapeMenuRuntime }) | null)?.L;
+}
 
 /** React-owned AutoShape and Change AutoShape grids; geometry and mutations remain engine-backed. */
 export function PptxShapeGridMenu({ host }: { host: HTMLElement }) {
@@ -21,22 +24,23 @@ export function PptxShapeGridMenu({ host }: { host: HTMLElement }) {
       const next = host.querySelector<HTMLElement>('#react-pptx-shape-grid-root');
       if (next !== slot) setSlot(next);
     };
-    const observer = new MutationObserver(attach);
-    observer.observe(host, { childList: true, subtree: true });
+    const Observer = host.ownerDocument.defaultView?.MutationObserver;
+    const observer = Observer ? new Observer(attach) : null;
+    observer?.observe(host, { childList: true, subtree: true });
     attach();
     return () => {
-      observer.disconnect();
-      if (slot) runtime()?.app?.reactShapeMenuCancel?.(slot);
+      observer?.disconnect();
+      if (slot) runtime(host)?.app?.reactShapeMenuCancel?.(slot);
     };
   }, [host, slot]);
   useEffect(() => { setActiveIndex(0); }, [slot]);
-  const L = runtime();
+  const L = runtime(host);
   if (!slot) return null;
   const choices = L?.app?.reactShapeMenuCatalog?.() || [];
   const t = (message: string) => L?.t?.(message) || message;
   const active = Math.min(activeIndex, Math.max(0, choices.length - 1));
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const current = Math.max(0, choiceRefs.current.indexOf(document.activeElement as HTMLButtonElement));
+    const current = Math.max(0, choiceRefs.current.indexOf(host.ownerDocument.activeElement as HTMLButtonElement));
     const last = choices.length - 1;
     let next = current;
     if (event.key === 'ArrowLeft') next = current % 8 === 0 ? current : current - 1;
@@ -55,6 +59,6 @@ export function PptxShapeGridMenu({ host }: { host: HTMLElement }) {
     }
   };
   return createPortal(<div className="shape-grid" data-menu-keyboard-owner="react" role="group" aria-label={t('AutoShapes')}>
-    {choices.map((choice, index) => <button key={choice.kind} ref={(element) => { choiceRefs.current[index] = element; }} type="button" tabIndex={index === active ? 0 : -1} data-tip={t(choice.label)} aria-label={t(choice.label)} title={t(choice.label)} onFocus={() => setActiveIndex(index)} onKeyDown={onKeyDown} onClick={() => L?.app?.reactShapeMenuAction?.(choice.kind)} dangerouslySetInnerHTML={{ __html: choice.svg }} />)}
+    {choices.map((choice, index) => <button key={choice.kind} ref={(element) => { choiceRefs.current[index] = element; }} type="button" tabIndex={index === active ? 0 : -1} data-tip={t(choice.label)} aria-label={t(choice.label)} title={t(choice.label)} onFocus={() => setActiveIndex(index)} onKeyDown={onKeyDown} onClick={() => L?.app?.reactShapeMenuAction?.(choice.kind)}><SvgArtwork markup={choice.svg} owner="pptx-shape-grid" /></button>)}
   </div>, slot);
 }

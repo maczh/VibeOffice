@@ -2,7 +2,7 @@
 is built (docs/pptx.md, Diagrams). Our layout, quick-style and colour definitions are our own, under
 urn:vibeoffice.work URNs; nothing is copied from Microsoft's built-in definitions.
 
-    python3 tests/lectern/smartart-spike.py BASE.pptx POWERPOINT_SMARTART.pptx OUTDIR
+    python3 tests/pptx/smartart-spike.py BASE.pptx POWERPOINT_SMARTART.pptx OUTDIR
 
 BASE: a one-slide deck saved by PPTX. POWERPOINT_SMARTART: a PowerPoint-authored deck with one SmartArt
 (for e/f). Writes:

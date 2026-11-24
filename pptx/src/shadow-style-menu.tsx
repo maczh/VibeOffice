@@ -10,7 +10,9 @@ interface ShadowMenuRuntime { t?(message: string): string }
 export function PptxShadowStyleMenu({ host }: { host: HTMLElement }) {
   const [request, setRequest] = useState<ShadowMenuRequest | null>(null);
   const [position, setPosition] = useState({ left: 2, top: 2 });
-  const L = (window as Window & { L?: ShadowMenuRuntime }).L;
+  const ownerDocument = host.ownerDocument;
+  const ownerWindow = ownerDocument.defaultView;
+  const L = (ownerWindow as (Window & { L?: ShadowMenuRuntime }) | null)?.L;
   useEffect(() => {
     const open = (event: Event) => {
       const detail = (event as CustomEvent<ShadowMenuRequest>).detail;
@@ -25,8 +27,8 @@ export function PptxShadowStyleMenu({ host }: { host: HTMLElement }) {
     if (!panel) return;
     const bounds = panel.getBoundingClientRect();
     setPosition({
-      left: Math.max(2, Math.min(request.left, window.innerWidth - bounds.width - 2)),
-      top: Math.max(2, Math.min(request.bottom, window.innerHeight - bounds.height - 2)),
+      left: Math.max(2, Math.min(request.left, ownerWindow?.innerWidth ?? bounds.width + 4)),
+      top: Math.max(2, Math.min(request.bottom, ownerWindow?.innerHeight ?? bounds.height + 4)),
     });
     panel.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
   }, [host, request]);
@@ -36,23 +38,23 @@ export function PptxShadowStyleMenu({ host }: { host: HTMLElement }) {
     const outside = (event: PointerEvent) => {
       const target = event.target;
       const panel = host.querySelector('.vibeoffice-shadow-style-menu');
-      if (target instanceof Node && !panel?.contains(target) && !request.anchor?.contains(target)) close();
+      if (target instanceof ownerDocument.defaultView!.Node && !panel?.contains(target) && !request.anchor?.contains(target)) close();
     };
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); request.anchor?.focus(); return; }
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
       const buttons = [...(host.querySelectorAll<HTMLButtonElement>('.vibeoffice-shadow-style-menu button') ?? [])];
-      const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      const index = buttons.indexOf(ownerDocument.activeElement as HTMLButtonElement);
       if (!buttons.length) return;
       event.preventDefault(); event.stopPropagation();
       const delta = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
       buttons[(index + delta + buttons.length) % buttons.length]?.focus();
     };
-    document.addEventListener('pointerdown', outside, true);
-    document.addEventListener('keydown', keydown, true);
+    ownerDocument.addEventListener('pointerdown', outside, true);
+    ownerDocument.addEventListener('keydown', keydown, true);
     return () => {
-      document.removeEventListener('pointerdown', outside, true);
-      document.removeEventListener('keydown', keydown, true);
+      ownerDocument.removeEventListener('pointerdown', outside, true);
+      ownerDocument.removeEventListener('keydown', keydown, true);
     };
   }, [host, request]);
   const engineRoot = host.querySelector<HTMLElement>('.vibeoffice-legacy-root[data-vibeoffice-engine-root]');
